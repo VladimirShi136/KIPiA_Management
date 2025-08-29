@@ -3,10 +3,24 @@ module com.kipia.management.kipia_management {
     requires javafx.graphics;
     requires javafx.controls;
     requires javafx.fxml;
+    requires java.sql;
 
+    // Открываем пакет с контроллерами для JavaFX FXML (рефлексия)
+    opens com.kipia.management.kipia_management.controllers to javafx.fxml;
 
-    opens com.kipia.management.kipia_management.controllers to javafx.fxml; // Открываем пакет для рефлексии
-    opens com.kipia.management.kipia_management; // Если у вас есть другие пакеты, которые нужно открыть
+    // Если FXML использует классы из основного пакета, откройте его тоже
+    opens com.kipia.management.kipia_management to javafx.fxml;
+
+    // Если FXML или другие компоненты обращаются к моделям через рефлексию (например, биндинги), откройте модели
+    opens com.kipia.management.kipia_management.models to javafx.fxml;
+
+    // Если сервисы не нужны для рефлексии, их не обязательно открывать
+    // Но если используете рефлексию или DI, можно открыть
+    // opens com.kipia.management.kipia_management.services to javafx.fxml;
+
+    // Экспортируем пакеты, которые должны быть видимы другим модулям (например, для тестов или внешних библиотек)
     exports com.kipia.management.kipia_management;
     exports com.kipia.management.kipia_management.controllers;
+    exports com.kipia.management.kipia_management.models;
+    exports com.kipia.management.kipia_management.services;
 }

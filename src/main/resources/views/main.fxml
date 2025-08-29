@@ -59,19 +59,20 @@
             <Label text="Выберите действие в левом меню для начала работы"/>
 
             <!-- Статистика -->
+            <!-- Статистика -->
             <VBox spacing="5" style="-fx-padding: 20; -fx-background-color: #f8f9fa; -fx-border-color: #ddd; -fx-border-radius: 5;">
                 <Label text="Статистика:" style="-fx-font-weight: bold;"/>
                 <HBox spacing="20">
                     <VBox alignment="CENTER">
-                        <Label text="150" style="-fx-font-size: 24px; -fx-text-fill: #3498db;"/>
+                        <Label fx:id="totalDevicesLabel" text="150" style="-fx-font-size: 24px; -fx-text-fill: #3498db;"/>
                         <Label text="Всего приборов"/>
                     </VBox>
                     <VBox alignment="CENTER">
-                        <Label text="135" style="-fx-font-size: 24px; -fx-text-fill: #2ecc71;"/>
+                        <Label fx:id="workingDevicesLabel" text="135" style="-fx-font-size: 24px; -fx-text-fill: #2ecc71;"/>
                         <Label text="В работе"/>
                     </VBox>
                     <VBox alignment="CENTER">
-                        <Label text="15" style="-fx-font-size: 24px; -fx-text-fill: #e74c3c;"/>
+                        <Label fx:id="repairDevicesLabel" text="15" style="-fx-font-size: 24px; -fx-text-fill: #e74c3c;"/>
                         <Label text="На ремонте"/>
                     </VBox>
                 </HBox>

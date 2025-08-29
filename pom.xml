@@ -90,7 +90,7 @@
                         <id>default-cli</id>
                         <configuration>
                             <mainClass>
-                                com.kipia.management.kipia_management/com.kipia.management.kipia_management.Main
+                                com.kipia.management.kipia_management.Main
                             </mainClass>
                             <launcher>app</launcher>
                             <jlinkZipName>app</jlinkZipName>
