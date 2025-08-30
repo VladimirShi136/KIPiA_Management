@@ -4,11 +4,19 @@ import com.kipia.management.kipia_management.controllers.MainController;
 import com.kipia.management.kipia_management.services.DatabaseService;
 import com.kipia.management.kipia_management.services.DeviceDAO;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.TextArea;
 import javafx.scene.image.Image;
+import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
+
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Главный класс приложения "Система учёта приборов КИПиА"
@@ -21,6 +29,8 @@ public class Main extends Application {
     // Сервисы приложения (могут быть использованы в контроллерах)
     private DatabaseService databaseService;
     private DeviceDAO deviceDAO;
+
+    private static final Logger logger = Logger.getLogger(Main.class.getName());
 
     @Override
     public void start(Stage primaryStage) {
@@ -66,8 +76,8 @@ public class Main extends Application {
             primaryStage.show();
 
         } catch (Exception e) {
-            e.printStackTrace();
-            showErrorDialog("Ошибка запуска приложения", e.getMessage());
+            // Убрал e.printStackTrace() - теперь логируется в диалоге
+            showErrorDialog("Ошибка запуска приложения", e.getMessage(), e);
         }
     }
 
@@ -96,20 +106,98 @@ public class Main extends Application {
             System.out.println("Сервисы базы данных успешно инициализированы");
 
         } catch (Exception e) {
-            System.err.println("Ошибка инициализации сервисов базы данных: " + e.getMessage());
-            e.printStackTrace();
-            showErrorDialog("Ошибка базы данных", "Не удалось подключиться к базе данных");
+            // Убрал System.err.println и e.printStackTrace() - теперь логируется в диалоге
+            showErrorDialog("Ошибка базы данных", "Не удалось подключиться к базе данных", e);
         }
     }
 
     /**
-     * Отображение диалога ошибки (временная реализация)
+     * Отображение диалога ошибки
      * @param title заголовок ошибки
      * @param message сообщение об ошибке
+     * @param exception исключение (для stack trace и логирования)
      */
-    private void showErrorDialog(String title, String message) {
-        System.err.println(title + ": " + message);
-        // TODO: заменить на JavaFX Alert dialog
+    private static void showErrorDialog(String title, String message, Throwable exception) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle(title);
+        alert.setHeaderText("Произошла ошибка!");
+        alert.setContentText(message);
+
+        // Кнопки: OK, Retry, Cancel
+        ButtonType okButton = new ButtonType("OK");
+        ButtonType retryButton = new ButtonType("Повторить");
+        ButtonType cancelButton = new ButtonType("Отмена");
+        alert.getButtonTypes().setAll(okButton, retryButton, cancelButton);
+
+        // Expandable контент для подробностей (stack trace)
+        if (exception != null) {
+            TextArea textArea = new TextArea(exception.toString());
+            textArea.setEditable(false);
+            textArea.setWrapText(true);
+            textArea.setMaxWidth(Double.MAX_VALUE);
+            textArea.setMaxHeight(Double.MAX_VALUE);
+
+            GridPane gridPane = new GridPane();
+            gridPane.setMaxWidth(Double.MAX_VALUE);
+            gridPane.add(textArea, 0, 0);
+
+            alert.getDialogPane().setExpandableContent(gridPane);
+            alert.setResizable(true);
+        }
+
+        // Логирование ошибки
+        if (exception != null) {
+            logger.log(Level.SEVERE, "Ошибка: " + message, exception);
+        } else {
+            logger.log(Level.SEVERE, "Ошибка: " + message);
+        }
+
+        // Показ диалога и обработка кнопок
+        alert.showAndWait().ifPresent(buttonType -> {
+            if (buttonType == retryButton) {
+                handleRetry(title); // Передаем контекст для разных действий
+            } else if (buttonType == cancelButton) {
+                handleCancel(title);
+            }
+            // OK просто закрывает диалог
+        });
+    }
+
+    // Обработка retry в зависимости от контекста
+    private static void handleRetry(String context) {
+        if ("Ошибка базы данных".equals(context)) {
+            // Повтор инициализации сервисов (с защитой от бесконечного цикла)
+            Platform.runLater(() -> {
+                Main app = new Main(); // Создаем новый экземпляр для повторной инициализации
+                try {
+                    app.initializeServices(); // Повторяем только инициализацию
+                } catch (Exception e) {
+                    showErrorDialog("Ошибка базы данных", "Повторная инициализация не удалась", e);
+                }
+            });
+        } else if ("Ошибка запуска приложения".equals(context)) {
+            // Попытка перезапуска приложения
+            Platform.runLater(() -> {
+                try {
+                    new Main().start(new Stage()); // Перезапускаем приложение
+                } catch (Exception e) {
+                    showErrorDialog("Ошибка перезапуска", "Не удалось перезапустить приложение", e);
+                }
+            });
+        } else {
+            System.out.println("Повторение действия...");
+        }
+    }
+
+    // Обработка cancel
+    private static void handleCancel(String context) {
+        if ("Ошибка запуска приложения".equals(context)) {
+            // Закрываем приложение
+            Platform.exit();
+            System.exit(0);
+        } else {
+            System.out.println("Отмена действия...");
+        }
     }
 
     public static void main(String[] args) {
