@@ -3,6 +3,7 @@ package com.kipia.management.kipia_management.services;
 import com.kipia.management.kipia_management.models.Device;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -12,7 +13,6 @@ import java.util.List;
  * @author vladimir_shi
  * @since 29.08.2025
  */
-
 public class DeviceDAO {
     // Сервис для работы с базой данных
     private final DatabaseService databaseService;
@@ -26,24 +26,47 @@ public class DeviceDAO {
     }
 
     /**
+     * Вспомогательный метод: сериализация списка фото в строку.
+     */
+    private String photosToString(List<String> photos) {
+        if (photos == null || photos.isEmpty()) return "";
+        return String.join(";", photos);
+    }
+
+    /**
+     * Вспомогательный метод: десериализация строки в список фото.
+     */
+    private List<String> stringToPhotos(String photosStr) {
+        if (photosStr == null || photosStr.isEmpty()) return new ArrayList<>();
+        return new ArrayList<>(Arrays.asList(photosStr.split(";")));
+    }
+
+    /**
      * Добавление нового прибора в базу данных
      * @param device объект прибора для добавления
      * @return true - если добавление прошло успешно, false - в случае ошибки
      */
     public boolean addDevice(Device device) {
-        // SQL-запрос для вставки данных прибора
-        String sql = "INSERT INTO devices(name, type, inventory_number, location, status) VALUES(?, ?, ?, ?, ?)";
-
-        try (PreparedStatement pstmt = databaseService.getConnection().prepareStatement(sql)) {
-            // Установка параметров запроса из объекта device
-            pstmt.setString(1, device.getName());
-            pstmt.setString(2, device.getType());
-            pstmt.setString(3, device.getInventoryNumber());
-            pstmt.setString(4, device.getLocation());
-            pstmt.setString(5, device.getStatus());
-
+        // Обновлено: добавлен плейсхолдер для photos
+        String sql = "INSERT INTO devices (type, name, manufacturer, inventory_number, year, location, status, additional_info, photo_path, photos) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
+            // Устанавливаем параметры (исправлен порядок для соответствия полям таблицы)
+            stmt.setString(1, device.getType());
+            stmt.setString(2, device.getName());
+            stmt.setString(3, device.getManufacturer());
+            stmt.setString(4, device.getInventoryNumber());
+            if (device.getYear() != null) {
+                stmt.setInt(5, device.getYear()); // Год
+            } else {
+                stmt.setNull(5, Types.INTEGER);
+            }
+            stmt.setString(6, device.getLocation());
+            stmt.setString(7, device.getStatus());
+            stmt.setString(8, device.getAdditionalInfo());  // Новое дополнительная
+            stmt.setString(9, device.getPhotoPath());  // Старое поле для первого фото
+            stmt.setString(10, photosToString(device.getPhotos()));  // Новое поле для списка фото
             // Выполнение запроса
-            pstmt.executeUpdate();
+            stmt.executeUpdate();
             return true;
         } catch (SQLException e) {
             System.out.println("Ошибка добавления прибора: " + e.getMessage());
@@ -57,24 +80,25 @@ public class DeviceDAO {
      */
     public List<Device> getAllDevices() {
         List<Device> devices = new ArrayList<>();
-        // SQL-запрос для получения всех записей из таблицы devices
+        // SQL с новым полем photos
         String sql = "SELECT * FROM devices ORDER BY name";
-
         try (Statement stmt = databaseService.getConnection().createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
-
-            // Обработка результатов запроса
             while (rs.next()) {
                 Device device = new Device();
-                // Заполнение объекта Device данными из ResultSet
                 device.setId(rs.getInt("id"));
-                device.setName(rs.getString("name"));
                 device.setType(rs.getString("type"));
+                device.setName(rs.getString("name"));
+                device.setManufacturer(rs.getString("manufacturer"));
                 device.setInventoryNumber(rs.getString("inventory_number"));
+                // Десериализация года (если null, оставляем null)
+                Object yearObj = rs.getObject("year");
+                device.setYear(yearObj != null ? (Integer) yearObj : null);
                 device.setLocation(rs.getString("location"));
                 device.setStatus(rs.getString("status"));
-
-                // Добавление прибора в список
+                device.setAdditionalInfo(rs.getString("additional_info"));
+                device.setPhotoPath(rs.getString("photo_path"));
+                device.setPhotos(stringToPhotos(rs.getString("photos")));  // Новое
                 devices.add(device);
             }
         } catch (SQLException e) {
@@ -89,20 +113,26 @@ public class DeviceDAO {
      * @return true - если обновление прошло успешно, false - в случае ошибки
      */
     public boolean updateDevice(Device device) {
-        // SQL-запрос для обновления данных прибора
-        String sql = "UPDATE devices SET name = ?, type = ?, inventory_number = ?, location = ?, status = ? WHERE id = ?";
-
-        try (PreparedStatement pstmt = databaseService.getConnection().prepareStatement(sql)) {
-            // Установка параметров запроса из объекта device
-            pstmt.setString(1, device.getName());
-            pstmt.setString(2, device.getType());
-            pstmt.setString(3, device.getInventoryNumber());
-            pstmt.setString(4, device.getLocation());
-            pstmt.setString(5, device.getStatus());
-            pstmt.setInt(6, device.getId());
-
-            // Выполнение запроса
-            pstmt.executeUpdate();
+        // Обновлено: добавлен photos = ? в SET
+        String sql = "UPDATE devices SET type = ?, name = ?, manufacturer = ?, inventory_number = ?, year = ?, location = ?, status = ?, additional_info = ?, photo_path = ?, photos = ? WHERE id = ?";
+        try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
+            // Устанавливаем параметры (порядок должен соответствовать плейсхолдерам)
+            stmt.setString(1, device.getType());
+            stmt.setString(2, device.getName());
+            stmt.setString(3, device.getManufacturer());
+            stmt.setString(4, device.getInventoryNumber());
+            if (device.getYear() != null) {
+                stmt.setInt(5, device.getYear()); // Год
+            } else {
+                stmt.setNull(5, Types.INTEGER);
+            }
+            stmt.setString(6, device.getLocation());
+            stmt.setString(7, device.getStatus());
+            stmt.setString(8, device.getAdditionalInfo());
+            stmt.setString(9, device.getPhotoPath());
+            stmt.setString(10, photosToString(device.getPhotos()));  // Список фото
+            stmt.setInt(11, device.getId());  // ID для WHERE
+            stmt.executeUpdate();
             return true;
         } catch (SQLException e) {
             System.out.println("Ошибка обновления прибора: " + e.getMessage());
@@ -116,15 +146,10 @@ public class DeviceDAO {
      * @return true - если удаление прошло успешно, false - в случае ошибки
      */
     public boolean deleteDevice(int id) {
-        // SQL-запрос для удаления прибора
         String sql = "DELETE FROM devices WHERE id = ?";
-
-        try (PreparedStatement pstmt = databaseService.getConnection().prepareStatement(sql)) {
-            // Установка параметра ID для удаления
-            pstmt.setInt(1, id);
-
-            // Выполнение запроса
-            pstmt.executeUpdate();
+        try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
+            stmt.setInt(1, id);
+            stmt.executeUpdate();
             return true;
         } catch (SQLException e) {
             System.out.println("Ошибка удаления прибора: " + e.getMessage());
@@ -138,25 +163,24 @@ public class DeviceDAO {
      * @return объект Device если найден, null - если не найден или произошла ошибка
      */
     public Device findDeviceByInventoryNumber(String inventoryNumber) {
-        // SQL-запрос для поиска прибора по инвентарному номеру
         String sql = "SELECT * FROM devices WHERE inventory_number = ?";
-
-        try (PreparedStatement pstmt = databaseService.getConnection().prepareStatement(sql)) {
-            // Установка параметра инвентарного номера для поиска
-            pstmt.setString(1, inventoryNumber);
-
-            // Выполнение запроса и получение результатов
-            ResultSet rs = pstmt.executeQuery();
-
-            // Если прибор найден, создаем и возвращаем объект Device
+        try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
+            stmt.setString(1, inventoryNumber);
+            ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
                 Device device = new Device();
                 device.setId(rs.getInt("id"));
-                device.setName(rs.getString("name"));
                 device.setType(rs.getString("type"));
+                device.setName(rs.getString("name"));
+                device.setManufacturer(rs.getString("manufacturer"));
                 device.setInventoryNumber(rs.getString("inventory_number"));
+                Object yearObj = rs.getObject("year");
+                device.setYear(yearObj != null ? (Integer) yearObj : null);
                 device.setLocation(rs.getString("location"));
                 device.setStatus(rs.getString("status"));
+                device.setAdditionalInfo(rs.getString("additional_info"));
+                device.setPhotoPath(rs.getString("photo_path"));
+                device.setPhotos(stringToPhotos(rs.getString("photos")));  // Новое
                 return device;
             }
         } catch (SQLException e) {

@@ -1,5 +1,8 @@
 package com.kipia.management.kipia_management.models;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Класс Device представляет модель данных прибора/оборудования в системе.
  * Содержит информацию о приборе и методы для работы с этими данными.
@@ -13,14 +16,20 @@ public class Device {
     // Уникальный идентификатор прибора в базе данных
     private int id;
 
-    // Наименование прибора
-    private String name;
-
     // Тип или категория прибора (например: измерительный, контрольный и т.д.)
     private String type;
 
+    // Наименование прибора
+    private String name;
+
+    // Производитель (новое)
+    private String manufacturer;
+
     // Инвентарный номер прибора (уникальный идентификатор в организации)
     private String inventoryNumber;
+
+    // Год выпуска (новое)
+    private Integer year;
 
     // Местонахождение или расположение прибора
     private String location;
@@ -28,27 +37,51 @@ public class Device {
     // Статус прибора (например: исправен, в ремонте, списан и т.д.)
     private String status;
 
+    // Доп информация (новое)
+    private String additionalInfo;
+
+    // Пусть к фото (новое)
+    private String photoPath;
+
+    private List<String> photos;  // Новая коллекция для путей фото
+
     /**
      * Конструктор по умолчанию.
      * Создает пустой объект Device без инициализации полей.
      */
-    public Device() {}
+    public Device() {
+        photos = new ArrayList<>();
+    }
 
     /**
      * Параметризованный конструктор.
      * Создает объект Device с указанными параметрами (кроме id).
-     * @param name наименование прибора
      * @param type тип прибора
+     * @param name наименование прибора
+     * @param manufacturer изготовитель прибора
      * @param inventoryNumber инвентарный номер
+     * @param year год выпуска
      * @param location местонахождение
      * @param status статус прибора
+     * @param additionalInfo дополнительная информация
+     * @param photoPath путь к фото-изображение прибора
      */
-    public Device(String name, String type, String inventoryNumber, String location, String status) {
-        this.name = name;
+    public Device(int id, String type, String name, String manufacturer, String inventoryNumber, Integer year, String location, String status, String additionalInfo, String photoPath) {
+        this.id = id;
         this.type = type;
+        this.name = name;
+        this.manufacturer = manufacturer;
         this.inventoryNumber = inventoryNumber;
+        this.year = year;
         this.location = location;
         this.status = status;
+        this.additionalInfo = additionalInfo;
+        this.photoPath = photoPath;
+
+        photos = new ArrayList<>();
+        if (photoPath != null && !photoPath.isEmpty()) {
+            photos.add(photoPath);  // Перенесём old photoPath первое фото
+        }
     }
 
     // Геттеры и сеттеры для доступа к приватным полям класса
@@ -66,18 +99,6 @@ public class Device {
     public void setId(int id) { this.id = id; }
 
     /**
-     * Получить наименование прибора.
-     * @return наименование прибора
-     */
-    public String getName() { return name; }
-
-    /**
-     * Установить наименование прибора.
-     * @param name новое наименование прибора
-     */
-    public void setName(String name) { this.name = name; }
-
-    /**
      * Получить тип прибора.
      * @return тип прибора
      */
@@ -90,6 +111,34 @@ public class Device {
     public void setType(String type) { this.type = type; }
 
     /**
+     * Получить наименование прибора.
+     * @return наименование прибора
+     */
+    public String getName() { return name; }
+
+    /**
+     * Установить наименование прибора.
+     * @param name новое наименование прибора
+     */
+    public void setName(String name) { this.name = name; }
+
+    /**
+     * Получить изготовителя
+     * @return изготовитель
+     */
+    public String getManufacturer() {
+        return manufacturer;
+    }
+
+    /**
+     * Установить изготовителя
+     * @param manufacturer новый изготовитель
+     */
+    public void setManufacturer(String manufacturer) {
+        this.manufacturer = manufacturer;
+    }
+
+    /**
      * Получить инвентарный номер прибора.
      * @return инвентарный номер
      */
@@ -100,6 +149,22 @@ public class Device {
      * @param inventoryNumber новый инвентарный номер
      */
     public void setInventoryNumber(String inventoryNumber) { this.inventoryNumber = inventoryNumber; }
+
+    /**
+     * Получить год выпуска
+     * @return год выпуска
+     */
+    public Integer getYear() {
+        return year;
+    }
+
+    /**
+     * Установить год выпуска
+     * @param year новый год выпуска
+     */
+    public void setYear(Integer year) {
+        this.year = year;
+    }
 
     /**
      * Получить местонахождение прибора.
@@ -126,12 +191,65 @@ public class Device {
     public void setStatus(String status) { this.status = status; }
 
     /**
+     * Получить доп инфо
+     * @return доп инфо
+     */
+    public String getAdditionalInfo() {
+        return additionalInfo;
+    }
+
+    /**
+     * Установить доп инфо
+     * @param additionalInfo новое доп инфо
+     */
+    public void setAdditionalInfo(String additionalInfo) {
+        this.additionalInfo = additionalInfo;
+    }
+
+    /**
+     * Получить путь к фото
+     * @return путь к фото
+     */
+    public String getPhotoPath() {
+        return photoPath;
+    }
+
+    /**
+     * Установить путь к фото
+     * @param photoPath новый путь к фото
+     */
+    public void setPhotoPath(String photoPath) {
+        this.photoPath = photoPath;
+    }
+
+    // Геттеры/сеттеры для списка фотографий:
+    public List<String> getPhotos() { return photos; }
+    public void setPhotos(List<String> photos) { this.photos = photos; }
+    public void addPhoto(String photoPath) {
+        if (photoPath != null && !photoPath.isEmpty()) {
+            photos.add(photoPath);
+        }
+    }
+
+    /**
      * Переопределенный метод toString() для удобного представления объекта в виде строки.
      * Используется для отладки и вывода информации о приборе.
-     * @return строковое представление объекта Device в формате: "Наименование (Инвентарный номер) - Местонахождение"
+     * @return строковое представление объекта Device
      */
     @Override
     public String toString() {
-        return name + " (" + inventoryNumber + ") - " + location;
+        return "Device{" +
+                "id=" + id +
+                ", type='" + type + '\'' +
+                ", name='" + name + '\'' +
+                ", manufacturer='" + manufacturer + '\'' +
+                ", inventoryNumber='" + inventoryNumber + '\'' +
+                ", year=" + year +
+                ", location='" + location + '\'' +
+                ", status='" + status + '\'' +
+                ", additionalInfo='" + additionalInfo + '\'' +
+                ", photoPath='" + photoPath + '\'' +
+                ", photos='" + photos +
+                '}';
     }
 }

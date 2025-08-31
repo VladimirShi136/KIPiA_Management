@@ -41,9 +41,6 @@ public class DatabaseService {
     /**
      * Метод для создания таблиц devices и maintenance в базе данных.
      * Используется SQL-запрос с конструкцией CREATE TABLE IF NOT EXISTS.
-     * Обратите внимание: в SQLite нельзя выполнять несколько CREATE TABLE в одном запросе,
-     * поэтому такой подход может привести к ошибке.
-     * Рекомендуется разделять создание таблиц на отдельные запросы.
      */
     public void createTables() {
         StringBuilder sql1 = new StringBuilder();
@@ -60,14 +57,15 @@ public class DatabaseService {
         // created_at - дата и время создания записи, по умолчанию текущее время
         sql1.append("CREATE TABLE IF NOT EXISTS devices (")
                 .append("id INTEGER PRIMARY KEY AUTOINCREMENT,")
-                .append("name TEXT NOT NULL,")
                 .append("type TEXT NOT NULL,")
+                .append("name TEXT NOT NULL,")
+                .append("manufacturer TEXT NOT NULL,")
                 .append("inventory_number TEXT UNIQUE NOT NULL,")
+                .append("year INTEGER,")
                 .append("location TEXT NOT NULL,")
                 .append("status TEXT DEFAULT 'В работе',")
-                .append("last_maintenance DATE,")
-                .append("next_maintenance DATE,")
-                .append("created_at DATETIME DEFAULT CURRENT_TIMESTAMP")
+                .append("additional_info TEXT,")
+                .append("photo_path TEXT")
                 .append(");");
 
         StringBuilder sql2 = new StringBuilder();
@@ -141,9 +139,9 @@ public class DatabaseService {
             return;
         }
 
-        Device device1 = new Device("Манометр МП-100", "Манометр", "INV-001", "Цех №1", "В работе");
-        Device device2 = new Device("Термопара ТХК-100", "Термопара", "INV-002", "Цех №2", "В работе");
-        Device device3 = new Device("Регулятор РПД-10", "Регулятор", "INV-003", "Склад", "На ремонте");
+        Device device1 = new Device();
+        Device device2 = new Device();
+        Device device3 = new Device();
 
         DeviceDAO deviceDAO = new DeviceDAO(this);
         deviceDAO.addDevice(device1);

@@ -1,27 +1,26 @@
 src/
 └── main/
     ├── java/
-    │   ├── co/kipia/management/kipia_management
-    │   │    ├── Main.java         # Главный класс приложения
-    │   │    ├── controllers/      # Контроллеры для JavaFX
-    │   │    │   ├── AddDeviceController.java
-    │   │    │   └── MainController.java
-    │   │    ├── models/           # Модели данных (Device и т.д.)
-    │   │    │   └── Device.java
-    │   │    └── services/         # Логика работы с БД
-    │   │        ├── DatabaseService.java
-    │   │        └── DeviceDAO.java
+    │   ├── com/kipia/management/kipia_management
+    │   │   ├── Main.java         # Главный класс приложения
+    │   │   ├── controllers/      # Контроллеры для JavaFX
+    │   │   │   ├── AddDeviceController.java
+    │   │   │   └── MainController.java
+    │   │   ├── models/           # Модели данных (Device и т.д.)
+    │   │   │   └── Device.java
+    │   │   └── services/         # Логика работы с БД
+    │   │       ├── DatabaseService.java
+    │   │       └── DeviceDAO.java
     │   │
     │   └── module-info.java
     │
     └── resources/
-        └── com/kipia/management/kipia_management
-            │
-            ├── views/  # FXML файлы интерфейса
-            │   ├── add-device-form.fxml
-            │   └── main.fxml
-            │
-            └── images/
-                └── icon.png (добавьте позже)
+        │
+        ├── views/  # FXML файлы интерфейса
+        │   ├── add-device-form.fxml
+        │   └── main.fxml
+        │
+        └── images/
+            └── icon.png (добавьте позже)
 
 

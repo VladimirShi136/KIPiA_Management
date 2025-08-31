@@ -5,11 +5,14 @@ import com.kipia.management.kipia_management.services.DeviceDAO;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
+import javafx.stage.FileChooser;
+import javafx.stage.Stage;
 
-import java.util.Objects;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- *
  * Контроллер для формы добавления нового прибора.
  *
  * @author vladimir_shi
@@ -17,28 +20,34 @@ import java.util.Objects;
  */
 
 public class AddDeviceController {
-
     @FXML
     private TextField nameField;
-
     @FXML
     private TextField typeField;
-
+    @FXML
+    private TextField manufacturerField;  // Из предыдущих обновлений
     @FXML
     private TextField inventoryNumberField;
-
+    @FXML
+    private TextField yearField;
     @FXML
     private TextField locationField;
-
     @FXML
     private ComboBox<String> statusComboBox;
-
+    @FXML
+    private TextArea additionalInfoField;
+    @FXML
+    private TextField photoPathField;  // Текст для одного фото (опционально)
+    @FXML
+    private ListView<String> selectedPhotosListView;  // Новое: список выбранных фото
+    @FXML
+    private Button photoChooseBtn;  // Кнопка выбора файла
     @FXML
     private Label messageLabel;
 
     private DeviceDAO deviceDAO;
+    private List<String> selectedPhotos = new ArrayList<>();  // Список путей выбранных фото
 
-    // Метод для внедрения DAO из MainController
     public void setDeviceDAO(DeviceDAO deviceDAO) {
         this.deviceDAO = deviceDAO;
     }
@@ -48,10 +57,47 @@ public class AddDeviceController {
         statusComboBox.setItems(FXCollections.observableArrayList("В работе", "На ремонте", "Списан"));
         statusComboBox.getSelectionModel().selectFirst();
         messageLabel.setText("");
+
+        // Настройка списка фото (без редактирования)
+        selectedPhotosListView.setItems(FXCollections.observableArrayList(selectedPhotos));
+        selectedPhotosListView.setCellFactory(param -> new ListCell<String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText("Фото: " + new File(item).getName());  // Краткое название файла
+                }
+            }
+        });
+
+        // ИСПОЛЬЗОВАНИЕ photoChooseBtn: Установка обработчика на кнопку для выбора фото
+        photoChooseBtn.setOnAction(event -> onChooseFiles());  // Убираем @FXML из метода, используем прямой вызов
+    }
+
+    // Новый метод: Обработчик кнопки выбора фото
+    @FXML
+    private void onChooseFiles() {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Выбрать фото для прибора");
+        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Изображения", "*.png", "*.jpg", "*.gif"));
+        Stage stage = (Stage) messageLabel.getScene().getWindow();
+        chooser.setSelectedExtensionFilter(chooser.getExtensionFilters().get(0));  // Значение по умолчанию
+
+        // Включить выбор нескольких файлов
+        List<File> files = chooser.showOpenMultipleDialog(stage);
+        if (files != null && !files.isEmpty()) {
+            for (File file : files) {
+                selectedPhotos.add(file.getAbsolutePath());
+            }
+            selectedPhotosListView.setItems(FXCollections.observableArrayList(selectedPhotos));  // Обновить список
+        }
     }
 
     @FXML
     private void onAddDevice() {
+        // Получаем данные из полей
         String name = nameField.getText().trim();
         String type = typeField.getText().trim();
         String inventoryNumber = inventoryNumberField.getText().trim();
@@ -63,15 +109,48 @@ public class AddDeviceController {
             return;
         }
 
-        // Проверяем, что такого инвентарного номера еще нет
+        // Проверка уникальности инвентарного номера
         if (deviceDAO.findDeviceByInventoryNumber(inventoryNumber) != null) {
             messageLabel.setText("Прибор с таким инвентарным номером уже существует");
             return;
         }
 
-        Device device = new Device(name, type, inventoryNumber, location, status);
-        boolean success = deviceDAO.addDevice(device);
+        // Создаём новый прибор
+        Device device = new Device();
+        device.setName(name);
+        device.setType(type);
+        device.setInventoryNumber(inventoryNumber);
+        device.setLocation(location);
+        device.setStatus(status);
 
+        // Заполняем дополнительные поля
+        if (!manufacturerField.getText().trim().isEmpty()) {
+            device.setManufacturer(manufacturerField.getText().trim());
+        }
+
+        if (!yearField.getText().trim().isEmpty()) {
+            try {
+                device.setYear(Integer.parseInt(yearField.getText()));
+            } catch (NumberFormatException e) {
+                messageLabel.setText("Год выпуска должен быть числом");
+                return;
+            }
+        }
+
+        device.setAdditionalInfo(additionalInfoField.getText());
+
+        // Добавляем фото из списка (новая функция)
+        for (String photoPath : selectedPhotos) {
+            device.addPhoto(photoPath);
+        }
+
+        // Сохраняем первое фото в старое поле для совместимости (опционально)
+        if (!selectedPhotos.isEmpty()) {
+            device.setPhotoPath(selectedPhotos.get(0));
+        }
+
+        // Сохраняем в DAO
+        boolean success = deviceDAO.addDevice(device);
         if (success) {
             messageLabel.setStyle("-fx-text-fill: green;");
             messageLabel.setText("Прибор успешно добавлен");
@@ -82,11 +161,10 @@ public class AddDeviceController {
         }
     }
 
-    @FXML
-    private void onCancel() {
-        // Очистка формы или закрытие формы (зависит от реализации)
-        clearForm();
-        messageLabel.setText("");
+    // Метод очистки списка фото (добавь в clearForm)
+    private void clearPhotos() {
+        selectedPhotos.clear();
+        selectedPhotosListView.setItems(FXCollections.observableArrayList());
     }
 
     private void clearForm() {
@@ -94,7 +172,17 @@ public class AddDeviceController {
         typeField.clear();
         inventoryNumberField.clear();
         locationField.clear();
+        yearField.clear();
+        additionalInfoField.clear();
         statusComboBox.getSelectionModel().selectFirst();
+        photoPathField.clear();
+        clearPhotos();  // Очищаем список фото
+    }
+
+    @FXML
+    private void onCancel() {
+        clearForm();
+        messageLabel.setText("");
+        // Опционально: Закрыть окно (если диалог) ((Stage) messageLabel.getScene().getWindow()).close();
     }
 }
-

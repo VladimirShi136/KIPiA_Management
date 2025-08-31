@@ -1,17 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-
-<!--
- @author vladimir_shi
- @since 23.08.2025
- -->
 
 <BorderPane xmlns="http://javafx.com/javafx/17.0.2-ea"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.kipia.management.kipia_management.controllers.MainController">
-
     <!-- Верхняя панель - заголовок -->
     <top>
         <HBox alignment="CENTER" style="-fx-background-color: #2c3e50; -fx-padding: 10;">
@@ -19,72 +12,64 @@
                    style="-fx-text-fill: white; -fx-font-size: 20px; -fx-font-weight: bold;"/>
         </HBox>
     </top>
-
     <!-- Левая панель - навигация -->
     <left>
         <VBox spacing="10" style="-fx-background-color: #34495e; -fx-padding: 10;">
             <Button text="Приборы"
-                    fx:id="devicesBtn"
                     style="-fx-background-color: #3498db; -fx-text-fill: white; -fx-font-weight: bold;"
                     onAction="#showDevices"
                     maxWidth="Infinity"/>
-
             <Button text="Добавить прибор"
-                    fx:id="addDeviceBtn"
                     style="-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-font-weight: bold;"
                     onAction="#showAddDeviceForm"
                     maxWidth="Infinity"/>
-
             <Button text="Отчёты"
-                    fx:id="reportsBtn"
                     style="-fx-background-color: #e67e22; -fx-text-fill: white; -fx-font-weight: bold;"
                     onAction="#showReports"
                     maxWidth="Infinity"/>
-
             <Region VBox.vgrow="ALWAYS"/>
-
             <Button text="Выход"
                     style="-fx-background-color: #e74c3c; -fx-text-fill: white;"
                     onAction="#exitApp"
                     maxWidth="Infinity"/>
         </VBox>
     </left>
-
     <!-- Центральная область - содержимое -->
     <center>
-        <VBox spacing="10" style="-fx-padding: 10;" fx:id="contentArea">
-            <Label text="Добро пожаловать в систему учёта приборов КИПиА"
-                   style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
-
-            <Label text="Выберите действие в левом меню для начала работы"/>
-
-            <!-- Статистика -->
-            <!-- Статистика -->
-            <VBox spacing="5" style="-fx-padding: 20; -fx-background-color: #f8f9fa; -fx-border-color: #ddd; -fx-border-radius: 5;">
+        <VBox spacing="15" style="-fx-padding: 10;" fx:id="contentArea">
+            <!-- Панель поиска и удаления (добавлена для просмотра устройств) -->
+            <HBox spacing="10" fx:id="searchAndDeletePane" visible="false" managed="false">
+                <Label text="Поиск:" style="-fx-font-weight: bold;"/>
+                <TextField fx:id="searchField" prefWidth="300.0" promptText="Введите название, тип или место установки"
+                           style="-fx-background-color: #ecf0f1; -fx-border-color: #bdc3c7;"/>
+                <Button fx:id="deleteButton" text="Удалить выбранный прибор"
+                        style="-fx-background-color: #e74c3c; -fx-text-fill: white; -fx-font-weight: bold;"
+                        onAction="#deleteSelectedDevice"/>
+            </HBox>
+            <!-- Статистика (дообработана для скрытия по дефолту и динамического обновления) -->
+            <VBox spacing="5" fx:id="statisticsPane" visible="false" managed="false" style="-fx-padding: 20; -fx-background-color: #f8f9fa; -fx-border-color: #ddd; -fx-border-radius: 5;">
                 <Label text="Статистика:" style="-fx-font-weight: bold;"/>
                 <HBox spacing="20">
                     <VBox alignment="CENTER">
-                        <Label fx:id="totalDevicesLabel" text="150" style="-fx-font-size: 24px; -fx-text-fill: #3498db;"/>
+                        <Label fx:id="totalDevicesLabel" text="--" style="-fx-font-size: 24px; -fx-text-fill: #3498db;"/>
                         <Label text="Всего приборов"/>
                     </VBox>
                     <VBox alignment="CENTER">
-                        <Label fx:id="workingDevicesLabel" text="135" style="-fx-font-size: 24px; -fx-text-fill: #2ecc71;"/>
+                        <Label fx:id="workingDevicesLabel" text="--" style="-fx-font-size: 24px; -fx-text-fill: #2ecc71;"/>
                         <Label text="В работе"/>
                     </VBox>
                     <VBox alignment="CENTER">
-                        <Label fx:id="repairDevicesLabel" text="15" style="-fx-font-size: 24px; -fx-text-fill: #e74c3c;"/>
+                        <Label fx:id="repairDevicesLabel" text="--" style="-fx-font-size: 24px; -fx-text-fill: #e74c3c;"/>
                         <Label text="На ремонте"/>
                     </VBox>
                 </HBox>
             </VBox>
         </VBox>
     </center>
-
     <!-- Нижняя панель - статус -->
     <bottom>
         <HBox alignment="CENTER_LEFT" style="-fx-background-color: #ecf0f1; -fx-padding: 5;">
             <Label text="Готов к работе" fx:id="statusLabel"/>
         </HBox>
     </bottom>
-
 </BorderPane>
