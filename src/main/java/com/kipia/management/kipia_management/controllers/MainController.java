@@ -2,6 +2,7 @@ package com.kipia.management.kipia_management.controllers;
 
 import com.kipia.management.kipia_management.models.Device;
 import com.kipia.management.kipia_management.services.DeviceDAO;
+import javafx.animation.FadeTransition;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.transformation.FilteredList;
@@ -20,6 +21,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 import java.io.File;
 import java.io.IOException;
@@ -27,6 +29,10 @@ import java.util.List;
 
 public class MainController {
 
+    public Button devicesBtn;
+    public Button addDeviceBtn;
+    public Button reportsBtn;
+    public Button exitBtn;
     @FXML
     private Label statusLabel;
 
@@ -63,6 +69,42 @@ public class MainController {
         this.deviceDAO = deviceDAO;
     }
 
+    private void applyHoverAndAnimation(Button button, String defaultColor, String hoverColor, String buttonType) {
+        // Базовый стиль (адаптируйте под ваш дизайн)
+        button.setStyle(
+                "-fx-background-color: " + defaultColor + "; " +
+                        "-fx-text-fill: white; " +
+                        "-fx-font-size: 14px; " +  // Standard шрифт для навиг./вори кнопок
+                        "-fx-background-radius: 5; " +
+                        "-fx-border-radius: 5; " +
+                        "-fx-padding: 8 12 8 12; " +  // Padding для комфорта
+                        "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 3, 0, 0, 1); " +
+                        "-fx-cursor: hand;"
+        );
+
+        // Hover-эффекты через event handlers (просто и без :hover)
+        button.setOnMouseEntered(e -> {
+            // Смена цвета
+            button.setStyle(button.getStyle().replace(defaultColor, hoverColor));
+
+            // Fade анимация (0.8 → 1.0)
+            FadeTransition fadeIn = new FadeTransition(Duration.millis(200), button);
+            fadeIn.setFromValue(0.8);
+            fadeIn.setToValue(1.0);
+            fadeIn.play();
+        });
+        button.setOnMouseExited(e -> {
+            // Возврат цвета
+            button.setStyle(button.getStyle().replace(hoverColor, defaultColor));
+
+            // Fade анимация (1.0 → 0.8)
+            FadeTransition fadeOut = new FadeTransition(Duration.millis(200), button);
+            fadeOut.setFromValue(1.0);
+            fadeOut.setToValue(0.8);
+            fadeOut.play();
+        });
+    }
+
     @FXML
     private void initialize() {
         // Устанавливаем начальный текст в статусной строке
@@ -76,6 +118,12 @@ public class MainController {
             statisticsPane.setVisible(false);
             statisticsPane.setManaged(false);
         }
+
+        // ДОБАВЛЕНО: Примени hover для навиг. кнопок (предполагая fx:id: devicesBtn, addDeviceBtn, reportsBtn, exitBtn)
+        if (devicesBtn != null) applyHoverAndAnimation(devicesBtn, "#3498db", "#5dade2", "navigation");
+        if (addDeviceBtn != null) applyHoverAndAnimation(addDeviceBtn, "#2ecc71", "#58d68d", "navigation");
+        if (reportsBtn != null) applyHoverAndAnimation(reportsBtn, "#e67e22", "#f5a13d", "navigation");
+        if (exitBtn != null) applyHoverAndAnimation(exitBtn, "#e74c3c", "#ec7063", "navigation");
     }
 
     @FXML
@@ -182,12 +230,27 @@ public class MainController {
 
         // 9. Колонка "Фото" — с кнопкой "Просмотр"
         TableColumn<Device, Void> photoCol = new TableColumn<>("Фото");
-        photoCol.setPrefWidth(100);
+        photoCol.setPrefWidth(145);
         photoCol.setCellFactory(param -> new TableCell<>() {
             private final Button addBtn = new Button("Добавить");
             private final Button viewBtn = new Button("Просмотр");
 
             {
+                // Стиль для "Добавить" (зеленый, позитивный)
+                addBtn.setStyle(
+                        "-fx-background-color: #4CAF50; " +
+                                "-fx-text-fill: white; " +
+                                "-fx-font-size: 11px; " +
+                                "-fx-background-radius: 5; " +
+                                "-fx-border-radius: 5; " +
+                                "-fx-border-color: #388E3C; " +
+                                "-fx-border-width: 1; " +
+                                "-fx-padding: 3 6 3 6; " +
+                                "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 2, 0, 0, 1); " +
+                                "-fx-cursor: hand;");
+                addBtn.setPrefWidth(65);  // Маленькая ширина
+                addBtn.setPrefHeight(22);  // Маленькая высота
+
                 addBtn.setOnAction(event -> {
                     Device device = getTableView().getItems().get(getIndex());
                     FileChooser chooser = new FileChooser();
@@ -201,6 +264,37 @@ public class MainController {
                         updateStatistics();  // Если хотите обновить статистику
                     }
                 });
+
+                // ДОБАВЛЕНО: Hover-эффекты через event handlers (программно)
+                addBtn.setOnMouseEntered(e -> {
+                    addBtn.setStyle(addBtn.getStyle().replace("#4CAF50", "#66BB6A"));  // Светлее зелёный при наведении
+                    FadeTransition fadeIn = new FadeTransition(Duration.millis(200), addBtn);
+                    fadeIn.setFromValue(0.8);
+                    fadeIn.setToValue(1.0);
+                    fadeIn.play();
+                });
+                addBtn.setOnMouseExited(e -> {
+                    addBtn.setStyle(addBtn.getStyle().replace("#66BB6A", "#4CAF50"));  // Возврат к темному
+                    FadeTransition fadeOut = new FadeTransition(Duration.millis(200), addBtn);
+                    fadeOut.setFromValue(1.0);
+                    fadeOut.setToValue(0.8);
+                    fadeOut.play();
+                });
+
+                // Стиль для "Просмотр" (синий, нейтральный)
+                viewBtn.setStyle(
+                        "-fx-background-color: #2196F3; " +
+                                "-fx-text-fill: white; " +
+                                "-fx-font-size: 11px; " +
+                                "-fx-background-radius: 5; " +
+                                "-fx-border-radius: 5; " +
+                                "-fx-border-color: #1976D2; " +
+                                "-fx-border-width: 1; " +
+                                "-fx-padding: 3 6 3 6; " +
+                                "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 2, 0, 0, 1); " +
+                                "-fx-cursor: hand;");
+                viewBtn.setPrefWidth(65);  // Маленькая ширина
+                viewBtn.setPrefHeight(22);  // Маленькая высота
 
                 viewBtn.setOnAction(event -> {
                     Device device = getTableView().getItems().get(getIndex());
@@ -234,6 +328,22 @@ public class MainController {
                     photoStage.setScene(scene);
                     photoStage.show();
                 });
+
+                // То же для viewBtn
+                viewBtn.setOnMouseEntered(e -> {
+                    viewBtn.setStyle(viewBtn.getStyle().replace("#2196F3", "#64B5F6"));  // Светлее синий
+                    FadeTransition fadeIn = new FadeTransition(Duration.millis(200), viewBtn);
+                    fadeIn.setFromValue(0.8);
+                    fadeIn.setToValue(1.0);
+                    fadeIn.play();
+                });
+                viewBtn.setOnMouseExited(e -> {
+                    viewBtn.setStyle(viewBtn.getStyle().replace("#64B5F6", "#2196F3"));  // Возврат к темному
+                    FadeTransition fadeOut = new FadeTransition(Duration.millis(200), viewBtn);
+                    fadeOut.setFromValue(1.0);
+                    fadeOut.setToValue(0.8);
+                    fadeOut.play();
+                });
             }
 
             // Отображение кнопок в клетке
@@ -243,7 +353,7 @@ public class MainController {
                 if (empty) {
                     setGraphic(null);
                 } else {
-                    VBox btnBox = new VBox(5, addBtn, viewBtn);
+                    HBox btnBox = new HBox(8, addBtn, viewBtn);
                     setGraphic(btnBox);
                 }
             }

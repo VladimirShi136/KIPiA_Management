@@ -49,8 +49,8 @@
     </GridPane>
 
     <HBox spacing="10" alignment="CENTER_RIGHT">
-        <Button text="Отмена" onAction="#onCancel"/>
-        <Button text="Добавить" onAction="#onAddDevice" style="-fx-background-color: #2ecc71; -fx-text-fill: white;"/>
+        <Button fx:id="cancelBtn" text="Отмена" onAction="#onCancel"/>
+        <Button fx:id="addBtn" text="Добавить" onAction="#onAddDevice" style="-fx-background-color: #2ecc71; -fx-text-fill: white;"/>
     </HBox>
 
     <Label fx:id="messageLabel" style="-fx-text-fill: red;"/>
