@@ -87,7 +87,7 @@ public class AddDeviceController {
 
     @FXML
     private void initialize() {
-        statusComboBox.setItems(FXCollections.observableArrayList("В работе", "На ремонте", "Списан"));
+        statusComboBox.setItems(FXCollections.observableArrayList("Хранение", "В работе", "Утерян", "Испорчен"));
         statusComboBox.getSelectionModel().selectFirst();
         messageLabel.setText("");
 

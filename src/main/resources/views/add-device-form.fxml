@@ -11,16 +11,16 @@
 
     <GridPane hgap="10" vgap="10">
         <!-- Существующие поля (твои оригинальные) -->
-        <Label text="Наименование:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
-        <TextField fx:id="nameField" GridPane.rowIndex="0" GridPane.columnIndex="1" prefWidth="200"/>
+        <Label text="Тип прибора:" GridPane.rowIndex="0" GridPane.columnIndex="0"/>
+        <TextField fx:id="typeField" GridPane.rowIndex="0" GridPane.columnIndex="1" prefWidth="200"/>
 
-        <Label text="Тип:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
-        <TextField fx:id="typeField" GridPane.rowIndex="1" GridPane.columnIndex="1" prefWidth="200"/>
+        <Label text="Модель:" GridPane.rowIndex="1" GridPane.columnIndex="0"/>
+        <TextField fx:id="nameField" GridPane.rowIndex="1" GridPane.columnIndex="1" prefWidth="200"/>
 
         <Label text="Инвентарный номер:" GridPane.rowIndex="2" GridPane.columnIndex="0"/>
         <TextField fx:id="inventoryNumberField" GridPane.rowIndex="2" GridPane.columnIndex="1" prefWidth="200"/>
 
-        <Label text="Местонахождение:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
+        <Label text="Место установки:" GridPane.rowIndex="3" GridPane.columnIndex="0"/>
         <TextField fx:id="locationField" GridPane.rowIndex="3" GridPane.columnIndex="1" prefWidth="200"/>
 
         <Label text="Статус:" GridPane.rowIndex="4" GridPane.columnIndex="0"/>

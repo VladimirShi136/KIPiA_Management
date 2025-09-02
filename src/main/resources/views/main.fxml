@@ -51,7 +51,7 @@
                 <Label style="-fx-font-weight: bold;" text="Статистика:"/>
                 <HBox spacing="20">
                     <VBox alignment="CENTER">
-                        <Label fx:id="totalDevicesLabel" style="-fx-font-size: 24px; -fx-text-fill: #3498db;"
+                        <Label fx:id="totalDevicesLabel" style="-fx-font-size: 24px; -fx-text-fill: #1e74e4;"
                                text="--"/>
                         <Label text="Всего приборов"/>
                     </VBox>
@@ -61,9 +61,19 @@
                         <Label text="В работе"/>
                     </VBox>
                     <VBox alignment="CENTER">
-                        <Label fx:id="repairDevicesLabel" style="-fx-font-size: 24px; -fx-text-fill: #e74c3c;"
+                        <Label fx:id="storageDevicesLabel" style="-fx-font-size: 24px; -fx-text-fill: #e74c3c;"
                                text="--"/>
-                        <Label text="На ремонте"/>
+                        <Label text="Хранение"/>
+                    </VBox>
+                    <VBox alignment="CENTER">
+                        <Label fx:id="lostDevicesLabel" style="-fx-font-size: 24px; -fx-text-fill: #706b69;"
+                               text="--"/>
+                        <Label text="Утерян"/>
+                    </VBox>
+                    <VBox alignment="CENTER">
+                        <Label fx:id="brokenDevicesLabel" style="-fx-font-size: 24px; -fx-text-fill: #ef8a06;"
+                               text="--"/>
+                        <Label text="Испорчен"/>
                     </VBox>
                 </HBox>
             </VBox>

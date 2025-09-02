@@ -46,7 +46,13 @@ public class MainController {
     private Label workingDevicesLabel;
 
     @FXML
-    private Label repairDevicesLabel;
+    private Label storageDevicesLabel;
+
+    @FXML
+    private Label lostDevicesLabel;
+
+    @FXML
+    private Label brokenDevicesLabel;
 
     @FXML
     private TextField searchField;
@@ -161,7 +167,7 @@ public class MainController {
         });
 
         // 2. Колонка "Название/модель"
-        TableColumn<Device, String> nameCol = new TableColumn<>("Название/модель");
+        TableColumn<Device, String> nameCol = new TableColumn<>("Модель");
         nameCol.setCellValueFactory(new PropertyValueFactory<>("name"));
         nameCol.setPrefWidth(150);
         nameCol.setCellFactory(TextFieldTableCell.forTableColumn());
@@ -177,7 +183,7 @@ public class MainController {
         manufacturerCol.setPrefWidth(120);
 
         // 4. Колонка "Инвентарный номер"
-        TableColumn<Device, String> inventoryCol = new TableColumn<>("Инвентарный номер");
+        TableColumn<Device, String> inventoryCol = new TableColumn<>("Инвентарный №");
         inventoryCol.setCellValueFactory(new PropertyValueFactory<>("inventoryNumber"));
         inventoryCol.setPrefWidth(120);
 
@@ -212,10 +218,10 @@ public class MainController {
         });
 
         // 7. Колонка "Состояние" — редактируемая с ComboBox
-        TableColumn<Device, String> statusCol = new TableColumn<>("Состояние");
+        TableColumn<Device, String> statusCol = new TableColumn<>("Статус");
         statusCol.setCellValueFactory(new PropertyValueFactory<>("status"));
         statusCol.setPrefWidth(100);
-        statusCol.setCellFactory(ComboBoxTableCell.forTableColumn("хранение", "в работе", "утерян", "испорчен"));
+        statusCol.setCellFactory(ComboBoxTableCell.forTableColumn("Хранение", "В работе", "Утерян", "Испорчен"));
         statusCol.setOnEditCommit(event -> {
             Device device = event.getRowValue();
             device.setStatus(event.getNewValue());
@@ -223,7 +229,7 @@ public class MainController {
             updateStatistics();
         });
 
-        // 8. Колонка "Доп. информация"
+        // 8. Колонка "Доп.информация"
         TableColumn<Device, String> additionalInfoCol = new TableColumn<>("Доп. информация");
         additionalInfoCol.setCellValueFactory(new PropertyValueFactory<>("additionalInfo"));
         additionalInfoCol.setPrefWidth(150);
@@ -359,6 +365,36 @@ public class MainController {
             }
         });
 
+        // ДОБАВЛЕНО: Глобальный стиль для селекции (голубой фон, чёрный текст)
+        deviceTable.setStyle("-fx-selection-bar: #cce7ff; -fx-selection-bar-text: black; -fx-selection-bar-non-focused: #cce7ff;");
+
+        // Настройка цвета строк таблицы
+        deviceTable.setRowFactory(tv -> new TableRow<>() {
+            @Override
+            protected void updateItem(Device item, boolean empty) {
+                super.updateItem(item, empty);
+
+                // Если строка пуста — сброс
+                if (empty){
+                    setStyle("");
+                    return;
+                }
+
+                // Если строка НЕ выбранная
+                if (!isSelected()) {
+                    if (getIndex() % 2 == 0) {
+                        setStyle("-fx-background-color: #b8b8b8;");
+                    } else {
+                        setStyle("-fx-background-color: white;");
+                    }
+                }
+                // Если строка ВЫБРАННАЯ
+                else {
+                    setStyle("-fx-background-color: #7abcff;");
+                }
+            }
+        });
+
         // Добавляем все колонки в таблицу
         deviceTable.getColumns().addAll(
                 typeCol,
@@ -396,8 +432,8 @@ public class MainController {
         // Устанавливаем отсортированный и отфильтрованный список в таблицу
         deviceTable.setItems(sortedList);
 
-        // По умолчанию сортируем по месту установки
-        deviceTable.getSortOrder().add(locationCol);
+        // По умолчанию сортируем по инвентарному номеру
+        deviceTable.getSortOrder().add(inventoryCol);
         deviceTable.sort();
 
         // Назначаем обработчик удаления на кнопку
@@ -441,15 +477,24 @@ public class MainController {
     private void updateStatistics() {
         int total = filteredList.size();
         long working = filteredList.stream()
-                .filter(d -> "в работе".equalsIgnoreCase(d.getStatus()))
+                .filter(d -> "В работе".equalsIgnoreCase(d.getStatus()))
                 .count();
-        long repair = filteredList.stream()
-                .filter(d -> "на ремонте".equalsIgnoreCase(d.getStatus()))
+        long storage = filteredList.stream()
+                .filter(d -> "Хранение".equalsIgnoreCase(d.getStatus()))
                 .count();
+        long lost = filteredList.stream()
+                .filter(d -> "Утерян".equalsIgnoreCase(d.getStatus()))
+                .count();
+        long broken = filteredList.stream()
+                .filter(d -> "Испорчен".equalsIgnoreCase(d.getStatus()))
+                .count();
+
 
         totalDevicesLabel.setText(String.valueOf(total));
         workingDevicesLabel.setText(String.valueOf(working));
-        repairDevicesLabel.setText(String.valueOf(repair));
+        storageDevicesLabel.setText(String.valueOf(storage));
+        lostDevicesLabel.setText(String.valueOf(lost));
+        brokenDevicesLabel.setText(String.valueOf(broken));
     }
 
     // Метод формы добавления нового устройства
