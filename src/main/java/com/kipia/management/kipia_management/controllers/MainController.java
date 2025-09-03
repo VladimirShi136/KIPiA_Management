@@ -22,6 +22,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+import javafx.util.converter.DefaultStringConverter;
 
 import java.io.File;
 import java.io.IOException;
@@ -75,7 +76,7 @@ public class MainController {
         this.deviceDAO = deviceDAO;
     }
 
-    private void applyHoverAndAnimation(Button button, String defaultColor, String hoverColor, String buttonType) {
+    private void applyHoverAndAnimation(Button button, String defaultColor, String hoverColor) {
         // Базовый стиль (адаптируйте под ваш дизайн)
         button.setStyle(
                 "-fx-background-color: " + defaultColor + "; " +
@@ -125,11 +126,12 @@ public class MainController {
             statisticsPane.setManaged(false);
         }
 
-        // ДОБАВЛЕНО: Примени hover для навиг. кнопок (предполагая fx:id: devicesBtn, addDeviceBtn, reportsBtn, exitBtn)
-        if (devicesBtn != null) applyHoverAndAnimation(devicesBtn, "#3498db", "#5dade2", "navigation");
-        if (addDeviceBtn != null) applyHoverAndAnimation(addDeviceBtn, "#2ecc71", "#58d68d", "navigation");
-        if (reportsBtn != null) applyHoverAndAnimation(reportsBtn, "#e67e22", "#f5a13d", "navigation");
-        if (exitBtn != null) applyHoverAndAnimation(exitBtn, "#e74c3c", "#ec7063", "navigation");
+        // ДОБАВЛЕНО: Примени hover для навиг. кнопок (предполагая fx:id: devicesBtn, addDeviceBtn, reportsBtn, exitBtn, deleteButton)
+        if (devicesBtn != null) applyHoverAndAnimation(devicesBtn, "#3498db", "#5dade2");
+        if (addDeviceBtn != null) applyHoverAndAnimation(addDeviceBtn, "#2ecc71", "#58d68d");
+        if (reportsBtn != null) applyHoverAndAnimation(reportsBtn, "#e67e22", "#f5a13d");
+        if (exitBtn != null) applyHoverAndAnimation(exitBtn, "#e74c3c", "#ec7063");
+        if (deleteButton != null) applyHoverAndAnimation(deleteButton, "#e74c3c", "#ec7063");
     }
 
     @FXML
@@ -169,7 +171,8 @@ public class MainController {
         // 2. Колонка "Название/модель"
         TableColumn<Device, String> nameCol = new TableColumn<>("Модель");
         nameCol.setCellValueFactory(new PropertyValueFactory<>("name"));
-        nameCol.setPrefWidth(150);
+        nameCol.setPrefWidth(90);
+        // Разрешаем редактирование текстом
         nameCol.setCellFactory(TextFieldTableCell.forTableColumn());
         nameCol.setOnEditCommit(event -> {
             Device device = event.getRowValue();
@@ -181,17 +184,32 @@ public class MainController {
         TableColumn<Device, String> manufacturerCol = new TableColumn<>("Производитель");
         manufacturerCol.setCellValueFactory(new PropertyValueFactory<>("manufacturer"));
         manufacturerCol.setPrefWidth(120);
+        // Разрешаем редактирование текстом
+        manufacturerCol.setCellFactory(TextFieldTableCell.forTableColumn());
+        manufacturerCol.setOnEditCommit(event -> {
+            Device device = event.getRowValue();
+            device.setManufacturer(event.getNewValue());
+            deviceDAO.updateDevice(device);
+        });
 
         // 4. Колонка "Инвентарный номер"
         TableColumn<Device, String> inventoryCol = new TableColumn<>("Инвентарный №");
         inventoryCol.setCellValueFactory(new PropertyValueFactory<>("inventoryNumber"));
         inventoryCol.setPrefWidth(120);
+        // Разрешаем редактирование текстом
+        inventoryCol.setCellFactory(TextFieldTableCell.forTableColumn());
+        inventoryCol.setOnEditCommit(event -> {
+            Device device = event.getRowValue();
+            device.setInventoryNumber(event.getNewValue());
+            deviceDAO.updateDevice(device);
+        });
 
         // 5. Колонка "Год выпуска"
         TableColumn<Device, String> yearCol = new TableColumn<>("Год выпуска");
         yearCol.setCellValueFactory(data -> new SimpleStringProperty(
                 data.getValue().getYear() != null ? data.getValue().getYear().toString() : ""));
         yearCol.setPrefWidth(100);
+        // Разрешаем редактирование текстом
         yearCol.setCellFactory(TextFieldTableCell.forTableColumn());
         yearCol.setOnEditCommit(event -> {
             Device device = event.getRowValue();
@@ -210,6 +228,7 @@ public class MainController {
         TableColumn<Device, String> locationCol = new TableColumn<>("Место установки");
         locationCol.setCellValueFactory(new PropertyValueFactory<>("location"));
         locationCol.setPrefWidth(120);
+        // Разрешаем редактирование текстом
         locationCol.setCellFactory(TextFieldTableCell.forTableColumn());
         locationCol.setOnEditCommit(event -> {
             Device device = event.getRowValue();
@@ -220,7 +239,8 @@ public class MainController {
         // 7. Колонка "Состояние" — редактируемая с ComboBox
         TableColumn<Device, String> statusCol = new TableColumn<>("Статус");
         statusCol.setCellValueFactory(new PropertyValueFactory<>("status"));
-        statusCol.setPrefWidth(100);
+        statusCol.setPrefWidth(80);
+        // Разрешаем изменять комбо-бокс в рамках 4-х параметров
         statusCol.setCellFactory(ComboBoxTableCell.forTableColumn("Хранение", "В работе", "Утерян", "Испорчен"));
         statusCol.setOnEditCommit(event -> {
             Device device = event.getRowValue();
@@ -229,12 +249,41 @@ public class MainController {
             updateStatistics();
         });
 
-        // 8. Колонка "Доп.информация"
-        TableColumn<Device, String> additionalInfoCol = new TableColumn<>("Доп. информация");
+        // 9. Колонка "Доп.информация"
+        TableColumn<Device, String> additionalInfoCol = new TableColumn<>("Дополнительная информация");
         additionalInfoCol.setCellValueFactory(new PropertyValueFactory<>("additionalInfo"));
-        additionalInfoCol.setPrefWidth(150);
+        additionalInfoCol.setPrefWidth(200);
 
-        // 9. Колонка "Фото" — с кнопкой "Просмотр"
+        // Используем TextFieldTableCell с конвертером для String
+        additionalInfoCol.setCellFactory(col -> {
+            TextFieldTableCell<Device, String> cell = new TextFieldTableCell<>(new DefaultStringConverter());
+
+            cell.itemProperty().addListener((obs, oldVal, newVal) -> {
+                if (newVal != null && !newVal.trim().isEmpty()) {
+                    if (newVal.length() > 50) {
+                        Tooltip tooltip = new Tooltip(newVal);
+                        tooltip.setWrapText(true);
+                        tooltip.setMaxWidth(300);
+                        cell.setTooltip(tooltip);
+                    } else {
+                        cell.setTooltip(null);
+                    }
+                } else {
+                    cell.setTooltip(null);
+                }
+            });
+            return cell;
+        });
+
+        // Обработка редактирования
+        additionalInfoCol.setOnEditCommit(event -> {
+            Device device = event.getRowValue();
+            device.setAdditionalInfo(event.getNewValue());
+            deviceDAO.updateDevice(device);
+        });
+
+
+        // 8. Колонка "Фото" — с кнопкой "Просмотр"
         TableColumn<Device, Void> photoCol = new TableColumn<>("Фото");
         photoCol.setPrefWidth(145);
         photoCol.setCellFactory(param -> new TableCell<>() {
@@ -352,6 +401,7 @@ public class MainController {
                 });
             }
 
+
             // Отображение кнопок в клетке
             @Override
             protected void updateItem(Void item, boolean empty) {
@@ -375,7 +425,7 @@ public class MainController {
                 super.updateItem(item, empty);
 
                 // Если строка пуста — сброс
-                if (empty){
+                if (empty) {
                     setStyle("");
                     return;
                 }
@@ -404,8 +454,9 @@ public class MainController {
                 yearCol,
                 locationCol,
                 statusCol,
-                additionalInfoCol,
-                photoCol);
+                photoCol,
+                additionalInfoCol
+        );
 
         // Загружаем данные из базы
         List<Device> allDevices = deviceDAO.getAllDevices();
