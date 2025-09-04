@@ -4,6 +4,7 @@ module com.kipia.management.kipia_management {
     requires javafx.controls;
     requires javafx.fxml;
     requires java.sql;
+    requires org.apache.poi.ooxml;
 
     // Открываем пакет с контроллерами для JavaFX FXML (рефлексия)
     opens com.kipia.management.kipia_management.controllers to javafx.fxml;
