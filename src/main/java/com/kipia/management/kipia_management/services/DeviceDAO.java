@@ -109,10 +109,10 @@ public class DeviceDAO {
 
     /**
      * Обновление данных прибора в базе данных
+     *
      * @param device объект прибора с обновленными данными
-     * @return true - если обновление прошло успешно, false - в случае ошибки
      */
-    public boolean updateDevice(Device device) {
+    public void updateDevice(Device device) {
         // Обновлено: добавлен photos = ? в SET
         String sql = "UPDATE devices SET type = ?, name = ?, manufacturer = ?, inventory_number = ?, year = ?, location = ?, status = ?, additional_info = ?, photo_path = ?, photos = ? WHERE id = ?";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
@@ -133,10 +133,8 @@ public class DeviceDAO {
             stmt.setString(10, photosToString(device.getPhotos()));  // Список фото
             stmt.setInt(11, device.getId());  // ID для WHERE
             stmt.executeUpdate();
-            return true;
         } catch (SQLException e) {
             System.out.println("Ошибка обновления прибора: " + e.getMessage());
-            return false;
         }
     }
 

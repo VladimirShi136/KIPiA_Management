@@ -5,15 +5,14 @@ import com.kipia.management.kipia_management.services.DeviceDAO;
 import javafx.animation.FadeTransition;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
+
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
-import javafx.geometry.Insets;
+
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.chart.PieChart;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.ComboBoxTableCell;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -29,19 +28,13 @@ import javafx.util.converter.DefaultStringConverter;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import javafx.scene.control.RadioButton;
-import javafx.scene.control.ToggleGroup;
 
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 public class MainController {
 
@@ -83,11 +76,15 @@ public class MainController {
 
     @FXML
     private VBox statisticsPane;
+    @FXML
+    private Button themeToggleBtn;
 
     private DeviceDAO deviceDAO;
     private FilteredList<Device> filteredList;
     private TableView<Device> deviceTable;
     private TableColumn<Device, String> inventoryCol;
+    private Scene scene;
+    private boolean isDarkTheme = false;
 
     // Метод для внедрения объекта DAO из основного приложения
     public void setDeviceDAO(DeviceDAO deviceDAO) {
@@ -96,38 +93,21 @@ public class MainController {
 
     private void applyHoverAndAnimation(Button button, String defaultColor, String hoverColor) {
         // Базовый стиль (адаптируйте под ваш дизайн)
+        // Standard шрифт для кнопок
+        // Padding для комфорта
         button.setStyle(
-                "-fx-background-color: " + defaultColor + "; " +
+                ("-fx-background-color: %s; " +
                         "-fx-text-fill: white; " +
-                        "-fx-font-size: 14px; " +  // Standard шрифт для навиг./вори кнопок
+                        "-fx-font-size: 14px; " +
                         "-fx-background-radius: 5; " +
                         "-fx-border-radius: 5; " +
-                        "-fx-padding: 8 12 8 12; " +  // Padding для комфорта
-                        "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 3, 0, 0, 1); " +
-                        "-fx-cursor: hand;"
+                        "-fx-padding: 8 12 8 12;" +
+                        "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 3, 0, 0, 1);" +
+                        "-fx-cursor: hand;").formatted(defaultColor)
         );
 
         // Hover-эффекты через event handlers (просто и без :hover)
-        button.setOnMouseEntered(e -> {
-            // Смена цвета
-            button.setStyle(button.getStyle().replace(defaultColor, hoverColor));
-
-            // Fade анимация (0.8 → 1.0)
-            FadeTransition fadeIn = new FadeTransition(Duration.millis(200), button);
-            fadeIn.setFromValue(0.8);
-            fadeIn.setToValue(1.0);
-            fadeIn.play();
-        });
-        button.setOnMouseExited(e -> {
-            // Возврат цвета
-            button.setStyle(button.getStyle().replace(hoverColor, defaultColor));
-
-            // Fade анимация (1.0 → 0.8)
-            FadeTransition fadeOut = new FadeTransition(Duration.millis(200), button);
-            fadeOut.setFromValue(1.0);
-            fadeOut.setToValue(0.8);
-            fadeOut.play();
-        });
+        AddDeviceController.selectStyleBtn(button, defaultColor, hoverColor);
     }
 
     @FXML
@@ -150,6 +130,36 @@ public class MainController {
         if (reportsBtn != null) applyHoverAndAnimation(reportsBtn, "#e67e22", "#f5a13d");
         if (exitBtn != null) applyHoverAndAnimation(exitBtn, "#e74c3c", "#ec7063");
         if (deleteButton != null) applyHoverAndAnimation(deleteButton, "#e74c3c", "#ec7063");
+    }
+
+    @FXML
+    private void toggleTheme() {
+        if (scene == null) {
+            System.out.println("Ошибка: Scene не передана");
+            return;
+        }
+
+        if (isDarkTheme) {
+            // Светлая тема (дефолт или лёгкий CSS, если есть)
+            scene.getStylesheets().clear();
+            // scene.getStylesheets().add("/styles/light-theme.css");  // Раскомментируй, если есть светлый CSS
+            if (themeToggleBtn != null) themeToggleBtn.setText("Тёмная тема");
+            isDarkTheme = false;
+            System.out.println("Светлая тема активирована");
+        } else {
+            // Тёмная тема
+            try {
+                scene.getStylesheets().clear();
+                scene.getStylesheets().add(getClass().getResource("/styles/dark-theme.css").toExternalForm());  // Правильный путь
+                if (themeToggleBtn != null) themeToggleBtn.setText("Светлая тема");
+                isDarkTheme = true;
+                System.out.println("Тёмная тема активирована");
+            } catch (Exception e) {
+                System.out.println("Ошибка загрузки CSS: " + e.getMessage());
+                Alert alert = new Alert(Alert.AlertType.ERROR, "Не удалось загрузить тёмную тему: " + e.getMessage());
+                alert.show();
+            }
+        }
     }
 
     @FXML
@@ -609,97 +619,28 @@ public class MainController {
         }
     }
 
-    // Метод показа отчетов
     @FXML
     private void showReports() {
-        statusLabel.setText("Просмотр отчётов");
-        // Очищаем контент
-        contentArea.getChildren().clear();
-        // Скрываем другие панели
-        searchAndDeletePane.setVisible(false);
-        searchAndDeletePane.setManaged(false);
-        statisticsPane.setVisible(false);
-        statisticsPane.setManaged(false);
+        try {
+            // Загружаем новый FXML для отчётов
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/reports.fxml"));
+            VBox reportsView = loader.load();
+            ReportsController reportsController = loader.getController();
 
-        // Получаем все устройства для отчёта
-        List<Device> allDevices = deviceDAO.getAllDevices();
+            // Передаём данные в ReportsController через init()
+            reportsController.init(deviceDAO, (Stage) contentArea.getScene().getWindow());
 
-        // Панель выбора типа отчёта
-        ToggleGroup reportTypeGroup = new ToggleGroup();
-        HBox reportTypeBox = new HBox(20);
-        reportTypeBox.setPadding(new Insets(10));
+            // Добавляем отчёты в contentArea
+            contentArea.getChildren().clear();
+            contentArea.getChildren().add(reportsView);
 
-        RadioButton statusReportBtn = new RadioButton("По статусу");
-        statusReportBtn.setToggleGroup(reportTypeGroup);
-        statusReportBtn.setSelected(true);  // По умолчанию
-
-        RadioButton typeReportBtn = new RadioButton("По типам приборов");
-        typeReportBtn.setToggleGroup(reportTypeGroup);
-
-        RadioButton manufacturerReportBtn = new RadioButton("По производителям");
-        manufacturerReportBtn.setToggleGroup(reportTypeGroup);
-
-        RadioButton locationReportBtn = new RadioButton("По местоположению");  // Новый радиобаттон
-        locationReportBtn.setToggleGroup(reportTypeGroup);
-
-        RadioButton yearReportBtn = new RadioButton("По годам выпуска");
-        yearReportBtn.setToggleGroup(reportTypeGroup);
-
-        reportTypeBox.getChildren().addAll(statusReportBtn, typeReportBtn, manufacturerReportBtn, locationReportBtn, yearReportBtn);
-
-        // Элементы отчёта (обновляемые)
-        Label titleLabel = new Label("Отчёт по устройтвам — По статусу");
-        titleLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold;");
-
-        Label statsLabel = new Label("");
-        statsLabel.setStyle("-fx-font-size: 16px;");
-
-        PieChart chart = new PieChart();
-        chart.setPrefSize(400, 300);
-
-        // Кнопка экспорта
-        Button exportReportButton = new Button("Экспортировать отчёт в Excel");
-        exportReportButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-padding: 5 10;");
-
-        // Функция обновления отчёта
-        Runnable updateReport = () -> {
-            String selectedType = ((RadioButton) reportTypeGroup.getSelectedToggle()).getText();
-            titleLabel.setText("Отчёт по устройствоам — " + selectedType);
-            if (selectedType.equals("По статусу")) {
-                buildReport(allDevices, Device::getStatus, "Распределение по статусам", statsLabel, chart);
-                exportReportButton.setOnAction(event -> exportReportToExcel(allDevices, "Status"));
-            } else if (selectedType.equals("По типам приборов")) {
-                buildReport(allDevices, Device::getType, "Распределение по типам", statsLabel, chart);
-                exportReportButton.setOnAction(event -> exportReportToExcel(allDevices, "Type"));
-            } else if (selectedType.equals("По производителям")) {
-                buildReport(allDevices, Device::getManufacturer, "Распределение по производителям", statsLabel, chart);
-                exportReportButton.setOnAction(event -> exportReportToExcel(allDevices, "Manufacturer"));
-            } else if (selectedType.equals("По местоположению")) {
-                buildReport(allDevices, Device::getLocation, "Распределение по местоположениям", statsLabel, chart);
-                exportReportButton.setOnAction(event -> exportReportToExcel(allDevices, "Location"));
-            } else if (selectedType.equals("По годам выпуска")) {
-                buildReportByYear(allDevices, statsLabel, chart);
-                exportReportButton.setOnAction(event -> exportReportToExcel(allDevices, "Year"));
-            }
-        };
-
-        // Обработчики для радиобаттонов
-        statusReportBtn.setOnAction(event -> updateReport.run());
-        typeReportBtn.setOnAction(event -> updateReport.run());
-        manufacturerReportBtn.setOnAction(event -> updateReport.run());
-        locationReportBtn.setOnAction(event -> updateReport.run());  // Добавлено для нового
-        yearReportBtn.setOnAction(event -> updateReport.run());
-
-        // Инициализация отчёта (по умолчанию "По статусу")
-        updateReport.run();
-
-        // Контейнер для отчёта
-        VBox reportsBox = new VBox(20);
-        reportsBox.setPadding(new Insets(20));
-        reportsBox.getChildren().addAll(reportTypeBox, titleLabel, statsLabel, chart, exportReportButton);
-
-        // Добавляем в contentArea
-        contentArea.getChildren().add(reportsBox);
+            // Скрываем другие панели (как в исходном)
+            searchAndDeletePane.setVisible(false);
+            statisticsPane.setVisible(false);
+        } catch (IOException e) {
+            e.printStackTrace();
+            statusLabel.setText("Ошибка загрузки отчётов: " + e.getMessage());
+        }
     }
 
     private void exportToExcel() {
@@ -868,110 +809,6 @@ public class MainController {
         }
     }
 
-    // Экспорт отчета в Excel файл
-    private void exportReportToExcel(List<Device> devices, String reportType) {
-        // Выбираем файл
-        FileChooser chooser = new FileChooser();
-        chooser.setTitle("Экспорт отчёта " + reportType + " в Excel");
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Excel файлы", "*.xlsx"));
-        File file = chooser.showSaveDialog(contentArea.getScene().getWindow());
-        if (file == null) return;
-
-        try (Workbook workbook = new XSSFWorkbook()) {
-            Sheet sheet = workbook.createSheet("Report");
-
-            // Заголовки
-            Row headerRow = sheet.createRow(0);
-            if (reportType.equals("Status")) {
-                headerRow.createCell(0).setCellValue("Статус");
-            } else if (reportType.equals("Type")) {
-                headerRow.createCell(0).setCellValue("Тип прибора");
-            } else if (reportType.equals("Manufacturer")) {
-                headerRow.createCell(0).setCellValue("Производитель");
-            } else if (reportType.equals("Location")) {  // Добавлено для местоположения
-                headerRow.createCell(0).setCellValue("Местоположение");
-            } else if (reportType.equals("Year")) {
-                headerRow.createCell(0).setCellValue("Год выпуска");
-            }
-            headerRow.createCell(1).setCellValue("Количество");
-
-            // Данные
-            Map<String, Long> countMap;
-            if (reportType.equals("Status")) {
-                countMap = devices.stream().collect(Collectors.groupingBy(Device::getStatus, Collectors.counting()));
-            } else if (reportType.equals("Type")) {
-                countMap = devices.stream().collect(Collectors.groupingBy(Device::getType, Collectors.counting()));
-            } else if (reportType.equals("Manufacturer")) {
-                countMap = devices.stream().collect(Collectors.groupingBy(Device::getManufacturer, Collectors.counting()));
-            } else if (reportType.equals("Location")) {  // Группировка по местоположению
-                countMap = devices.stream().collect(Collectors.groupingBy(Device::getLocation, Collectors.counting()));
-            } else {  // Year
-                countMap = devices.stream().filter(d -> d.getYear() != null)
-                        .collect(Collectors.groupingBy(d -> d.getYear().toString(), Collectors.counting()));
-            }
-
-            int rowNum = 1;
-            for (Map.Entry<String, Long> entry : countMap.entrySet()) {
-                if (entry.getKey() == null || entry.getKey().isEmpty()) continue;  // Пропускаем пустые
-                Row row = sheet.createRow(rowNum++);
-                row.createCell(0).setCellValue(entry.getKey());
-                row.createCell(1).setCellValue(entry.getValue());
-            }
-
-            // Запись
-            try (FileOutputStream out = new FileOutputStream(file)) {
-                workbook.write(out);
-            }
-
-            Alert alert = new Alert(Alert.AlertType.INFORMATION, "Отчёт " + reportType + " экспортирован: " + file.getAbsolutePath());
-            alert.show();
-        } catch (Exception e) {
-            Alert alert = new Alert(Alert.AlertType.ERROR, "Ошибка: " + e.getMessage());
-        }
-    }
-
-    // Сборщик данных и отчёта для категориальных полей (статус, тип, производитель)
-    private void buildReport(List<Device> devices, Function<Device, String> fieldGetter, String chartTitle, Label statsLabel, PieChart chart) {
-        Map<String, Long> countMap = devices.stream()
-                .filter(d -> fieldGetter.apply(d) != null && !fieldGetter.apply(d).isEmpty())
-                .collect(Collectors.groupingBy(fieldGetter, Collectors.counting()));
-
-        // Текстовая статистика
-        StringBuilder statsText = new StringBuilder("Общая статистика:\n");
-        countMap.forEach((key, count) -> statsText.append(key).append(": ").append(count).append("\n"));
-        statsLabel.setText(statsText.toString());
-
-        // Диаграмма
-        ObservableList<PieChart.Data> chartData = FXCollections.observableArrayList();
-        countMap.forEach((key, count) -> chartData.add(new PieChart.Data(key + " (" + count + ")", count)));
-        chart.setData(chartData);
-        chart.setTitle(chartTitle);  // Динамический заголовок
-    }
-
-    // Специальный сборщик для года (Integer -> String)
-    private void buildReportByYear(List<Device> devices, Label statsLabel, PieChart chart) {
-        Map<String, Long> countMap = devices.stream()
-                .filter(d -> d.getYear() != null)
-                .collect(Collectors.groupingBy(d -> d.getYear().toString(), Collectors.counting()));
-
-        StringBuilder statsText = new StringBuilder("Общая статистика:\n");
-        countMap.forEach((key, count) -> statsText.append(key).append(": ").append(count).append("\n"));
-        statsLabel.setText(statsText.toString());
-
-        ObservableList<PieChart.Data> chartData = FXCollections.observableArrayList();
-        countMap.forEach((key, count) -> chartData.add(new PieChart.Data("Год " + key + " (" + count + ")", count)));
-        chart.setData(chartData);
-        chart.setTitle("Распределение по годам");
-    }
-
-    // Вспомогательный метод для безопасного чтения ячейки (возвращает строку)
-    private String getCellValue(Row row, int cellIndex) {
-        Cell cell = row.getCell(cellIndex);
-        if (cell == null) return "";
-        cell.setCellType(CellType.STRING);  // Принудительно в строку
-        return cell.getStringCellValue().trim();
-    }
-
     // Новый method в MainController
     private SortedList<Device> createSortedList(FilteredList<Device> filteredList, TableView<Device> table, TableColumn<Device, String> defaultSortColumn) {
         SortedList<Device> sortedList = new SortedList<>(filteredList);
@@ -983,9 +820,21 @@ public class MainController {
         return sortedList;
     }
 
+    // Вспомогательный метод для безопасного чтения ячейки (возвращает строку)
+    private String getCellValue(Row row, int cellIndex) {
+        Cell cell = row.getCell(cellIndex);
+        if (cell == null) return "";
+        cell.setCellType(CellType.STRING);  // Принудительно в строку
+        return cell.getStringCellValue().trim();
+    }
+
     // Выход из приложения
     @FXML
     private void exitApp() {
         System.exit(0);
+    }
+
+    public void setScene(Scene scene) {
+        this.scene = scene;
     }
 }

@@ -15,6 +15,7 @@ import javafx.scene.image.Image;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Stage;
 
+import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -42,14 +43,15 @@ public class Main extends Application {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/main.fxml"));
             Parent root = loader.load();
 
+            // Настраиваем сцену
+            Scene scene = new Scene(root, 1000, 700);
+
             // Получаем контроллер и передаем ему сервисы
             MainController controller = loader.getController();
             if (controller != null) {
                 controller.setDeviceDAO(deviceDAO);
+                controller.setScene(scene);  // Передаём Scene для темы
             }
-
-            // Настраиваем сцену
-            Scene scene = new Scene(root, 1000, 700);
 
             // Настраиваем главное окно
             primaryStage.setTitle("Система учёта приборов КИПиА");
@@ -59,7 +61,7 @@ public class Main extends Application {
 
             // Добавляем иконку
             try {
-                Image icon = new Image(getClass().getResourceAsStream("/images/icon.png"));
+                Image icon = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/images/icon.png")));
                 primaryStage.getIcons().add(icon);
             } catch (Exception e) {
                 System.out.println("Иконка не найдена, используется стандартная");
@@ -113,8 +115,9 @@ public class Main extends Application {
 
     /**
      * Отображение диалога ошибки
-     * @param title заголовок ошибки
-     * @param message сообщение об ошибке
+     *
+     * @param title     заголовок ошибки
+     * @param message   сообщение об ошибке
      * @param exception исключение (для stack trace и логирования)
      */
     private static void showErrorDialog(String title, String message, Throwable exception) {

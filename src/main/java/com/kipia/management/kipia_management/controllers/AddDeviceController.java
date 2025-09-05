@@ -50,13 +50,13 @@ public class AddDeviceController {
     private Label messageLabel;
 
     private DeviceDAO deviceDAO;
-    private List<String> selectedPhotos = new ArrayList<>();  // Список путей выбранных фото
+    private final List<String> selectedPhotos = new ArrayList<>();  // Список путей выбранных фото
 
     public void setDeviceDAO(DeviceDAO deviceDAO) {
         this.deviceDAO = deviceDAO;
     }
 
-    private void applyHoverAndAnimation(Button button, String defaultColor, String hoverColor, String buttonType) {
+    private void applyHoverAndAnimation(Button button, String defaultColor, String hoverColor) {
         // Аналогично методу в дерево MainController
         button.setStyle(
                 "-fx-background-color: " + defaultColor + "; " +
@@ -69,6 +69,10 @@ public class AddDeviceController {
                         "-fx-cursor: hand;"
         );
 
+        selectStyleBtn(button, defaultColor, hoverColor);
+    }
+
+    static void selectStyleBtn(Button button, String defaultColor, String hoverColor) {
         button.setOnMouseEntered(e -> {
             button.setStyle(button.getStyle().replace(defaultColor, hoverColor));
             FadeTransition fadeIn = new FadeTransition(Duration.millis(200), button);
@@ -91,12 +95,12 @@ public class AddDeviceController {
         statusComboBox.getSelectionModel().selectFirst();
         messageLabel.setText("");
 
-        if (addBtn != null) applyHoverAndAnimation(addBtn, "#2ecc71", "#58d68d", "form");  // Зеленый для "Добавить"
-        if (cancelBtn != null) applyHoverAndAnimation(cancelBtn, "#e74c3c", "#ec7063", "form");  // Красный для "Отмена"
+        if (addBtn != null) applyHoverAndAnimation(addBtn, "#2ecc71", "#58d68d");  // Зеленый для "Добавить"
+        if (cancelBtn != null) applyHoverAndAnimation(cancelBtn, "#e74c3c", "#ec7063");  // Красный для "Отмена"
 
         // Настройка списка фото (без редактирования)
         selectedPhotosListView.setItems(FXCollections.observableArrayList(selectedPhotos));
-        selectedPhotosListView.setCellFactory(param -> new ListCell<String>() {
+        selectedPhotosListView.setCellFactory(param -> new ListCell<>() {
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
@@ -119,7 +123,7 @@ public class AddDeviceController {
         chooser.setTitle("Выбрать фото для прибора");
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Изображения", "*.png", "*.jpg", "*.gif"));
         Stage stage = (Stage) messageLabel.getScene().getWindow();
-        chooser.setSelectedExtensionFilter(chooser.getExtensionFilters().get(0));  // Значение по умолчанию
+        chooser.setSelectedExtensionFilter(chooser.getExtensionFilters().getFirst());  // Значение по умолчанию
 
         // Включить выбор нескольких файлов
         List<File> files = chooser.showOpenMultipleDialog(stage);
@@ -182,7 +186,7 @@ public class AddDeviceController {
 
         // Сохраняем первое фото в старое поле для совместимости (опционально)
         if (!selectedPhotos.isEmpty()) {
-            device.setPhotoPath(selectedPhotos.get(0));
+            device.setPhotoPath(selectedPhotos.getFirst());
         }
 
         // Сохраняем в DAO

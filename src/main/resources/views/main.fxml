@@ -28,6 +28,9 @@
             <Button fx:id="reportsBtn" maxWidth="Infinity" onAction="#showReports"
                     style="-fx-background-color: #e67e22; -fx-text-fill: white; -fx-font-weight: bold;" text="Отчёты"/>
             <Region VBox.vgrow="ALWAYS"/>
+            <!-- Новая кнопка для переключателя темы -->
+            <Button fx:id="themeToggleBtn" maxWidth="1.7976931348623157E308" onAction="#toggleTheme"
+                    style="-fx-background-color: #7f8c8d; -fx-text-fill: white;" text="Тёмная тема"/>
             <Button fx:id="exitBtn" maxWidth="Infinity" onAction="#exitApp"
                     style="-fx-background-color: #e74c3c; -fx-text-fill: white;" text="Выход"/>
         </VBox>

@@ -1,0 +1,116 @@
+/* Основной фон */
+.root {
+    -fx-background-color: #2b2b2b;
+}
+
+/* Кнопки */
+.button {
+    -fx-background-color: #444;
+    -fx-text-fill: #eee;
+    -fx-border-color: #666;
+    -fx-background-radius: 5;
+    -fx-border-radius: 5;
+}
+.button:hover {
+    -fx-background-color: #555;
+}
+
+/* Надписи (общие) */
+.label {
+    -fx-text-fill: #eee;
+}
+
+/* Текстовые поля */
+.text-field {
+    -fx-background-color: #444;
+    -fx-text-fill: #eee;
+    -fx-prompt-text-fill: #aaa;
+    -fx-border-color: #666;
+}
+
+/* Таблица */
+.table-view {
+    -fx-background-color: #3a3a3a;
+    -fx-control-inner-background: #444;
+    -fx-text-fill: #eee;
+}
+.table-view .column-header {
+    -fx-background-color: #555;
+    -fx-text-fill: #eee;
+}
+.table-view .table-cell {
+    -fx-background-color: #444;
+    -fx-text-fill: #eee;
+}
+
+/* RadioButton */
+.radio-button .text {
+    -fx-text-fill: #eee;
+}
+
+/* Диаграммы (Общие стили для всех чартов) */
+.chart {
+    -fx-background-color: #333;  /* Тёмный фон для диаграммы */
+    -fx-legend-text-fill: #eee;  /* Текст в легенде */
+}
+
+/* Заголовок диаграммы */
+.chart .chart-title {
+    -fx-text-fill: #fff;  /* Белый текст для заголовка */
+    -fx-font-weight: bold;
+}
+
+/* Лейблы на осях (для линейных чартов, но полезно и для Pie) */
+.chart .axis-label {
+    -fx-text-fill: #eee;
+}
+
+/* Лейблы данных (для PieChart стлохо) */
+.chart .chart-label {
+    -fx-text-fill: #fff;  /* Белый текст для категорий и процентов */
+    -fx-font-size: 12px;  /* Размер текста */
+}
+
+.chart .chart-content .chart-plot-background {
+    -fx-background-color: #333;  /* Фон области диаграммы */
+}
+
+/* Специфически для PieChart (расширенные стили) */
+.pie-chart {
+    -fx-background-color: transparent;  /* Прозрачный для наследования от .chart */
+}
+
+/* Легенда */
+.pie-chart .chart-legend {
+    -fx-background-color: #444; /* тёмный фон легенды */
+    -fx-text-fill: #fff;        /* белый текст легенды */
+}
+
+.pie-chart .chart-legend-item-text {
+    -fx-text-fill: #ffffff;       /* белый цвет текста элементов легенды */
+    -fx-font-weight: bold;
+}
+
+/* Текст подписей секторов */
+.pie-chart .chart-label {
+    -fx-text-fill: #ffffff;     /* яркий белый цвет для подписей */
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+    -fx-effect: dropshadow(gaussian, black, 2, 0.5, 0, 0);
+}
+
+.pie-chart .chart-data-label {
+    -fx-text-fill: #ffffff;  /* Для дополнительных лейблов данных */
+    -fx-font-size: 11px;
+}
+
+.pie-chart .chart-plot-background {
+    -fx-background-color: #333;
+}
+
+/* Заголовок диаграммы */
+.chart .chart-title {
+    -fx-text-fill: white;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
