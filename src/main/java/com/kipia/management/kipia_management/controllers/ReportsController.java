@@ -4,27 +4,29 @@ import com.kipia.management.kipia_management.models.Device;
 import com.kipia.management.kipia_management.services.DeviceDAO;
 import com.kipia.management.kipia_management.services.DeviceReportService;
 import com.kipia.management.kipia_management.services.ExcelExportService;
+import com.kipia.management.kipia_management.utils.StyleUtils;
 import javafx.fxml.FXML;
-import javafx.scene.chart.PieChart;
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.JFreeChart;
+import org.jfree.chart.fx.ChartViewer;
+import org.jfree.chart.plot.PiePlot;
+import org.jfree.chart.title.LegendTitle;
+import org.jfree.data.general.DefaultPieDataset;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.control.*;
-import javafx.scene.effect.Glow;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import javafx.util.Duration;
-import javafx.animation.Interpolator;
-import javafx.animation.KeyFrame;
-import javafx.animation.KeyValue;
-import javafx.animation.ScaleTransition;
-import javafx.animation.Timeline;
 import javafx.scene.control.RadioButton;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import org.jfree.chart.block.BlockBorder;
+import java.awt.Font;
+import java.awt.Color;
 
 /**
  * @author vladimir_shi
@@ -47,7 +49,7 @@ public class ReportsController {
     @FXML
     private Label titleLabel;
     @FXML
-    private PieChart chart;
+    private BorderPane chartPane;
     @FXML
     private Button exportReportButton;
 
@@ -56,70 +58,136 @@ public class ReportsController {
     private Stage primaryStage;
     private List<Device> allDevices;
 
-    // Создай новый стильный метод для RadioButton
-    private void applyStyleToRadioButton(RadioButton button) {
-        // Начальный стиль
-        button.setStyle(
-                "-fx-background-color: linear-gradient(to right, #6b5ce7, #a29bfe); " +
-                        "-fx-text-fill: white; " +
-                        "-fx-font-size: 14px; " +
-                        "-fx-font-weight: bold; " +
-                        "-fx-background-radius: 10; " +
-                        "-fx-border-radius: 10; " +
-                        "-fx-padding: 5 10 5 10; " +
-                        "-fx-effect: null; " +
-                        "-fx-cursor: hand;");
+    // Поля для хранения текущего графика и вьювера
+    private JFreeChart currentChart;
+    private ChartViewer currentChartViewer;
 
-        Glow glow = new Glow(0.0);
-        ScaleTransition scaleIn = new ScaleTransition(Duration.millis(300), button);
-        scaleIn.setFromX(1.0);
-        scaleIn.setFromY(1.0);
-        scaleIn.setToX(1.2);
-        scaleIn.setToY(1.2);
-        scaleIn.setInterpolator(Interpolator.EASE_OUT);
+    private void buildPieChartWithJFreeChart(Map<String, Long> dataMap) {
+        DefaultPieDataset dataset = new DefaultPieDataset();
+        dataMap.forEach(dataset::setValue);
 
-        // Timeline для hover-in эффектов — используй add для KeyValues
-        Timeline hoverIn = new Timeline();
-        hoverIn.getKeyFrames().add(new KeyFrame(Duration.millis(300),
-                new KeyValue(glow.levelProperty(), 0.8, Interpolator.EASE_IN),
-                new KeyValue(button.styleProperty(),
-                        "-fx-background-color: linear-gradient(to right, #ff6b6b, #4ecdc4); " +
-                                "-fx-text-fill: white; " +
-                                "-fx-font-size: 14px; " +
-                                "-fx-font-weight: bold; " +
-                                "-fx-background-radius: 10; " +
-                                "-fx-border-radius: 10; " +
-                                "-fx-padding: 5 10 5 10; " +
-                                "-fx-effect: dropshadow(gaussian, rgba(255,107,107,0.5), 10, 0, 0, 0); " +
-                                "-fx-cursor: hand;", Interpolator.EASE_IN)));
+        JFreeChart chart = ChartFactory.createPieChart(
+                "Распределение",
+                dataset,
+                true,
+                true,
+                false
+        );
 
-        button.setOnMouseEntered(e -> {
-            button.setEffect(glow);
-            hoverIn.playFromStart();
-            scaleIn.playFromStart();
+        PiePlot plot = (PiePlot) chart.getPlot();
+
+        // Применяем стиль в зависимости от темы
+        updateChartTheme(chart, plot);
+
+        plot.setOutlineVisible(true);
+        plot.setLabelFont(new Font("Dialog", Font.BOLD, 12)); // Сделать шрифт чётким
+
+        ChartViewer chartViewer = new ChartViewer(chart);
+        chartViewer.setPrefSize(600, 400);
+
+        // Сохраняем текущий график и вьювер
+        currentChart = chart;
+        currentChartViewer = chartViewer;
+
+        chartPane.setCenter(chartViewer);
+
+        // ДОБАВЛЕНО: Обновляем тему после установки графика (на случай задержки сцены)
+        chartPane.sceneProperty().addListener((obs, oldScene, newScene) -> {
+            if (newScene != null) {
+                // Логируем текущую тему
+                boolean isDark = isDarkThemeActive();
+                System.out.println("ReportsController: Scene установлена. Тема тёмная? " + isDark);
+
+                // Слушатель на изменения стилей
+                newScene.getStylesheets().addListener((javafx.collections.ListChangeListener<String>) c -> {
+                    while (c.next()) {
+                        if (c.wasAdded() || c.wasRemoved()) {
+                            System.out.println("ReportsController: Стили изменились, обновляем тему.");
+                            updateChartTheme();
+                        }
+                    }
+                });
+
+                // Сразу обновляем тему при установке сцены (если стили уже загружены)
+                updateChartTheme();
+            }
         });
+    }
 
-        button.setOnMouseExited(e -> {
-            button.setEffect(null);
-            hoverIn.stop();
-            button.setStyle(
-                    "-fx-background-color: linear-gradient(to right, #6b5ce7, #a29bfe); " +
-                            "-fx-text-fill: white; " +
-                            "-fx-font-size: 14px; " +
-                            "-fx-font-weight: bold; " +
-                            "-fx-background-radius: 10; " +
-                            "-fx-border-radius: 10; " +
-                            "-fx-padding: 5 10 5 10; " +
-                            "-fx-effect: null; " +
-                            "-fx-cursor: hand;");
-            ScaleTransition scaleOut = new ScaleTransition(Duration.millis(300), button);
-            scaleOut.setFromX(1.2);
-            scaleOut.setFromY(1.2);
-            scaleOut.setToX(1.0);
-            scaleOut.setToY(1.0);
-            scaleOut.setInterpolator(Interpolator.EASE_OUT);
-            scaleOut.play();
-        });
+    private void styleChartForDarkTheme(JFreeChart chart, PiePlot plot) {
+        Color darkBg = new Color(43, 43, 43);
+        Color whiteText = Color.WHITE;
+
+        chart.setBackgroundPaint(darkBg);
+        plot.setBackgroundPaint(darkBg);
+        plot.setOutlinePaint(whiteText); // Обводка
+
+        plot.setLabelPaint(whiteText);
+        plot.setLabelBackgroundPaint(null);
+        plot.setLabelOutlinePaint(null);
+        plot.setLabelShadowPaint(null);
+
+        // Легенда
+        LegendTitle legend = chart.getLegend();
+        if (legend != null) {
+            legend.setBackgroundPaint(darkBg);
+            legend.setItemPaint(whiteText);
+            legend.setItemFont(new Font("Dialog", Font.BOLD, 12));
+            legend.setFrame(new BlockBorder(Color.DARK_GRAY));
+        }
+    }
+
+    private void styleChartForLightTheme(JFreeChart chart, PiePlot plot) {
+        Color whiteBg = Color.WHITE;
+        Color darkText = Color.DARK_GRAY;
+
+        chart.setBackgroundPaint(whiteBg);
+        plot.setBackgroundPaint(whiteBg);
+        plot.setOutlinePaint(darkText); // Обводка
+
+        plot.setLabelPaint(darkText);
+        plot.setLabelBackgroundPaint(null);
+        plot.setLabelOutlinePaint(null);
+        plot.setLabelShadowPaint(null);
+
+        LegendTitle legend = chart.getLegend();
+        if (legend != null) {
+            legend.setBackgroundPaint(whiteBg);
+            legend.setItemPaint(darkText);
+            legend.setItemFont(new Font("Dialog", Font.BOLD, 12));
+            legend.setFrame(new BlockBorder(Color.LIGHT_GRAY));
+        }
+    }
+
+    private void updateChartTheme(JFreeChart chart, PiePlot plot) {
+        if (chart == null || plot == null) {
+            System.out.println("ReportsController: chart или plot == null, пропускаем обновление.");
+            return;
+        }
+        boolean isDark = isDarkThemeActive();
+        System.out.println("ReportsController: Обновляем тему. Тёмная? " + isDark);
+        if (isDark) {
+            styleChartForDarkTheme(chart, plot);
+        } else {
+            styleChartForLightTheme(chart, plot);
+        }
+        chart.fireChartChanged();
+    }
+
+    private void updateChartTheme() {
+        if (currentChart == null) return;
+        PiePlot plot = (PiePlot) currentChart.getPlot();
+        updateChartTheme(currentChart, plot);
+    }
+
+    private boolean isDarkThemeActive() {
+        if (chartPane == null || chartPane.getScene() == null) {
+            System.out.println("ReportsController: chartPane или scene == null.");
+            return false;
+        }
+        boolean hasDark = chartPane.getScene().getStylesheets().stream().anyMatch(s -> s.contains("dark-theme.css"));
+        System.out.println("ReportsController: Проверка темы - dark-theme.css найден? " + hasDark);
+        return hasDark;
     }
 
     private void exportReportToExcel() {
@@ -186,11 +254,11 @@ public class ReportsController {
         this.allDevices = deviceDAO.getAllDevices();  // Загружаем данные из DAO
 
         // Добавь style к RadioButton после инициализации
-        if (statusReportBtn != null) applyStyleToRadioButton(statusReportBtn);
-        if (typeReportBtn != null) applyStyleToRadioButton(typeReportBtn);
-        if (manufacturerReportBtn != null) applyStyleToRadioButton(manufacturerReportBtn);
-        if (locationReportBtn != null) applyStyleToRadioButton(locationReportBtn);
-        if (yearReportBtn != null) applyStyleToRadioButton(yearReportBtn);
+        if (statusReportBtn != null) StyleUtils.applyStyleToRadioButton(statusReportBtn);
+        if (typeReportBtn != null) StyleUtils.applyStyleToRadioButton(typeReportBtn);
+        if (manufacturerReportBtn != null) StyleUtils.applyStyleToRadioButton(manufacturerReportBtn);
+        if (locationReportBtn != null) StyleUtils.applyStyleToRadioButton(locationReportBtn);
+        if (yearReportBtn != null) StyleUtils.applyStyleToRadioButton(yearReportBtn);
 
         // Обработчик смены радио-кнопки
         reportTypeGroup.selectedToggleProperty().addListener((obs, oldToggle, newToggle) -> {
@@ -201,6 +269,25 @@ public class ReportsController {
 
         exportReportButton.setOnAction(event -> exportReportToExcel());
 
+        // Вызов метода из StyleUtils для применения CSS и hover
+        if (exportReportButton != null) {
+            exportReportButton.getStyleClass().add("report-export-button");
+            StyleUtils.applyHoverAndAnimation(exportReportButton, "report-export-button", "report-export-button-hover");
+        }
+
+        // Слушатель для смены темы (отслеживаем изменения в стилях сцены)
+        chartPane.sceneProperty().addListener((obsScene, oldScene, newScene) -> {
+            if (newScene != null) {
+                newScene.getStylesheets().addListener((javafx.collections.ListChangeListener<String>) c -> {
+                    while (c.next()) {
+                        if (c.wasAdded() || c.wasRemoved()) {
+                            updateChartTheme();
+                        }
+                    }
+                });
+            }
+        });
+
         // Инициализация с первым отчётом
         updateReport();
     }
@@ -209,30 +296,15 @@ public class ReportsController {
     private void updateReport() {
         RadioButton selected = (RadioButton) reportTypeGroup.getSelectedToggle();
         if (selected == null) return;
+
         String selectedType = selected.getText();
         titleLabel.setText("Отчёт по устройствам — " + selectedType);
 
-        switch (selectedType) {
-            case "По статусу":
-                reportService.buildReport(allDevices, Device::getStatus, "Распределение по статусам", chart);
-                exportReportButton.setOnAction(e -> excelService.exportReportToExcel(allDevices, "Status", primaryStage));
-                break;
-            case "По типам приборов":
-                reportService.buildReport(allDevices, Device::getType, "Распределение по типам", chart);
-                exportReportButton.setOnAction(e -> excelService.exportReportToExcel(allDevices, "Type", primaryStage));
-                break;
-            case "По производителям":
-                reportService.buildReport(allDevices, Device::getManufacturer, "Распределение по производителям", chart);
-                exportReportButton.setOnAction(e -> excelService.exportReportToExcel(allDevices, "Manufacturer", primaryStage));
-                break;
-            case "По местоположению":
-                reportService.buildReport(allDevices, Device::getLocation, "Распределение по местоположениям", chart);
-                exportReportButton.setOnAction(e -> excelService.exportReportToExcel(allDevices, "Location", primaryStage));
-                break;
-            case "По годам выпуска":
-                reportService.buildReportByYear(allDevices, chart);
-                exportReportButton.setOnAction(e -> excelService.exportReportToExcel(allDevices, "Year", primaryStage));
-                break;
-        }
+        Map<String, Long> countMap = getReportDataForCurrentType();
+
+        buildPieChartWithJFreeChart(countMap);
+
+        // Обновляем тему при каждом обновлении отчёта (включая возврат в вкладку)
+        updateChartTheme();
     }
 }

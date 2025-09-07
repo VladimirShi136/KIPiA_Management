@@ -2,15 +2,13 @@ package com.kipia.management.kipia_management.controllers;
 
 import com.kipia.management.kipia_management.models.Device;
 import com.kipia.management.kipia_management.services.DeviceDAO;
-import javafx.animation.FadeTransition;
+import com.kipia.management.kipia_management.utils.StyleUtils;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
-
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
-
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -23,12 +21,10 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import javafx.util.Duration;
 import javafx.util.converter.DefaultStringConverter;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.File;
@@ -91,25 +87,6 @@ public class MainController {
         this.deviceDAO = deviceDAO;
     }
 
-    private void applyHoverAndAnimation(Button button, String defaultColor, String hoverColor) {
-        // Базовый стиль (адаптируйте под ваш дизайн)
-        // Standard шрифт для кнопок
-        // Padding для комфорта
-        button.setStyle(
-                ("-fx-background-color: %s; " +
-                        "-fx-text-fill: white; " +
-                        "-fx-font-size: 14px; " +
-                        "-fx-background-radius: 5; " +
-                        "-fx-border-radius: 5; " +
-                        "-fx-padding: 8 12 8 12;" +
-                        "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 3, 0, 0, 1);" +
-                        "-fx-cursor: hand;").formatted(defaultColor)
-        );
-
-        // Hover-эффекты через event handlers (просто и без :hover)
-        AddDeviceController.selectStyleBtn(button, defaultColor, hoverColor);
-    }
-
     @FXML
     private void initialize() {
         // Устанавливаем начальный текст в статусной строке
@@ -124,12 +101,34 @@ public class MainController {
             statisticsPane.setManaged(false);
         }
 
-        // ДОБАВЛЕНО: Примени hover для навиг. кнопок
-        if (devicesBtn != null) applyHoverAndAnimation(devicesBtn, "#3498db", "#5dade2");
-        if (addDeviceBtn != null) applyHoverAndAnimation(addDeviceBtn, "#2ecc71", "#58d68d");
-        if (reportsBtn != null) applyHoverAndAnimation(reportsBtn, "#e67e22", "#f5a13d");
-        if (exitBtn != null) applyHoverAndAnimation(exitBtn, "#e74c3c", "#ec7063");
-        if (deleteButton != null) applyHoverAndAnimation(deleteButton, "#e74c3c", "#ec7063");
+        // Присваиваем CSS классы кнопкам (через applyHoverAndAnimation или напрямую)
+        if (devicesBtn != null) StyleUtils.applyHoverAndAnimation(devicesBtn, "button-devices", "button-devices-hover");
+        if (addDeviceBtn != null) StyleUtils.applyHoverAndAnimation(addDeviceBtn, "button-add-device", "button-add-device-hover");
+        if (reportsBtn != null) StyleUtils.applyHoverAndAnimation(reportsBtn, "button-reports", "button-reports-hover");
+        if (themeToggleBtn != null) StyleUtils.applyHoverAndAnimation(themeToggleBtn, "button-theme-toggle", "button-theme-toggle-hover");
+        if (exitBtn != null) StyleUtils.applyHoverAndAnimation(exitBtn, "button-exit", "button-exit-hover");
+        if (deleteButton != null) StyleUtils.applyHoverAndAnimation(deleteButton, "button-delete", "button-delete-hover");
+
+        // Добавляем CSS классы к статистике
+        if (totalDevicesLabel != null) {
+            totalDevicesLabel.getStyleClass().addAll("stat-number", "stat-total");
+        }
+        if (workingDevicesLabel != null) {
+            workingDevicesLabel.getStyleClass().addAll("stat-number", "stat-working");
+        }
+        if (storageDevicesLabel != null) {
+            storageDevicesLabel.getStyleClass().addAll("stat-number", "stat-storage");
+        }
+        if (lostDevicesLabel != null) {
+            lostDevicesLabel.getStyleClass().addAll("stat-number", "stat-lost");
+        }
+        if (brokenDevicesLabel != null) {
+            brokenDevicesLabel.getStyleClass().addAll("stat-number", "stat-broken");
+        }
+
+        if (statisticsPane != null) {
+            statisticsPane.getStyleClass().add("statistics-pane");
+        }
     }
 
     @FXML
@@ -142,7 +141,7 @@ public class MainController {
         if (isDarkTheme) {
             // Светлая тема (дефолт или лёгкий CSS, если есть)
             scene.getStylesheets().clear();
-            // scene.getStylesheets().add("/styles/light-theme.css");  // Раскомментируй, если есть светлый CSS
+            scene.getStylesheets().add(getClass().getResource("/styles/light-theme.css").toExternalForm());  // светлый CSS
             if (themeToggleBtn != null) themeToggleBtn.setText("Тёмная тема");
             isDarkTheme = false;
             System.out.println("Светлая тема активирована");
@@ -150,7 +149,7 @@ public class MainController {
             // Тёмная тема
             try {
                 scene.getStylesheets().clear();
-                scene.getStylesheets().add(getClass().getResource("/styles/dark-theme.css").toExternalForm());  // Правильный путь
+                scene.getStylesheets().add(getClass().getResource("/styles/dark-theme.css").toExternalForm()); // темный CSS
                 if (themeToggleBtn != null) themeToggleBtn.setText("Светлая тема");
                 isDarkTheme = true;
                 System.out.println("Тёмная тема активирована");
@@ -166,20 +165,20 @@ public class MainController {
     private void showDevices() {
         statusLabel.setText("Просмотр списка приборов");
 
-
         // Очищаем содержимое contentArea, убирая previous views
         contentArea.getChildren().clear();
 
         // Создаём кнопки экспорта/импорта в новой HBox (под панелью поиска)
         HBox exportImportPane = new HBox(10);
         exportButton = new Button("Экспорт в Excel");
-        exportButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-padding: 5 10;");
+        exportButton.getStyleClass().addAll("button-export");
         exportButton.setOnAction(event -> exportToExcel());
-        if (exportButton != null) applyHoverAndAnimation(exportButton, "#2ecc71", "#58d68d");
+        StyleUtils.applyHoverAndAnimation(exportButton, "button-export", "button-export-hover");
+
         importButton = new Button("Импорт из Excel");
-        importButton.setStyle("-fx-background-color: #2196F3; -fx-text-fill: white; -fx-padding: 5 10;");
+        importButton.getStyleClass().addAll("button-import");
         importButton.setOnAction(event -> importFromExcel());
-        if (importButton != null) applyHoverAndAnimation(importButton, "#3498db", "#5dade2");
+        StyleUtils.applyHoverAndAnimation(importButton, "button-import", "button-import-hover");
         exportImportPane.getChildren().addAll(exportButton, importButton);
 
         // Добавляем панели в contentArea: поиск, экспорт/импорт, статистика
@@ -334,21 +333,21 @@ public class MainController {
             private final Button viewBtn = new Button("Просмотр");
 
             {
-                // Стиль для "Добавить" (зеленый, позитивный)
-                addBtn.setStyle(
-                        "-fx-background-color: #4CAF50; " +
-                                "-fx-text-fill: white; " +
-                                "-fx-font-size: 11px; " +
-                                "-fx-background-radius: 5; " +
-                                "-fx-border-radius: 5; " +
-                                "-fx-border-color: #388E3C; " +
-                                "-fx-border-width: 1; " +
-                                "-fx-padding: 3 6 3 6; " +
-                                "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 2, 0, 0, 1); " +
-                                "-fx-cursor: hand;");
-                addBtn.setPrefWidth(65);  // Маленькая ширина
-                addBtn.setPrefHeight(22);  // Маленькая высота
+                // Присваиваем CSS классы
+                addBtn.getStyleClass().add("table-button-add");
+                viewBtn.getStyleClass().add("table-button-view");
 
+                // Подключаем hover-эффекты через метод applyHoverAndAnimation
+                StyleUtils.applyHoverAndAnimation(addBtn, "table-button-add", "table-button-add-hover");
+                StyleUtils.applyHoverAndAnimation(viewBtn, "table-button-view", "table-button-view-hover");
+
+                // Фиксируем размеры кнопок
+                addBtn.setPrefWidth(65);
+                addBtn.setPrefHeight(22);
+                viewBtn.setPrefWidth(65);
+                viewBtn.setPrefHeight(22);
+
+                // Обработчик кнопки "Добавить"
                 addBtn.setOnAction(event -> {
                     Device device = getTableView().getItems().get(getIndex());
                     FileChooser chooser = new FileChooser();
@@ -357,43 +356,13 @@ public class MainController {
                     Stage stage = (Stage) addBtn.getScene().getWindow();
                     File file = chooser.showOpenDialog(stage);
                     if (file != null) {
-                        device.addPhoto(file.getAbsolutePath());  // Добавляем в список
-                        deviceDAO.updateDevice(device);  // Сохраняем
-                        updateStatistics();  // Если хотите обновить статистику
+                        device.addPhoto(file.getAbsolutePath());
+                        deviceDAO.updateDevice(device);
+                        updateStatistics();
                     }
                 });
 
-                // ДОБАВЛЕНО: Hover-эффекты через event handlers (программно)
-                addBtn.setOnMouseEntered(e -> {
-                    addBtn.setStyle(addBtn.getStyle().replace("#4CAF50", "#66BB6A"));  // Светлее зелёный при наведении
-                    FadeTransition fadeIn = new FadeTransition(Duration.millis(200), addBtn);
-                    fadeIn.setFromValue(0.8);
-                    fadeIn.setToValue(1.0);
-                    fadeIn.play();
-                });
-                addBtn.setOnMouseExited(e -> {
-                    addBtn.setStyle(addBtn.getStyle().replace("#66BB6A", "#4CAF50"));  // Возврат к темному
-                    FadeTransition fadeOut = new FadeTransition(Duration.millis(200), addBtn);
-                    fadeOut.setFromValue(1.0);
-                    fadeOut.setToValue(0.8);
-                    fadeOut.play();
-                });
-
-                // Стиль для "Просмотр" (синий, нейтральный)
-                viewBtn.setStyle(
-                        "-fx-background-color: #2196F3; " +
-                                "-fx-text-fill: white; " +
-                                "-fx-font-size: 11px; " +
-                                "-fx-background-radius: 5; " +
-                                "-fx-border-radius: 5; " +
-                                "-fx-border-color: #1976D2; " +
-                                "-fx-border-width: 1; " +
-                                "-fx-padding: 3 6 3 6; " +
-                                "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 2, 0, 0, 1); " +
-                                "-fx-cursor: hand;");
-                viewBtn.setPrefWidth(65);  // Маленькая ширина
-                viewBtn.setPrefHeight(22);  // Маленькая высота
-
+                // Обработчик кнопки "Просмотр"
                 viewBtn.setOnAction(event -> {
                     Device device = getTableView().getItems().get(getIndex());
                     List<String> photos = device.getPhotos();
@@ -402,12 +371,9 @@ public class MainController {
                         alert.show();
                         return;
                     }
-
-                    // Просмотр нескольких фото в новом окне
                     Stage photoStage = new Stage();
                     photoStage.setTitle("Фото прибора: " + device.getName());
                     VBox photoBox = new VBox(10);
-
                     for (String path : photos) {
                         try {
                             Image image = new Image("file:" + path);
@@ -420,27 +386,10 @@ public class MainController {
                             photoBox.getChildren().add(label);
                         }
                     }
-
                     ScrollPane scroll = new ScrollPane(photoBox);
                     Scene scene = new Scene(scroll, 300, 600);
                     photoStage.setScene(scene);
                     photoStage.show();
-                });
-
-                // То же для viewBtn
-                viewBtn.setOnMouseEntered(e -> {
-                    viewBtn.setStyle(viewBtn.getStyle().replace("#2196F3", "#64B5F6"));  // Светлее синий
-                    FadeTransition fadeIn = new FadeTransition(Duration.millis(200), viewBtn);
-                    fadeIn.setFromValue(0.8);
-                    fadeIn.setToValue(1.0);
-                    fadeIn.play();
-                });
-                viewBtn.setOnMouseExited(e -> {
-                    viewBtn.setStyle(viewBtn.getStyle().replace("#64B5F6", "#2196F3"));  // Возврат к темному
-                    FadeTransition fadeOut = new FadeTransition(Duration.millis(200), viewBtn);
-                    fadeOut.setFromValue(1.0);
-                    fadeOut.setToValue(0.8);
-                    fadeOut.play();
                 });
             }
 
@@ -621,6 +570,7 @@ public class MainController {
 
     @FXML
     private void showReports() {
+        statusLabel.setText("Просмотр отчётов");
         try {
             // Загружаем новый FXML для отчётов
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/reports.fxml"));

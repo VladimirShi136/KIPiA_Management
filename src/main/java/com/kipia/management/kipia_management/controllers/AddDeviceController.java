@@ -2,13 +2,12 @@ package com.kipia.management.kipia_management.controllers;
 
 import com.kipia.management.kipia_management.models.Device;
 import com.kipia.management.kipia_management.services.DeviceDAO;
-import javafx.animation.FadeTransition;
+import com.kipia.management.kipia_management.utils.StyleUtils;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import javafx.util.Duration;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -56,47 +55,21 @@ public class AddDeviceController {
         this.deviceDAO = deviceDAO;
     }
 
-    private void applyHoverAndAnimation(Button button, String defaultColor, String hoverColor) {
-        // Аналогично методу в дерево MainController
-        button.setStyle(
-                "-fx-background-color: " + defaultColor + "; " +
-                        "-fx-text-fill: white; " +
-                        "-fx-font-size: 14px; " +
-                        "-fx-background-radius: 5; " +
-                        "-fx-border-radius: 5; " +
-                        "-fx-padding: 10 20 10 20; " +  // Чуть больше padding для формы
-                        "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 3, 0, 0, 1); " +
-                        "-fx-cursor: hand;"
-        );
-
-        selectStyleBtn(button, defaultColor, hoverColor);
-    }
-
-    static void selectStyleBtn(Button button, String defaultColor, String hoverColor) {
-        button.setOnMouseEntered(e -> {
-            button.setStyle(button.getStyle().replace(defaultColor, hoverColor));
-            FadeTransition fadeIn = new FadeTransition(Duration.millis(200), button);
-            fadeIn.setFromValue(0.8);
-            fadeIn.setToValue(1.0);
-            fadeIn.play();
-        });
-        button.setOnMouseExited(e -> {
-            button.setStyle(button.getStyle().replace(hoverColor, defaultColor));
-            FadeTransition fadeOut = new FadeTransition(Duration.millis(200), button);
-            fadeOut.setFromValue(1.0);
-            fadeOut.setToValue(0.8);
-            fadeOut.play();
-        });
-    }
-
     @FXML
     private void initialize() {
         statusComboBox.setItems(FXCollections.observableArrayList("Хранение", "В работе", "Утерян", "Испорчен"));
         statusComboBox.getSelectionModel().selectFirst();
         messageLabel.setText("");
 
-        if (addBtn != null) applyHoverAndAnimation(addBtn, "#2ecc71", "#58d68d");  // Зеленый для "Добавить"
-        if (cancelBtn != null) applyHoverAndAnimation(cancelBtn, "#e74c3c", "#ec7063");  // Красный для "Отмена"
+        if (addBtn != null) {
+            StyleUtils.applyHoverAndAnimation(addBtn, "button-add", "button-add-hover");
+        }
+        if (cancelBtn != null) {
+            StyleUtils.applyHoverAndAnimation(cancelBtn, "button-cancel", "button-cancel-hover");
+        }
+        if (photoChooseBtn != null) {
+            StyleUtils.applyHoverAndAnimation(photoChooseBtn, "photo-choose-btn", "photo-choose-btn-hover" );
+        }
 
         // Настройка списка фото (без редактирования)
         selectedPhotosListView.setItems(FXCollections.observableArrayList(selectedPhotos));

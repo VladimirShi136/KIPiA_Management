@@ -45,6 +45,8 @@ public class Main extends Application {
 
             // Настраиваем сцену
             Scene scene = new Scene(root, 1000, 700);
+            // Применяем стиль светлой темы
+            scene.getStylesheets().add(getClass().getResource("/styles/light-theme.css").toExternalForm());
 
             // Получаем контроллер и передаем ему сервисы
             MainController controller = loader.getController();

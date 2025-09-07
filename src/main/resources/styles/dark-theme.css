@@ -3,114 +3,281 @@
     -fx-background-color: #2b2b2b;
 }
 
-/* Кнопки */
-.button {
-    -fx-background-color: #444;
-    -fx-text-fill: #eee;
-    -fx-border-color: #666;
-    -fx-background-radius: 5;
-    -fx-border-radius: 5;
+/* Верхняя панель */
+.top {
+    -fx-background-color: #2c3e50;
+    -fx-padding: 10px;
 }
-.button:hover {
+.header-label {
+    -fx-text-fill: white;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+}
+
+/* Левая навигация */
+.left {
+    -fx-background-color: #34495e;
+    -fx-padding: 10px;
+}
+.nav-button {
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-background-radius: 5px;
+    -fx-border-radius: 5px;
+    -fx-padding: 10px;
+    -fx-cursor: hand;
+    -fx-font-size: 14px;
+    -fx-border-color: transparent;
+}
+.nav-button:hover {
     -fx-background-color: #555;
 }
-
-/* Надписи (общие) */
-.label {
-    -fx-text-fill: #eee;
+.button-devices {
+    -fx-background-color: #3498db;
+}
+.button-add {
+    -fx-background-color: #2ecc71;
+}
+.button-reports {
+    -fx-background-color: #e67e22;
+}
+.button-theme-toggle {
+    -fx-background-color: #7f8c8d;
+}
+.button-exit {
+    -fx-background-color: #e74c3c;
 }
 
-/* Текстовые поля */
-.text-field {
+/* Центр */
+#contentArea {
+    -fx-padding: 10px;
+    -fx-spacing: 15px;
+}
+
+/* Поиск */
+.search-delete-pane {
+    -fx-spacing: 10px;
+}
+.search-label {
+    -fx-font-weight: bold;
+    -fx-text-fill: #eee;
+}
+.search-field {
+    -fx-pref-width: 300px;
     -fx-background-color: #444;
     -fx-text-fill: #eee;
     -fx-prompt-text-fill: #aaa;
     -fx-border-color: #666;
 }
+.button-delete {
+    -fx-background-color: #e74c3c;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-background-radius: 5px;
+    -fx-border-radius: 5px;
+    -fx-padding: 7px 15px;
+    -fx-cursor: hand;
+}
 
-/* Таблица */
-.table-view {
+/* Статистика */
+.statistics-pane {
     -fx-background-color: #3a3a3a;
-    -fx-control-inner-background: #444;
+    -fx-padding: 20px;
+    -fx-border-color: #666;
+    -fx-border-radius: 5px;
+    -fx-spacing: 10px;
+}
+
+.statistics-header {
+    -fx-font-weight: bold;
+    -fx-font-size: 16px;
+    -fx-padding-bottom: 10px;
     -fx-text-fill: #eee;
 }
-.table-view .column-header {
+
+.statistics-data {
+    -fx-spacing: 20px;
+}
+
+.stat-number {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+}
+
+.stat-total {
+    -fx-text-fill: #539bf5;
+}
+
+.stat-working {
+    -fx-text-fill: #6ed07f;
+}
+
+.stat-storage {
+    -fx-text-fill: #f16964;
+}
+
+.stat-lost {
+    -fx-text-fill: #8b867f;
+}
+
+.stat-broken {
+    -fx-text-fill: #f6bf54;
+}
+
+.stat-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: #bbb;
+}
+
+/* Нижняя панель */
+.bottom {
+    -fx-background-color: #1e1e1e;
+    -fx-padding: 5px;
+    -fx-alignment: center-left;
+}
+.status-label {
+    -fx-text-fill: #eee;
+    -fx-font-size: 12px;
+}
+
+/* Reports.fxml */
+
+.reports-root {
+    -fx-padding: 20px;
+    -fx-background-color: #2b2b2b;
+}
+
+.report-buttons {
+    -fx-spacing: 20px;
+}
+
+.report-radio {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #eee;
+}
+
+.report-radio:selected {
     -fx-background-color: #555;
+}
+
+.report-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
     -fx-text-fill: #eee;
 }
-.table-view .table-cell {
+
+.chart-pane {
+    -fx-background-color: transparent;
+}
+
+.report-export-button {
+    -fx-background-color: #4caf50;
+    -fx-text-fill: white;
+    -fx-padding: 5 10;
+    -fx-background-radius: 5px;
+    -fx-border-radius: 5px;
+    -fx-cursor: hand;
+}
+
+/* Add-device-form.fxml */
+
+.add-device-root {
+    -fx-padding: 15px;
+    -fx-background-color: #2b2b2b;
+}
+
+.form-header {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-padding-bottom: 10px;
+    -fx-text-fill: #eee;
+}
+
+.form-grid {
+    -fx-hgap: 10px;
+    -fx-vgap: 10px;
+}
+
+.form-label {
+    -fx-alignment: center-right;
+    -fx-text-fill: #eee;
+}
+
+.form-input {
+    -fx-pref-width: 200px;
+    -fx-background-color: #444;
+    -fx-text-fill: #eee;
+    -fx-prompt-text-fill: #aaa;
+    -fx-border-color: #666;
+    -fx-background-radius: 3px;
+    -fx-border-radius: 3px;
+}
+
+.form-textarea {
+    -fx-pref-width: 200px;
+    -fx-pref-height: 60px;
+    -fx-background-color: #444;
+    -fx-text-fill: #eee;
+    -fx-prompt-text-fill: #aaa;
+    -fx-border-color: #666;
+    -fx-background-radius: 3px;
+    -fx-border-radius: 3px;
+}
+
+.photo-picker {
+    -fx-spacing: 5px;
+}
+
+.photo-choose-btn {
+    -fx-background-color: #3498db;
+    -fx-text-fill: white;
+    -fx-cursor: hand;
+}
+
+.photo-choose-btn:hover {
+    -fx-background-color: #2980b9;
+}
+
+.photo-list {
+    -fx-pref-height: 100px;
+    -fx-pref-width: 200px;
     -fx-background-color: #444;
     -fx-text-fill: #eee;
 }
 
-/* RadioButton */
-.radio-button .text {
-    -fx-text-fill: #eee;
+.form-buttons {
+    -fx-spacing: 10px;
+    -fx-alignment: center-right;
 }
 
-/* Диаграммы (Общие стили для всех чартов) */
-.chart {
-    -fx-background-color: #333;  /* Тёмный фон для диаграммы */
-    -fx-legend-text-fill: #eee;  /* Текст в легенде */
-}
-
-/* Заголовок диаграммы */
-.chart .chart-title {
-    -fx-text-fill: #fff;  /* Белый текст для заголовка */
-    -fx-font-weight: bold;
-}
-
-/* Лейблы на осях (для линейных чартов, но полезно и для Pie) */
-.chart .axis-label {
-    -fx-text-fill: #eee;
-}
-
-/* Лейблы данных (для PieChart стлохо) */
-.chart .chart-label {
-    -fx-text-fill: #fff;  /* Белый текст для категорий и процентов */
-    -fx-font-size: 12px;  /* Размер текста */
-}
-
-.chart .chart-content .chart-plot-background {
-    -fx-background-color: #333;  /* Фон области диаграммы */
-}
-
-/* Специфически для PieChart (расширенные стили) */
-.pie-chart {
-    -fx-background-color: transparent;  /* Прозрачный для наследования от .chart */
-}
-
-/* Легенда */
-.pie-chart .chart-legend {
-    -fx-background-color: #444; /* тёмный фон легенды */
-    -fx-text-fill: #fff;        /* белый текст легенды */
-}
-
-.pie-chart .chart-legend-item-text {
-    -fx-text-fill: #ffffff;       /* белый цвет текста элементов легенды */
-    -fx-font-weight: bold;
-}
-
-/* Текст подписей секторов */
-.pie-chart .chart-label {
-    -fx-text-fill: #ffffff;     /* яркий белый цвет для подписей */
-    -fx-font-weight: bold;
-    -fx-font-size: 12px;
-    -fx-effect: dropshadow(gaussian, black, 2, 0.5, 0, 0);
-}
-
-.pie-chart .chart-data-label {
-    -fx-text-fill: #ffffff;  /* Для дополнительных лейблов данных */
-    -fx-font-size: 11px;
-}
-
-.pie-chart .chart-plot-background {
-    -fx-background-color: #333;
-}
-
-/* Заголовок диаграммы */
-.chart .chart-title {
+.button-cancel {
+    -fx-background-color: #e74c3c;
     -fx-text-fill: white;
-    -fx-font-size: 16px;
-    -fx-font-weight: bold;
+    -fx-cursor: hand;
+    -fx-padding: 7px 15px;
+    -fx-background-radius: 5px;
+    -fx-border-radius: 5px;
+}
+
+.button-cancel:hover {
+    -fx-background-color: #c0392b;
+}
+
+.button-add {
+    -fx-background-color: #2ecc71;
+    -fx-text-fill: white;
+    -fx-cursor: hand;
+    -fx-padding: 7px 15px;
+    -fx-background-radius: 5px;
+    -fx-border-radius: 5px;
+}
+
+.button-add:hover {
+    -fx-background-color: #27ae60;
+}
+
+.form-message {
+    -fx-text-fill: red;
+    -fx-padding-top: 10px;
 }
