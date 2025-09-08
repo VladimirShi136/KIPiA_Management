@@ -31,6 +31,12 @@ public class Device {
     // Год выпуска (новое)
     private Integer year;
 
+    // Предел измерений
+    private String measurementLimit;
+
+    // Класс точности
+    private Double accuracyClass;
+
     // Местонахождение или расположение прибора
     private String location;
 
@@ -43,7 +49,8 @@ public class Device {
     // Пусть к фото (новое)
     private String photoPath;
 
-    private List<String> photos;  // Новая коллекция для путей фото
+    // Новая коллекция для путей фото
+    private List<String> photos;
 
     /**
      * Конструктор по умолчанию.
@@ -61,18 +68,22 @@ public class Device {
      * @param manufacturer изготовитель прибора
      * @param inventoryNumber инвентарный номер
      * @param year год выпуска
+     * @param measurementLimit предел измерений
+     * @param accuracyClass класс точности
      * @param location местонахождение
      * @param status статус прибора
      * @param additionalInfo дополнительная информация
      * @param photoPath путь к фото-изображение прибора
      */
-    public Device(int id, String type, String name, String manufacturer, String inventoryNumber, Integer year, String location, String status, String additionalInfo, String photoPath) {
+    public Device(int id, String type, String name, String manufacturer, String inventoryNumber, Integer year, String measurementLimit, Double accuracyClass, String location, String status, String additionalInfo, String photoPath) {
         this.id = id;
         this.type = type;
         this.name = name;
         this.manufacturer = manufacturer;
         this.inventoryNumber = inventoryNumber;
         this.year = year;
+        this.measurementLimit = measurementLimit;
+        this.accuracyClass = accuracyClass;
         this.location = location;
         this.status = status;
         this.additionalInfo = additionalInfo;
@@ -167,6 +178,38 @@ public class Device {
     }
 
     /**
+     * Получить предел измерений
+     * @return предел измерений
+     */
+    public String getMeasurementLimit() {
+        return measurementLimit;
+    }
+
+    /**
+     * Установить предел измерений для прибора
+     * @param measurementLimit предел измерений
+     */
+    public void setMeasurementLimit(String measurementLimit) {
+        this.measurementLimit = measurementLimit;
+    }
+
+    /**
+     * Получить класс точности прибора
+     * @return класс точности
+     */
+    public Double getAccuracyClass() {
+        return accuracyClass;
+    }
+
+    /**
+     * Установить класс точности прибора
+     * @param accuracyClass класс точности
+     */
+    public void setAccuracyClass(Double accuracyClass) {
+        this.accuracyClass = accuracyClass;
+    }
+
+    /**
      * Получить местонахождение прибора.
      * @return местонахождение прибора
      */
@@ -245,11 +288,13 @@ public class Device {
                 ", manufacturer='" + manufacturer + '\'' +
                 ", inventoryNumber='" + inventoryNumber + '\'' +
                 ", year=" + year +
+                ", measurementLimit='" + measurementLimit + '\'' +
+                ", accuracyClass=" + accuracyClass +
                 ", location='" + location + '\'' +
                 ", status='" + status + '\'' +
                 ", additionalInfo='" + additionalInfo + '\'' +
                 ", photoPath='" + photoPath + '\'' +
-                ", photos='" + photos +
+                ", photos=" + photos +
                 '}';
     }
 }

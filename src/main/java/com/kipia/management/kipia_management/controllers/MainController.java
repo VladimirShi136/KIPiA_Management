@@ -22,9 +22,11 @@ import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.converter.DefaultStringConverter;
+import javafx.util.converter.DoubleStringConverter;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.File;
@@ -103,11 +105,14 @@ public class MainController {
 
         // Присваиваем CSS классы кнопкам (через applyHoverAndAnimation или напрямую)
         if (devicesBtn != null) StyleUtils.applyHoverAndAnimation(devicesBtn, "button-devices", "button-devices-hover");
-        if (addDeviceBtn != null) StyleUtils.applyHoverAndAnimation(addDeviceBtn, "button-add-device", "button-add-device-hover");
+        if (addDeviceBtn != null)
+            StyleUtils.applyHoverAndAnimation(addDeviceBtn, "button-add-device", "button-add-device-hover");
         if (reportsBtn != null) StyleUtils.applyHoverAndAnimation(reportsBtn, "button-reports", "button-reports-hover");
-        if (themeToggleBtn != null) StyleUtils.applyHoverAndAnimation(themeToggleBtn, "button-theme-toggle", "button-theme-toggle-hover");
+        if (themeToggleBtn != null)
+            StyleUtils.applyHoverAndAnimation(themeToggleBtn, "button-theme-toggle", "button-theme-toggle-hover");
         if (exitBtn != null) StyleUtils.applyHoverAndAnimation(exitBtn, "button-exit", "button-exit-hover");
-        if (deleteButton != null) StyleUtils.applyHoverAndAnimation(deleteButton, "button-delete", "button-delete-hover");
+        if (deleteButton != null)
+            StyleUtils.applyHoverAndAnimation(deleteButton, "button-delete", "button-delete-hover");
 
         // Добавляем CSS классы к статистике
         if (totalDevicesLabel != null) {
@@ -278,7 +283,34 @@ public class MainController {
             deviceDAO.updateDevice(device);
         });
 
-        // 7. Колонка "Состояние" — редактируемая с ComboBox
+        // 7. Колонка "Предел измерений"
+        TableColumn<Device, String> measurementLimitCol = new TableColumn<>("Предел измерений");
+        measurementLimitCol.setCellValueFactory(new PropertyValueFactory<>("measurementLimit"));
+        measurementLimitCol.setPrefWidth(120);
+        measurementLimitCol.setCellFactory(TextFieldTableCell.forTableColumn());
+        measurementLimitCol.setOnEditCommit(event -> {
+            Device device = event.getRowValue();
+            device.setMeasurementLimit(event.getNewValue());
+            deviceDAO.updateDevice(device);
+        });
+
+        // 8. Колонка "Класс точности" (Double)
+        TableColumn<Device, Double> accuracyClassCol = new TableColumn<>("Класс точности");
+        accuracyClassCol.setCellValueFactory(new PropertyValueFactory<>("accuracyClass"));
+        accuracyClassCol.setPrefWidth(110);
+        accuracyClassCol.setCellFactory(TextFieldTableCell.forTableColumn(new DoubleStringConverter()));
+        accuracyClassCol.setOnEditCommit(event -> {
+            Device device = event.getRowValue();
+            try {
+                device.setAccuracyClass(event.getNewValue());
+                deviceDAO.updateDevice(device);
+            } catch (NumberFormatException e) {
+                // Некорректный формат Double — можно добавить alert или сброс
+                updateStatistics();
+            }
+        });
+
+        // 10. Колонка "Состояние" — редактируемая с ComboBox
         TableColumn<Device, String> statusCol = new TableColumn<>("Статус");
         statusCol.setCellValueFactory(new PropertyValueFactory<>("status"));
         statusCol.setPrefWidth(80);
@@ -291,7 +323,7 @@ public class MainController {
             updateStatistics();
         });
 
-        // 9. Колонка "Доп.информация"
+        // 11. Колонка "Доп.информация"
         TableColumn<Device, String> additionalInfoCol = new TableColumn<>("Дополнительная информация");
         additionalInfoCol.setCellValueFactory(new PropertyValueFactory<>("additionalInfo"));
         additionalInfoCol.setPrefWidth(200);
@@ -325,7 +357,7 @@ public class MainController {
         });
 
 
-        // 8. Колонка "Фото" — с кнопкой "Просмотр"
+        // 9. Колонка "Фото" — с кнопкой "Просмотр"
         TableColumn<Device, Void> photoCol = new TableColumn<>("Фото");
         photoCol.setPrefWidth(145);
         photoCol.setCellFactory(param -> new TableCell<>() {
@@ -444,6 +476,8 @@ public class MainController {
                 manufacturerCol,
                 inventoryCol,
                 yearCol,
+                measurementLimitCol,
+                accuracyClassCol,
                 locationCol,
                 statusCol,
                 photoCol,
@@ -606,7 +640,7 @@ public class MainController {
             Sheet sheet = workbook.createSheet("Devices");
 
             // Заголовки столбцов (соответствуем полям Device)
-            String[] headers = {"Тип прибора", "Модель", "Производитель", "Инвентарный №", "Год выпуска", "Место установки", "Статус", "Дополнительная информация"};
+            String[] headers = {"Тип прибора", "Модель", "Производитель", "Инвентарный №", "Год выпуска", "Предел измерений", "Класс точности", "Место установки", "Статус", "Дополнительная информация"};
             Row headerRow = sheet.createRow(0);
             for (int i = 0; i < headers.length; i++) {
                 headerRow.createCell(i).setCellValue(headers[i]);
@@ -622,9 +656,11 @@ public class MainController {
                 row.createCell(2).setCellValue(device.getManufacturer() != null ? device.getManufacturer() : "");
                 row.createCell(3).setCellValue(device.getInventoryNumber() != null ? device.getInventoryNumber() : "");
                 row.createCell(4).setCellValue(device.getYear() != null ? device.getYear().toString() : "");  // Число как строка для корректности
-                row.createCell(5).setCellValue(device.getLocation() != null ? device.getLocation() : "");
-                row.createCell(6).setCellValue(device.getStatus() != null ? device.getStatus() : "");
-                row.createCell(7).setCellValue(device.getAdditionalInfo() != null ? device.getAdditionalInfo() : "");
+                row.createCell(5).setCellValue(device.getMeasurementLimit() != null ? device.getMeasurementLimit() : "");
+                row.createCell(6).setCellValue(device.getAccuracyClass() != null ? device.getAccuracyClass() : 0.0);
+                row.createCell(7).setCellValue(device.getLocation() != null ? device.getLocation() : "");
+                row.createCell(8).setCellValue(device.getStatus() != null ? device.getStatus() : "");
+                row.createCell(9).setCellValue(device.getAdditionalInfo() != null ? device.getAdditionalInfo() : "");
             }
 
             // Автоподстройка ширины колонок для лучшей читабельности
@@ -688,9 +724,18 @@ public class MainController {
                         device.setYear(null);  // Если не число, ставим null
                     }
                 }
-                device.setLocation(getCellValue(row, 5));
-                device.setStatus(getCellValue(row, 6));
-                device.setAdditionalInfo(getCellValue(row, 7));
+                String accuracyStr = getCellValue(row, 5);
+                if (!accuracyStr.isEmpty()) {
+                    try {
+                        device.setAccuracyClass(Double.parseDouble(accuracyStr));
+                    } catch (NumberFormatException e) {
+                        device.setAccuracyClass(null);
+                    }
+                }
+                device.setMeasurementLimit(getCellValue(row, 6));
+                device.setLocation(getCellValue(row, 7));
+                device.setStatus(getCellValue(row, 8));
+                device.setAdditionalInfo(getCellValue(row, 9));
 
                 // Валидация: инвентарный номер обязателен
                 if (device.getInventoryNumber() == null || device.getInventoryNumber().isEmpty()) {
@@ -705,6 +750,8 @@ public class MainController {
                     existing.setName(device.getName());
                     existing.setManufacturer(device.getManufacturer());
                     // Год уже обработан
+                    existing.setAccuracyClass((device.getAccuracyClass()));
+                    existing.setMeasurementLimit(device.getMeasurementLimit());
                     existing.setLocation(device.getLocation());
                     existing.setStatus(device.getStatus());
                     existing.setAdditionalInfo(device.getAdditionalInfo());
@@ -730,7 +777,8 @@ public class MainController {
                     if (lower.isEmpty()) return true;
                     return (device.getName() != null && device.getName().toLowerCase().contains(lower)) ||
                             (device.getType() != null && device.getType().toLowerCase().contains(lower)) ||
-                            (device.getLocation() != null && device.getLocation().toLowerCase().contains(lower));
+                            (device.getLocation() != null && device.getLocation().toLowerCase().contains(lower)) ||
+                            (device.getMeasurementLimit() != null && device.getMeasurementLimit().toLowerCase().contains(lower));
                 });
                 updateStatistics();
             });

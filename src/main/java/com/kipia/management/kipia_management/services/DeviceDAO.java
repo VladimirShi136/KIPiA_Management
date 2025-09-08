@@ -48,7 +48,7 @@ public class DeviceDAO {
      */
     public boolean addDevice(Device device) {
         // Обновлено: добавлен плейсхолдер для photos
-        String sql = "INSERT INTO devices (type, name, manufacturer, inventory_number, year, location, status, additional_info, photo_path, photos) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO devices (type, name, manufacturer, inventory_number, year, measurement_limit, accuracy_class, location, status, additional_info, photo_path, photos) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
             // Устанавливаем параметры (исправлен порядок для соответствия полям таблицы)
             stmt.setString(1, device.getType());
@@ -60,11 +60,17 @@ public class DeviceDAO {
             } else {
                 stmt.setNull(5, Types.INTEGER);
             }
-            stmt.setString(6, device.getLocation());
-            stmt.setString(7, device.getStatus());
-            stmt.setString(8, device.getAdditionalInfo());  // Новое дополнительная
-            stmt.setString(9, device.getPhotoPath());  // Старое поле для первого фото
-            stmt.setString(10, photosToString(device.getPhotos()));  // Новое поле для списка фото
+            stmt.setString(6, device.getMeasurementLimit()); // Новое поле
+            if (device.getAccuracyClass() != null) {
+                stmt.setDouble(7, device.getAccuracyClass()); // Новое поле
+            } else {
+                stmt.setNull(7, Types.DOUBLE);
+            }
+            stmt.setString(8, device.getLocation());
+            stmt.setString(9, device.getStatus());
+            stmt.setString(10, device.getAdditionalInfo());  // Новое дополнительная
+            stmt.setString(11, device.getPhotoPath());  // Старое поле для первого фото
+            stmt.setString(12, photosToString(device.getPhotos()));  // Новое поле для списка фото
             // Выполнение запроса
             stmt.executeUpdate();
             return true;
@@ -94,6 +100,9 @@ public class DeviceDAO {
                 // Десериализация года (если null, оставляем null)
                 Object yearObj = rs.getObject("year");
                 device.setYear(yearObj != null ? (Integer) yearObj : null);
+                device.setMeasurementLimit(rs.getString("measurement_limit")); // Новое поле
+                Object accuracyObj = rs.getObject("accuracy_class");
+                device.setAccuracyClass(accuracyObj != null ? (Double) accuracyObj : null); // Новое поле
                 device.setLocation(rs.getString("location"));
                 device.setStatus(rs.getString("status"));
                 device.setAdditionalInfo(rs.getString("additional_info"));
@@ -126,12 +135,18 @@ public class DeviceDAO {
             } else {
                 stmt.setNull(5, Types.INTEGER);
             }
-            stmt.setString(6, device.getLocation());
-            stmt.setString(7, device.getStatus());
-            stmt.setString(8, device.getAdditionalInfo());
-            stmt.setString(9, device.getPhotoPath());
-            stmt.setString(10, photosToString(device.getPhotos()));  // Список фото
-            stmt.setInt(11, device.getId());  // ID для WHERE
+            stmt.setString(6, device.getMeasurementLimit()); // Новое поле
+            if (device.getAccuracyClass() != null) {
+                stmt.setDouble(7, device.getAccuracyClass()); // Новое поле
+            } else {
+                stmt.setNull(7, Types.DOUBLE);
+            }
+            stmt.setString(8, device.getLocation());
+            stmt.setString(9, device.getStatus());
+            stmt.setString(10, device.getAdditionalInfo());
+            stmt.setString(11, device.getPhotoPath());
+            stmt.setString(12, photosToString(device.getPhotos()));  // Список фото
+            stmt.setInt(13, device.getId());  // ID для WHERE
             stmt.executeUpdate();
         } catch (SQLException e) {
             System.out.println("Ошибка обновления прибора: " + e.getMessage());
@@ -174,6 +189,9 @@ public class DeviceDAO {
                 device.setInventoryNumber(rs.getString("inventory_number"));
                 Object yearObj = rs.getObject("year");
                 device.setYear(yearObj != null ? (Integer) yearObj : null);
+                device.setMeasurementLimit(rs.getString("measurement_limit")); // Новое поле
+                Object accuracyObj = rs.getObject("accuracy_class");
+                device.setAccuracyClass(accuracyObj != null ? (Double) accuracyObj : null); // Новое поле
                 device.setLocation(rs.getString("location"));
                 device.setStatus(rs.getString("status"));
                 device.setAdditionalInfo(rs.getString("additional_info"));

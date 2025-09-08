@@ -1,56 +1,107 @@
 package com.kipia.management.kipia_management.services;
 
 import com.kipia.management.kipia_management.models.Device;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
-import javafx.scene.chart.PieChart;
-import javafx.scene.paint.Color;
-import javafx.scene.text.Text;
-
+import javafx.scene.layout.BorderPane;
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.JFreeChart;
+import org.jfree.chart.fx.ChartViewer;
+import org.jfree.chart.plot.PiePlot;
+import org.jfree.chart.title.LegendTitle;
+import org.jfree.chart.block.BlockBorder;
+import java.awt.Font;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/**
- * @author vladimir_shi
- * @since 05.09.2025
- */
-
 public class DeviceReportService {
-    // Метод для сборки отчёта (для категориальных полей — статус, тип, производитель, местоположение)
-    public void buildReport(List<Device> devices, Function<Device, String> fieldGetter, String chartTitle, PieChart chart) {
-        Map<String, Long> countMap = devices.stream()
-                .filter(d -> fieldGetter.apply(d) != null && !fieldGetter.apply(d).isEmpty())
-                .collect(Collectors.groupingBy(fieldGetter, Collectors.counting()));
 
-        ObservableList<PieChart.Data> chartData = FXCollections.observableArrayList();
-        countMap.forEach((key, count) -> chartData.add(new PieChart.Data(key + " (" + count + ")", count)));
-        chart.setData(chartData);
-        chart.setTitle(chartTitle);
+    // Возвращает map подсчёта по выбранному критерию
+    public Map<String, Long> getReportData(List<Device> devices, String reportKey) {
+        return switch (reportKey) {
+            case "Status" -> groupBy(devices, Device::getStatus);
+            case "Type" -> groupBy(devices, Device::getType);
+            case "Manufacturer" -> groupBy(devices, Device::getManufacturer);
+            case "Location" -> groupBy(devices, Device::getLocation);
+            case "Year" -> devices.stream()
+                    .filter(d -> d.getYear() != null)
+                    .collect(Collectors.groupingBy(d -> d.getYear().toString(), Collectors.counting()));
+            default -> Collections.emptyMap();
+        };
     }
 
-    // Специальный метод для отчёта по годам (года — Integer, но группируем как String)
-    public void buildReportByYear(List<Device> devices, PieChart chart) {
-        Map<String, Long> countMap = devices.stream()
-                .filter(d -> d.getYear() != null)
-                .collect(Collectors.groupingBy(d -> d.getYear().toString(), Collectors.counting()));
-
-        ObservableList<PieChart.Data> chartData = FXCollections.observableArrayList();
-        countMap.forEach((key, count) -> chartData.add(new PieChart.Data("Год " + key + " (" + count + ")", count)));
-        chart.setData(chartData);
-        chart.setTitle("Распределение по годам");
-        updatePieChartLabelsColor(chart);
+    private Map<String, Long> groupBy(List<Device> devices, Function<Device, String> classifier) {
+        return devices.stream()
+                .filter(d -> classifier.apply(d) != null && !classifier.apply(d).isEmpty())
+                .collect(Collectors.groupingBy(classifier, Collectors.counting()));
     }
 
-    private void updatePieChartLabelsColor(PieChart chart) {
-        // Ищем все Text элементы с подписями в PieChart
-        chart.lookupAll(".chart-pie-label").forEach(node -> {
-            if (node instanceof Text text) {
-                text.setFill(Color.WHITE);  // Задаём белый цвет текста
-                // При необходимости можно добавить тень или увеличенный шрифт:
-                // text.setStyle("-fx-effect: dropshadow(gaussian, black, 2, 0.5, 0, 0);");
-            }
-        });
+    // Метод построения JFreeChart диаграммы с обновлением темы
+    public ChartViewer buildPieChart(Map<String, Long> dataMap, String chartTitle, BorderPane chartPane, boolean isDarkTheme) {
+        org.jfree.data.general.DefaultPieDataset dataset = new org.jfree.data.general.DefaultPieDataset();
+        dataMap.forEach(dataset::setValue);
+
+        JFreeChart chart = ChartFactory.createPieChart(
+                chartTitle,
+                dataset,
+                true,
+                true,
+                false
+        );
+
+        PiePlot plot = (PiePlot) chart.getPlot();
+        if (isDarkTheme) {
+            styleChartForDarkTheme(chart, plot);
+        } else {
+            styleChartForLightTheme(chart, plot);
+        }
+        plot.setOutlineVisible(true);
+        plot.setLabelFont(new Font("Dialog", Font.BOLD, 12));
+
+        ChartViewer chartViewer = new ChartViewer(chart);
+        chartViewer.setPrefSize(600, 400);
+        chartPane.setCenter(chartViewer);
+        return chartViewer;
+    }
+
+    private void styleChartForDarkTheme(JFreeChart chart, PiePlot plot) {
+        // Используем полное имя для java.awt.Color, чтобы избежать конфликта с javafx.scene.paint.Color
+        java.awt.Color darkBg = new java.awt.Color(43, 43, 43);
+        java.awt.Color whiteText = java.awt.Color.WHITE;
+        chart.setBackgroundPaint(darkBg);
+        plot.setBackgroundPaint(darkBg);
+        plot.setOutlinePaint(whiteText);
+        plot.setLabelPaint(whiteText);
+        plot.setLabelBackgroundPaint(null);
+        plot.setLabelOutlinePaint(null);
+        plot.setLabelShadowPaint(null);
+        LegendTitle legend = chart.getLegend();
+        if (legend != null) {
+            legend.setBackgroundPaint(darkBg);
+            legend.setItemPaint(whiteText);
+            legend.setItemFont(new Font("Dialog", Font.BOLD, 12));
+            legend.setFrame(new BlockBorder(java.awt.Color.DARK_GRAY));
+        }
+    }
+
+    private void styleChartForLightTheme(JFreeChart chart, PiePlot plot) {
+        // Используем полное имя для java.awt.Color
+        java.awt.Color whiteBg = java.awt.Color.WHITE;
+        java.awt.Color darkText = java.awt.Color.DARK_GRAY;
+        chart.setBackgroundPaint(whiteBg);
+        plot.setBackgroundPaint(whiteBg);
+        plot.setOutlinePaint(darkText);
+        plot.setLabelPaint(darkText);
+        plot.setLabelBackgroundPaint(null);
+        plot.setLabelOutlinePaint(null);
+        plot.setLabelShadowPaint(null);
+        LegendTitle legend = chart.getLegend();
+        if (legend != null) {
+            legend.setBackgroundPaint(whiteBg);
+            legend.setItemPaint(darkText);
+            legend.setItemFont(new Font("Dialog", Font.BOLD, 12));
+            legend.setFrame(new BlockBorder(java.awt.Color.LIGHT_GRAY));
+        }
     }
 }

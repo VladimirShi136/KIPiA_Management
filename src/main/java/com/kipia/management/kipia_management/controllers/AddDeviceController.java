@@ -34,6 +34,10 @@ public class AddDeviceController {
     @FXML
     private TextField yearField;
     @FXML
+    private TextField measurementLimitField;
+    @FXML
+    private TextField accuracyClassField;
+    @FXML
     private TextField locationField;
     @FXML
     private ComboBox<String> statusComboBox;
@@ -68,7 +72,7 @@ public class AddDeviceController {
             StyleUtils.applyHoverAndAnimation(cancelBtn, "button-cancel", "button-cancel-hover");
         }
         if (photoChooseBtn != null) {
-            StyleUtils.applyHoverAndAnimation(photoChooseBtn, "photo-choose-btn", "photo-choose-btn-hover" );
+            StyleUtils.applyHoverAndAnimation(photoChooseBtn, "photo-choose-btn", "photo-choose-btn-hover");
         }
 
         // Настройка списка фото (без редактирования)
@@ -114,6 +118,17 @@ public class AddDeviceController {
         String name = nameField.getText().trim();
         String type = typeField.getText().trim();
         String inventoryNumber = inventoryNumberField.getText().trim();
+        String measurementLimit = measurementLimitField.getText().trim();
+        String accuracyClassStr = accuracyClassField.getText().trim();
+        Double accuracyClass = null;
+        if (!accuracyClassStr.isEmpty()) {
+            try {
+                accuracyClass = Double.parseDouble(accuracyClassStr);
+            } catch (NumberFormatException e) {
+                messageLabel.setText("Класс точности должен быть числом");
+                return;
+            }
+        }
         String location = locationField.getText().trim();
         String status = statusComboBox.getValue();
 
@@ -133,6 +148,8 @@ public class AddDeviceController {
         device.setName(name);
         device.setType(type);
         device.setInventoryNumber(inventoryNumber);
+        device.setMeasurementLimit(measurementLimit);
+        device.setAccuracyClass(accuracyClass);
         device.setLocation(location);
         device.setStatus(status);
 
@@ -185,7 +202,10 @@ public class AddDeviceController {
         typeField.clear();
         inventoryNumberField.clear();
         locationField.clear();
+        manufacturerField.clear();
         yearField.clear();
+        accuracyClassField.clear();
+        measurementLimitField.clear();
         additionalInfoField.clear();
         statusComboBox.getSelectionModel().selectFirst();
         photoPathField.clear();
