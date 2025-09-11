@@ -11,6 +11,8 @@ import javafx.scene.effect.Glow;
 import javafx.util.Duration;
 
 /**
+ * Класс с утилитами для работы со стилями CSS
+ *
  * @author vladimir_shi
  * @since 08.09.2025
  */

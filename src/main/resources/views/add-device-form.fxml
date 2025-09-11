@@ -8,44 +8,67 @@
     <Label text="Добавление нового прибора" styleClass="form-header"/>
     <GridPane hgap="10" vgap="10" styleClass="form-grid">
         <Label text="Тип прибора:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
-        <TextField fx:id="typeField" GridPane.rowIndex="0" GridPane.columnIndex="1" prefWidth="200" styleClass="form-input"/>
+        <TextField fx:id="typeField" GridPane.rowIndex="0" GridPane.columnIndex="1" prefWidth="200"
+                   styleClass="form-input"/>
 
         <Label text="Модель:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
-        <TextField fx:id="nameField" GridPane.rowIndex="1" GridPane.columnIndex="1" prefWidth="200" styleClass="form-input"/>
+        <TextField fx:id="nameField" GridPane.rowIndex="1" GridPane.columnIndex="1" prefWidth="200"
+                   styleClass="form-input"/>
 
         <Label text="Инвентарный номер:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
-        <TextField fx:id="inventoryNumberField" GridPane.rowIndex="2" GridPane.columnIndex="1" prefWidth="200" styleClass="form-input"/>
+        <TextField fx:id="inventoryNumberField" GridPane.rowIndex="2" GridPane.columnIndex="1" prefWidth="200"
+                   styleClass="form-input"/>
 
         <Label text="Место установки:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
-        <TextField fx:id="locationField" GridPane.rowIndex="3" GridPane.columnIndex="1" prefWidth="200" styleClass="form-input"/>
+        <TextField fx:id="locationField" GridPane.rowIndex="3" GridPane.columnIndex="1" prefWidth="200"
+                   styleClass="form-input"/>
 
-        <Label text="Статус:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
-        <ComboBox fx:id="statusComboBox" GridPane.rowIndex="4" GridPane.columnIndex="1" prefWidth="200" styleClass="form-input"/>
+        <!-- Новое поле -->
+        <Label text="Кран № (опционально):" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+        <TextField fx:id="valveNumberField" GridPane.rowIndex="4" GridPane.columnIndex="1" prefWidth="200"
+                   styleClass="form-input"/>
 
-        <Label text="Предел измерений:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
-        <TextField fx:id="measurementLimitField" GridPane.rowIndex="5" GridPane.columnIndex="1" prefWidth="200" styleClass="form-input" promptText="В кг или МПа"/>
+        <Label text="Статус:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
+        <ComboBox fx:id="statusComboBox" GridPane.rowIndex="5" GridPane.columnIndex="1" prefWidth="200"
+                  styleClass="form-input"/>
 
-        <Label text="Класс точности:" GridPane.rowIndex="6" GridPane.columnIndex="0"  styleClass="form-label"/>
-        <TextField fx:id="accuracyClassField" GridPane.rowIndex="6" GridPane.columnIndex="1" prefWidth="200" styleClass="form-input" promptText="Введите число в %"/>
+        <Label text="Предел измерений (опционально):" GridPane.rowIndex="6" GridPane.columnIndex="0"
+               styleClass="form-label"/>
+        <TextField fx:id="measurementLimitField" GridPane.rowIndex="6" GridPane.columnIndex="1" prefWidth="200"
+                   styleClass="form-input" promptText="В кг или МПа"/>
 
-        <Label text="Производитель (опционально):" GridPane.rowIndex="7" GridPane.columnIndex="0" styleClass="form-label"/>
-        <TextField fx:id="manufacturerField" GridPane.rowIndex="7" GridPane.columnIndex="1" prefWidth="200" promptText="Например, ОАО Манотомь" styleClass="form-input"/>
+        <Label text="Класс точности (опционально):" GridPane.rowIndex="7" GridPane.columnIndex="0"
+               styleClass="form-label"/>
+        <TextField fx:id="accuracyClassField" GridPane.rowIndex="7" GridPane.columnIndex="1" prefWidth="200"
+                   styleClass="form-input" promptText="Введите число в %"/>
 
-        <Label text="Год выпуска (опционально):" GridPane.rowIndex="8" GridPane.columnIndex="0" styleClass="form-label"/>
-        <TextField fx:id="yearField" GridPane.rowIndex="8" GridPane.columnIndex="1" prefWidth="200" promptText="Год (число), напр. 2023" styleClass="form-input"/>
+        <Label text="Производитель (опционально):" GridPane.rowIndex="8" GridPane.columnIndex="0"
+               styleClass="form-label"/>
+        <TextField fx:id="manufacturerField" GridPane.rowIndex="8" GridPane.columnIndex="1" prefWidth="200"
+                   promptText="Например, ОАО Манотомь" styleClass="form-input"/>
 
-        <Label text="Доп. информация (опционально):" GridPane.rowIndex="9" GridPane.columnIndex="0" styleClass="form-label"/>
-        <TextArea fx:id="additionalInfoField" GridPane.rowIndex="9" GridPane.columnIndex="1" prefWidth="200" prefHeight="60" promptText="Любая дополнительная информация" styleClass="form-textarea"/>
+        <Label text="Год выпуска (опционально):" GridPane.rowIndex="9" GridPane.columnIndex="0"
+               styleClass="form-label"/>
+        <TextField fx:id="yearField" GridPane.rowIndex="9" GridPane.columnIndex="1" prefWidth="200"
+                   promptText="Год (число), напр. 2023" styleClass="form-input"/>
 
-        <Label text="Фото (несколько):" GridPane.rowIndex="10" GridPane.columnIndex="0" styleClass="form-label"/>
-        <HBox spacing="5" GridPane.rowIndex="10" GridPane.columnIndex="1" styleClass="photo-picker">
-            <TextField fx:id="photoPathField" prefWidth="180" editable="false" promptText="Выберите файл" styleClass="form-input"/>
+        <Label text="Доп. информация (опционально):" GridPane.rowIndex="10" GridPane.columnIndex="0"
+               styleClass="form-label"/>
+        <TextArea fx:id="additionalInfoField" GridPane.rowIndex="10" GridPane.columnIndex="1" prefWidth="200"
+                  prefHeight="60" promptText="Любая дополнительная информация" styleClass="form-textarea"/>
+
+        <Label text="Фото (несколько):" GridPane.rowIndex="11" GridPane.columnIndex="0" styleClass="form-label"/>
+        <HBox spacing="5" GridPane.rowIndex="11" GridPane.columnIndex="1" styleClass="photo-picker">
+            <TextField fx:id="photoPathField" prefWidth="180" editable="false" promptText="Выберите файл"
+                       styleClass="form-input"/>
             <Button fx:id="photoChooseBtn" text="Выбрать фото" onAction="#onChooseFiles" styleClass="photo-choose-btn"/>
         </HBox>
 
-        <Label text="Выбранные фото:" GridPane.rowIndex="11" GridPane.columnIndex="0" styleClass="form-label"/>
-        <ListView fx:id="selectedPhotosListView" GridPane.rowIndex="11" GridPane.columnIndex="1" prefHeight="100" prefWidth="200" styleClass="photo-list"/>
+        <Label text="Выбранные фото:" GridPane.rowIndex="12" GridPane.columnIndex="0" styleClass="form-label"/>
+        <ListView fx:id="selectedPhotosListView" GridPane.rowIndex="12" GridPane.columnIndex="1" prefHeight="100"
+                  prefWidth="200" styleClass="photo-list"/>
     </GridPane>
+
 
     <HBox spacing="10" alignment="CENTER_RIGHT" styleClass="form-buttons">
         <Button fx:id="cancelBtn" text="Отмена" onAction="#onCancel" styleClass="button-cancel"/>

@@ -144,14 +144,12 @@ public class MainController {
         }
 
         if (isDarkTheme) {
-            // Светлая тема (дефолт или лёгкий CSS, если есть)
             scene.getStylesheets().clear();
             scene.getStylesheets().add(getClass().getResource("/styles/light-theme.css").toExternalForm());  // светлый CSS
             if (themeToggleBtn != null) themeToggleBtn.setText("Тёмная тема");
             isDarkTheme = false;
             System.out.println("Светлая тема активирована");
         } else {
-            // Тёмная тема
             try {
                 scene.getStylesheets().clear();
                 scene.getStylesheets().add(getClass().getResource("/styles/dark-theme.css").toExternalForm()); // темный CSS
@@ -271,19 +269,7 @@ public class MainController {
             }
         });
 
-        // 6. Колонка "Место установки"
-        TableColumn<Device, String> locationCol = new TableColumn<>("Место установки");
-        locationCol.setCellValueFactory(new PropertyValueFactory<>("location"));
-        locationCol.setPrefWidth(120);
-        // Разрешаем редактирование текстом
-        locationCol.setCellFactory(TextFieldTableCell.forTableColumn());
-        locationCol.setOnEditCommit(event -> {
-            Device device = event.getRowValue();
-            device.setLocation(event.getNewValue());
-            deviceDAO.updateDevice(device);
-        });
-
-        // 7. Колонка "Предел измерений"
+        // 6. Колонка "Предел измерений"
         TableColumn<Device, String> measurementLimitCol = new TableColumn<>("Предел измерений");
         measurementLimitCol.setCellValueFactory(new PropertyValueFactory<>("measurementLimit"));
         measurementLimitCol.setPrefWidth(120);
@@ -294,7 +280,7 @@ public class MainController {
             deviceDAO.updateDevice(device);
         });
 
-        // 8. Колонка "Класс точности" (Double)
+        // 7. Колонка "Класс точности" (Double)
         TableColumn<Device, Double> accuracyClassCol = new TableColumn<>("Класс точности");
         accuracyClassCol.setCellValueFactory(new PropertyValueFactory<>("accuracyClass"));
         accuracyClassCol.setPrefWidth(110);
@@ -308,6 +294,30 @@ public class MainController {
                 // Некорректный формат Double — можно добавить alert или сброс
                 updateStatistics();
             }
+        });
+
+        // 8. Колонка "Место установки"
+        TableColumn<Device, String> locationCol = new TableColumn<>("Место установки");
+        locationCol.setCellValueFactory(new PropertyValueFactory<>("location"));
+        locationCol.setPrefWidth(120);
+        // Разрешаем редактирование текстом
+        locationCol.setCellFactory(TextFieldTableCell.forTableColumn());
+        locationCol.setOnEditCommit(event -> {
+            Device device = event.getRowValue();
+            device.setLocation(event.getNewValue());
+            deviceDAO.updateDevice(device);
+        });
+
+        // 9. Колонка "Кран №"
+        TableColumn<Device, String> valveNumberCol = new TableColumn<>("Кран №");
+        valveNumberCol.setCellValueFactory(new PropertyValueFactory<>("valveNumber"));
+        valveNumberCol.setPrefWidth(90);
+        // Разрешаем редактирование текстом
+        valveNumberCol.setCellFactory(TextFieldTableCell.forTableColumn());
+        valveNumberCol.setOnEditCommit(event -> {
+            Device device = event.getRowValue();
+            device.setValveNumber(event.getNewValue());
+            deviceDAO.updateDevice(device);
         });
 
         // 10. Колонка "Состояние" — редактируемая с ComboBox
@@ -357,7 +367,7 @@ public class MainController {
         });
 
 
-        // 9. Колонка "Фото" — с кнопкой "Просмотр"
+        // 12. Колонка "Фото" — с кнопками "Добавить" и "Просмотр"
         TableColumn<Device, Void> photoCol = new TableColumn<>("Фото");
         photoCol.setPrefWidth(145);
         photoCol.setCellFactory(param -> new TableCell<>() {
@@ -425,7 +435,6 @@ public class MainController {
                 });
             }
 
-
             // Отображение кнопок в клетке
             @Override
             protected void updateItem(Void item, boolean empty) {
@@ -479,6 +488,7 @@ public class MainController {
                 measurementLimitCol,
                 accuracyClassCol,
                 locationCol,
+                valveNumberCol,
                 statusCol,
                 photoCol,
                 additionalInfoCol
@@ -640,7 +650,7 @@ public class MainController {
             Sheet sheet = workbook.createSheet("Devices");
 
             // Заголовки столбцов (соответствуем полям Device)
-            String[] headers = {"Тип прибора", "Модель", "Производитель", "Инвентарный №", "Год выпуска", "Предел измерений", "Класс точности", "Место установки", "Статус", "Дополнительная информация"};
+            String[] headers = {"Тип прибора", "Модель", "Производитель", "Инвентарный №", "Год выпуска", "Предел измерений", "Класс точности", "Место установки", "Кран №", "Статус", "Дополнительная информация"};
             Row headerRow = sheet.createRow(0);
             for (int i = 0; i < headers.length; i++) {
                 headerRow.createCell(i).setCellValue(headers[i]);
@@ -659,8 +669,9 @@ public class MainController {
                 row.createCell(5).setCellValue(device.getMeasurementLimit() != null ? device.getMeasurementLimit() : "");
                 row.createCell(6).setCellValue(device.getAccuracyClass() != null ? device.getAccuracyClass() : 0.0);
                 row.createCell(7).setCellValue(device.getLocation() != null ? device.getLocation() : "");
-                row.createCell(8).setCellValue(device.getStatus() != null ? device.getStatus() : "");
-                row.createCell(9).setCellValue(device.getAdditionalInfo() != null ? device.getAdditionalInfo() : "");
+                row.createCell(8).setCellValue(device.getValveNumber() != null ? device.getValveNumber() : "");
+                row.createCell(9).setCellValue(device.getStatus() != null ? device.getStatus() : "");
+                row.createCell(10).setCellValue(device.getAdditionalInfo() != null ? device.getAdditionalInfo() : "");
             }
 
             // Автоподстройка ширины колонок для лучшей читабельности
@@ -724,7 +735,8 @@ public class MainController {
                         device.setYear(null);  // Если не число, ставим null
                     }
                 }
-                String accuracyStr = getCellValue(row, 5);
+                device.setMeasurementLimit(getCellValue(row, 5));
+                String accuracyStr = getCellValue(row, 6);
                 if (!accuracyStr.isEmpty()) {
                     try {
                         device.setAccuracyClass(Double.parseDouble(accuracyStr));
@@ -732,10 +744,10 @@ public class MainController {
                         device.setAccuracyClass(null);
                     }
                 }
-                device.setMeasurementLimit(getCellValue(row, 6));
                 device.setLocation(getCellValue(row, 7));
-                device.setStatus(getCellValue(row, 8));
-                device.setAdditionalInfo(getCellValue(row, 9));
+                device.setValveNumber(getCellValue(row, 8));
+                device.setStatus(getCellValue(row, 9));
+                device.setAdditionalInfo(getCellValue(row, 10));
 
                 // Валидация: инвентарный номер обязателен
                 if (device.getInventoryNumber() == null || device.getInventoryNumber().isEmpty()) {
@@ -750,9 +762,10 @@ public class MainController {
                     existing.setName(device.getName());
                     existing.setManufacturer(device.getManufacturer());
                     // Год уже обработан
-                    existing.setAccuracyClass((device.getAccuracyClass()));
                     existing.setMeasurementLimit(device.getMeasurementLimit());
+                    existing.setAccuracyClass((device.getAccuracyClass()));
                     existing.setLocation(device.getLocation());
+                    existing.setValveNumber(device.getValveNumber());
                     existing.setStatus(device.getStatus());
                     existing.setAdditionalInfo(device.getAdditionalInfo());
                     existing.setYear(device.getYear());  // Явно устанавливаем, так как null-safe
@@ -787,7 +800,7 @@ public class MainController {
             SortedList<Device> sortedList = createSortedList(filteredList, deviceTable, inventoryCol);
             deviceTable.setItems(sortedList);
 
-            // По умолчанию сортируем по инвентарному номеру (если надо)
+            // По умолчанию сортируем по инвентарному номеру
             deviceTable.getSortOrder().add(inventoryCol);
             deviceTable.sort();
 
@@ -807,7 +820,7 @@ public class MainController {
         }
     }
 
-    // Новый method в MainController
+    //
     private SortedList<Device> createSortedList(FilteredList<Device> filteredList, TableView<Device> table, TableColumn<Device, String> defaultSortColumn) {
         SortedList<Device> sortedList = new SortedList<>(filteredList);
         sortedList.comparatorProperty().bind(table.comparatorProperty());

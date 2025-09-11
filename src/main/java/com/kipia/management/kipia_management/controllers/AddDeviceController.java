@@ -28,7 +28,7 @@ public class AddDeviceController {
     @FXML
     private TextField typeField;
     @FXML
-    private TextField manufacturerField;  // Из предыдущих обновлений
+    private TextField manufacturerField;
     @FXML
     private TextField inventoryNumberField;
     @FXML
@@ -40,13 +40,15 @@ public class AddDeviceController {
     @FXML
     private TextField locationField;
     @FXML
+    private TextField valveNumberField;  // Добавлено поле для "Кран №"
+    @FXML
     private ComboBox<String> statusComboBox;
     @FXML
     private TextArea additionalInfoField;
     @FXML
     private TextField photoPathField;  // Текст для одного фото (опционально)
     @FXML
-    private ListView<String> selectedPhotosListView;  // Новое: список выбранных фото
+    private ListView<String> selectedPhotosListView;  // Список выбранных фото
     @FXML
     private Button photoChooseBtn;  // Кнопка выбора файла
     @FXML
@@ -115,9 +117,20 @@ public class AddDeviceController {
     @FXML
     private void onAddDevice() {
         // Получаем данные из полей
-        String name = nameField.getText().trim();
         String type = typeField.getText().trim();
+        String name = nameField.getText().trim();
+        String manufacturer = manufacturerField.getText().trim();
         String inventoryNumber = inventoryNumberField.getText().trim();
+        String yearStr = yearField.getText().trim();
+        Integer year = null;
+        if (!yearStr.isEmpty()) {
+            try {
+                year = Integer.parseInt(yearStr);
+            } catch (NumberFormatException e) {
+                messageLabel.setText("Год должен быть числом");
+                return;
+            }
+        }
         String measurementLimit = measurementLimitField.getText().trim();
         String accuracyClassStr = accuracyClassField.getText().trim();
         Double accuracyClass = null;
@@ -130,6 +143,7 @@ public class AddDeviceController {
             }
         }
         String location = locationField.getText().trim();
+        String valveNumber = valveNumberField.getText().trim();
         String status = statusComboBox.getValue();
 
         if (name.isEmpty() || type.isEmpty() || inventoryNumber.isEmpty() || location.isEmpty() || status == null) {
@@ -145,28 +159,16 @@ public class AddDeviceController {
 
         // Создаём новый прибор
         Device device = new Device();
-        device.setName(name);
         device.setType(type);
+        device.setName(name);
+        device.setManufacturer(manufacturer);
         device.setInventoryNumber(inventoryNumber);
         device.setMeasurementLimit(measurementLimit);
         device.setAccuracyClass(accuracyClass);
+        device.setYear(year);
         device.setLocation(location);
+        device.setValveNumber(valveNumber);
         device.setStatus(status);
-
-        // Заполняем дополнительные поля
-        if (!manufacturerField.getText().trim().isEmpty()) {
-            device.setManufacturer(manufacturerField.getText().trim());
-        }
-
-        if (!yearField.getText().trim().isEmpty()) {
-            try {
-                device.setYear(Integer.parseInt(yearField.getText()));
-            } catch (NumberFormatException e) {
-                messageLabel.setText("Год выпуска должен быть числом");
-                return;
-            }
-        }
-
         device.setAdditionalInfo(additionalInfoField.getText());
 
         // Добавляем фото из списка (новая функция)
@@ -202,6 +204,7 @@ public class AddDeviceController {
         typeField.clear();
         inventoryNumberField.clear();
         locationField.clear();
+        valveNumberField.clear();
         manufacturerField.clear();
         yearField.clear();
         accuracyClassField.clear();

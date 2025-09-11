@@ -15,6 +15,13 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * Класс-сервис для работы с отчетами
+ *
+ * @author vladimir_shi
+ * @since 04.09.2025
+ */
+
 public class DeviceReportService {
 
     // Возвращает map подсчёта по выбранному критерию

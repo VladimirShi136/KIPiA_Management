@@ -40,6 +40,9 @@ public class Device {
     // Местонахождение или расположение прибора
     private String location;
 
+    // Номер крана или узла (если нужно)
+    private String valveNumber;
+
     // Статус прибора (например: исправен, в ремонте, списан и т.д.)
     private String status;
 
@@ -75,7 +78,7 @@ public class Device {
      * @param additionalInfo дополнительная информация
      * @param photoPath путь к фото-изображение прибора
      */
-    public Device(int id, String type, String name, String manufacturer, String inventoryNumber, Integer year, String measurementLimit, Double accuracyClass, String location, String status, String additionalInfo, String photoPath) {
+    public Device(int id, String type, String name, String manufacturer, String inventoryNumber, Integer year, String measurementLimit, Double accuracyClass, String location, String valveNumber, String status, String additionalInfo, String photoPath) {
         this.id = id;
         this.type = type;
         this.name = name;
@@ -85,6 +88,7 @@ public class Device {
         this.measurementLimit = measurementLimit;
         this.accuracyClass = accuracyClass;
         this.location = location;
+        this.valveNumber = valveNumber;
         this.status = status;
         this.additionalInfo = additionalInfo;
         this.photoPath = photoPath;
@@ -222,6 +226,22 @@ public class Device {
     public void setLocation(String location) { this.location = location; }
 
     /**
+     * Получить номер крана.
+     * @return номер крана
+     */
+    public String getValveNumber() {
+        return valveNumber;
+    }
+
+    /**
+     * Установить номер крана.
+     * @param valveNumber новый номер крана
+     */
+    public void setValveNumber(String valveNumber) {
+        this.valveNumber = valveNumber;
+    }
+
+    /**
      * Получить статус прибора.
      * @return текущий статус прибора
      */
@@ -291,6 +311,7 @@ public class Device {
                 ", measurementLimit='" + measurementLimit + '\'' +
                 ", accuracyClass=" + accuracyClass +
                 ", location='" + location + '\'' +
+                ", valveNumber='" + valveNumber + '\'' +
                 ", status='" + status + '\'' +
                 ", additionalInfo='" + additionalInfo + '\'' +
                 ", photoPath='" + photoPath + '\'' +

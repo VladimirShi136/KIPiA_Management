@@ -13,6 +13,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Класс для работы с экспортом данных
+ *
+ * @author vladimir_shi
+ * @since 23.08.2025
+ */
+
 public class ExcelExportService {
 
     public void exportReport(List<Device> devices, String reportKey, Stage primaryStage) {
