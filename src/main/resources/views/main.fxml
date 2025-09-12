@@ -1,76 +1,71 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
-<BorderPane xmlns="http://javafx.com/javafx/23" xmlns:fx="http://javafx.com/fxml/1"
+
+<BorderPane xmlns="http://javafx.com/javafx/23"
+            xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.kipia.management.kipia_management.controllers.MainController">
 
-    <!-- Верхняя панель - заголовок -->
+    <!--  ── Верхняя панель ──  -->
     <top>
         <HBox fx:id="top" alignment="CENTER" styleClass="top">
-            <Label fx:id="headerLabel" text="Учёт приборов КИПиА" styleClass="header-label"/>
+            <Label fx:id="headerLabel"
+                   text="Учёт приборов КИПиА"
+                   styleClass="header-label"/>
         </HBox>
     </top>
 
-    <!-- Левая панель - навигация -->
+    <!--  ── Левая панель (меню) ──  -->
     <left>
         <VBox fx:id="left" spacing="10" styleClass="left">
-            <Button fx:id="devicesBtn" maxWidth="Infinity" onAction="#showDevices" styleClass="nav-button button-devices" text="Приборы"/>
-            <Button fx:id="addDeviceBtn" maxWidth="Infinity" onAction="#showAddDeviceForm" styleClass="nav-button button-add-device" text="Добавить прибор"/>
-            <Button fx:id="reportsBtn" maxWidth="Infinity" onAction="#showReports" styleClass="nav-button button-reports" text="Отчёты"/>
+            <Button fx:id="devicesBtn"
+                    maxWidth="Infinity"
+                    onAction="#showDevices"
+                    styleClass="nav-button button-devices"
+                    text="Приборы"/>
+            <Button fx:id="addDeviceBtn"
+                    maxWidth="Infinity"
+                    onAction="#showAddDeviceForm"
+                    styleClass="nav-button button-add-device"
+                    text="Добавить прибор"/>
+            <Button fx:id="reportsBtn"
+                    maxWidth="Infinity"
+                    onAction="#showReports"
+                    styleClass="nav-button button-reports"
+                    text="Отчёты"/>
             <Region VBox.vgrow="ALWAYS"/>
-            <Button fx:id="themeToggleBtn" maxWidth="Infinity" onAction="#toggleTheme" styleClass="nav-button button-theme-toggle" text="Тёмная тема"/>
-            <Button fx:id="exitBtn" maxWidth="Infinity" onAction="#exitApp" styleClass="nav-button button-exit" text="Выход"/>
+            <Button fx:id="themeToggleBtn"
+                    maxWidth="Infinity"
+                    onAction="#toggleTheme"
+                    styleClass="nav-button button-theme-toggle"
+                    text="Тёмная тема"/>
+            <Button fx:id="exitBtn"
+                    maxWidth="Infinity"
+                    onAction="#exitApp"
+                    styleClass="nav-button button-exit"
+                    text="Выход"/>
         </VBox>
     </left>
 
-    <!-- Центральная область - содержимое -->
+    <!--  ── Центральная часть ──  -->
+    <!--  Здесь будет динамически подставляться view‑контент,
+          например, таблица приборов, форма добавления, отчёты и т.п.  -->
     <center>
-        <VBox fx:id="contentArea" spacing="15">
-            <!-- Панель поиска и удаления -->
-            <HBox fx:id="searchAndDeletePane" managed="false" spacing="10" visible="false" styleClass="search-delete-pane">
-                <Label text="Поиск:" styleClass="search-label"/>
-                <TextField fx:id="searchField" prefWidth="300.0" promptText="Введите название, тип или место установки" styleClass="search-field"/>
-                <Button fx:id="deleteButton" onAction="#deleteSelectedDevice" styleClass="button-delete" text="Удалить выбранный прибор"/>
-            </HBox>
-
-            <!-- Статистика -->
-            <VBox fx:id="statisticsPane" managed="false" spacing="5" visible="false" styleClass="statistics-pane">
-                <Label text="Статистика:" styleClass="statistics-header"/>
-                <HBox spacing="20" styleClass="statistics-data">
-                    <VBox alignment="CENTER">
-                        <Label fx:id="totalDevicesLabel" text="--" styleClass="stat-number stat-total"/>
-                        <Label text="Всего приборов" styleClass="stat-label"/>
-                    </VBox>
-                    <VBox alignment="CENTER">
-                        <Label fx:id="workingDevicesLabel" text="--" styleClass="stat-number stat-working"/>
-                        <Label text="В работе" styleClass="stat-label"/>
-                    </VBox>
-                    <VBox alignment="CENTER">
-                        <Label fx:id="storageDevicesLabel" text="--" styleClass="stat-number stat-storage"/>
-                        <Label text="Хранение" styleClass="stat-label"/>
-                    </VBox>
-                    <VBox alignment="CENTER">
-                        <Label fx:id="lostDevicesLabel" text="--" styleClass="stat-number stat-lost"/>
-                        <Label text="Утерян" styleClass="stat-label"/>
-                    </VBox>
-                    <VBox alignment="CENTER">
-                        <Label fx:id="brokenDevicesLabel" text="--" styleClass="stat-number stat-broken"/>
-                        <Label text="Испорчен" styleClass="stat-label"/>
-                    </VBox>
-                </HBox>
-            </VBox>
-        </VBox>
+        <VBox fx:id="contentArea" spacing="15"/>
     </center>
 
-    <!-- Нижняя панель - статус -->
+    <!--  ── Нижняя панель (статус) ──  -->
     <bottom>
-        <HBox fx:id="bottom" alignment="CENTER_LEFT" styleClass="bottom">
-            <Label fx:id="statusLabel" text="Готов к работе" styleClass="status-label"/>
+        <HBox fx:id="bottom"
+              alignment="CENTER_LEFT"
+              styleClass="bottom">
+            <Label fx:id="statusLabel"
+                   text="Готов к работе"
+                   styleClass="status-label"/>
         </HBox>
     </bottom>
 </BorderPane>

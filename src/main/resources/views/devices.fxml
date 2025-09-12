@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<!--
+    Таблица приборов + панель поиска, кнопки импорта/экспорта,
+    статистика (над таблицей) и кнопка удаления.
+    Все стили берутся из вашего CSS‑файла.
+-->
+<VBox xmlns="http://javafx.com/javafx/23"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.kipia.management.kipia_management.controllers.DevicesTableController"
+      spacing="10">
+
+    <!-- ____________________
+         1️⃣  ПАНЕЛЬ ПОИСКА И УДАЛЕНИЯ
+         ____________________ -->
+    <HBox fx:id="searchAndDeletePane" spacing="10">
+        <Label text="Поиск:" styleClass="search-label"/>
+        <TextField fx:id="searchField"
+                   prefWidth="300.0"
+                   promptText="Введите название, тип или место установки"
+                   styleClass="search-field"/>
+        <!-- Кнопка удаления -->
+        <Button fx:id="deleteButton"
+                text="Удалить выбранный прибор"
+                styleClass="button-delete"/>
+    </HBox>
+
+    <!-- ____________________
+         2️⃣  КНОПКИ ИМПОРТА / ЭКСПОРТА
+         ____________________ -->
+    <HBox spacing="10">
+        <Button fx:id="exportButton"
+                text="Экспорт в Excel"
+                styleClass="button-export"/>
+        <Button fx:id="importButton"
+                text="Импорт из Excel"
+                styleClass="button-import"/>
+    </HBox>
+
+    <!-- ____________________
+         3️⃣  БЛОК СТАТИСТИКИ (над таблицей!)
+         ____________________ -->
+    <VBox styleClass="statistics-pane" spacing="5">
+        <!-- Заголовок статистики (не обязателен, но удобно) -->
+        <Label text="Статистика:" styleClass="statistics-header"/>
+
+        <!-- Основные цифры -->
+        <HBox spacing="20" styleClass="statistics-data">
+            <VBox alignment="CENTER">
+                <Label fx:id="totalDevicesLabel"
+                       text="--"
+                       styleClass="stat-total"/>
+                <Label text="Всего приборов"
+                       styleClass="stat-label"/>
+            </VBox>
+
+            <VBox alignment="CENTER">
+                <Label fx:id="workingDevicesLabel"
+                       text="--"
+                       styleClass="stat-working"/>
+                <Label text="В работе"
+                       styleClass="stat-label"/>
+            </VBox>
+
+            <VBox alignment="CENTER">
+                <Label fx:id="storageDevicesLabel"
+                       text="--"
+                       styleClass="stat-storage"/>
+                <Label text="Хранение"
+                       styleClass="stat-label"/>
+            </VBox>
+
+            <VBox alignment="CENTER">
+                <Label fx:id="lostDevicesLabel"
+                       text="--"
+                       styleClass="stat-lost"/>
+                <Label text="Утерян"
+                       styleClass="stat-label"/>
+            </VBox>
+
+            <VBox alignment="CENTER">
+                <Label fx:id="brokenDevicesLabel"
+                       text="--"
+                       styleClass="stat-broken"/>
+                <Label text="Испорчен"
+                       styleClass="stat-label"/>
+            </VBox>
+        </HBox>
+    </VBox>
+
+    <!-- ____________________
+         4️⃣  ТАБЛИЦА ПРИБОРОВ
+         ____________________ -->
+    <TableView fx:id="deviceTable"
+               editable="true"
+               prefHeight="400"/>
+</VBox>

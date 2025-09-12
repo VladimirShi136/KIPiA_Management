@@ -232,33 +232,38 @@
     -fx-spacing: 20px;
 }
 
-.stat-number {
+.stat-total {
+    -fx-text-fill: #1e74e4;
     -fx-font-size: 24px;
     -fx-font-weight: bold;
 }
 
-.stat-total {
-    -fx-text-fill: #1e74e4;
-}
-
 .stat-working {
     -fx-text-fill: #2ecc71;
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
 }
 
 .stat-storage {
     -fx-text-fill: #e74c3c;
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
 }
 
 .stat-lost {
     -fx-text-fill: #706b69;
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
 }
 
 .stat-broken {
     -fx-text-fill: #ef8a06;
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
 }
 
 .stat-label {
-    -fx-font-size: 12px;
+    -fx-font-size: 14px;
     -fx-text-fill: #555;
 }
 
