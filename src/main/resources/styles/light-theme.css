@@ -463,3 +463,15 @@
     -fx-text-fill: red;
     -fx-padding-top: 10px;
 }
+
+/* Свойства строк таблицы */
+
+.even-row {
+    -fx-background-color: #b8b8b8;
+}
+.odd-row {
+    -fx-background-color: white;
+}
+.selected-row {
+    -fx-background-color: #7abcff;
+}

@@ -2,25 +2,42 @@ src/
 └── main/
     ├── java/
     │   ├── com/kipia/management/kipia_management
-    │   │   ├── Main.java         # Главный класс приложения
-    │   │   ├── controllers/      # Контроллеры для JavaFX
-    │   │   │   ├── AddDeviceController.java
-    │   │   │   └── MainController.java
-    │   │   ├── models/           # Модели данных (Device и т.д.)
-    │   │   │   └── Device.java
-    │   │   └── services/         # Логика работы с БД
-    │   │       ├── DatabaseService.java
-    │   │       └── DeviceDAO.java
-    │   │
-    │   └── module-info.java
+    │   │   ├── Main.java           # Главный класс приложения
+    │   │   │
+    │   │   ├── controllers/        # Контроллеры для JavaFX
+    │   │   │   ├── AddDeviceController.java   # Контроллер для формы добавления нового прибора.
+    │   │   │   ├── MainController.java     # Главный контроллер – отвечает за навигацию
+    │   │   │   ├── DevicesTableController.java   # Контроллер для работы с таблицей приборов
+    │   │   │   └── ReportsController.java    # Контроллер для работы с отчетами
+    │   │   │
+    │   │   ├── models/   # Модели данных (Device и т.д.)
+    │   │   │   └── Device.java       # Класс для создания объектов "приборов"
+    │   │   │
+    │   │   ├── services/  # Логика работы с БД
+    │   │   │   ├── DatabaseService.java       # Класс для работы с БД
+    │   │   │   ├── DeviceDAO.java        # Класс для выполнения действий с БД (CRUD операции)
+    │   │   │   ├── DeviceReportService.java      # Класс-сервис для работы с отчетами
+    │   │   │   └── ExcelExportService.java      # Класс для работы с экспортом данных
+    │   │   └── utils/       # Пакет с утилитами
+    │   │       ├── ExcelImportExportUtil0.java    # Класс для работы с импортом и экспортом данных
+    │   │       └── StyleUtils.java     # Класс с утилитами для работы со стилями CSS
+    │   └── module-info.java      # Файл взаимодействия модулей
     │
     └── resources/
+        ├── images/     # Файлы иконок и других изображений
+        │   └── icon.png       # Иконка приложения
         │
-        ├── views/  # FXML файлы интерфейса
-        │   ├── add-device-form.fxml
-        │   └── main.fxml
+        ├── styles/  # Файлы стилей CSS
+        │   ├── dark-theme.css       # Темная тема
+        │   └── light-theme.css       # Светлая тема (По умолчанию)
         │
-        └── images/
-            └── icon.png (добавьте позже)
+        └── views/  # FXML файлы интерфейса
+            ├── add-device-form.fxml    # Экран с формой добавления приборов
+            ├── devices.fxml       # Экран с таблицей приборов
+            ├── main.fxml        # Начальный экран при запуске
+            └── reports.fxml      # Экран с просмотром отчетов
+
+
+
 
 

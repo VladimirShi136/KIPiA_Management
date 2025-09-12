@@ -21,8 +21,8 @@ import java.util.List;
  */
 
 public class AddDeviceController {
-    public Button cancelBtn;
-    public Button addBtn;
+
+    // ---------- FXML‑элементы ----------
     @FXML
     private TextField nameField;
     @FXML
@@ -54,13 +54,27 @@ public class AddDeviceController {
     @FXML
     private Label messageLabel;
 
-    private DeviceDAO deviceDAO;
-    private final List<String> selectedPhotos = new ArrayList<>();  // Список путей выбранных фото
+    // ---------- Кнопки -----------
+    public Button cancelBtn;
+    public Button addBtn;
 
+    // ---------- Список выбранных фото ----------
+    private final List<String> selectedPhotos = new ArrayList<>();
+
+    // ---------- Сервисы ----------
+    private DeviceDAO deviceDAO;
+
+    /**
+     * Инициализация сервиса DAO.
+     * @param deviceDAO - сервис DAO
+     */
     public void setDeviceDAO(DeviceDAO deviceDAO) {
         this.deviceDAO = deviceDAO;
     }
 
+    /**
+     * Метод инициализации контроллера.
+     */
     @FXML
     private void initialize() {
         statusComboBox.setItems(FXCollections.observableArrayList("Хранение", "В работе", "Утерян", "Испорчен"));
@@ -95,7 +109,9 @@ public class AddDeviceController {
         photoChooseBtn.setOnAction(event -> onChooseFiles());  // Убираем @FXML из метода, используем прямой вызов
     }
 
-    // Новый метод: Обработчик кнопки выбора фото
+    /**
+     * Обработчик нажатия на кнопку выбора фото.
+     */
     @FXML
     private void onChooseFiles() {
         FileChooser chooser = new FileChooser();
@@ -114,6 +130,9 @@ public class AddDeviceController {
         }
     }
 
+    /**
+     * Метод для добавления нового прибора.
+     */
     @FXML
     private void onAddDevice() {
         // Получаем данные из полей
@@ -193,12 +212,17 @@ public class AddDeviceController {
         }
     }
 
-    // Метод очистки списка фото (добавь в clearForm)
+    /**
+     * Метод для очистки списка фото.
+     */
     private void clearPhotos() {
         selectedPhotos.clear();
         selectedPhotosListView.setItems(FXCollections.observableArrayList());
     }
 
+    /**
+     * Метод для очистки формы.
+     */
     private void clearForm() {
         nameField.clear();
         typeField.clear();
@@ -215,6 +239,9 @@ public class AddDeviceController {
         clearPhotos();  // Очищаем список фото
     }
 
+    /**
+     * Метод для отмены добавления прибора.
+     */
     @FXML
     private void onCancel() {
         clearForm();

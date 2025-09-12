@@ -43,7 +43,9 @@ public class StyleUtils {
     }
 
     /**
-     * Применение стиля и анимации для RadioButton, как было в ReportsController
+     * Применение стиля и анимации для RadioButton
+     *
+     * @param button     кнопка, к которой применяются стили
      */
     public static void applyStyleToRadioButton(RadioButton button) {
         // Начальный стиль
