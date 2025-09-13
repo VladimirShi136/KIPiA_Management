@@ -1,5 +1,7 @@
 package com.kipia.management.kipia_management.controllers;
 
+import com.kipia.management.kipia_management.controllers.cell.ValidatingDoubleCell;
+import com.kipia.management.kipia_management.controllers.cell.ValidatingIntegerCell;
 import com.kipia.management.kipia_management.models.Device;
 import com.kipia.management.kipia_management.services.DeviceDAO;
 import com.kipia.management.kipia_management.utils.ExcelImportExportUtil;
@@ -17,8 +19,6 @@ import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Callback;
-import javafx.util.converter.DoubleStringConverter;
-import javafx.util.converter.IntegerStringConverter;
 
 import java.io.File;
 import java.util.List;
@@ -26,7 +26,6 @@ import java.util.function.BiConsumer;
 
 /**
  * Контроллер, отвечающий за отображение и работу с таблицей приборов.
- *
  * @author vladimir_shi
  * @since 11.09.2025
  */
@@ -96,54 +95,44 @@ public class DevicesTableController {
      */
     private void createTableColumns() {
 
-        // 1. Текстовые колонки (Type, Name, Manufacturer, Inventory, …)
+        //  Текстовые колонки
         TableColumn<Device, String> typeCol = createEditableStringColumn(
-                "Тип прибора", "type", 100,
+                "Тип прибора", "type", 80,
                 Device::setType);
 
         TableColumn<Device, String> nameCol = createEditableStringColumn(
-                "Модель", "name", 90,
+                "Модель", "name", 80,
                 Device::setName);
 
         TableColumn<Device, String> manufacturerCol = createEditableStringColumn(
-                "Производитель", "manufacturer", 120,
+                "Производитель", "manufacturer", 100,
                 Device::setManufacturer);
 
         inventoryCol = createEditableStringColumn(
                 "Инвентарный №", "inventoryNumber", 120,
                 Device::setInventoryNumber);
 
-        // 2. Год выпуска – теперь через фабричный метод (Integer)
-        TableColumn<Device, Integer> yearCol = createEditableIntegerColumn(
-                "Год выпуска", "year", 100,
-                (device, newValue) -> {  // BiConsumer<Device, Integer>
-                    device.setYear(newValue);
-                    deviceDAO.updateDevice(device);
-                });
-
-        // 3. Обычные строковые колонки
         TableColumn<Device, String> measurementLimitCol = createEditableStringColumn(
                 "Предел измерений", "measurementLimit", 120,
                 Device::setMeasurementLimit);
 
         TableColumn<Device, String> locationCol = createEditableStringColumn(
-                "Место установки", "location", 120,
+                "Место установки", "location", 110,
                 Device::setLocation);
 
         TableColumn<Device, String> valveNumberCol = createEditableStringColumn(
-                "Кран №", "valveNumber", 90,
+                "Кран №", "valveNumber", 70,
                 Device::setValveNumber);
 
         TableColumn<Device, String> additionalInfoCol = createEditableStringColumn(
-                "Доп. информация", "additionalInfo", 200,
+                "Доп. информация", "additionalInfo", 180,
                 Device::setAdditionalInfo);
 
-        // 4. Числовая колонка – Double (класс точности)
-        TableColumn<Device, Double> accuracyClassCol = createEditableDoubleColumn(
-                "Класс точности", "accuracyClass", 110,
-                Device::setAccuracyClass);
+        //  Числовые колонки
+        TableColumn<Device, Integer> yearCol = createYearColumn();
+        TableColumn<Device, Double> accuracyClassCol = createAccuracyClassColumn();
 
-        // 5. Статус – ComboBox
+        // Статус – ComboBox
         TableColumn<Device, String> statusCol = new TableColumn<>("Статус");
         statusCol.setPrefWidth(80);
         statusCol.setCellValueFactory(new PropertyValueFactory<>("status"));
@@ -156,7 +145,7 @@ public class DevicesTableController {
             updateStatistics();
         });
 
-        // 6. Фото – две кнопки «Добавить» / «Просмотр»
+        // Фото – две кнопки «Добавить» / «Просмотр»
         TableColumn<Device, Void> photoCol = new TableColumn<>("Фото");
         photoCol.setPrefWidth(145);
         photoCol.setCellFactory(createPhotoCellFactory());
@@ -180,6 +169,43 @@ public class DevicesTableController {
     // -----------------------------------------------------------------
 
     /**
+     * Колонка, редактируемая через ValidatingIntegerCell
+     * @return - колонка
+     */
+    private TableColumn<Device, Integer> createYearColumn() {
+        TableColumn<Device, Integer> yearCol = new TableColumn<>("Год выпуска");
+        yearCol.setCellValueFactory(new PropertyValueFactory<>("year"));
+        yearCol.setPrefWidth(80);
+        yearCol.setCellFactory(col -> new ValidatingIntegerCell());
+        yearCol.setEditable(true);
+        yearCol.setOnEditCommit(event -> {
+            Device device = event.getRowValue();
+            device.setYear(event.getNewValue());
+            deviceDAO.updateDevice(device);
+        });
+        return yearCol;
+    }
+
+    /**
+     * Колонка, редактируемая через ValidatingDoubleCell
+     * @return - колонка
+     */
+    private TableColumn<Device, Double> createAccuracyClassColumn() {
+        TableColumn<Device, Double> accuracyClassCol = new TableColumn<>("Класс точности");
+        accuracyClassCol.setCellValueFactory(new PropertyValueFactory<>("accuracyClass"));
+        accuracyClassCol.setPrefWidth(100);
+
+        accuracyClassCol.setCellFactory(col -> new ValidatingDoubleCell());
+        accuracyClassCol.setEditable(true);
+        accuracyClassCol.setOnEditCommit(event -> {
+            Device device = event.getRowValue();
+            device.setAccuracyClass(event.getNewValue());
+            deviceDAO.updateDevice(device);
+        });
+        return accuracyClassCol;
+    }
+
+    /**
      * Текстовая колонка, редактируемая через TextFieldTableCell.
      */
     private TableColumn<Device, String> createEditableStringColumn(
@@ -196,73 +222,6 @@ public class DevicesTableController {
             Device dev = event.getRowValue();
             onCommit.accept(dev, event.getNewValue());
             deviceDAO.updateDevice(dev);
-        });
-        return col;
-    }
-
-    /**
-     * Числовая колонка (Double) с DoubleStringConverter.
-     */
-    private TableColumn<Device, Double> createEditableDoubleColumn(
-            String title,
-            String propertyName,
-            double prefWidth,
-            BiConsumer<Device, Double> onCommit) {
-
-        TableColumn<Device, Double> col = new TableColumn<>(title);
-        col.setCellValueFactory(new PropertyValueFactory<>(propertyName));
-        col.setPrefWidth(prefWidth);
-        col.setCellFactory(TextFieldTableCell.forTableColumn(new DoubleStringConverter()));
-        col.setOnEditCommit(event -> {
-            Device dev = event.getRowValue();
-            onCommit.accept(dev, event.getNewValue());
-            deviceDAO.updateDevice(dev);
-        });
-        return col;
-    }
-
-    /**
-     * Числовая колонка (Integer) с IntegerStringConverter.
-     */
-    private TableColumn<Device, Integer> createEditableIntegerColumn(
-            String title,
-            String propertyName,
-            double prefWidth,
-            BiConsumer<Device, Integer> onCommit) {
-        TableColumn<Device, Integer> col = new TableColumn<>(title);
-        col.setCellValueFactory(new PropertyValueFactory<>(propertyName));
-        col.setPrefWidth(prefWidth);
-
-        // Кастомный конвертер: Graceful handling ошибок
-        IntegerStringConverter converter = new IntegerStringConverter() {
-            @Override
-            public Integer fromString(String string) {
-                if (string == null || string.trim().isEmpty()) {
-                    return null;  // Пустой ввод → null
-                }
-                try {
-                    return super.fromString(string);  // Стандартный парсинг
-                } catch (NumberFormatException e) {
-                    // При ошибке возвращаем null — будет обработано ниже
-                    // Alert покажем в onEditCommit
-                    return null;  // Или null, чтобы предотвратить commit
-                }
-            }
-        };
-
-        col.setCellFactory(TextFieldTableCell.forTableColumn(converter));
-        col.setOnEditCommit(event -> {
-            if (event.getNewValue() == null) {
-                // Некорректный ввод (из нашего converter): покажем Alert и откатим
-                showAlert(Alert.AlertType.WARNING,
-                        "Год должен быть целым числом. Вы ввели некорректное значение.");
-                deviceTable.refresh();  // Откат: перерисуем таблицу
-                return;  // Не сохраняем
-            }
-            Device dev = event.getRowValue();
-            onCommit.accept(dev, event.getNewValue());
-            deviceDAO.updateDevice(dev);
-            // updateStatistics();  // Добавь, если нужно
         });
         return col;
     }
@@ -452,6 +411,14 @@ public class DevicesTableController {
     // -----------------------------------------------------------------
     //   Вспомогательные методы
     // -----------------------------------------------------------------
+
+    /**
+     * Метод для создания отсортированного списка
+     *
+     * @param filtered - отфильтрованный список
+     * @param table    - таблица
+     * @return - отсортированный список
+     */
     private SortedList<Device> createSortedList(FilteredList<Device> filtered,
                                                 TableView<Device> table) {
         SortedList<Device> sorted = new SortedList<>(filtered);
@@ -512,6 +479,12 @@ public class DevicesTableController {
         });
     }
 
+    /**
+     * Метод для вывода уведомления
+     *
+     * @param type - тип уведомления
+     * @param text - текст уведомления
+     */
     private void showAlert(Alert.AlertType type, String text) {
         Alert a = new Alert(type, text);
         a.show();

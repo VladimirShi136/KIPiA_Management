@@ -5,6 +5,11 @@ src/
     │   │   ├── Main.java           # Главный класс приложения
     │   │   │
     │   │   ├── controllers/        # Контроллеры для JavaFX
+    │   │   │   ├── cell/            # Классы для работы с ячейками таблиц
+    │   │   │   │   ├── AbstractValidationCell.java  # Абстрактный класс для валидации
+    │   │   │   │   ├── ValidatingDoubleCell.java    # Класс для валидации ячейки с дробным значением
+    │   │   │   │   └── ValidatingIntegerCell.java    # Класс для валидации ячейки с целым значением
+    │   │   │   │
     │   │   │   ├── AddDeviceController.java   # Контроллер для формы добавления нового прибора.
     │   │   │   ├── MainController.java     # Главный контроллер – отвечает за навигацию
     │   │   │   ├── DevicesTableController.java   # Контроллер для работы с таблицей приборов
