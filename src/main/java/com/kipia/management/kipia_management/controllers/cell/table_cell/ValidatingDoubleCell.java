@@ -1,4 +1,4 @@
-package com.kipia.management.kipia_management.controllers.cell;
+package com.kipia.management.kipia_management.controllers.cell.table_cell;
 
 /**
  * Класс для валидации чисел с плавающей точкой

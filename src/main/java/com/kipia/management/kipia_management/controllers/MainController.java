@@ -27,9 +27,14 @@ public class MainController {
     //public Button themeToggleBtn;
 
     // ── UI‑элементы, которые остаются в main.fxml ────────
-    @FXML private Label statusLabel;
-    @FXML private VBox contentArea;          // контейнер, куда будем вставлять view‑ы
-    @FXML private Button themeToggleBtn;    // (поле уже объявлено выше, но повторяется для @FXML)
+    @FXML
+    private Label statusLabel;
+    @FXML
+    private VBox contentArea;          // контейнер, куда будем вставлять view‑ы
+    @FXML
+    private Button themeToggleBtn;
+    @FXML
+    private Button groupedDevicesBtn;
 
     // ── Сервис доступа к БД ───────────────────────────────
     private DeviceDAO deviceDAO;
@@ -42,17 +47,23 @@ public class MainController {
     //  Методы, вызываемые из главного окна
     // ---------------------------------------------------------
 
-    /** Внедряем DAO из главного приложения (MainApp). */
+    /**
+     * Внедряем DAO из главного приложения (MainApp).
+     */
     public void setDeviceDAO(DeviceDAO dao) {
         this.deviceDAO = dao;
     }
 
-    /** Передаём сцену, чтобы можно было менять стили. */
+    /**
+     * Передаём сцену, чтобы можно было менять стили.
+     */
     public void setScene(Scene scene) {
         this.scene = scene;
     }
 
-    /** Инициализация UI‑элементов (hover‑эффекты, стили). */
+    /**
+     * Инициализация UI‑элементов (hover‑эффекты, стили).
+     */
     @FXML
     private void initialize() {
         statusLabel.setText("Готов к работе");
@@ -63,9 +74,12 @@ public class MainController {
         StyleUtils.applyHoverAndAnimation(reportsBtn, "button-reports", "button-reports-hover");
         StyleUtils.applyHoverAndAnimation(themeToggleBtn, "button-theme-toggle", "button-theme-toggle-hover");
         StyleUtils.applyHoverAndAnimation(exitBtn, "button-exit", "button-exit-hover");
+        StyleUtils.applyHoverAndAnimation(groupedDevicesBtn, "button-grouped", "button-grouped-hover");
     }
 
-    /** Переключение светлой/тёмной темы. */
+    /**
+     * Переключение светлой/тёмной темы.
+     */
     @FXML
     private void toggleTheme() {
         if (scene == null) {
@@ -87,7 +101,9 @@ public class MainController {
         }
     }
 
-    /** Выход из приложения. */
+    /**
+     * Выход из приложения.
+     */
     @FXML
     private void exitApp() {
         System.exit(0);
@@ -97,15 +113,16 @@ public class MainController {
     //  Переходы к разным представлениям
     // ---------------------------------------------------------
 
-    /** Показать таблицу приборов. */
+    /**
+     * Показать таблицу приборов.
+     */
     @FXML
     private void showDevices() {
         statusLabel.setText("Просмотр списка приборов");
         contentArea.getChildren().clear();
 
         try {
-            FXMLLoader loader = new FXMLLoader(
-                    getClass().getResource("/views/devices.fxml"));
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/devices.fxml"));
             Parent view = loader.load();
 
             // Получаем контроллер и передаём ему DAO
@@ -120,7 +137,33 @@ public class MainController {
         }
     }
 
-    /** Показать форму добавления прибора. */
+    /**
+     * Показать группировку приборов.
+     */
+    @FXML
+    private void showGroupedDevices() {
+        statusLabel.setText("Просмотр списка приборов по месту установки");
+        contentArea.getChildren().clear();
+
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/devices_grouped.fxml"));
+            Parent view = loader.load();
+
+            // Получаем контроллер и передаём ему DAO
+            DevicesGroupedController ctrl = loader.getController();
+            ctrl.setDeviceDAO(deviceDAO);
+            ctrl.init();
+
+            contentArea.getChildren().add(view);
+        } catch (Exception ex) {
+            System.err.println("Ошибка загрузки списка приборов по месту установки: " + ex.getMessage());
+            ex.printStackTrace();
+        }
+    }
+
+    /**
+     * Показать форму добавления прибора.
+     */
     @FXML
     private void showAddDeviceForm() {
         statusLabel.setText("Добавление нового прибора");
@@ -140,7 +183,9 @@ public class MainController {
         }
     }
 
-    /** Показать отчёты. */
+    /**
+     * Показать отчёты.
+     */
     @FXML
     private void showReports() {
         statusLabel.setText("Просмотр отчётов");

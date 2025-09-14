@@ -1,24 +1,18 @@
-package com.kipia.management.kipia_management.controllers.cell;
+package com.kipia.management.kipia_management.controllers.cell.tree_table_cell;
 
-import com.kipia.management.kipia_management.models.Device;
 import javafx.scene.control.Alert;
-import javafx.scene.control.TableCell;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TreeTableCell;
 
 /**
- * Абстрактный класс для валидации числовых данных в таблице приборов.
  * @author vladimir_shi
  * @since 13.09.2025
  */
 
-public abstract class AbstractValidatingCell<T> extends TableCell<Device, T> {
+public abstract class AbstractValidatingTreeCell<T> extends TreeTableCell<Object, T> {
+    protected TextField textField;
+    private boolean isShowingAlert = false;
 
-    protected TextField textField;  // Поле для ввода текста
-    private boolean isShowingAlert = false;  // Показывать ли предупреждение о некорректном вводе
-
-    /**
-     * Запускает редактирование ячейки
-     */
     @Override
     public void startEdit() {
         super.startEdit();
@@ -30,9 +24,6 @@ public abstract class AbstractValidatingCell<T> extends TableCell<Device, T> {
         textField.requestFocus();
     }
 
-    /**
-     * Отменяет редактирование ячейки
-     */
     @Override
     public void cancelEdit() {
         super.cancelEdit();
@@ -40,11 +31,6 @@ public abstract class AbstractValidatingCell<T> extends TableCell<Device, T> {
         setGraphic(null);
     }
 
-    /**
-     * Обновляет ячейку
-     * @param item - новое значение
-     * @param empty - является ли ячейка пустой
-     */
     @Override
     protected void updateItem(T item, boolean empty) {
         super.updateItem(item, empty);
@@ -63,9 +49,6 @@ public abstract class AbstractValidatingCell<T> extends TableCell<Device, T> {
         }
     }
 
-    /**
-     * Создает текстовое поле
-     */
     private void createTextField() {
         textField = new TextField();
         textField.setOnAction(e -> processEdit());
@@ -74,27 +57,20 @@ public abstract class AbstractValidatingCell<T> extends TableCell<Device, T> {
         });
     }
 
-    // Метод вызывается при окончании редактирования (нажали Enter или ушёл фокус)
     protected void processEdit() {
         String input = textField.getText().trim();
-
         if (input.contains(",")) {
             showAlert("Используйте точку вместо запятой.");
             cancelEdit();
             return;
         }
-
-        // Если пустое, разрешаем null и коммитим
         if (input.isEmpty()) {
             commitEdit(null);
             return;
         }
-
-        // Специфичная валидация и коммит — реализуется в наследнике
         validateAndCommit(input);
     }
 
-    // Абстрактный метод, чтобы наследник сам валидировал и вызывал commitEdit/cancelEdit
     protected abstract void validateAndCommit(String input);
 
     protected void showAlert(String msg) {

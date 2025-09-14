@@ -1,22 +1,15 @@
-package com.kipia.management.kipia_management.controllers.cell;
+package com.kipia.management.kipia_management.controllers.cell.tree_table_cell;
 
 /**
- * Класс для валидации целых чисел
  * @author vladimir_shi
  * @since 13.09.2025
  */
 
-public class ValidatingIntegerCell extends AbstractValidatingCell<Integer> {
-
-    /**
-     * Метод для валидации и сохранения значения
-     * @param input - введённое значение
-     */
+public class ValidatingIntegerTreeCell extends AbstractValidatingTreeCell<Integer> {
     @Override
     protected void validateAndCommit(String input) {
         try {
             int val = Integer.parseInt(input);
-            // Пример проверки диапазона (по желанию)
             if (val < 1900 || val > 2100) {
                 showAlert("Год должен быть в диапазоне 1900–2100.");
                 cancelEdit();

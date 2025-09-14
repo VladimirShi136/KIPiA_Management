@@ -27,6 +27,11 @@
                     onAction="#showDevices"
                     styleClass="nav-button button-devices"
                     text="Приборы"/>
+            <Button fx:id="groupedDevicesBtn"
+                    maxWidth="Infinity"
+                    onAction="#showGroupedDevices"
+                    text="Приборы по месту установки"
+                    styleClass="nav-button button-grouped"/>
             <Button fx:id="addDeviceBtn"
                     maxWidth="Infinity"
                     onAction="#showAddDeviceForm"

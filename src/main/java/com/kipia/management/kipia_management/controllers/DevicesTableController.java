@@ -1,7 +1,7 @@
 package com.kipia.management.kipia_management.controllers;
 
-import com.kipia.management.kipia_management.controllers.cell.ValidatingDoubleCell;
-import com.kipia.management.kipia_management.controllers.cell.ValidatingIntegerCell;
+import com.kipia.management.kipia_management.controllers.cell.table_cell.ValidatingDoubleCell;
+import com.kipia.management.kipia_management.controllers.cell.table_cell.ValidatingIntegerCell;
 import com.kipia.management.kipia_management.models.Device;
 import com.kipia.management.kipia_management.services.DeviceDAO;
 import com.kipia.management.kipia_management.utils.ExcelImportExportUtil;
@@ -379,7 +379,7 @@ public class DevicesTableController {
     }
 
     // -----------------------------------------------------------------
-    //   Экспорт / импорт Excel (используем Apache POI, как в MainController)
+    //   Экспорт / импорт Excel (используем Apache POI)
     // -----------------------------------------------------------------
     private void exportToExcel() {
         ExcelImportExportUtil.exportDevicesToExcel(deviceTable.getScene().getWindow(), deviceTable.getItems());

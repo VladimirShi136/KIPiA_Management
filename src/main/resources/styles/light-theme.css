@@ -77,6 +77,27 @@
     -fx-min-width: 160px;
     -fx-pref-width: 160px;
 }
+.button-grouped {
+    -fx-background-color: #bbbf06;
+    -fx-padding: 10 20;
+    -fx-wrap-text: true;
+    -fx-text-alignment: center;
+    -fx-font-weight: bold;
+    -fx-min-width: 160px;
+    -fx-pref-width: 160px;
+    -fx-alignment: center;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 2, 0, 0, 1);
+}
+.button-grouped-hover {
+    -fx-background-color: #d5d837;
+    -fx-padding: 10 20;
+    -fx-wrap-text: true;
+    -fx-text-alignment: center;
+    -fx-font-weight: bold;
+    -fx-min-width: 160px;
+    -fx-pref-width: 160px;
+    -fx-alignment: center;
+}
 .button-add-device {
     -fx-background-color: #2ecc71;
     -fx-padding: 10 20;
@@ -171,7 +192,7 @@
     -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 2, 0, 0, 1);
 }
 .button-delete-hover {
-    -fx-background-color: #e43e2d;
+    -fx-background-color: #fb4c3b;
     -fx-padding: 5px 10px;
     -fx-min-width: 230px;
     -fx-pref-width: 160px;
