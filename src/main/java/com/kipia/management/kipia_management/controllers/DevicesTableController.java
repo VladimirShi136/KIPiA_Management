@@ -97,23 +97,23 @@ public class DevicesTableController {
 
         //  Текстовые колонки
         TableColumn<Device, String> typeCol = createEditableStringColumn(
-                "Тип прибора", "type", 80,
+                "Тип прибора", "type", 100,
                 Device::setType);
 
         TableColumn<Device, String> nameCol = createEditableStringColumn(
-                "Модель", "name", 80,
+                "Модель", "name", 75,
                 Device::setName);
 
         TableColumn<Device, String> manufacturerCol = createEditableStringColumn(
-                "Производитель", "manufacturer", 100,
+                "Завод изготовитель", "manufacturer", 115,
                 Device::setManufacturer);
 
         inventoryCol = createEditableStringColumn(
-                "Инвентарный №", "inventoryNumber", 120,
+                "Инв. №", "inventoryNumber", 70,
                 Device::setInventoryNumber);
 
         TableColumn<Device, String> measurementLimitCol = createEditableStringColumn(
-                "Предел измерений", "measurementLimit", 120,
+                "Предел измерений", "measurementLimit", 100,
                 Device::setMeasurementLimit);
 
         TableColumn<Device, String> locationCol = createEditableStringColumn(
@@ -125,7 +125,7 @@ public class DevicesTableController {
                 Device::setValveNumber);
 
         TableColumn<Device, String> additionalInfoCol = createEditableStringColumn(
-                "Доп. информация", "additionalInfo", 180,
+                "Доп. информация", "additionalInfo", 150,
                 Device::setAdditionalInfo);
 
         //  Числовые колонки
@@ -134,7 +134,7 @@ public class DevicesTableController {
 
         // Статус – ComboBox
         TableColumn<Device, String> statusCol = new TableColumn<>("Статус");
-        statusCol.setPrefWidth(80);
+        statusCol.setPrefWidth(70);
         statusCol.setCellValueFactory(new PropertyValueFactory<>("status"));
         statusCol.setCellFactory(ComboBoxTableCell.forTableColumn(
                 "Хранение", "В работе", "Утерян", "Испорчен"));
@@ -175,8 +175,12 @@ public class DevicesTableController {
     private TableColumn<Device, Integer> createYearColumn() {
         TableColumn<Device, Integer> yearCol = new TableColumn<>("Год выпуска");
         yearCol.setCellValueFactory(new PropertyValueFactory<>("year"));
-        yearCol.setPrefWidth(80);
-        yearCol.setCellFactory(col -> new ValidatingIntegerCell());
+        yearCol.setPrefWidth(90);
+        yearCol.setCellFactory(col -> {
+            ValidatingIntegerCell cell = new ValidatingIntegerCell();
+            cell.getStyleClass().add("numeric-cell");
+            return cell;
+        });
         yearCol.setEditable(true);
         yearCol.setOnEditCommit(event -> {
             Device device = event.getRowValue();
@@ -193,9 +197,12 @@ public class DevicesTableController {
     private TableColumn<Device, Double> createAccuracyClassColumn() {
         TableColumn<Device, Double> accuracyClassCol = new TableColumn<>("Класс точности");
         accuracyClassCol.setCellValueFactory(new PropertyValueFactory<>("accuracyClass"));
-        accuracyClassCol.setPrefWidth(100);
-
-        accuracyClassCol.setCellFactory(col -> new ValidatingDoubleCell());
+        accuracyClassCol.setPrefWidth(90);
+        accuracyClassCol.setCellFactory(col -> {
+            ValidatingDoubleCell cell = new ValidatingDoubleCell();
+            cell.getStyleClass().add("numeric-cell");
+            return cell;
+        });
         accuracyClassCol.setEditable(true);
         accuracyClassCol.setOnEditCommit(event -> {
             Device device = event.getRowValue();
@@ -325,7 +332,16 @@ public class DevicesTableController {
                 if (lower.isEmpty()) return true;
                 return (dev.getName() != null && dev.getName().toLowerCase().contains(lower))
                         || (dev.getType() != null && dev.getType().toLowerCase().contains(lower))
-                        || (dev.getLocation() != null && dev.getLocation().toLowerCase().contains(lower));
+                        || (dev.getManufacturer() != null && dev.getManufacturer().toLowerCase().contains(lower))
+                        || (dev.getLocation() != null && dev.getLocation().toLowerCase().contains(lower))
+                        || (dev.getInventoryNumber() != null && dev.getInventoryNumber().toLowerCase().contains(lower))
+                        || (dev.getYear() != null && String.valueOf(dev.getYear()).contains(lower))
+                        || (dev.getMeasurementLimit() != null && dev.getMeasurementLimit().toLowerCase().contains(lower))
+                        || (dev.getAccuracyClass() != null && String.valueOf(dev.getAccuracyClass()).contains(lower))
+                        || (dev.getValveNumber() != null && dev.getValveNumber().toLowerCase().contains(lower))
+                        || (dev.getStatus() != null && dev.getStatus().toLowerCase().contains(lower))
+                        || (dev.getAdditionalInfo() != null && dev.getAdditionalInfo().toLowerCase().contains(lower));
+
             });
             updateStatistics();
         });

@@ -9,28 +9,27 @@
     <GridPane hgap="10" vgap="10" styleClass="form-grid">
         <Label text="Тип прибора:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
         <TextField fx:id="typeField" GridPane.rowIndex="0" GridPane.columnIndex="1" prefWidth="200"
-                   styleClass="form-input"/>
+                   styleClass="form-input" promptText="Например, Манометр"/>
 
         <Label text="Модель:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
         <TextField fx:id="nameField" GridPane.rowIndex="1" GridPane.columnIndex="1" prefWidth="200"
-                   styleClass="form-input"/>
+                   styleClass="form-input" promptText="Например, МП4-УУ2"/>
 
         <Label text="Инвентарный номер:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
         <TextField fx:id="inventoryNumberField" GridPane.rowIndex="2" GridPane.columnIndex="1" prefWidth="200"
-                   styleClass="form-input"/>
+                   styleClass="form-input" promptText="Введите номер через ТМ, например, ТМ-001"/>
 
         <Label text="Место установки:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
         <TextField fx:id="locationField" GridPane.rowIndex="3" GridPane.columnIndex="1" prefWidth="200"
-                   styleClass="form-input"/>
+                   styleClass="form-input" promptText="Например, 88 км Губкин"/>
 
-        <!-- Новое поле -->
         <Label text="Кран № (опционально):" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
         <TextField fx:id="valveNumberField" GridPane.rowIndex="4" GridPane.columnIndex="1" prefWidth="200"
-                   styleClass="form-input"/>
+                   styleClass="form-input" promptText="Например, Р1-333"/>
 
         <Label text="Статус:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
         <ComboBox fx:id="statusComboBox" GridPane.rowIndex="5" GridPane.columnIndex="1" prefWidth="200"
-                  styleClass="form-input"/>
+                  styleClass="form-input" promptText="Выберите статус прибора"/>
 
         <Label text="Предел измерений (опционально):" GridPane.rowIndex="6" GridPane.columnIndex="0"
                styleClass="form-label"/>

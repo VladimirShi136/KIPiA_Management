@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
  * @since 23.08.2025
  */
 
-public class ExcelExportService {
+public class ExcelExportReportsService {
 
     public void exportReport(List<Device> devices, String reportKey, Stage primaryStage) {
         FileChooser chooser = new FileChooser();

@@ -27,12 +27,29 @@ import java.util.logging.Logger;
  */
 public class Main extends Application {
 
-    // Сервисы приложения (могут быть использованы в контроллерах)
+    // Сервисы базы данных
     private DatabaseService databaseService;
     private DeviceDAO deviceDAO;
 
+    // Поле для логирования
     private static final Logger logger = Logger.getLogger(Main.class.getName());
 
+    /**
+     * Главный метод приложения
+     *
+     * @param args аргументы командной строки
+     */
+    public static void main(String[] args) {
+        launch(args);
+    }
+
+    /**
+     *
+     * @param primaryStage the primary stage for this application, onto which
+     * the application scene can be set.
+     * Applications may create other stages, if needed, but they will not be
+     * primary stages.
+     */
     @Override
     public void start(Stage primaryStage) {
         try {
@@ -80,7 +97,6 @@ public class Main extends Application {
             primaryStage.show();
 
         } catch (Exception e) {
-            // Убрал e.printStackTrace() - теперь логируется в диалоге
             showErrorDialog("Ошибка запуска приложения", e.getMessage(), e);
         }
     }
@@ -110,7 +126,6 @@ public class Main extends Application {
             System.out.println("Сервисы базы данных успешно инициализированы");
 
         } catch (Exception e) {
-            // Убрал System.err.println и e.printStackTrace() - теперь логируется в диалоге
             showErrorDialog("Ошибка базы данных", "Не удалось подключиться к базе данных", e);
         }
     }
@@ -168,7 +183,11 @@ public class Main extends Application {
         });
     }
 
-    // Обработка retry в зависимости от контекста
+    /**
+     * Обработка повторного запуска приложения
+     *
+     * @param context контекст ошибки
+     */
     private static void handleRetry(String context) {
         if ("Ошибка базы данных".equals(context)) {
             // Повтор инициализации сервисов (с защитой от бесконечного цикла)
@@ -194,7 +213,11 @@ public class Main extends Application {
         }
     }
 
-    // Обработка cancel
+    /**
+     * Обработка отмены действия
+     *
+     * @param context контекст ошибки
+     */
     private static void handleCancel(String context) {
         if ("Ошибка запуска приложения".equals(context)) {
             // Закрываем приложение
@@ -203,10 +226,5 @@ public class Main extends Application {
         } else {
             System.out.println("Отмена действия...");
         }
-    }
-
-    public static void main(String[] args) {
-        // Запускаем JavaFX приложение
-        launch(args);
     }
 }

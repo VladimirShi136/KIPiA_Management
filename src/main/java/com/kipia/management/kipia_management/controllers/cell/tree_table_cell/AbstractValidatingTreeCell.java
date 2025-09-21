@@ -1,5 +1,6 @@
 package com.kipia.management.kipia_management.controllers.cell.tree_table_cell;
 
+import com.kipia.management.kipia_management.controllers.DevicesGroupedController;
 import javafx.scene.control.Alert;
 import javafx.scene.control.TextField;
 import javafx.scene.control.TreeTableCell;
@@ -9,7 +10,7 @@ import javafx.scene.control.TreeTableCell;
  * @since 13.09.2025
  */
 
-public abstract class AbstractValidatingTreeCell<T> extends TreeTableCell<Object, T> {
+public abstract class AbstractValidatingTreeCell<T> extends TreeTableCell<DevicesGroupedController.TreeRowItem, T> {
     protected TextField textField;
     private boolean isShowingAlert = false;
 

@@ -19,7 +19,7 @@
         <Label text="Поиск:" styleClass="search-label"/>
         <TextField fx:id="searchField"
                    prefWidth="300.0"
-                   promptText="Введите название, тип или место установки"
+                   promptText="Введите текст для поиска"
                    styleClass="search-field"/>
         <!-- Кнопка удаления -->
         <Button fx:id="deleteButton"

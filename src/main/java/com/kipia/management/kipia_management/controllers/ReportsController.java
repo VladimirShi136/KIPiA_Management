@@ -3,7 +3,7 @@ package com.kipia.management.kipia_management.controllers;
 import com.kipia.management.kipia_management.models.Device;
 import com.kipia.management.kipia_management.services.DeviceDAO;
 import com.kipia.management.kipia_management.services.DeviceReportService;
-import com.kipia.management.kipia_management.services.ExcelExportService;
+import com.kipia.management.kipia_management.services.ExcelExportReportsService;
 import com.kipia.management.kipia_management.utils.StyleUtils;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
@@ -26,7 +26,7 @@ public class ReportsController {
     @FXML private Button exportReportButton;
 
     private DeviceReportService reportService;
-    private ExcelExportService excelService;
+    private ExcelExportReportsService excelService;
     private Stage primaryStage;
     private List<Device> allDevices;
 
@@ -35,7 +35,7 @@ public class ReportsController {
     public void init(DeviceDAO deviceDAO, Stage primaryStage) {
         this.primaryStage = primaryStage;
         this.reportService = new DeviceReportService();
-        this.excelService = new ExcelExportService();
+        this.excelService = new ExcelExportReportsService();
         this.allDevices = deviceDAO.getAllDevices();
 
         if (statusReportBtn != null) StyleUtils.applyStyleToRadioButton(statusReportBtn);

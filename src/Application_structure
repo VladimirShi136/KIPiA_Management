@@ -6,25 +6,31 @@ src/
     │   │   │
     │   │   ├── controllers/        # Контроллеры для JavaFX
     │   │   │   ├── cell/            # Классы для работы с ячейками таблиц
-    │   │   │   │   ├── AbstractValidationCell.java  # Абстрактный класс для валидации
-    │   │   │   │   ├── ValidatingDoubleCell.java    # Класс для валидации ячейки с дробным значением
-    │   │   │   │   └── ValidatingIntegerCell.java    # Класс для валидации ячейки с целым значением
+    │   │   │   │   ├── table_cell/     # Работа с ячейками обычных таблиц
+    │   │   │   │   │   ├── AbstractValidatingCell.java     # Абстрактный класс для валидации
+    │   │   │   │   │   ├── ValidatingDoubleCell.java     # Класс для валидации ячейки с дробным значением
+    │   │   │   │   │   └── ValidatingIntegerCell.java    # Класс для валидации ячейки с целым значением
+    │   │   │   │   └── tree_table_cell/  # Работа с ячейками таблицы древовидной структуры
+    │   │   │   │       ├── AbstractValidatingTreeCell.java     # Абстрактный класс для валидации
+    │   │   │   │       ├── ValidatingDoubleTreeCell.java     # Класс для валидации ячейки с дробным значением
+    │   │   │   │       └── ValidatingIntegerTreeCell.java    # Класс для валидации ячейки с целым значением
     │   │   │   │
     │   │   │   ├── AddDeviceController.java   # Контроллер для формы добавления нового прибора.
     │   │   │   ├── MainController.java     # Главный контроллер – отвечает за навигацию
     │   │   │   ├── DevicesTableController.java   # Контроллер для работы с таблицей приборов
+    │   │   │   ├── DevicesGroupedController.java   # Контроллер для работы с таблицей приборов (группированный вид)
     │   │   │   └── ReportsController.java    # Контроллер для работы с отчетами
     │   │   │
     │   │   ├── models/   # Модели данных (Device и т.д.)
     │   │   │   └── Device.java       # Класс для создания объектов "приборов"
     │   │   │
-    │   │   ├── services/  # Логика работы с БД
+    │   │   ├── services/  # Сервисы
     │   │   │   ├── DatabaseService.java       # Класс для работы с БД
     │   │   │   ├── DeviceDAO.java        # Класс для выполнения действий с БД (CRUD операции)
     │   │   │   ├── DeviceReportService.java      # Класс-сервис для работы с отчетами
-    │   │   │   └── ExcelExportService.java      # Класс для работы с экспортом данных
+    │   │   │   └── ExcelExportReportsService.java      # Класс для работы с экспортом данных из отчетов
     │   │   └── utils/       # Пакет с утилитами
-    │   │       ├── ExcelImportExportUtil0.java    # Класс для работы с импортом и экспортом данных
+    │   │       ├── ExcelImportExportUtil0.java    # Класс для работы с импортом и экспортом данных из таблицы
     │   │       └── StyleUtils.java     # Класс с утилитами для работы со стилями CSS
     │   └── module-info.java      # Файл взаимодействия модулей
     │
@@ -39,6 +45,7 @@ src/
         └── views/  # FXML файлы интерфейса
             ├── add-device-form.fxml    # Экран с формой добавления приборов
             ├── devices.fxml       # Экран с таблицей приборов
+            ├── devices_grouped.fxml   # Экран с таблицей приборов (группированный по месту установки)
             ├── main.fxml        # Начальный экран при запуске
             └── reports.fxml      # Экран с просмотром отчетов
 

@@ -12,14 +12,13 @@
     -fx-text-fill: white;
     -fx-cursor: hand;
     -fx-padding: 8 12 8 12;
-
     /* Плавный переход для фонового цвета и эффекта */
     -fx-transition: background-color 0.3s ease, effect 0.3s ease;
 }
 
 /* Верхняя панель */
 .top {
-    -fx-background-color: #2c3e50;
+    -fx-background-color: #456381;
     -fx-padding: 10px;
 }
 .header-label {
@@ -30,10 +29,10 @@
 
 /* Левая навигация */
 .left {
-    -fx-background-color: #34495e;
+    -fx-background-color: #527091;
     -fx-padding: 10px;
-    -fx-min-width: 200px; /* например, чтобы левая панель не сжималась */
-    -fx-pref-width: 160px; /* или фиксированная ширина */
+    -fx-min-width: 200px; /* чтобы левая панель не сжималась */
+    -fx-pref-width: 160px; /* фиксированная ширина */
 }
 .nav-button {
     -fx-text-fill: white;
@@ -69,7 +68,7 @@
     -fx-padding: 10 20;
     -fx-min-width: 160px;
     -fx-pref-width: 160px;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 2, 0, 0, 1);
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
 }
 .button-devices-hover {
     -fx-background-color: #5dade2;
@@ -86,7 +85,7 @@
     -fx-min-width: 160px;
     -fx-pref-width: 160px;
     -fx-alignment: center;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 2, 0, 0, 1);
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
 }
 .button-grouped-hover {
     -fx-background-color: #d5d837;
@@ -103,7 +102,7 @@
     -fx-padding: 10 20;
     -fx-min-width: 160px;
     -fx-pref-width: 160px;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 2, 0, 0, 1);
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
 }
 .button-add-device-hover {
     -fx-background-color: #58d68d;
@@ -116,7 +115,7 @@
     -fx-padding: 10 20;
     -fx-min-width: 160px;
     -fx-pref-width: 160px;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 2, 0, 0, 1);
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
 }
 .button-reports-hover {
     -fx-background-color: #f5a13d;
@@ -125,20 +124,19 @@
     -fx-pref-width: 160px;
 }
 .button-theme-toggle {
-    -fx-min-width: 160px;        /* фиксированная ширина как у других кнопок */
+    -fx-min-width: 160px; /* фиксированная ширина как у других кнопок */
     -fx-pref-width: 160px;
-    -fx-padding: 10 20;           /* отступы совпадают с другими */
-    -fx-background-color: #192a35; /* тёмный насыщенный фон (можно чуть светлее #34495e) */
-    -fx-text-fill: white;          /* белый текст */
+    -fx-padding: 10 20; /* отступы совпадают с другими */
+    -fx-background-color: #192a35; /* тёмный насыщенный фон */
+    -fx-text-fill: white; /* белый текст */
     -fx-font-size: 14px;
     -fx-font-weight: bold;
     -fx-background-radius: 5px;
     -fx-border-radius: 5px;
     -fx-cursor: hand;
     -fx-transition: background-color 0.3s ease, effect 0.3s ease;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 2, 0, 0, 1);
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
 }
-
 /* Hover для кнопки смены темы */
 .button-theme-toggle-hover {
     -fx-background-color: #203443; /* светлее при наведении */
@@ -146,13 +144,12 @@
     -fx-min-width: 160px;
     -fx-pref-width: 160px;
 }
-
 .button-exit {
     -fx-background-color: #e74c3c;
     -fx-padding: 10 20;
     -fx-min-width: 160px;
     -fx-pref-width: 160px;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 2, 0, 0, 1);
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
 }
 .button-exit-hover {
     -fx-background-color: #ec7063;
@@ -160,13 +157,11 @@
     -fx-min-width: 160px;
     -fx-pref-width: 160px;
 }
-
 /* Центр */
 #contentArea {
     -fx-padding: 10px;
     -fx-spacing: 15px;
 }
-
 /* Поиск */
 .search-delete-pane {
     -fx-spacing: 10px;
@@ -189,7 +184,7 @@
     -fx-cursor: hand;
     -fx-min-width: 230px;
     -fx-pref-width: 160px;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 2, 0, 0, 1);
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
 }
 .button-delete-hover {
     -fx-background-color: #fb4c3b;
@@ -197,7 +192,6 @@
     -fx-min-width: 230px;
     -fx-pref-width: 160px;
 }
-
 /* Кнопки экспорт и импорт*/
 .button-export {
     -fx-background-color: #4CAF50;
@@ -208,14 +202,12 @@
     -fx-font-weight: bold;
     -fx-cursor: hand;
     -fx-transition: background-color 0.3s ease, effect 0.3s ease;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 2, 0, 0, 1);
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
 }
-
 .button-export-hover {
     -fx-background-color: #58d68d;
     -fx-padding: 5 10;
 }
-
 .button-import {
     -fx-background-color: #2196F3;
     -fx-text-fill: white;
@@ -225,14 +217,12 @@
     -fx-font-weight: bold;
     -fx-cursor: hand;
     -fx-transition: background-color 0.3s ease, effect 0.3s ease;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 2, 0, 0, 1);
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
 }
-
 .button-import-hover {
     -fx-background-color: #5dade2;
     -fx-padding: 5 10;
 }
-
 /* Статистика */
 .statistics-pane {
     -fx-background-color: #f8f9fa;
@@ -241,53 +231,44 @@
     -fx-border-radius: 5px;
     -fx-spacing: 10px;
 }
-
 .statistics-header {
     -fx-font-weight: bold;
     -fx-font-size: 16px;
     -fx-padding-bottom: 10px;
     -fx-text-fill: #333;
 }
-
 .statistics-data {
     -fx-spacing: 20px;
 }
-
 .stat-total {
     -fx-text-fill: #1e74e4;
     -fx-font-size: 24px;
     -fx-font-weight: bold;
 }
-
 .stat-working {
     -fx-text-fill: #2ecc71;
     -fx-font-size: 24px;
     -fx-font-weight: bold;
 }
-
 .stat-storage {
     -fx-text-fill: #e74c3c;
     -fx-font-size: 24px;
     -fx-font-weight: bold;
 }
-
 .stat-lost {
     -fx-text-fill: #706b69;
     -fx-font-size: 24px;
     -fx-font-weight: bold;
 }
-
 .stat-broken {
     -fx-text-fill: #ef8a06;
     -fx-font-size: 24px;
     -fx-font-weight: bold;
 }
-
 .stat-label {
     -fx-font-size: 14px;
     -fx-text-fill: #555;
 }
-
 /* Кнопки в таблице, колонка "Фото" */
 .table-button-add {
     -fx-background-color: #4CAF50;
@@ -299,16 +280,14 @@
     -fx-border-width: 1;
     -fx-padding: 3 6;
     -fx-cursor: hand;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 2, 0, 0, 1);
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
     -fx-transition: background-color 0.2s ease;
 }
-
 .table-button-add-hover {
     -fx-background-color: #66BB6A; /* светлее зелёный */
     -fx-padding: 3 6;
     -fx-font-size: 8px;
 }
-
 .table-button-view {
     -fx-background-color: #2196F3;
     -fx-text-fill: white;
@@ -319,16 +298,14 @@
     -fx-border-width: 1;
     -fx-padding: 3 6;
     -fx-cursor: hand;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 2, 0, 0, 1);
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
     -fx-transition: background-color 0.2s ease;
 }
-
 .table-button-view-hover {
     -fx-background-color: #64B5F6; /* светлее синий */
     -fx-padding: 3 6;
     -fx-font-size: 8px;
 }
-
 /* Нижняя панель */
 .bottom {
     -fx-background-color: #ecf0f1;
@@ -339,32 +316,25 @@
     -fx-text-fill: black;
     -fx-font-size: 12px;
 }
-
 /* Reports.fxml */
-
 .reports-root {
     -fx-padding: 20px;
 }
-
 .report-buttons {
     -fx-spacing: 20px;
 }
-
 .report-radio {
     -fx-font-size: 14px;
     -fx-font-weight: bold;
     -fx-text-fill: #333;
 }
-
 .report-title {
     -fx-font-size: 18px;
     -fx-font-weight: bold;
 }
-
 .chart-pane {
     -fx-background-color: transparent;
 }
-
 .report-export-button {
     -fx-background-color: #429846;
     -fx-text-fill: white;
@@ -374,49 +344,39 @@
     -fx-font-weight: bold;
     -fx-font-size: 14px;
     -fx-cursor: hand;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 2, 0, 0, 1);
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
     -fx-transition: background-color 0.3s ease, effect 0.3s ease;
 }
 .report-export-button-hover {
     -fx-background-color: #51bc56; /* чуть темнее при наведении */
     -fx-padding: 5 10;
 }
-
-
 /* Add-device-form.fxml */
-
 .add-device-root {
     -fx-padding: 15px;
 }
-
 .form-header {
     -fx-font-size: 16px;
     -fx-font-weight: bold;
     -fx-padding-bottom: 10px;
 }
-
 .form-grid {
     -fx-hgap: 10px;
     -fx-vgap: 10px;
 }
-
 .form-label {
     -fx-alignment: center-right;
 }
-
 .form-input {
     -fx-pref-width: 200px;
 }
-
 .form-textarea {
     -fx-pref-width: 200px;
     -fx-pref-height: 60px;
 }
-
 .photo-picker {
     -fx-spacing: 5px;
 }
-
 .photo-choose-btn {
     -fx-background-color: #105383;
     -fx-text-fill: white;
@@ -426,25 +386,21 @@
     -fx-font-weight: bold;
     -fx-cursor: hand;
     -fx-font-size: 14px;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 2, 0, 0, 1);
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
     -fx-transition: background-color 0.3s ease, effect 0.3s ease;
 }
-
 .photo-choose-btn-hover {
     -fx-background-color: #1080c8;
     -fx-padding: 5px 10px;
 }
-
 .photo-list {
     -fx-pref-height: 100px;
     -fx-pref-width: 200px;
 }
-
 .form-buttons {
     -fx-spacing: 10px;
     -fx-alignment: center-right;
 }
-
 .button-cancel {
     -fx-background-color: #932014;
     -fx-text-fill: white;
@@ -454,15 +410,13 @@
     -fx-font-weight: bold;
     -fx-cursor: hand;
     -fx-font-size: 14px;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 2, 0, 0, 1);
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
     -fx-transition: background-color 0.3s ease, effect 0.3s ease;
 }
-
 .button-cancel-hover {
     -fx-background-color: #f43420;
     -fx-padding: 5px 10px;
 }
-
 .button-add {
     -fx-background-color: #1eb15e;
     -fx-text-fill: white;
@@ -472,21 +426,20 @@
     -fx-font-weight: bold;
     -fx-cursor: hand;
     -fx-font-size: 14px;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 2, 0, 0, 1);
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
     -fx-transition: background-color 0.3s ease, effect 0.3s ease;
 }
 .button-add-hover {
     -fx-background-color: #1bd568;
     -fx-padding: 5px 10px;
 }
-
 .form-message {
     -fx-text-fill: red;
     -fx-padding-top: 10px;
 }
 
-/* Свойства строк таблицы */
-
+/* ===== Оптимизированные стили для TreeTableView с группировкой ===== */
+/* Стили для обычных строк таблицы (чередующийся фон) */
 .even-row {
     -fx-background-color: #b8b8b8;
 }
@@ -496,3 +449,159 @@
 .selected-row {
     -fx-background-color: #7abcff;
 }
+
+/* Стили для групповых строк (заголовки) */
+.tree-table-row-cell.group-row {
+    -fx-background-color: #d6eaff; /* Светло-голубой фон для групп */
+    -fx-font-weight: bold; /* Жирный шрифт */
+    -fx-font-size: 16px; /* Крупнее */
+    -fx-text-fill: black; /* Цвет текста */
+}
+
+/* Выделение групповой строки */
+.tree-table-row-cell.group-row:selected {
+    -fx-background-color: #a0c8ff; /* Цвет выделения для группы */
+    -fx-font-size: 16px; /* Крупнее */
+    -fx-text-fill: black; /* Цвет текста */
+}
+
+/* Стили для обычных строк (чередующийся фон) */
+.tree-table-row-cell.even-row {
+    -fx-background-color: white;
+}
+.tree-table-row-cell.odd-row {
+    -fx-background-color: #b8b8b8;
+}
+.tree-table-row-cell.selected-row {
+    -fx-background-color: #a0c8ff;
+}
+
+/* Текст в ячейках при наведении и выделении */
+.tree-table-row-cell:hover .text {
+    -fx-fill: black;
+}
+.tree-table-row-cell:selected .text {
+    -fx-fill: black;
+}
+
+/* Для текста внутри кнопок в ячейках — всегда белый цвет */
+.tree-table-cell .button .text {
+    -fx-fill: white !important;
+}
+
+/* Также фиксируем цвет текста кнопок при hover и выделении строки */
+.tree-table-row-cell:hover .button .text,
+.tree-table-row-cell:selected .button .text {
+    -fx-fill: white !important;
+}
+
+/* Если в твоём проекте кнопки имеют классы для hover, добавь для них тоже */
+.table-button-add,
+.table-button-add:hover,
+.table-button-add-hover,
+.table-button-add-hover:hover,
+.table-button-view,
+.table-button-view:hover,
+.table-button-view-hover,
+.table-button-view-hover:hover {
+    -fx-text-fill: white !important;
+}
+
+/* --- Шапки таблиц (headers) --- Одинаковые для TableView и TreeTableView */
+.table-view .column-header,
+.tree-table-view .column-header {
+    -fx-background-color: #3487da; /* Цвет фона */
+    -fx-font-family: "Arial"; /* Шрифт Arial */
+    -fx-font-size: 14px; /* Размер 12px */
+    -fx-font-weight: bold; /* Жирный */
+    -fx-min-height: 48px; /* Высота шапки для двух строк текста */
+    -fx-pref-height: 48px; /* Предпочтительная высота */
+    -fx-max-height: 96px; /* Максимальная высота (достаточно для 2-3 строк) */
+    -fx-padding: 5px 8px; /* Отступы для красоты */
+    -fx-alignment: center; /* Центрируем текст заголовков */
+    -fx-wrap-text: true; /* Разрешаем перенос текста */
+    -fx-border-color: transparent; /* Без границ */
+    -fx-text-alignment: center; /* Выравнивание текста по центру */
+}
+
+/* Обеспечиваем, что текст внутри label заголовка может переноситься */
+.table-view .column-header .label,
+.tree-table-view .column-header .label {
+    -fx-wrap-text: true;
+    -fx-text-overrun: clip;
+    -fx-text-alignment: center;
+    -fx-label-padding: 0 0 0 0;  /* Снимаем отступы у label */
+    -fx-pref-height: 48px;       /* Высота для label */
+    -fx-min-height: 48px;
+    -fx-max-height: 96px;
+}
+
+/* --- Ячейки данных (обычные строки, не группы) --- Одинаковые шрифт и размер */
+.tree-table-cell {
+    -fx-font-family: "Arial"; /* Шрифт Arial */
+    -fx-font-size: 12px; /* Размер 12px (компактный, но читаемый) */
+    -fx-text-fill: black; /* Чёрный текст */
+    -fx-alignment: center; /* Выравнивание по центру для всех ячеек данных */
+}
+
+/* Базовые стили для всех ячеек TableView */
+.table-cell {
+    -fx-font-family: "Arial"; /* Шрифт Arial */
+    -fx-font-size: 12px; /* Размер 12px (компактный, но читаемый) */
+    -fx-text-fill: black; /* Чёрный текст */
+    -fx-alignment: center; /* Выравнивание по центру */
+}
+
+/* Стили для числовых ячеек (используются в коде для "Год выпуска" и "Класс точности") */
+.numeric-cell {
+    -fx-font-family: "Arial";
+    -fx-font-size: 12px;
+    -fx-text-fill: black;
+    -fx-alignment: center; /* Выравнивание по центру для числовых ячеек */
+}
+
+/* --- Базовые стили ячеек (разделители столбцов) --- */
+.tree-table-cell {
+    -fx-border-width: 0 1px 0 0; /* Граница справа */
+    -fx-border-color: transparent #d0d0d0 transparent transparent; /* Светло-серая линия справа */
+}
+
+/* В групповых строках убираем все вертикальные границы, оставляем только нижнюю (для визуального отделения группы) */
+.tree-table-row-cell.group-row > .tree-table-cell {
+    -fx-border-width: 0 0 1px 0 !important; /* Только нижняя граница */
+    -fx-border-color: transparent transparent #bbb transparent !important; /* Цвет нижней границы */
+}
+
+/* --- Выделение строк --- */
+.tree-table-row-cell:selected,
+.tree-table-row-cell:selected > .tree-table-cell {
+    -fx-background-color: #a0c8ff;
+}
+
+/* Убираем фон и границы у выделенных ячеек (чтобы фон был ровным) */
+.tree-table-cell:selected,
+.tree-table-cell:selected:focused {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+/* --- Убираем вертикальные полосы в групповых строках при выделении --- */
+.tree-table-row-cell.group-row:selected > .tree-table-cell {
+    -fx-border-width: 0 !important;
+    -fx-border-color: transparent !important;
+    -fx-background-color: #a0c8ff !important;
+}
+
+.tree-table-row-cell.group-row:selected:focused > .tree-table-cell {
+    -fx-border-width: 0 !important;
+    -fx-border-color: transparent !important;
+    -fx-background-color: #a0c8ff !important;
+}
+
+/* Убираем границы у всех элементов внутри выделенных групповых ячеек (на всякий случай) */
+.tree-table-row-cell.group-row:selected > .tree-table-cell * {
+    -fx-border-width: 0 !important;
+    -fx-border-color: transparent !important;
+}
+
+
