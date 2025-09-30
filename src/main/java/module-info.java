@@ -10,6 +10,7 @@ module com.kipia.management.kipia_management {
     requires jfreechart.fx; // JavaFX-адаптер для интеграции JFreeChart с JavaFX UI.
     requires java.desktop; // Стандартный модуль для десктоп-функций (например, иконки или системные диалоги).
 
+
     // opens - позволяет другим модулям (или системе) получать доступ к вашим классам через рефлексию.
     // Открываем пакет с контроллерами для JavaFX FXML для связки fxml полей/методов (рефлексия)
     opens com.kipia.management.kipia_management.controllers to javafx.fxml;

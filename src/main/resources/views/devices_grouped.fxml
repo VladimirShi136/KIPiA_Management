@@ -2,22 +2,29 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
+<!--
+  Author: vladimir_shi
+  Since: 12.09.2025
+  * Окно группированной таблицы приборов *
+-->
+
 <VBox xmlns="http://javafx.com/javafx/23" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.kipia.management.kipia_management.controllers.DevicesGroupedController"
       spacing="10" prefWidth="1000" prefHeight="700" styleClass="root-pane">
 
-    <!-- Панель поиска и кнопка удаления -->
+    <!-- 1️⃣ ПАНЕЛЬ ПОИСКА И КНОПКА УДАЛЕНИЯ -->
     <HBox fx:id="searchAndDeletePane" spacing="10">
         <Label text="Поиск:" styleClass="search-label"/>
         <TextField fx:id="searchField" prefWidth="300"
                    promptText="Введите текст для поиска"
                    styleClass="search-field"/>
+        <!-- Кнопка удаления -->
         <Button fx:id="deleteButton"
                 text="Удалить выбранный прибор"
                 styleClass="button-delete"/>
     </HBox>
 
-    <!-- Кнопки импорта и экспорта -->
+    <!-- 2️⃣ КНОПКИ ИМПОРТА / ЭКСПОРТА -->
     <HBox spacing="10" alignment="CENTER_LEFT">
         <Button fx:id="exportButton"
                 text="Экспорт в Excel"
@@ -27,7 +34,7 @@
                 styleClass="button-import"/>
     </HBox>
 
-    <!-- Статистика -->
+    <!-- 3️⃣ СТАТИСТИКА -->
     <VBox styleClass="statistics-pane" spacing="5">
         <Label text="Статистика:" styleClass="statistics-header"/>
         <HBox spacing="20" styleClass="statistics-data">
@@ -54,7 +61,6 @@
         </HBox>
     </VBox>
 
-    <!-- TreeTableView c приборами -->
+    <!-- 4️⃣ ГРУППИРОВАННАЯ ТАБЛИЦА ПРИБОРОВ -->
     <TreeTableView fx:id="treeTable" editable="true" VBox.vgrow="always" prefHeight="500" prefWidth="980"/>
-
 </VBox>

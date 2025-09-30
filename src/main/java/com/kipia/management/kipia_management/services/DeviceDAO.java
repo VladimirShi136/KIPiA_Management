@@ -133,6 +133,23 @@ public class DeviceDAO {
         return null;
     }
 
+    /**
+     * Получение прибора по ID (для SchemeEditor)
+     */
+    public Device getDeviceById(int id) {
+        String sql = "SELECT * FROM devices WHERE id = ?";
+        try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
+            stmt.setInt(1, id);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return createDeviceSQL(rs);
+            }
+        } catch (SQLException e) {
+            System.out.println("Ошибка получения прибора по ID: " + e.getMessage());
+        }
+        return null;
+    }
+
     // Дополнительный метод
     private Device createDeviceSQL(ResultSet rs) throws SQLException {
         Device device = new Device();

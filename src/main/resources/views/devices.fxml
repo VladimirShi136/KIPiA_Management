@@ -3,18 +3,17 @@
 <?import javafx.scene.layout.*?>
 
 <!--
-    Таблица приборов + панель поиска, кнопки импорта/экспорта,
-    статистика (над таблицей) и кнопка удаления.
-    Все стили берутся из вашего CSS‑файла.
+  Author: vladimir_shi
+  Since: 29.08.2025
+  * Окно основной таблицы приборов *
 -->
+
 <VBox xmlns="http://javafx.com/javafx/23"
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.kipia.management.kipia_management.controllers.DevicesTableController"
       spacing="10">
 
-    <!-- ____________________
-         1️⃣  ПАНЕЛЬ ПОИСКА И УДАЛЕНИЯ
-         ____________________ -->
+    <!-- 1️⃣ ПАНЕЛЬ ПОИСКА И УДАЛЕНИЯ -->
     <HBox fx:id="searchAndDeletePane" spacing="10">
         <Label text="Поиск:" styleClass="search-label"/>
         <TextField fx:id="searchField"
@@ -27,9 +26,7 @@
                 styleClass="button-delete"/>
     </HBox>
 
-    <!-- ____________________
-         2️⃣  КНОПКИ ИМПОРТА / ЭКСПОРТА
-         ____________________ -->
+    <!-- 2️⃣ КНОПКИ ИМПОРТА / ЭКСПОРТА -->
     <HBox spacing="10">
         <Button fx:id="exportButton"
                 text="Экспорт в Excel"
@@ -39,11 +36,9 @@
                 styleClass="button-import"/>
     </HBox>
 
-    <!-- ____________________
-         3️⃣  БЛОК СТАТИСТИКИ (над таблицей!)
-         ____________________ -->
+    <!-- 3️⃣ СТАТИСТИКА -->
     <VBox styleClass="statistics-pane" spacing="5">
-        <!-- Заголовок статистики (не обязателен, но удобно) -->
+        <!-- Заголовок статистики -->
         <Label text="Статистика:" styleClass="statistics-header"/>
 
         <!-- Основные цифры -->
@@ -90,9 +85,7 @@
         </HBox>
     </VBox>
 
-    <!-- ____________________
-         4️⃣  ТАБЛИЦА ПРИБОРОВ
-         ____________________ -->
+    <!-- 4️⃣ ТАБЛИЦА ПРИБОРОВ -->
     <TableView fx:id="deviceTable"
                editable="true"
                prefHeight="400"/>

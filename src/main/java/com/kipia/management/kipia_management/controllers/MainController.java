@@ -1,6 +1,8 @@
 package com.kipia.management.kipia_management.controllers;
 
 import com.kipia.management.kipia_management.services.DeviceDAO;
+import com.kipia.management.kipia_management.services.DeviceLocationDAO;
+import com.kipia.management.kipia_management.services.SchemeDAO;
 import com.kipia.management.kipia_management.utils.StyleUtils;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -22,22 +24,23 @@ public class MainController {
     // ── Кнопки меню ─────────────────────────────────────
     public Button devicesBtn;
     public Button addDeviceBtn;
+    public Button groupedDevicesBtn;
+    public Button schemesBtn;
     public Button reportsBtn;
     public Button exitBtn;
-    //public Button themeToggleBtn;
 
     // ── UI‑элементы, которые остаются в main.fxml ────────
     @FXML
     private Label statusLabel;
     @FXML
-    private VBox contentArea;          // контейнер, куда будем вставлять view‑ы
+    private VBox contentArea;
     @FXML
     private Button themeToggleBtn;
-    @FXML
-    private Button groupedDevicesBtn;
 
-    // ── Сервис доступа к БД ───────────────────────────────
+    // ── Сервисы доступа к БД ───────────────────────────────
     private DeviceDAO deviceDAO;
+    private SchemeDAO schemeDAO;
+    private DeviceLocationDAO deviceLocationDAO;
 
     // ── Тема ─────────────────────────────────────────────
     private Scene scene;
@@ -53,6 +56,10 @@ public class MainController {
     public void setDeviceDAO(DeviceDAO dao) {
         this.deviceDAO = dao;
     }
+
+    public void setSchemeDAO(SchemeDAO dao) { this.schemeDAO = dao; }
+
+    public void setDeviceLocationDAO (DeviceLocationDAO dao) { this.deviceLocationDAO = dao; }
 
     /**
      * Передаём сцену, чтобы можно было менять стили.
@@ -75,6 +82,7 @@ public class MainController {
         StyleUtils.applyHoverAndAnimation(themeToggleBtn, "button-theme-toggle", "button-theme-toggle-hover");
         StyleUtils.applyHoverAndAnimation(exitBtn, "button-exit", "button-exit-hover");
         StyleUtils.applyHoverAndAnimation(groupedDevicesBtn, "button-grouped", "button-grouped-hover");
+        StyleUtils.applyHoverAndAnimation(schemesBtn, "button-schemes", "button-schemes-hover");
     }
 
     /**
@@ -158,6 +166,28 @@ public class MainController {
         } catch (Exception ex) {
             System.err.println("Ошибка загрузки списка приборов по месту установки: " + ex.getMessage());
             ex.printStackTrace();
+        }
+    }
+
+    /**
+     * Показать редактор схем.
+     */
+    @FXML
+    private void showSchemesEditor() {
+        statusLabel.setText("Редактирование схем");
+        contentArea.getChildren().clear();
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/scheme-editor.fxml"));
+            Parent view = loader.load();
+            SchemeEditorController ctrl = loader.getController();
+            ctrl.setDeviceDAO(deviceDAO);
+            ctrl.setSchemeDAO(schemeDAO);
+            ctrl.setDeviceLocationDAO(deviceLocationDAO);
+            ctrl.init();    // <-- ДОБАВИТЬ: инициализация данных
+            contentArea.getChildren().add(view);
+        } catch (IOException e) {
+            statusLabel.setText("Ошибка загрузки редактора схем: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 

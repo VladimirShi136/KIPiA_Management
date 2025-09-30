@@ -6,13 +6,21 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.layout.BorderPane?>
+
+<!--
+  Author: vladimir_shi
+  Since: 04.09.2025
+  * Окно отчетов *
+-->
+
 <VBox xmlns="http://javafx.com/javafx/23" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.kipia.management.kipia_management.controllers.ReportsController"
       spacing="20" styleClass="reports-root">
     <fx:define>
-        <ToggleGroup fx:id="reportTypeGroup"/>
+        <ToggleGroup fx:id="reportTypeGroup"/> <!-- ToggleGroup для выбора типа отчета -->
     </fx:define>
 
+    <!-- 1️⃣ РАДИО-КНОПКИ ОТЧЕТОВ ПО КАТЕГОРИЯМ -->
     <HBox spacing="20" styleClass="report-buttons">
         <RadioButton text="По статусу" toggleGroup="$reportTypeGroup" fx:id="statusReportBtn" selected="true" styleClass="report-radio"/>
         <RadioButton text="По типам приборов" toggleGroup="$reportTypeGroup" fx:id="typeReportBtn" styleClass="report-radio"/>
@@ -21,9 +29,12 @@
         <RadioButton text="По годам выпуска" toggleGroup="$reportTypeGroup" fx:id="yearReportBtn" styleClass="report-radio"/>
     </HBox>
 
+    <!-- Этот Label будет содержать название отчета -->
     <Label fx:id="titleLabel" text="Отчёт по устройствам — По статусу" styleClass="report-title"/>
 
+    <!-- Этот BorderPane будет содержать график -->
     <BorderPane fx:id="chartPane" prefWidth="600" prefHeight="400" styleClass="chart-pane"/>
 
+    <!-- Кнопка экспорта отчета в Excel -->
     <Button fx:id="exportReportButton" text="Экспортировать отчёт в Excel" styleClass="report-export-button"/>
 </VBox>

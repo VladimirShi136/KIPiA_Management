@@ -97,6 +97,27 @@
     -fx-pref-width: 160px;
     -fx-alignment: center;
 }
+.button-schemes {
+    -fx-background-color: #620f8c;
+    -fx-padding: 10 20;
+    -fx-wrap-text: true;
+    -fx-text-alignment: center;
+    -fx-font-weight: bold;
+    -fx-min-width: 160px;
+    -fx-pref-width: 160px;
+    -fx-alignment: center;
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
+}
+.button-schemes-hover {
+    -fx-background-color: #6f129f;
+    -fx-padding: 10 20;
+    -fx-wrap-text: true;
+    -fx-text-alignment: center;
+    -fx-font-weight: bold;
+    -fx-min-width: 160px;
+    -fx-pref-width: 160px;
+    -fx-alignment: center;
+}
 .button-add-device {
     -fx-background-color: #2ecc71;
     -fx-padding: 10 20;

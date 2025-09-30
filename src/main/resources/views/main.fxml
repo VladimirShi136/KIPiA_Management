@@ -6,11 +6,17 @@
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
 
+<!--
+  Author: vladimir_shi
+  Since: 24.08.2025
+  * Главное окно *
+-->
+
 <BorderPane xmlns="http://javafx.com/javafx/23"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.kipia.management.kipia_management.controllers.MainController">
 
-    <!--  ── Верхняя панель ──  -->
+    <!-- 1️⃣ ── Верхняя панель ──  -->
     <top>
         <HBox fx:id="top" alignment="CENTER" styleClass="top">
             <Label fx:id="headerLabel"
@@ -19,7 +25,7 @@
         </HBox>
     </top>
 
-    <!--  ── Левая панель (меню) ──  -->
+    <!-- 2️⃣ ── Левая панель (меню) ──  -->
     <left>
         <VBox fx:id="left" spacing="10" styleClass="left">
             <Button fx:id="devicesBtn"
@@ -32,6 +38,11 @@
                     onAction="#showGroupedDevices"
                     text="Приборы по месту установки"
                     styleClass="nav-button button-grouped"/>
+            <Button fx:id="schemesBtn"
+                    maxWidth="Infinity"
+                    onAction="#showSchemesEditor"
+                    text="Схемы локаций установки"
+                    styleClass="nav-button button-schemes"/>
             <Button fx:id="addDeviceBtn"
                     maxWidth="Infinity"
                     onAction="#showAddDeviceForm"
@@ -56,14 +67,14 @@
         </VBox>
     </left>
 
-    <!--  ── Центральная часть ──  -->
-    <!--  Здесь будет динамически подставляться view‑контент,
+    <!-- 3️⃣ ── Центральная часть ──  -->
+    <!--  Здесь динамически подставляется view‑контент,
           например, таблица приборов, форма добавления, отчёты и т.п.  -->
     <center>
         <VBox fx:id="contentArea" spacing="15"/>
     </center>
 
-    <!--  ── Нижняя панель (статус) ──  -->
+    <!-- 4️⃣ ── Нижняя панель (статус) ──  -->
     <bottom>
         <HBox fx:id="bottom"
               alignment="CENTER_LEFT"

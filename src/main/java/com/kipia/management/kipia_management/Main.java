@@ -3,6 +3,8 @@ package com.kipia.management.kipia_management;
 import com.kipia.management.kipia_management.controllers.MainController;
 import com.kipia.management.kipia_management.services.DatabaseService;
 import com.kipia.management.kipia_management.services.DeviceDAO;
+import com.kipia.management.kipia_management.services.DeviceLocationDAO;
+import com.kipia.management.kipia_management.services.SchemeDAO;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
@@ -25,11 +27,14 @@ import java.util.logging.Logger;
  * @author vladimir_shi
  * @since 23.08.2025
  */
+
 public class Main extends Application {
 
     // Сервисы базы данных
     private DatabaseService databaseService;
     private DeviceDAO deviceDAO;
+    private SchemeDAO schemeDAO;
+    private DeviceLocationDAO deviceLocationDAO;
 
     // Поле для логирования
     private static final Logger logger = Logger.getLogger(Main.class.getName());
@@ -44,11 +49,10 @@ public class Main extends Application {
     }
 
     /**
-     *
      * @param primaryStage the primary stage for this application, onto which
-     * the application scene can be set.
-     * Applications may create other stages, if needed, but they will not be
-     * primary stages.
+     *                     the application scene can be set.
+     *                     Applications may create other stages, if needed, but they will not be
+     *                     primary stages.
      */
     @Override
     public void start(Stage primaryStage) {
@@ -69,6 +73,8 @@ public class Main extends Application {
             MainController controller = loader.getController();
             if (controller != null) {
                 controller.setDeviceDAO(deviceDAO);
+                controller.setSchemeDAO(schemeDAO);
+                controller.setDeviceLocationDAO(deviceLocationDAO);
                 controller.setScene(scene);  // Передаём Scene для темы
             }
 
@@ -119,6 +125,8 @@ public class Main extends Application {
 
             // Создаем DAO для работы с приборами
             deviceDAO = new DeviceDAO(databaseService);
+            schemeDAO = new SchemeDAO(databaseService);
+            deviceLocationDAO = new DeviceLocationDAO(databaseService);
 
             // Добавляем тестовые данные если таблицы пустые
             databaseService.addTestData();

@@ -1,10 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+
+<!--
+  Author: vladimir_shi
+  Since: 28.08.2025
+  * Окно добавления прибора *
+-->
+
 <VBox xmlns="http://javafx.com/javafx/17.0.2-ea"
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.kipia.management.kipia_management.controllers.AddDeviceController"
       spacing="10" styleClass="add-device-root" style="-fx-padding: 15;">
+
+    <!-- 1️⃣ ПАНЕЛЬ ДОБАВЛЕНИЯ -->
     <Label text="Добавление нового прибора" styleClass="form-header"/>
     <GridPane hgap="10" vgap="10" styleClass="form-grid">
         <Label text="Тип прибора:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
@@ -68,11 +77,12 @@
                   prefWidth="200" styleClass="photo-list"/>
     </GridPane>
 
-
+    <!-- 2️⃣ КНОПКИ ДОБАВЛЕНИЯ И ОТМЕНЫ -->
     <HBox spacing="10" alignment="CENTER_RIGHT" styleClass="form-buttons">
         <Button fx:id="cancelBtn" text="Отмена" onAction="#onCancel" styleClass="button-cancel"/>
         <Button fx:id="addBtn" text="Добавить" onAction="#onAddDevice" styleClass="button-add"/>
     </HBox>
 
+    <!-- 3️⃣ СООБЩЕНИЯ -->
     <Label fx:id="messageLabel" styleClass="form-message"/>
 </VBox>

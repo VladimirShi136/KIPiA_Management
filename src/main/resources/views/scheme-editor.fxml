@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import java.lang.Object?>
+<?import javafx.scene.Parent?>
+<?import javafx.scene.Scene?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.ToolBar?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<!--
+Автор: vladimir_shi
+Создал: 2025-09-18 (на основе существующих FXML)
+Описание: FXML для редактора интерактивных схем.
+- Основной холст (AnchorPane) для отображения и рисования схемы.
+- Панель инструментов: режимы рисования и добавления приборов.
+- ComboBox для выбора прибора из списка.
+- Кнопки для действий: Сохранить, загрузить, новый.
+-->
+<BorderPane xmlns="http://javafx.com/javafx/23"
+             xmlns:fx="http://javafx.com/fxml/1"
+             fx:controller="com.kipia.management.kipia_management.controllers.SchemeEditorController"
+             styleClass="scheme-editor">
+<!-- Верхняя панель: инструменты -->
+<top>
+    <VBox spacing="10">
+        <!-- Панель выбора схемы -->
+        <HBox spacing="10">
+            <Label text="Схема:"/>
+            <ComboBox fx:id="schemeComboBox" prefWidth="200"/>
+            <Button fx:id="newSchemeBtn" text="Новая схема"/>
+            <Button fx:id="saveSchemeBtn" text="Сохранить схему"/>
+            <Button fx:id="deleteSchemeBtn" text="Удалить схему"/>
+        </HBox>
+        <!-- Панель инструментов -->
+        <ToolBar>
+            <Button fx:id="selectToolBtn" styleClass="tool-button" text="Выбрать"/>
+            <Button fx:id="lineToolBtn" styleClass="tool-button" text="Линия"/>
+            <Button fx:id="rectToolBtn" styleClass="tool-button" text="Прямоугольник"/>
+            <Button fx:id="addDeviceToolBtn" styleClass="tool-button" text="Добавить прибор"/>
+            <Separator/>
+            <Label text="Выберите прибор:"/>
+            <ComboBox fx:id="deviceComboBox" prefWidth="200"/>
+        </ToolBar>
+    </VBox>
+</top>
+<!-- Центральная область: холст схемы -->
+<center>
+    <ScrollPane>
+        <AnchorPane fx:id="schemePane"
+                    styleClass="scheme-pane"
+                    prefWidth="800"
+                    prefHeight="600"
+                    onMousePressed="#onPaneMousePressed"
+                    onMouseDragged="#onPaneMouseDragged"
+                    onMouseReleased="#onPaneMouseReleased">
+            <!-- Здесь будут динамически добавляться линии, фигуры, приборы -->
+        </AnchorPane>
+    </ScrollPane>
+</center>
+<!-- Нижняя панель: статус -->
+<bottom>
+    <HBox styleClass="bottom">
+        <Label fx:id="statusLabel" text="Готово к редактированию" styleClass="status-label"/>
+    </HBox>
+</bottom>
+</BorderPane>
