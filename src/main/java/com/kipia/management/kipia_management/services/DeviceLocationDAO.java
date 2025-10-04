@@ -80,6 +80,25 @@ public class DeviceLocationDAO {
     }
 
     /**
+     * Получить список device_id всех приборов, которые установлены на любых схемах.
+     *
+     * @return список id приборов, которые заняты на схемах
+     */
+    public List<Integer> getAllUsedDeviceIds() {
+        List<Integer> ids = new ArrayList<>();
+        String sql = "SELECT DISTINCT device_id FROM device_locations";
+        try (Statement stmt = databaseService.getConnection().createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                ids.add(rs.getInt("device_id"));
+            }
+        } catch (SQLException e) {
+            System.out.println("Ошибка получения занятых приборов: " + e.getMessage());
+        }
+        return ids;
+    }
+
+    /**
      * Получение списка привязок для конкретной схемы
      *
      * @param schemeId ID схемы

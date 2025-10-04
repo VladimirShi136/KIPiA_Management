@@ -84,7 +84,7 @@ public class DatabaseService {
                 .append("id INTEGER PRIMARY KEY AUTOINCREMENT,")
                 .append("name TEXT NOT NULL,")
                 .append("description TEXT,")
-                .append("data TEXT")  // JSON-строка для объектов схемы (линии, фигуры)
+                .append("data TEXT")  // строка для объектов схемы (линии, фигуры)
                 .append("); ");
 
         // 3. НОВАЯ ТАБЛИЦА: device_locations (привязка приборов к схемам)
@@ -198,12 +198,12 @@ public class DatabaseService {
         deviceDAO.addDevice(device3);
 
         // НОВЫЕ: Добавить тестовую схему
-        // Предполагаем, что у тебя есть SchemeDAO (создай его, как предложил ранее)
-        // Или интегрируй напрямую здесь (покажу пример вставки)
-        try (PreparedStatement stmtScheme = connection.prepareStatement("INSERT INTO schemes (name, description, data) VALUES (?, ?, ?)");) {
+        String serializedScheme = "RECTANGLE,50,50,200,100;LINE,10,10,50,50";
+        try (PreparedStatement stmtScheme = connection.prepareStatement(
+                "INSERT INTO schemes (name, description, data) VALUES (?, ?, ?)")) {
             stmtScheme.setString(1, "Схема предприятия");
             stmtScheme.setString(2, "Тестовая схема с линиями");
-            stmtScheme.setString(3, "{\"objects\": [{\"type\":\"RECTANGLE\", \"x\":50, \"y\":50, \"width\":200, \"height\":100}]}");  // Пример data
+            stmtScheme.setString(3, serializedScheme);
             stmtScheme.executeUpdate();
             System.out.println("Тестовая схема добавлена");
         } catch (SQLException e) {

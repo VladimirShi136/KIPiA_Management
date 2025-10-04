@@ -31,7 +31,7 @@ import java.util.logging.Logger;
 public class Main extends Application {
 
     // Сервисы базы данных
-    private DatabaseService databaseService;
+    private DatabaseService databaseService; 
     private DeviceDAO deviceDAO;
     private SchemeDAO schemeDAO;
     private DeviceLocationDAO deviceLocationDAO;
