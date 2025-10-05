@@ -12,55 +12,157 @@
 - Кнопки для действий: Сохранить, загрузить, новый.
 -->
 
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.image.Image?>
 <BorderPane xmlns="http://javafx.com/javafx/23"
-             xmlns:fx="http://javafx.com/fxml/1"
-             fx:controller="com.kipia.management.kipia_management.controllers.SchemeEditorController"
-             styleClass="scheme-editor">
-<!-- Верхняя панель: инструменты -->
-<top>
-    <VBox spacing="10">
-        <!-- Панель выбора схемы -->
-        <HBox spacing="10">
-            <Label text="Схема:"/>
-            <ComboBox fx:id="schemeComboBox" prefWidth="200"/>
-            <Button fx:id="newSchemeBtn" text="Новая схема"/>
-            <Button fx:id="saveSchemeBtn" text="Сохранить схему"/>
-            <Button fx:id="deleteSchemeBtn" text="Удалить схему"/>
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.kipia.management.kipia_management.controllers.SchemeEditorController">
+    <!-- Верхняя панель: инструменты -->
+    <top>
+        <VBox spacing="10">
+            <!-- Панель выбора схемы -->
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Label text="Схема:" styleClass="scheme-label"/>
+                <ComboBox fx:id="schemeComboBox" prefWidth="200"/>
+                <Button fx:id="newSchemeBtn" styleClass="new-scheme-button">
+                    <graphic>
+                        <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
+                            <Image url="@../images/new-scheme.png"/>
+                        </ImageView>
+                    </graphic>
+                    <tooltip>
+                        <Tooltip text="Создать новую схему"/>
+                    </tooltip>
+                </Button>
+                <Button fx:id="saveSchemeBtn" styleClass="save-scheme-button">
+                    <graphic>
+                        <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
+                            <Image url="@../images/save.png"/>
+                        </ImageView>
+                    </graphic>
+                    <tooltip>
+                        <Tooltip text="Сохранить новую схему"/>
+                    </tooltip>
+                </Button>
+                <Button fx:id="deleteSchemeBtn" styleClass="delete-scheme-button">
+                    <graphic>
+                        <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
+                            <Image url="@../images/delete.png"/>
+                        </ImageView>
+                    </graphic>
+                    <tooltip>
+                        <Tooltip text="Удалить схему"/>
+                    </tooltip>
+                </Button>
+            </HBox>
+            <!-- Панель инструментов -->
+            <HBox spacing="10" alignment="CENTER_LEFT">
+            <ToolBar>
+                <Button fx:id="selectToolBtn" styleClass="tool-button">
+                    <graphic>
+                        <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
+                            <Image url="@../images/hand.png"/>
+                        </ImageView>
+                    </graphic>
+                    <tooltip>
+                        <Tooltip text="Выбрать фигуру"/>
+                    </tooltip>
+                </Button>
+                <Button fx:id="undoBtn" styleClass="tool-button">
+                    <graphic>
+                        <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
+                            <Image url="@../images/undo.png"/>
+                        </ImageView>
+                    </graphic>
+                    <tooltip>
+                        <Tooltip text="Отменить"/>
+                    </tooltip>
+                </Button>
+                <Button fx:id="redoBtn" styleClass="tool-button">
+                    <graphic>
+                        <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
+                            <Image url="@../images/redo.png"/>
+                        </ImageView>
+                    </graphic>
+                    <tooltip>
+                        <Tooltip text="Повторить"/>
+                    </tooltip>
+                </Button>
+                <Button fx:id="lineToolBtn" styleClass="tool-button">
+                    <graphic>
+                        <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
+                            <Image url="@../images/line.png"/>
+                        </ImageView>
+                    </graphic>
+                    <tooltip>
+                        <Tooltip text="Линия"/>
+                    </tooltip>
+                </Button>
+                <Button fx:id="rectToolBtn" styleClass="tool-button">
+                    <graphic>
+                        <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
+                            <Image url="@../images/rectangle.png"/>
+                        </ImageView>
+                    </graphic>
+                    <tooltip>
+                        <Tooltip text="Прямоугольник"/>
+                    </tooltip>
+                </Button>
+                <Button fx:id="ellipseToolBtn" styleClass="tool-button">
+                    <graphic>
+                        <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
+                            <Image url="@../images/ellipse.png"/>
+                        </ImageView>
+                    </graphic>
+                    <tooltip>
+                        <Tooltip text="Эллипс"/>
+                    </tooltip>
+                </Button>
+                <Button fx:id="textToolBtn" styleClass="tool-button">
+                    <graphic>
+                        <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
+                            <Image url="@../images/text.png"/>
+                        </ImageView>
+                    </graphic>
+                    <tooltip>
+                        <Tooltip text="Текст"/>
+                    </tooltip>
+                </Button>
+                <Button fx:id="addDeviceToolBtn" styleClass="tool-button">
+                    <graphic>
+                        <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
+                            <Image url="@../images/add.png"/>
+                        </ImageView>
+                    </graphic>
+                    <tooltip>
+                        <Tooltip text="Добавить прибор"/>
+                    </tooltip>
+                </Button>
+                <Separator/>
+                <Label text="Выберите прибор:" styleClass="select-label"/>
+                <ComboBox fx:id="deviceComboBox" prefWidth="200"/>
+            </ToolBar>
+            </HBox>
+        </VBox>
+    </top>
+    <!-- Центральная область: холст схемы -->
+    <center>
+        <ScrollPane>
+            <AnchorPane fx:id="schemePane"
+                        styleClass="scheme-pane"
+                        prefWidth="800"
+                        prefHeight="600"
+                        onMousePressed="#onPaneMousePressed"
+                        onMouseDragged="#onPaneMouseDragged"
+                        onMouseReleased="#onPaneMouseReleased">
+                <!-- Здесь будут динамически добавляться линии, фигуры, приборы -->
+            </AnchorPane>
+        </ScrollPane>
+    </center>
+    <!-- Нижняя панель: статус -->
+    <bottom>
+        <HBox styleClass="bottom">
+            <Label fx:id="statusLabel" text="Готово к редактированию" styleClass="status-label"/>
         </HBox>
-        <!-- Панель инструментов -->
-        <ToolBar>
-            <Button fx:id="selectToolBtn" styleClass="tool-button" text="Выбрать"/>
-            <Button fx:id="undoBtn" styleClass="tool-button" text="Отменить"/>
-            <Button fx:id="redoBtn" styleClass="tool-button" text="Повторить"/>
-            <Button fx:id="lineToolBtn" styleClass="tool-button" text="Линия"/>
-            <Button fx:id="rectToolBtn" styleClass="tool-button" text="Прямоугольник"/>
-            <Button fx:id="ellipseToolBtn" styleClass="tool-button" text="Эллипс"/>
-            <Button fx:id="textToolBtn" styleClass="tool-button" text="Текст"/>
-            <Button fx:id="addDeviceToolBtn" styleClass="tool-button" text="Добавить прибор"/>
-            <Separator/>
-            <Label text="Выберите прибор:"/>
-            <ComboBox fx:id="deviceComboBox" prefWidth="200"/>
-        </ToolBar>
-    </VBox>
-</top>
-<!-- Центральная область: холст схемы -->
-<center>
-    <ScrollPane>
-        <AnchorPane fx:id="schemePane"
-                    styleClass="scheme-pane"
-                    prefWidth="800"
-                    prefHeight="600"
-                    onMousePressed="#onPaneMousePressed"
-                    onMouseDragged="#onPaneMouseDragged"
-                    onMouseReleased="#onPaneMouseReleased">
-            <!-- Здесь будут динамически добавляться линии, фигуры, приборы -->
-        </AnchorPane>
-    </ScrollPane>
-</center>
-<!-- Нижняя панель: статус -->
-<bottom>
-    <HBox styleClass="bottom">
-        <Label fx:id="statusLabel" text="Готово к редактированию" styleClass="status-label"/>
-    </HBox>
-</bottom>
+    </bottom>
 </BorderPane>

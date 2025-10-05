@@ -18,51 +18,49 @@
 
     <!-- 1️⃣ ── Верхняя панель ──  -->
     <top>
-        <HBox fx:id="top" alignment="CENTER" styleClass="top">
-            <Label fx:id="headerLabel"
-                   text="Учёт приборов КИПиА"
-                   styleClass="header-label"/>
+        <HBox alignment="CENTER" styleClass="top">
+            <Label text="Учёт приборов КИПиА" styleClass="header-label"/>
         </HBox>
     </top>
 
     <!-- 2️⃣ ── Левая панель (меню) ──  -->
     <left>
-        <VBox fx:id="left" spacing="10" styleClass="left">
+        <VBox spacing="10" styleClass="left">
             <Button fx:id="devicesBtn"
                     maxWidth="Infinity"
                     onAction="#showDevices"
-                    styleClass="nav-button button-devices"
+                    styleClass="button-devices"
                     text="Приборы"/>
             <Button fx:id="groupedDevicesBtn"
                     maxWidth="Infinity"
                     onAction="#showGroupedDevices"
                     text="Приборы по месту установки"
-                    styleClass="nav-button button-grouped"/>
+                    styleClass="button-grouped"/>
             <Button fx:id="schemesBtn"
                     maxWidth="Infinity"
                     onAction="#showSchemesEditor"
                     text="Схемы локаций установки"
-                    styleClass="nav-button button-schemes"/>
+                    styleClass="button-schemes"/>
             <Button fx:id="addDeviceBtn"
                     maxWidth="Infinity"
                     onAction="#showAddDeviceForm"
-                    styleClass="nav-button button-add-device"
+                    styleClass="button-add-device"
                     text="Добавить прибор"/>
             <Button fx:id="reportsBtn"
                     maxWidth="Infinity"
                     onAction="#showReports"
-                    styleClass="nav-button button-reports"
+                    styleClass="button-reports"
                     text="Отчёты"/>
             <Region VBox.vgrow="ALWAYS"/>
             <Button fx:id="themeToggleBtn"
                     maxWidth="Infinity"
                     onAction="#toggleTheme"
-                    styleClass="nav-button button-theme-toggle"
+                    styleClass="button-theme-toggle"
                     text="Тёмная тема"/>
             <Button fx:id="exitBtn"
                     maxWidth="Infinity"
                     onAction="#exitApp"
-                    styleClass="nav-button button-exit"
+                    styleClass="button-exit"
                     text="Выход"/>
         </VBox>
     </left>
@@ -76,12 +74,8 @@
 
     <!-- 4️⃣ ── Нижняя панель (статус) ──  -->
     <bottom>
-        <HBox fx:id="bottom"
-              alignment="CENTER_LEFT"
-              styleClass="bottom">
-            <Label fx:id="statusLabel"
-                   text="Готов к работе"
-                   styleClass="status-label"/>
+        <HBox alignment="CENTER_LEFT" styleClass="bottom">
+            <Label fx:id="statusLabel" text="Готов к работе" styleClass="status-label"/>
         </HBox>
     </bottom>
 </BorderPane>

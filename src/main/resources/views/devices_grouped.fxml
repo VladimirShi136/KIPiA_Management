@@ -8,33 +8,53 @@
   * Окно группированной таблицы приборов *
 -->
 
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.image.Image?>
 <VBox xmlns="http://javafx.com/javafx/23" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.kipia.management.kipia_management.controllers.DevicesGroupedController"
-      spacing="10" prefWidth="1000" prefHeight="700" styleClass="root-pane">
+      spacing="10" prefWidth="1000" prefHeight="700">
 
-    <!-- 1️⃣ ПАНЕЛЬ ПОИСКА И КНОПКА УДАЛЕНИЯ -->
-    <HBox fx:id="searchAndDeletePane" spacing="10">
+    <!-- 1️⃣ ПАНЕЛЬ ПОИСКА И УДАЛЕНИЯ -->
+    <HBox spacing="10" alignment="CENTER_LEFT">
         <Label text="Поиск:" styleClass="search-label"/>
-        <TextField fx:id="searchField" prefWidth="300"
+        <TextField fx:id="searchField"
                    promptText="Введите текст для поиска"
                    styleClass="search-field"/>
         <!-- Кнопка удаления -->
-        <Button fx:id="deleteButton"
-                text="Удалить выбранный прибор"
-                styleClass="button-delete"/>
+        <Button fx:id="deleteButton" styleClass="button-delete">
+            <graphic>
+                <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
+                    <Image url="@../images/delete.png"/>
+                </ImageView>
+            </graphic>
+            <tooltip>
+                <Tooltip text="Удалить выбранный прибор"/>
+            </tooltip>
+        </Button>
+        <!-- Кнопки импорта и экспорта -->
+        <Button fx:id="exportButton" styleClass="button-export">
+            <graphic>
+                <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
+                    <Image url="@../images/export.png"/>
+                </ImageView>
+            </graphic>
+            <tooltip>
+                <Tooltip text="Экспорт в Excel"/>
+            </tooltip>
+        </Button>
+        <Button fx:id="importButton" styleClass="button-import">
+            <graphic>
+                <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
+                    <Image url="@../images/import.png"/>
+                </ImageView>
+            </graphic>
+            <tooltip>
+                <Tooltip text="Импорт из Excel"/>
+            </tooltip>
+        </Button>
     </HBox>
 
-    <!-- 2️⃣ КНОПКИ ИМПОРТА / ЭКСПОРТА -->
-    <HBox spacing="10" alignment="CENTER_LEFT">
-        <Button fx:id="exportButton"
-                text="Экспорт в Excel"
-                styleClass="button-export"/>
-        <Button fx:id="importButton"
-                text="Импорт из Excel"
-                styleClass="button-import"/>
-    </HBox>
-
-    <!-- 3️⃣ СТАТИСТИКА -->
+    <!-- 2️⃣ СТАТИСТИКА -->
     <VBox styleClass="statistics-pane" spacing="5">
         <Label text="Статистика:" styleClass="statistics-header"/>
         <HBox spacing="20" styleClass="statistics-data">
@@ -61,6 +81,6 @@
         </HBox>
     </VBox>
 
-    <!-- 4️⃣ ГРУППИРОВАННАЯ ТАБЛИЦА ПРИБОРОВ -->
+    <!-- 3️⃣ ГРУППИРОВАННАЯ ТАБЛИЦА ПРИБОРОВ -->
     <TreeTableView fx:id="treeTable" editable="true" VBox.vgrow="always" prefHeight="500" prefWidth="980"/>
 </VBox>

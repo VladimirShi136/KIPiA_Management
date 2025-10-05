@@ -171,6 +171,16 @@ public class SchemeEditorController {
             }
         });
 
+        schemePane.setOnMouseClicked(e -> schemePane.requestFocus());
+        schemePane.setOnKeyPressed(event -> {
+            if (selectedNode != null && currentTool == Tool.SELECT) {
+                switch (event.getCode()) {
+                    case DELETE, BACK_SPACE -> deleteSelectedShape();
+                }
+            }
+        });
+        schemePane.setFocusTraversable(true);  // Чтобы schemePane мог получать фокус и клавиши
+
         setupToolButtons();
         newSchemeBtn.setOnAction(e -> createNewScheme());
         saveSchemeBtn.setOnAction(e -> saveCurrentScheme());
@@ -317,9 +327,13 @@ public class SchemeEditorController {
     }
 
     private void applyButtonStyles() {
-        for (Button btn : List.of(newSchemeBtn, saveSchemeBtn, deleteSchemeBtn, selectToolBtn, undoBtn, redoBtn, lineToolBtn, rectToolBtn, ellipseToolBtn, textToolBtn, addDeviceToolBtn)) {  // Добавил новые
+        for (Button btn : List.of(selectToolBtn, undoBtn, redoBtn, lineToolBtn, rectToolBtn, ellipseToolBtn, textToolBtn, addDeviceToolBtn)) {  // Добавил новые
             StyleUtils.applyHoverAndAnimation(btn, "tool-button", "tool-button-hover");
         }
+        //newSchemeBtn, saveSchemeBtn, deleteSchemeBtn
+        StyleUtils.applyHoverAndAnimation(newSchemeBtn, "new-scheme-button", "new-scheme-button-hover");
+        StyleUtils.applyHoverAndAnimation(saveSchemeBtn, "save-scheme-button", "save-scheme-button-hover");
+        StyleUtils.applyHoverAndAnimation(deleteSchemeBtn, "delete-scheme-button", "delete-scheme-button-hover");
     }
 
     // -----------------------------------------------------------------
@@ -330,6 +344,13 @@ public class SchemeEditorController {
     private void selectShape(Node shape) {
         deselectShape();
         selectedNode = shape;
+        selectedNode.setOnContextMenuRequested(e -> {
+            ContextMenu contextMenu = new ContextMenu();
+            MenuItem deleteItem = new MenuItem("Удалить");
+            deleteItem.setOnAction(ev -> deleteSelectedShape());
+            contextMenu.getItems().add(deleteItem);
+            contextMenu.show(selectedNode, e.getScreenX(), e.getScreenY());
+        });
         if (shape instanceof Rectangle || shape instanceof Ellipse || shape instanceof Line) {
             addResizeHandles();
         }
@@ -369,6 +390,29 @@ public class SchemeEditorController {
         } else if (selectedNode instanceof Line) {
             addLineResizeHandles((Line) selectedNode);
         }
+    }
+
+    private void deleteSelectedShape() {
+        if (selectedNode == null) return;
+
+        Node shapeToRemove = selectedNode;  // Сохраняем ссылку до очистки
+        deselectShape();                   // Очистка выделения и маркеров
+
+        Command deleteCmd = new Command() {
+            @Override
+            public void execute() {
+                schemePane.getChildren().remove(shapeToRemove);
+            }
+            @Override
+            public void undo() {
+                schemePane.getChildren().add(shapeToRemove);
+            }
+        };
+
+        deleteCmd.execute();
+        undoStack.push(deleteCmd);
+        redoStack.clear();
+        statusLabel.setText("Фигура удалена");
     }
 
     private void addRectangleResizeHandles(Rectangle rect) {
@@ -423,7 +467,6 @@ public class SchemeEditorController {
             } else if (selectedNode instanceof Line) {
                 resizeLineByHandle((Line)selectedNode, resizeCorner, currX, currY);
             }
-            System.out.println("Resizing rectangle handleIdx=" + resizeCorner + " to x=" + currX + ", y=" + currY);
             updateResizeHandles();
             e.consume();
         });
@@ -436,44 +479,89 @@ public class SchemeEditorController {
     }
 
     private void resizeRectangleByHandle(Rectangle rect, int handleIdx, double x, double y) {
+        double x0 = rect.getX();
+        double y0 = rect.getY();
+        double w0 = rect.getWidth();
+        double h0 = rect.getHeight();
+
+        double newX = x0;
+        double newY = y0;
+        double newWidth = w0;
+        double newHeight = h0;
+
         switch (handleIdx) {
-            case 0: // top-left
-                rect.setWidth(rect.getWidth() + (rect.getX() - x));
-                rect.setHeight(rect.getHeight() + (rect.getY() - y));
-                rect.setX(x);
-                rect.setY(y);
+            case 0:  // top-left
+                newX = x;
+                newY = y;
+                newWidth = w0 + (x0 - x);
+                newHeight = h0 + (y0 - y);
                 break;
-            case 1: // left-center — расширяем/сужаем влево
-                double newWidthLeft = Math.max(rect.getWidth() + (rect.getX() - x), 0);
-                rect.setWidth(newWidthLeft);
-                rect.setX(x);  // Двигаем x влево, если уменьшаем
+            case 1:  // left-center
+                newX = x;
+                newWidth = w0 + (x0 - x);
                 break;
-            case 2: // bottom-left
-                rect.setWidth(rect.getWidth() + (rect.getX() - x));
-                rect.setHeight(y - rect.getY());
-                rect.setX(x);
+            case 2:  // bottom-left
+                newX = x;
+                newHeight = y - y0;
+                newWidth = w0 + (x0 - x);
                 break;
-            case 3: // top-center — расширяем/сужаем вверх
-                double newHeight = Math.max(rect.getHeight() + (rect.getY() - y), 0);
-                rect.setHeight(newHeight);
-                rect.setY(y);  // Двигаем y вверх, если уменьшаем
+            case 3:  // top-center
+                newY = y;
+                newHeight = h0 + (y0 - y);
                 break;
-            case 4: // bottom-center — расширяем/сужаем вниз
-                rect.setHeight(Math.max(y - rect.getY(), 0));  // Только высота, фигура не двигается по y
+            case 4:  // bottom-center
+                newHeight = y - y0;
                 break;
-            case 5: // top-right
-                rect.setWidth(x - rect.getX());
-                rect.setHeight(rect.getHeight() + (rect.getY() - y));
-                rect.setY(y);
+            case 5:  // top-right
+                newWidth = x - x0;
+                newY = y;
+                newHeight = h0 + (y0 - y);
                 break;
-            case 6: // right-center — расширяем/сужаем вправо
-                rect.setWidth(Math.max(x - rect.getX(), 0));  // Только ширина, фигура не двигается по x
+            case 6:  // right-center
+                newWidth = x - x0;
                 break;
-            case 7: // bottom-right
-                rect.setWidth(x - rect.getX());
-                rect.setHeight(y - rect.getY());
+            case 7:  // bottom-right
+                newWidth = x - x0;
+                newHeight = y - y0;
                 break;
         }
+
+        // Обработка “переворота” по ширине
+        if (newWidth < 0) {
+            newWidth = Math.abs(newWidth);
+            newX = newX - newWidth;
+
+            // Меняем маркер handleIdx на противоположный по горизонтали
+            if (handleIdx == 0) handleIdx = 5;
+            else if (handleIdx == 1) handleIdx = 6;
+            else if (handleIdx == 2) handleIdx = 7;
+            else if (handleIdx == 5) handleIdx = 0;
+            else if (handleIdx == 6) handleIdx = 1;
+            else if (handleIdx == 7) handleIdx = 2;
+        }
+
+        // Обработка “переворота” по высоте
+        if (newHeight < 0) {
+            newHeight = Math.abs(newHeight);
+            newY = newY - newHeight;
+
+            // Меняем маркер handleIdx на противоположный по вертикали
+            if (handleIdx == 0) handleIdx = 2;
+            else if (handleIdx == 3) handleIdx = 4;
+            else if (handleIdx == 5) handleIdx = 7;
+            else if (handleIdx == 2) handleIdx = 0;
+            else if (handleIdx == 4) handleIdx = 3;
+            else if (handleIdx == 7) handleIdx = 5;
+        }
+
+        // Обновляем фигуру
+        rect.setX(newX);
+        rect.setY(newY);
+        rect.setWidth(newWidth);
+        rect.setHeight(newHeight);
+
+        // Обновляем текущий индекс маркера, чтобы обработать дальнейшее растягивание правильно
+        resizeCorner = handleIdx;
     }
 
     private void resizeEllipseByHandle(Ellipse ellipse, int handleIdx, double x, double y) {
