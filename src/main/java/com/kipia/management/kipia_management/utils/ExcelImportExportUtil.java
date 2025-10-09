@@ -130,7 +130,7 @@ public class ExcelImportExportUtil {
                 if (groupNode.getValue() instanceof DevicesGroupedController.GroupItem group) {
                     Row groupRow = sheet.createRow(rowNum++);
                     Cell groupCell = groupRow.createCell(0);
-                    groupCell.setCellValue(group.getLocation());
+                    groupCell.setCellValue(group.location());
                     groupCell.setCellStyle(groupStyle);
 
                     Row headerRow = sheet.createRow(rowNum++);
@@ -144,7 +144,7 @@ public class ExcelImportExportUtil {
                     for (TreeItem<DevicesGroupedController.TreeRowItem> deviceNode : groupNode.getChildren()) {
                         if (deviceNode.getValue() instanceof DevicesGroupedController.DeviceItem deviceItem) {
                             Row row = sheet.createRow(rowNum++);
-                            fillDeviceRow(deviceItem.getDevice(), row, cellStyle);
+                            fillDeviceRow(deviceItem.device(), row, cellStyle);
                         }
                     }
                 }

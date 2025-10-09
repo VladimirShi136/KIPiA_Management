@@ -29,7 +29,6 @@ public class ReportsController {
     private ExcelExportReportsService excelService;
     private Stage primaryStage;
     private List<Device> allDevices;
-
     private ChartViewer currentChartViewer;
 
     public void init(DeviceDAO deviceDAO, Stage primaryStage) {

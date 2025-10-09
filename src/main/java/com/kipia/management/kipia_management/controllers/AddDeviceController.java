@@ -64,12 +64,23 @@ public class AddDeviceController {
     // ---------- Сервисы ----------
     private DeviceDAO deviceDAO;
 
+    // ---------- Контроллеры ----------
+    private SchemeEditorController schemeEditorController;
+
     /**
      * Инициализация сервиса DAO.
      * @param deviceDAO - сервис DAO
      */
     public void setDeviceDAO(DeviceDAO deviceDAO) {
         this.deviceDAO = deviceDAO;
+    }
+
+    /**
+     *  Инициализация контроллера редактирования схемы.
+     * @param controller - контроллер
+     */
+    public void setSchemeEditorController(SchemeEditorController controller) {
+        this.schemeEditorController = controller;
     }
 
     /**
@@ -190,7 +201,7 @@ public class AddDeviceController {
         device.setStatus(status);
         device.setAdditionalInfo(additionalInfoField.getText());
 
-        // Добавляем фото из списка (новая функция)
+        // Добавляем фото из списка
         for (String photoPath : selectedPhotos) {
             device.addPhoto(photoPath);
         }
@@ -206,6 +217,9 @@ public class AddDeviceController {
             messageLabel.setStyle("-fx-text-fill: green;");
             messageLabel.setText("Прибор успешно добавлен");
             clearForm();
+            if (schemeEditorController != null) {
+                schemeEditorController.refreshSchemesAndDevices();
+            }
         } else {
             messageLabel.setStyle("-fx-text-fill: red;");
             messageLabel.setText("Ошибка при добавлении прибора");
@@ -246,6 +260,5 @@ public class AddDeviceController {
     private void onCancel() {
         clearForm();
         messageLabel.setText("");
-        // Опционально: Закрыть окно (если диалог) ((Stage) messageLabel.getScene().getWindow()).close();
     }
 }

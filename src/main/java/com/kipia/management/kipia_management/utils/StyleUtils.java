@@ -16,8 +16,8 @@ import javafx.util.Duration;
  * @author vladimir_shi
  * @since 08.09.2025
  */
-
 public class StyleUtils {
+
     /**
      * Метод для применения CSS классов с плавной сменой классов при наведении мыши.
      *

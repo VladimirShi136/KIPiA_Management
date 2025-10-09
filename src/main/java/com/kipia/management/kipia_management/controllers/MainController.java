@@ -42,6 +42,9 @@ public class MainController {
     private SchemeDAO schemeDAO;
     private DeviceLocationDAO deviceLocationDAO;
 
+    // ── Экземпляр редактора схем для передачи в другие контроллеры ─
+    private SchemeEditorController schemeEditorController;
+
     // ── Тема ─────────────────────────────────────────────
     private Scene scene;
     private boolean isDarkTheme = false;
@@ -136,6 +139,9 @@ public class MainController {
             // Получаем контроллер и передаём ему DAO
             DevicesTableController ctrl = loader.getController();
             ctrl.setDeviceDAO(deviceDAO);
+            if (schemeEditorController != null) {
+                ctrl.setSchemeEditorController(schemeEditorController);
+            }
             ctrl.init();                     // инициализируем таблицу
 
             contentArea.getChildren().add(view);
@@ -160,6 +166,9 @@ public class MainController {
             // Получаем контроллер и передаём ему DAO
             DevicesGroupedController ctrl = loader.getController();
             ctrl.setDeviceDAO(deviceDAO);
+            if (schemeEditorController != null) {
+                ctrl.setSchemeEditorController(schemeEditorController);
+            }
             ctrl.init();
 
             contentArea.getChildren().add(view);
@@ -183,6 +192,9 @@ public class MainController {
             ctrl.setDeviceDAO(deviceDAO);
             ctrl.setSchemeDAO(schemeDAO);
             ctrl.setDeviceLocationDAO(deviceLocationDAO);
+            if (schemeEditorController == null) {
+                schemeEditorController = ctrl;
+            }
             ctrl.init();    // <-- ДОБАВИТЬ: инициализация данных
             contentArea.getChildren().add(view);
         } catch (IOException e) {
@@ -206,6 +218,9 @@ public class MainController {
 
             AddDeviceController ctrl = loader.getController();
             ctrl.setDeviceDAO(deviceDAO);
+            if (schemeEditorController != null) {
+                ctrl.setSchemeEditorController(schemeEditorController);
+            }
             contentArea.getChildren().add(view);
         } catch (IOException e) {
             statusLabel.setText("Ошибка загрузки формы: " + e.getMessage());

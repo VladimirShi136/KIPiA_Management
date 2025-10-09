@@ -101,7 +101,7 @@ public class DatabaseService {
 
         // Выполнение SQL-запроса для создания таблиц
         try (Statement stmt = connection.createStatement()) {
-            stmt.executeUpdate(sql1.toString() + sql2.toString() + sql3.toString());
+            stmt.executeUpdate(sql1 + sql2.toString() + sql3);
             System.out.println("Таблицы созданы успешно!");
         } catch (SQLException e) {
             System.out.println("Ошибка создания таблиц: " + e.getMessage());
@@ -212,7 +212,7 @@ public class DatabaseService {
 
         // НОВЫЕ: Добавить тестовые привязки приборов (device_locations)
         // Пример: привяжем приборы к схеме ID=1 (первая добавленная схем)
-        try (PreparedStatement stmtLoc = connection.prepareStatement("INSERT INTO device_locations (device_id, scheme_id, x, y) VALUES (?, 1, ?, ?)");) {  // scheme_id=1 предполагаем
+        try (PreparedStatement stmtLoc = connection.prepareStatement("INSERT INTO device_locations (device_id, scheme_id, x, y) VALUES (?, 1, ?, ?)")) {  // scheme_id=1 предполагаем
             // Получить ID добавленных приборов (предполагаем через запрос, но для простоты, используй insert-returns или жёстко)
             stmtLoc.setInt(1, 1);  // Устройство ID=1 (device1)
             stmtLoc.setDouble(2, 100);

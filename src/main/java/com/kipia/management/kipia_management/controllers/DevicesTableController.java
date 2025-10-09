@@ -57,6 +57,9 @@ public class DevicesTableController {
     // ---------- Сервисы ----------
     private DeviceDAO deviceDAO;
 
+    // ---------- Контроллеры ----------
+    private SchemeEditorController schemeEditorController;
+
     // Списки, используемые для фильтрации/сортировки
     private FilteredList<Device> filteredList;
 
@@ -72,6 +75,14 @@ public class DevicesTableController {
      */
     public void setDeviceDAO(DeviceDAO dao) {
         this.deviceDAO = dao;
+    }
+
+    /**
+     *  Инициализация контроллера редактирования схемы.
+     * @param controller - контроллер
+     */
+    public void setSchemeEditorController(SchemeEditorController controller) {
+        this.schemeEditorController = controller;
     }
 
     /**
@@ -229,6 +240,11 @@ public class DevicesTableController {
             Device dev = event.getRowValue();
             onCommit.accept(dev, event.getNewValue());
             deviceDAO.updateDevice(dev);
+            if (propertyName.equals("location")) {
+                if (schemeEditorController != null) {
+                    schemeEditorController.refreshSchemesAndDevices();
+                }
+            }
         });
         return col;
     }
@@ -387,6 +403,9 @@ public class DevicesTableController {
                 if (ok) {
                     filteredList.getSource().remove(selected);
                     updateStatistics();
+                    if (schemeEditorController != null) {
+                        schemeEditorController.refreshSchemesAndDevices();
+                    }
                 } else {
                     showAlert(Alert.AlertType.ERROR, "Не удалось удалить запись из БД");
                 }
@@ -406,6 +425,9 @@ public class DevicesTableController {
                 () -> {
                     loadDataFromDao();
                     updateStatistics();
+                    if (schemeEditorController != null) {
+                        schemeEditorController.refreshSchemesAndDevices();
+                    }
                 },
                 () -> {
                     // Ошибка при импорте

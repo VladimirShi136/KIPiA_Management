@@ -150,7 +150,30 @@ public class DeviceDAO {
         return null;
     }
 
-    // Дополнительный метод
+    /**
+     * Получение списка уникальных локаций
+     * @return - список уникальных локаций
+     */
+    public List<String> getDistinctLocations() {
+        List<String> locations = new ArrayList<>();
+        String sql = "SELECT DISTINCT location FROM devices WHERE location IS NOT NULL AND location <> '' ORDER BY location";
+        try (Statement stmt = databaseService.getConnection().createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                locations.add(rs.getString("location"));
+            }
+        } catch (SQLException e) {
+            System.out.println("Ошибка получения уникальных локаций: " + e.getMessage());
+        }
+        return locations;
+    }
+
+    /**
+     * Вспомогательный метод для создания объекта Device из ResultSet
+     * @param rs - ResultSet
+     * @return - объект Device
+     * @throws SQLException - при ошибках
+     */
     private Device createDeviceSQL(ResultSet rs) throws SQLException {
         Device device = new Device();
         device.setId(rs.getInt("id"));

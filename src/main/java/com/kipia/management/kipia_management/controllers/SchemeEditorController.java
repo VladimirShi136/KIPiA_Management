@@ -48,7 +48,6 @@ public class SchemeEditorController {
 
     // Данные
     private Scheme currentScheme;
-    private ObservableList<Scheme> schemeList;
     private ObservableList<Device> deviceList;
     private ObservableList<Device> availableDevicesList;
 
@@ -60,8 +59,8 @@ public class SchemeEditorController {
     private double startX, startY;
 
     // Стек для Undo/Redo (только для фигур)
-    private Stack<Command> undoStack = new Stack<>();
-    private Stack<Command> redoStack = new Stack<>();
+    private final Stack<Command> undoStack = new Stack<>();
+    private final Stack<Command> redoStack = new Stack<>();
 
     // Preview для рисования фигур в реальном времени
     private Line previewLine;
@@ -85,50 +84,33 @@ public class SchemeEditorController {
         void undo();
     }
 
-    private static class AddShapeCommand implements Command {
-        private AnchorPane pane;
-        private Node shape;
-
-        AddShapeCommand(AnchorPane pane, Node shape) {
-            this.pane = pane;
-            this.shape = shape;
-        }
+    private record AddShapeCommand(AnchorPane pane, Node shape) implements Command {
 
         @Override
-        public void execute() {
-            pane.getChildren().add(shape);
+            public void execute() {
+                pane.getChildren().add(shape);
+            }
+
+            @Override
+            public void undo() {
+                pane.getChildren().remove(shape);
+            }
         }
+
+    private record MoveShapeCommand(Node shape, double oldX, double oldY, double newX, double newY) implements Command {
 
         @Override
-        public void undo() {
-            pane.getChildren().remove(shape);
-        }
-    }
+            public void execute() {
+                shape.setLayoutX(newX);
+                shape.setLayoutY(newY);
+            }
 
-    private static class MoveShapeCommand implements Command {
-        private Node shape;
-        private double oldX, oldY, newX, newY;
-
-        MoveShapeCommand(Node shape, double oldX, double oldY, double newX, double newY) {
-            this.shape = shape;
-            this.oldX = oldX;
-            this.oldY = oldY;
-            this.newX = newX;
-            this.newY = newY;
+            @Override
+            public void undo() {
+                shape.setLayoutX(oldX);
+                shape.setLayoutY(oldY);
+            }
         }
-
-        @Override
-        public void execute() {
-            shape.setLayoutX(newX);
-            shape.setLayoutY(newY);
-        }
-
-        @Override
-        public void undo() {
-            shape.setLayoutX(oldX);
-            shape.setLayoutY(oldY);
-        }
-    }
 
     // -----------------------------------------------------------------
     // PUBLIC API (внедрение из MainController)
@@ -149,7 +131,7 @@ public class SchemeEditorController {
     @FXML
     private void initialize() {
         // Настройка ComboBox
-        schemeComboBox.setConverter(new javafx.util.StringConverter<Scheme>() {
+        schemeComboBox.setConverter(new javafx.util.StringConverter<>() {
             @Override
             public String toString(Scheme s) {
                 return s != null ? s.getName() : "";
@@ -160,7 +142,7 @@ public class SchemeEditorController {
             }
         });
         schemeComboBox.valueProperty().addListener((obs, oldV, newV) -> loadScheme(newV));
-        deviceComboBox.setConverter(new javafx.util.StringConverter<Device>() {
+        deviceComboBox.setConverter(new javafx.util.StringConverter<>() {
             @Override
             public String toString(Device d) {
                 return d != null ? d.getInventoryNumber() + " - " + d.getName() : "";
@@ -182,9 +164,14 @@ public class SchemeEditorController {
         schemePane.setFocusTraversable(true);  // Чтобы schemePane мог получать фокус и клавиши
 
         setupToolButtons();
-        newSchemeBtn.setOnAction(e -> createNewScheme());
+
+        // кнопки не видны и не управляются
+        newSchemeBtn.setVisible(false);
+        deleteSchemeBtn.setVisible(false);
+        newSchemeBtn.setManaged(false);
+        deleteSchemeBtn.setManaged(false);
+
         saveSchemeBtn.setOnAction(e -> saveCurrentScheme());
-        deleteSchemeBtn.setOnAction(e -> deleteCurrentScheme());
 
         applyButtonStyles();
     }
@@ -196,8 +183,27 @@ public class SchemeEditorController {
     }
 
     private void loadSchemes() {
-        schemeList = FXCollections.observableArrayList(schemeDAO.getAllSchemes());
+        List<String> locations = deviceDAO.getDistinctLocations();
+        List<Scheme> schemesFromLocations = new ArrayList<>();
+
+        for (String location : locations) {
+            // Пытаемся найти схему с именем, равным location
+            Scheme scheme = schemeDAO.findSchemeByName(location);
+            if (scheme == null) {
+                // Если не нашли — создаем новую пустую схему с таким именем
+                scheme = new Scheme(0, location, "Автоматически созданная схема", "{}");
+                boolean created = schemeDAO.addScheme(scheme);
+                if (!created) {
+                    System.out.println("Не удалось создать схему для места установки: " + location);
+                    continue; // переходим к следующей локации
+                }
+            }
+            schemesFromLocations.add(scheme);
+        }
+
+        ObservableList<Scheme> schemeList = FXCollections.observableArrayList(schemesFromLocations);
         schemeComboBox.setItems(schemeList);
+
         if (!schemeList.isEmpty()) {
             schemeComboBox.getSelectionModel().select(0);
         }
@@ -209,43 +215,44 @@ public class SchemeEditorController {
     }
 
     private void refreshAvailableDevices() {
-        if (deviceList == null || deviceLocationDAO == null) {
+        if (deviceList == null || deviceLocationDAO == null || schemeComboBox.getValue() == null) {
             availableDevicesList = FXCollections.observableArrayList();
             deviceComboBox.setItems(availableDevicesList);
             return;
         }
+
+        String selectedSchemeName = schemeComboBox.getValue().getName();
+
+        // Получаем список ID приборов, использованных в других схемах
         List<Integer> usedDeviceIds = deviceLocationDAO.getAllUsedDeviceIds();
         List<Integer> currentSchemeDeviceIds = new ArrayList<>();
+
         if (currentScheme != null) {
             List<DeviceLocation> currentLocations = deviceLocationDAO.getLocationsBySchemeId(currentScheme.getId());
             for (DeviceLocation loc : currentLocations) {
                 currentSchemeDeviceIds.add(loc.getDeviceId());
             }
-            if (!currentSchemeDeviceIds.isEmpty()) {
-                int removedCount = 0;
-                for (Integer id : currentSchemeDeviceIds) {
-                    if (usedDeviceIds.remove(id)) {
-                        removedCount++;
-                    }
-                }
-            }
+            // Исключаем приборы текущей схемы из usedDeviceIds, чтобы позволить повторное использование на той же схеме
+            usedDeviceIds.removeAll(currentSchemeDeviceIds);
         }
+
+        // Фильтруем приборы по location == selectedSchemeName и исключаем занятые
         availableDevicesList = FXCollections.observableArrayList();
+
         for (Device device : deviceList) {
             int devId = device.getId();
-            boolean isUsedElsewhere = usedDeviceIds.contains(devId);
-            boolean isOnCurrentScheme = currentSchemeDeviceIds.contains(devId);
-            if (currentScheme == null) {
-                if (!isUsedElsewhere) {
-                    availableDevicesList.add(device);
-                }
-            } else {
+            // Добавляем только приборы с подходящим location
+            if (selectedSchemeName.equals(device.getLocation())) {
+                boolean isUsedElsewhere = usedDeviceIds.contains(devId);
+                boolean isOnCurrentScheme = currentSchemeDeviceIds.contains(devId);
                 if (!isUsedElsewhere && !isOnCurrentScheme) {
                     availableDevicesList.add(device);
                 }
             }
         }
+
         deviceComboBox.setItems(availableDevicesList);
+
         if (!availableDevicesList.isEmpty()) {
             deviceComboBox.getSelectionModel().selectFirst();
         } else {
@@ -354,8 +361,7 @@ public class SchemeEditorController {
         if (shape instanceof Rectangle || shape instanceof Ellipse || shape instanceof Line) {
             addResizeHandles();
         }
-        if (shape instanceof Shape) {
-            Shape s = (Shape) shape;
+        if (shape instanceof Shape s) {
             s.setStroke(Color.RED);
             s.setStrokeWidth(3);
         }
@@ -364,8 +370,7 @@ public class SchemeEditorController {
 
     // Сбросить выделение
     private void deselectShape() {
-        if (selectedNode instanceof Shape) {
-            Shape s = (Shape) selectedNode;
+        if (selectedNode instanceof Shape s) {
             s.setStroke(Color.BLACK);
             s.setStrokeWidth(1);
         }
@@ -601,8 +606,7 @@ public class SchemeEditorController {
 
     // Обновить положение маркеров
     private void updateResizeHandles() {
-        if (selectedNode instanceof Rectangle && resizeHandles != null) {
-            Rectangle rect = (Rectangle) selectedNode;
+        if (selectedNode instanceof Rectangle rect && resizeHandles != null) {
             double[] x = {rect.getX(), rect.getX() + rect.getWidth() / 2, rect.getX() + rect.getWidth()};
             double[] y = {rect.getY(), rect.getY() + rect.getHeight() / 2, rect.getY() + rect.getHeight()};
             int index = 0;
@@ -616,8 +620,7 @@ public class SchemeEditorController {
                     index++;
                 }
             }
-        } else if (selectedNode instanceof Ellipse && resizeHandles != null) {
-            Ellipse ellipse = (Ellipse) selectedNode;
+        } else if (selectedNode instanceof Ellipse ellipse && resizeHandles != null) {
             double cx = ellipse.getCenterX(), cy = ellipse.getCenterY();
             double rx = ellipse.getRadiusX(), ry = ellipse.getRadiusY();
             if (resizeHandles[0] != null) resizeHandles[0].setCenterX(cx - rx); // left
@@ -629,8 +632,7 @@ public class SchemeEditorController {
             if (resizeHandles[1] != null) resizeHandles[1].setCenterY(cy);
             if (resizeHandles[2] != null) resizeHandles[2].setCenterX(cx);
             if (resizeHandles[3] != null) resizeHandles[3].setCenterX(cx);
-        } else if (selectedNode instanceof Line && resizeHandles != null) {
-            Line line = (Line) selectedNode;
+        } else if (selectedNode instanceof Line line && resizeHandles != null) {
             if (resizeHandles[0] != null) {
                 resizeHandles[0].setCenterX(line.getStartX());
                 resizeHandles[0].setCenterY(line.getStartY());
@@ -645,6 +647,7 @@ public class SchemeEditorController {
     // -----------------------------------------------------------------
     // РАБОТА С СХЕМАМИ
     // -----------------------------------------------------------------
+    // Загрузить схему
     private void loadScheme(Scheme scheme) {
         if (scheme == null) return;
         currentScheme = scheme;
@@ -675,20 +678,7 @@ public class SchemeEditorController {
         statusLabel.setText("Загружена схема: " + scheme.getName());
     }
 
-    private void createNewScheme() {
-        TextInputDialog dialog = new TextInputDialog("Новая схема");
-        dialog.setTitle("Создать новую схему");
-        dialog.setHeaderText("Введите имя схемы:");
-        dialog.showAndWait().ifPresent(name -> {
-            Scheme newScheme = new Scheme(0, name, "Описание", "{}");
-            if (schemeDAO.addScheme(newScheme)) {
-                schemeList.add(newScheme);
-                schemeComboBox.setValue(newScheme);
-                statusLabel.setText("Создана новая схема: " + name);
-            }
-        });
-    }
-
+    // Сохранить текущую схему
     private void saveCurrentScheme() {
         if (currentScheme == null) return;
         deselectShape();  // Сбросить выделение перед сохранением
@@ -703,8 +693,7 @@ public class SchemeEditorController {
         schemeDAO.updateScheme(currentScheme);
 
         for (Node node : schemePane.getChildren()) {
-            if (node instanceof Circle && ((Circle) node).getFill() == Color.BLUE) {
-                Circle circle = (Circle) node;
+            if (node instanceof Circle circle && circle.getFill() == Color.BLUE) {
                 Device device = (Device) circle.getUserData();
                 if (device != null) {
                     DeviceLocation loc = new DeviceLocation(device.getId(), currentScheme.getId(), circle.getCenterX(), circle.getCenterY());
@@ -716,24 +705,11 @@ public class SchemeEditorController {
         statusLabel.setText("Схема сохранена: " + currentScheme.getName());
     }
 
-    private void deleteCurrentScheme() {
-        if (currentScheme == null) return;
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION, "Удалить схему " + currentScheme.getName() + "?", ButtonType.YES, ButtonType.NO);
-        confirm.showAndWait().ifPresent(r -> {
-            if (r == ButtonType.YES) {
-                if (schemeDAO.deleteScheme(currentScheme.getId())) {
-                    deviceLocationDAO.deleteLocationsBySchemeId(currentScheme.getId());
-                    schemeList.remove(currentScheme);
-                    currentScheme = null;
-                    schemeComboBox.setValue(null);
-                    schemePane.getChildren().clear();
-                    refreshAvailableDevices();
-                    statusLabel.setText("Схема удалена");
-                } else {
-                    statusLabel.setText("Ошибка удаления схемы");
-                }
-            }
-        });
+    // Обновить схемы и приборы
+    public void refreshSchemesAndDevices() {
+        loadSchemes();
+        loadDevices();
+        refreshAvailableDevices();
     }
 
     // -----------------------------------------------------------------
@@ -754,22 +730,25 @@ public class SchemeEditorController {
                 selectShape(hovered);
                 isDraggingSelected = true;
                 double realX = 0, realY = 0;
-                if (hovered instanceof Rectangle) {
-                    Rectangle rect = (Rectangle) hovered;
-                    realX = rect.getX();
-                    realY = rect.getY();
-                } else if (hovered instanceof Ellipse) {
-                    Ellipse ellipse = (Ellipse) hovered;
-                    realX = ellipse.getCenterX();
-                    realY = ellipse.getCenterY();
-                } else if (hovered instanceof Text) {
-                    Text text = (Text) hovered;
-                    realX = text.getX();
-                    realY = text.getY();
-                } else if (hovered instanceof Line) {
-                    Line line = (Line) hovered;
-                    realX = line.getStartX();
-                    realY = line.getStartY();
+                switch (hovered) {
+                    case Rectangle rect -> {
+                        realX = rect.getX();
+                        realY = rect.getY();
+                    }
+                    case Ellipse ellipse -> {
+                        realX = ellipse.getCenterX();
+                        realY = ellipse.getCenterY();
+                    }
+                    case Text text -> {
+                        realX = text.getX();
+                        realY = text.getY();
+                    }
+                    case Line line -> {
+                        realX = line.getStartX();
+                        realY = line.getStartY();
+                    }
+                    default -> {
+                    }
                 }
                 dragOffsetX = event.getX() - realX;
                 dragOffsetY = event.getY() - realY;
@@ -834,33 +813,35 @@ public class SchemeEditorController {
                 double newX = event.getX() - dragOffsetX;
                 double newY = event.getY() - dragOffsetY;
                 // Обновляем реальные координаты фигуры
-                if (selectedNode instanceof Rectangle) {
-                    Rectangle rect = (Rectangle) selectedNode;
-                    rect.setX(newX);
-                    rect.setY(newY);
-                } else if (selectedNode instanceof Ellipse) {
-                    Ellipse ellipse = (Ellipse) selectedNode;
-                    ellipse.setCenterX(newX);
-                    ellipse.setCenterY(newY);
-                } else if (selectedNode instanceof Text) {
-                    Text text = (Text) selectedNode;
-                    text.setX(newX);
-                    text.setY(newY);
-                } else if (selectedNode instanceof Line) {
-                    // Сдвигаем линию целиком
-                    Line line = (Line) selectedNode;
-                    double dx = newX - line.getStartX();
-                    double dy = newY - line.getStartY();
-                    line.setStartX(newX);
-                    line.setStartY(newY);
-                    line.setEndX(line.getEndX() + dx);
-                    line.setEndY(line.getEndY() + dy);
+                switch (selectedNode) {
+                    case Rectangle rect -> {
+                        rect.setX(newX);
+                        rect.setY(newY);
+                    }
+                    case Ellipse ellipse -> {
+                        ellipse.setCenterX(newX);
+                        ellipse.setCenterY(newY);
+                    }
+                    case Text text -> {
+                        text.setX(newX);
+                        text.setY(newY);
+                    }
+                    case Line line -> {
+                        // Сдвигаем линию целиком
+                        double dx = newX - line.getStartX();
+                        double dy = newY - line.getStartY();
+                        line.setStartX(newX);
+                        line.setStartY(newY);
+                        line.setEndX(line.getEndX() + dx);
+                        line.setEndY(line.getEndY() + dy);
+                    }
+                    default -> {
+                    }
                 }
                 updateResizeHandles();  // Обновляем маркеры
             } else if (isResizing && selectedNode != null) {
                 double currX = event.getX(), currY = event.getY();
-                if (selectedNode instanceof Rectangle) {
-                    Rectangle rect = (Rectangle) selectedNode;
+                if (selectedNode instanceof Rectangle rect) {
                     if (resizeCorner == 0) {  // Top-left
                         rect.setWidth(rect.getWidth() + (rect.getX() - currX));
                         rect.setHeight(rect.getHeight() + (rect.getY() - currY));
@@ -899,9 +880,8 @@ public class SchemeEditorController {
         if (currentTool == Tool.SELECT) {
             if (isDraggingSelected && selectedNode != null) {
                 // Запоминаем старое положение перед перемещением (для Undo, если нужно)
-                double oldX = 0, oldY = 0, newX = 0, newY = 0;
-                if (selectedNode instanceof Rectangle) {
-                    Rectangle rect = (Rectangle) selectedNode;
+                double oldX = 0, oldY = 0, newX, newY;
+                if (selectedNode instanceof Rectangle rect) {
                     newX = rect.getX();
                     newY = rect.getY();
                     // oldX/newY нужно отслеживать, но для простоты пропустим
@@ -949,7 +929,6 @@ public class SchemeEditorController {
     }
 
     private void addDeviceAt(double x, double y) {
-        final boolean[] dragged = {false};
         Device selected = deviceComboBox.getValue();
         if (selected == null) {
             Alert alert = new Alert(Alert.AlertType.WARNING, "Выберите прибор из списка!");
@@ -991,6 +970,7 @@ public class SchemeEditorController {
                     schemePane.getChildren().remove(circle);
                     refreshAvailableDevices();
                     statusLabel.setText("Прибор удалён");
+                    schemeComboBox.setValue(currentScheme);
                 }
             });
         });
@@ -1087,8 +1067,7 @@ public class SchemeEditorController {
                 ellipse.setStroke(Color.BLACK);
                 return ellipse;
             } else if (type == Type.TEXT) {
-                Text textNode = new Text(x1, y1, text);
-                return textNode;
+                return new Text(x1, y1, text);
             }
             return null;
         }
@@ -1126,7 +1105,6 @@ public class SchemeEditorController {
                     double radiusY = Double.parseDouble(parts[4]);
                     return new SchemeObject(t, x1, y1, radiusX, radiusY);
                 } else if (t == Type.TEXT) {
-                    String text = parts[3];
                     return new SchemeObject(t, x1, y1, 0, 0);  // текст в конструкторе
                 }
             } catch (NumberFormatException e) {
@@ -1136,17 +1114,13 @@ public class SchemeEditorController {
         }
 
         static SchemeObject fromNode(Node node) {
-            if (node instanceof Line) {
-                Line line = (Line) node;
+            if (node instanceof Line line) {
                 return new SchemeObject(Type.LINE, line.getStartX(), line.getStartY(), line.getEndX(), line.getEndY());
-            } else if (node instanceof Rectangle) {
-                Rectangle rect = (Rectangle) node;
+            } else if (node instanceof Rectangle rect) {
                 return new SchemeObject(Type.RECTANGLE, rect.getX(), rect.getY(), rect.getWidth(), rect.getHeight());
-            } else if (node instanceof Ellipse) {
-                Ellipse ellipse = (Ellipse) node;
+            } else if (node instanceof Ellipse ellipse) {
                 return new SchemeObject(Type.ELLIPSE, ellipse.getCenterX(), ellipse.getCenterY(), ellipse.getRadiusX(), ellipse.getRadiusY());
-            } else if (node instanceof Text) {
-                Text text = (Text) node;
+            } else if (node instanceof Text text) {
                 return new SchemeObject(Type.TEXT, text.getX(), text.getY(), 0, 0);  // текст в конструкторе
             }
             return null;

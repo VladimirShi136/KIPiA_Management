@@ -37,9 +37,18 @@ public class DevicesGroupedController {
 
     private DeviceDAO deviceDAO;
     private FilteredList<Device> filteredList;
+    private SchemeEditorController schemeEditorController;
 
     public void setDeviceDAO(DeviceDAO dao) {
         this.deviceDAO = dao;
+    }
+
+    /**
+     * Инициализация контроллера редактирования схемы.
+     * @param controller - контроллер
+     */
+    public void setSchemeEditorController(SchemeEditorController controller) {
+        this.schemeEditorController = controller;
     }
 
     @FXML
@@ -61,28 +70,10 @@ public class DevicesGroupedController {
     public sealed interface TreeRowItem permits GroupItem, DeviceItem {
     }
 
-    public static final class GroupItem implements TreeRowItem {
-        private final String location;
-
-        public GroupItem(String location) {
-            this.location = location;
-        }
-
-        public String getLocation() {
-            return location;
-        }
+    public record GroupItem(String location) implements TreeRowItem {
     }
 
-    public static final class DeviceItem implements TreeRowItem {
-        private final Device device;
-
-        public DeviceItem(Device device) {
-            this.device = device;
-        }
-
-        public Device getDevice() {
-            return device;
-        }
+    public record DeviceItem(Device device) implements TreeRowItem {
     }
 
     // --- Колонки с фабриками ячеек с проверкой редактирования ---
@@ -113,8 +104,8 @@ public class DevicesGroupedController {
         yearCol.setPrefWidth(90);
         yearCol.setCellValueFactory(param -> {
             TreeRowItem val = param.getValue().getValue();
-            if (val instanceof DeviceItem deviceItem) {
-                return new ReadOnlyObjectWrapper<>(deviceItem.getDevice().getYear());
+            if (val instanceof DeviceItem(Device device)) {
+                return new ReadOnlyObjectWrapper<>(device.getYear());
             } else {
                 return new ReadOnlyObjectWrapper<>(null);
             }
@@ -124,15 +115,28 @@ public class DevicesGroupedController {
                 getStyleClass().add("numeric-cell");
             }
 
+            /**
+             * Обновление ячейки
+             * @param item - новое значение
+             * @param empty - является ли ячейка пустой
+             */
             @Override
             public void updateItem(Integer item, boolean empty) {
+                // Проверка ячейки
                 TreeRowItem val = getTreeTableRow() == null ? null : getTreeTableRow().getItem();
+                // Если ячейка не является прибором
                 if (!(val instanceof DeviceItem)) {
+                    // Запрет редактирования
                     setEditable(false);
+                    // Очистка
                     setText(null);
+                    // Удаление графического представления
                     setGraphic(null);
+                // Если ячейка является прибором
                 } else {
+                    // Разрешение редактирования
                     setEditable(true);
+                    // Обновление
                     super.updateItem(item, empty);
                 }
             }
@@ -150,9 +154,9 @@ public class DevicesGroupedController {
         yearCol.setEditable(true);
         yearCol.setOnEditCommit(event -> {
             TreeRowItem val = event.getRowValue().getValue();
-            if (val instanceof DeviceItem deviceItem) {
-                deviceItem.getDevice().setYear(event.getNewValue());
-                deviceDAO.updateDevice(deviceItem.getDevice());
+            if (val instanceof DeviceItem(Device device)) {
+                device.setYear(event.getNewValue());
+                deviceDAO.updateDevice(device);
                 treeTable.refresh();
             }
         });
@@ -167,8 +171,8 @@ public class DevicesGroupedController {
         accuracyClassCol.setPrefWidth(90);
         accuracyClassCol.setCellValueFactory(param -> {
             TreeRowItem val = param.getValue().getValue();
-            if (val instanceof DeviceItem deviceItem) {
-                return new ReadOnlyObjectWrapper<>(deviceItem.getDevice().getAccuracyClass());
+            if (val instanceof DeviceItem(Device device)) {
+                return new ReadOnlyObjectWrapper<>(device.getAccuracyClass());
             } else {
                 return new ReadOnlyObjectWrapper<>(null);
             }
@@ -204,9 +208,9 @@ public class DevicesGroupedController {
         accuracyClassCol.setEditable(true);
         accuracyClassCol.setOnEditCommit(event -> {
             TreeRowItem val = event.getRowValue().getValue();
-            if (val instanceof DeviceItem deviceItem) {
-                deviceItem.getDevice().setAccuracyClass(event.getNewValue());
-                deviceDAO.updateDevice(deviceItem.getDevice());
+            if (val instanceof DeviceItem(Device device)) {
+                device.setAccuracyClass(event.getNewValue());
+                deviceDAO.updateDevice(device);
                 treeTable.refresh();
             }
         });
@@ -221,13 +225,13 @@ public class DevicesGroupedController {
         statusCol.setPrefWidth(70);
         statusCol.setCellValueFactory(param -> {
             TreeRowItem val = param.getValue().getValue();
-            if (val instanceof DeviceItem deviceItem)
-                return new ReadOnlyObjectWrapper<>(deviceItem.getDevice().getStatus());
+            if (val instanceof DeviceItem(Device device))
+                return new ReadOnlyObjectWrapper<>(device.getStatus());
             else
                 return new ReadOnlyObjectWrapper<>("");
         });
 
-        statusCol.setCellFactory(column -> new ComboBoxTreeTableCell<TreeRowItem, String>("Хранение", "В работе", "Утерян", "Испорчен") {
+        statusCol.setCellFactory(column -> new ComboBoxTreeTableCell<>("Хранение", "В работе", "Утерян", "Испорчен") {
             @Override
             public void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
@@ -264,9 +268,9 @@ public class DevicesGroupedController {
         statusCol.setEditable(true);
         statusCol.setOnEditCommit(event -> {
             TreeRowItem val = event.getRowValue().getValue();
-            if (val instanceof DeviceItem deviceItem) {
-                deviceItem.getDevice().setStatus(event.getNewValue());
-                deviceDAO.updateDevice(deviceItem.getDevice());
+            if (val instanceof DeviceItem(Device device)) {
+                device.setStatus(event.getNewValue());
+                deviceDAO.updateDevice(device);
                 updateStatistics();
                 treeTable.refresh();
             }
@@ -318,8 +322,8 @@ public class DevicesGroupedController {
 
             private Device getCurrentDevice() {
                 TreeRowItem rowItem = getTreeTableRow() == null ? null : getTreeTableRow().getItem();
-                if (rowItem instanceof DeviceItem deviceItem) {
-                    return deviceItem.getDevice();
+                if (rowItem instanceof DeviceItem(Device device)) {
+                    return device;
                 }
                 return null;
             }
@@ -387,8 +391,8 @@ public class DevicesGroupedController {
         locationCol.setPrefWidth(100);
         locationCol.setCellValueFactory(param -> {
             TreeRowItem val = param.getValue().getValue();
-            if (val instanceof GroupItem g) return new ReadOnlyObjectWrapper<>(g.getLocation());
-            else if (val instanceof DeviceItem d) return new ReadOnlyObjectWrapper<>(d.getDevice().getType());
+            if (val instanceof GroupItem(String location)) return new ReadOnlyObjectWrapper<>(location);
+            else if (val instanceof DeviceItem(Device device)) return new ReadOnlyObjectWrapper<>(device.getType());
             else return new ReadOnlyObjectWrapper<>("");
         });
         locationCol.setCellFactory(col -> new TextFieldTreeTableCell<>(new DefaultStringConverter()) {
@@ -402,13 +406,12 @@ public class DevicesGroupedController {
                     setEditable(false);
                 } else {
                     TreeRowItem val = getTreeTableRow() == null ? null : getTreeTableRow().getItem();
+                    setText(item);
                     if (val instanceof GroupItem) {
-                        setText(item);
                         setEditable(false);
                         setAlignment(Pos.CENTER_LEFT); // Левое выравнивание для групповых строк
                         setStyle("-fx-font-weight: bold; -fx-font-size: 12px; -fx-padding: 8 8 5 0;");
                     } else {
-                        setText(item);
                         setEditable(true);
                         setStyle("");
                     }
@@ -438,9 +441,9 @@ public class DevicesGroupedController {
         locationCol.setEditable(true);
         locationCol.setOnEditCommit(event -> {
             TreeRowItem val = event.getRowValue().getValue();
-            if (val instanceof DeviceItem deviceItem) {
-                deviceItem.getDevice().setType(event.getNewValue());
-                deviceDAO.updateDevice(deviceItem.getDevice());
+            if (val instanceof DeviceItem(Device device)) {
+                device.setType(event.getNewValue());
+                deviceDAO.updateDevice(device);
                 treeTable.refresh();
             }
         });
@@ -455,8 +458,8 @@ public class DevicesGroupedController {
         col.setPrefWidth(width);
         col.setCellValueFactory(param -> {
             TreeRowItem val = param.getValue().getValue();
-            if (val instanceof DeviceItem deviceItem) {
-                return new ReadOnlyObjectWrapper<>(getter.apply(deviceItem.getDevice()));
+            if (val instanceof DeviceItem(Device device)) {
+                return new ReadOnlyObjectWrapper<>(getter.apply(device));
             }
             return new ReadOnlyObjectWrapper<>("");
         });
@@ -492,9 +495,9 @@ public class DevicesGroupedController {
         col.setEditable(true);
         col.setOnEditCommit(event -> {
             TreeRowItem val = event.getRowValue().getValue();
-            if (val instanceof DeviceItem deviceItem) {
-                setter.accept(deviceItem.getDevice(), event.getNewValue());
-                deviceDAO.updateDevice(deviceItem.getDevice());
+            if (val instanceof DeviceItem(Device device)) {
+                setter.accept(device, event.getNewValue());
+                deviceDAO.updateDevice(device);
                 treeTable.refresh();
             }
         });
@@ -575,6 +578,9 @@ public class DevicesGroupedController {
                             () -> {
                                 loadData();
                                 updateStatistics();
+                                if (schemeEditorController != null) {
+                                    schemeEditorController.refreshSchemesAndDevices();
+                                }
                             },
                             () -> {
                                 Alert error = new Alert(Alert.AlertType.ERROR);
@@ -593,7 +599,7 @@ public class DevicesGroupedController {
             alert.show();
             return;
         }
-        Device dev = ((DeviceItem) selected.getValue()).getDevice();
+        Device dev = ((DeviceItem) selected.getValue()).device();
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
                 "Удалить прибор \"" + dev.getName() + "\"?", ButtonType.YES, ButtonType.NO);
         confirm.showAndWait().ifPresent(b -> {
@@ -603,6 +609,9 @@ public class DevicesGroupedController {
                     filteredList.getSource().remove(dev);
                     updateTreeItems();
                     updateStatistics();
+                    if (schemeEditorController != null) {
+                        schemeEditorController.refreshSchemesAndDevices();
+                    }
                 } else {
                     Alert error = new Alert(Alert.AlertType.ERROR, "Ошибка удаления из базы");
                     error.show();

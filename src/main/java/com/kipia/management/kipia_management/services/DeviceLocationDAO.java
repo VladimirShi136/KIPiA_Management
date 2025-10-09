@@ -32,9 +32,8 @@ public class DeviceLocationDAO {
      * Добавление новой привязки прибора к схеме
      *
      * @param location объект привязки для добавления
-     * @return true - если добавление прошло успешно, false - в случае ошибки
      */
-    public boolean addDeviceLocation(DeviceLocation location) {
+    public void addDeviceLocation(DeviceLocation location) {
         String sql = "INSERT INTO device_locations (device_id, scheme_id, x, y) VALUES (?, ?, ?, ?) ON CONFLICT(device_id, scheme_id) DO UPDATE SET x = excluded.x, y = excluded.y";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
             stmt.setInt(1, location.getDeviceId());
@@ -42,10 +41,8 @@ public class DeviceLocationDAO {
             stmt.setDouble(3, location.getX());
             stmt.setDouble(4, location.getY());
             stmt.executeUpdate();
-            return true;
         } catch (SQLException e) {
             System.out.println("Ошибка добавления локации: " + e.getMessage());
-            return false;
         }
     }
 
@@ -53,10 +50,9 @@ public class DeviceLocationDAO {
      * Обновление привязки прибора к схеме (аналогично добавлению, так как ON CONFLICT обновляет)
      *
      * @param location объект привязки с обновленными данными
-     * @return true - если обновление прошло успешно, false - в случае ошибки
      */
-    public boolean updateDeviceLocation(DeviceLocation location) {
-        return addDeviceLocation(location);  // Для простоты, делегируем add (ON CONFLICT)
+    public void updateDeviceLocation(DeviceLocation location) {
+        addDeviceLocation(location);
     }
 
     /**
@@ -64,18 +60,15 @@ public class DeviceLocationDAO {
      *
      * @param deviceId ID прибора
      * @param schemeId ID схемы
-     * @return true - если удаление прошло успешно, false - в случае ошибки
      */
-    public boolean deleteDeviceLocation(int deviceId, int schemeId) {
+    public void deleteDeviceLocation(int deviceId, int schemeId) {
         String sql = "DELETE FROM device_locations WHERE device_id = ? AND scheme_id = ?";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
             stmt.setInt(1, deviceId);
             stmt.setInt(2, schemeId);
             stmt.executeUpdate();
-            return true;
         } catch (SQLException e) {
             System.out.println("Ошибка удаления локации: " + e.getMessage());
-            return false;
         }
     }
 
@@ -128,35 +121,14 @@ public class DeviceLocationDAO {
      * Удаление всех привязок для схемы (если схема удаляется)
      *
      * @param schemeId ID схемы
-     * @return true - если удаление прошло успешно, false - в случае ошибки
      */
-    public boolean deleteLocationsBySchemeId(int schemeId) {
+    public void deleteLocationsBySchemeId(int schemeId) {
         String sql = "DELETE FROM device_locations WHERE scheme_id = ?";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
             stmt.setInt(1, schemeId);
             stmt.executeUpdate();
-            return true;
         } catch (SQLException e) {
             System.out.println("Ошибка удаления локаций схемы: " + e.getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Удаление всех привязок для прибора (если прибор удаляется)
-     *
-     * @param deviceId ID прибора
-     * @return true - если удаление прошло успешно, false - в случае ошибки
-     */
-    public boolean deleteLocationsByDeviceId(int deviceId) {
-        String sql = "DELETE FROM device_locations WHERE device_id = ?";
-        try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
-            stmt.setInt(1, deviceId);
-            stmt.executeUpdate();
-            return true;
-        } catch (SQLException e) {
-            System.out.println("Ошибка удаления локаций прибора: " + e.getMessage());
-            return false;
         }
     }
 }
