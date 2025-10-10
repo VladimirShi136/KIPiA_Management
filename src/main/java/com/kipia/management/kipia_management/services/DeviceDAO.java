@@ -5,6 +5,8 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Класс DeviceDAO (Data Access Object) предоставляет методы для работы с данными приборов
@@ -16,6 +18,8 @@ import java.util.List;
 public class DeviceDAO {
     // Сервис для работы с базой данных
     private final DatabaseService databaseService;
+    // логгер для сообщений
+    private static final Logger LOGGER = Logger.getLogger(DeviceDAO.class.getName());
 
     /**
      * Конструктор класса DeviceDAO
@@ -50,12 +54,11 @@ public class DeviceDAO {
         // SQL соответствует полям таблицы (13 параметров)
         String sql = "INSERT INTO devices (type, name, manufacturer, inventory_number, year, measurement_limit, accuracy_class, location, valve_number, status, additional_info, photo_path, photos) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
-            // Устанавливаем 13 параметров для полей
             installParameters(device, stmt);
             stmt.executeUpdate();
             return true;
         } catch (SQLException e) {
-            System.out.println("Ошибка добавления прибора: " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "Ошибка добавления прибора: " + e.getMessage());  // Замена println на logger
             return false;
         }
     }
@@ -74,7 +77,7 @@ public class DeviceDAO {
                 devices.add(createDeviceSQL(rs));
             }
         } catch (SQLException e) {
-            System.out.println("Ошибка получения приборов: " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "Ошибка получения приборов: " + e.getMessage());  // Замена println
         }
         return devices;
     }
@@ -88,12 +91,11 @@ public class DeviceDAO {
         // Исправленный SQL
         String sql = "UPDATE devices SET type = ?, name = ?, manufacturer = ?, inventory_number = ?, year = ?, measurement_limit = ?, accuracy_class = ?, location = ?, valve_number = ?, status = ?, additional_info = ?, photo_path = ?, photos = ? WHERE id = ?";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
-            // Устанавливаем 13 параметров для полей
-            installParameters(device, stmt);  // 1-13: поля
-            stmt.setInt(14, device.getId());  // 14:shutdown id для WHERE
+            installParameters(device, stmt);
+            stmt.setInt(14, device.getId());  // Устанавливаем 14: id для WHERE
             stmt.executeUpdate();
         } catch (SQLException e) {
-            System.out.println("Ошибка обновления прибора: " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "Ошибка обновления прибора: " + e.getMessage());  // Замена println на logger
         }
     }
 
@@ -109,7 +111,7 @@ public class DeviceDAO {
             stmt.executeUpdate();
             return true;
         } catch (SQLException e) {
-            System.out.println("Ошибка удаления прибора: " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "Ошибка удаления прибора: " + e.getMessage());  // Замена println на logger
             return false;
         }
     }
@@ -128,7 +130,7 @@ public class DeviceDAO {
                 return createDeviceSQL(rs);
             }
         } catch (SQLException e) {
-            System.out.println("Ошибка поиска прибора: " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "Ошибка поиска прибора: " + e.getMessage());  // Замена println на logger
         }
         return null;
     }
@@ -145,7 +147,7 @@ public class DeviceDAO {
                 return createDeviceSQL(rs);
             }
         } catch (SQLException e) {
-            System.out.println("Ошибка получения прибора по ID: " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "Ошибка получения прибора по ID: " + e.getMessage());  // Замена println на logger
         }
         return null;
     }
@@ -163,7 +165,7 @@ public class DeviceDAO {
                 locations.add(rs.getString("location"));
             }
         } catch (SQLException e) {
-            System.out.println("Ошибка получения уникальных локаций: " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "Ошибка получения уникальных локаций: " + e.getMessage());  // Замена println на logger
         }
         return locations;
     }

@@ -44,6 +44,10 @@ public class MainController {
 
     // ── Экземпляр редактора схем для передачи в другие контроллеры ─
     private SchemeEditorController schemeEditorController;
+    private Parent schemeEditorView;  // Сохранённый Root Node из FXML
+
+    private DevicesTableController devicesTableController;
+    private Parent devicesTableView;
 
     // ── Тема ─────────────────────────────────────────────
     private Scene scene;
@@ -183,20 +187,39 @@ public class MainController {
      */
     @FXML
     private void showSchemesEditor() {
-        statusLabel.setText("Редактирование схем");
-        contentArea.getChildren().clear();
+        statusLabel.setText("Редактор схем");  // Обновляем статус
+
+        // Если экземпляр уже создан — просто показываем сохранённый view (состояние не теряется)
+        if (schemeEditorView != null && schemeEditorController != null) {
+            contentArea.getChildren().clear();
+            contentArea.getChildren().add(schemeEditorView);
+            System.out.println("DEBUG: SchemeEditor — showing existing view (state preserved)");
+            return;  // Не перезагружаем, иконки/приборы остаются
+        }
+
+        // Первый запуск: Загружаем FXML и инициализируем
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/scheme-editor.fxml"));
-            Parent view = loader.load();
-            SchemeEditorController ctrl = loader.getController();
-            ctrl.setDeviceDAO(deviceDAO);
-            ctrl.setSchemeDAO(schemeDAO);
-            ctrl.setDeviceLocationDAO(deviceLocationDAO);
-            if (schemeEditorController == null) {
-                schemeEditorController = ctrl;
-            }
-            ctrl.init();    // <-- ДОБАВИТЬ: инициализация данных
-            contentArea.getChildren().add(view);
+            schemeEditorView = loader.load();  // Сохраняем Root Node (Parent)
+
+            schemeEditorController = loader.getController();
+            System.out.println("DEBUG: SchemeEditorController created first time, setting DAO...");
+
+            // Внедряем DAO (только один раз)
+            schemeEditorController.setDeviceDAO(deviceDAO);
+            schemeEditorController.setSchemeDAO(schemeDAO);
+            schemeEditorController.setDeviceLocationDAO(deviceLocationDAO);
+
+            // Вызываем init() только один раз
+            System.out.println("DEBUG: Calling init() for SchemeEditorController (first time)");
+            schemeEditorController.init();
+
+            // Добавляем view в contentArea
+            contentArea.getChildren().clear();
+            contentArea.getChildren().add(schemeEditorView);
+
+            System.out.println("DEBUG: SchemeEditor loaded first time successfully");
+
         } catch (IOException e) {
             statusLabel.setText("Ошибка загрузки редактора схем: " + e.getMessage());
             e.printStackTrace();

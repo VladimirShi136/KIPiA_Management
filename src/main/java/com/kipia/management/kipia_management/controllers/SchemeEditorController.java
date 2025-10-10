@@ -11,6 +11,8 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.Node;
@@ -22,6 +24,7 @@ import javafx.scene.shape.Ellipse;
 import javafx.scene.shape.Shape;
 import javafx.scene.text.Text;
 import javafx.scene.Cursor;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
@@ -34,12 +37,18 @@ import java.util.Stack;
  */
 public class SchemeEditorController {
     // FXML элементы
-    @FXML private ComboBox<Scheme> schemeComboBox;
-    @FXML private ComboBox<Device> deviceComboBox;
-    @FXML private Button newSchemeBtn, saveSchemeBtn, deleteSchemeBtn, selectToolBtn, lineToolBtn, rectToolBtn, addDeviceToolBtn;
-    @FXML private Button undoBtn, redoBtn, ellipseToolBtn, textToolBtn;  // Из FXML
-    @FXML private AnchorPane schemePane;
-    @FXML private Label statusLabel;
+    @FXML
+    private ComboBox<Scheme> schemeComboBox;
+    @FXML
+    private ComboBox<Device> deviceComboBox;
+    @FXML
+    private Button newSchemeBtn, saveSchemeBtn, deleteSchemeBtn, selectToolBtn, lineToolBtn, rectToolBtn, addDeviceToolBtn;
+    @FXML
+    private Button undoBtn, redoBtn, ellipseToolBtn, textToolBtn;  // Из FXML
+    @FXML
+    private AnchorPane schemePane;
+    @FXML
+    private Label statusLabel;
 
     // DAO (внедряются из MainController)
     private DeviceDAO deviceDAO;
@@ -52,7 +61,8 @@ public class SchemeEditorController {
     private ObservableList<Device> availableDevicesList;
 
     // Режимы работы
-    private enum Tool { SELECT, LINE, RECTANGLE, ELLIPSE, TEXT, ADD_DEVICE }
+    private enum Tool {SELECT, LINE, RECTANGLE, ELLIPSE, TEXT, ADD_DEVICE}
+
     private Tool currentTool = Tool.SELECT;
 
     // Для рисования
@@ -81,36 +91,37 @@ public class SchemeEditorController {
     // Интерфейс команд для Undo/Redo
     private interface Command {
         void execute();
+
         void undo();
     }
 
     private record AddShapeCommand(AnchorPane pane, Node shape) implements Command {
 
         @Override
-            public void execute() {
-                pane.getChildren().add(shape);
-            }
-
-            @Override
-            public void undo() {
-                pane.getChildren().remove(shape);
-            }
+        public void execute() {
+            pane.getChildren().add(shape);
         }
+
+        @Override
+        public void undo() {
+            pane.getChildren().remove(shape);
+        }
+    }
 
     private record MoveShapeCommand(Node shape, double oldX, double oldY, double newX, double newY) implements Command {
 
         @Override
-            public void execute() {
-                shape.setLayoutX(newX);
-                shape.setLayoutY(newY);
-            }
-
-            @Override
-            public void undo() {
-                shape.setLayoutX(oldX);
-                shape.setLayoutY(oldY);
-            }
+        public void execute() {
+            shape.setLayoutX(newX);
+            shape.setLayoutY(newY);
         }
+
+        @Override
+        public void undo() {
+            shape.setLayoutX(oldX);
+            shape.setLayoutY(oldY);
+        }
+    }
 
     // -----------------------------------------------------------------
     // PUBLIC API (внедрение из MainController)
@@ -118,9 +129,11 @@ public class SchemeEditorController {
     public void setDeviceDAO(DeviceDAO dao) {
         this.deviceDAO = dao;
     }
+
     public void setSchemeDAO(SchemeDAO dao) {
         this.schemeDAO = dao;
     }
+
     public void setDeviceLocationDAO(DeviceLocationDAO dao) {
         this.deviceLocationDAO = dao;
     }
@@ -136,17 +149,24 @@ public class SchemeEditorController {
             public String toString(Scheme s) {
                 return s != null ? s.getName() : "";
             }
+
             @Override
             public Scheme fromString(String s) {
                 return null; // Не используется
             }
         });
-        schemeComboBox.valueProperty().addListener((obs, oldV, newV) -> loadScheme(newV));
+        schemeComboBox.valueProperty().addListener((obs, oldV, newV) -> {
+            if (newV != null && !newV.equals(oldV)) {  // Добавь проверку на изменение, чтобы избежать дубликатов
+                System.out.println("DEBUG: Listener detected scheme change from " + (oldV != null ? oldV.getName() : "null") + " to " + newV.getName());
+                loadScheme(newV);
+            }
+        });
         deviceComboBox.setConverter(new javafx.util.StringConverter<>() {
             @Override
             public String toString(Device d) {
                 return d != null ? d.getInventoryNumber() + " - " + d.getName() : "";
             }
+
             @Override
             public Device fromString(String s) {
                 return null;
@@ -177,87 +197,177 @@ public class SchemeEditorController {
     }
 
     public void init() {
-        loadSchemes();
-        loadDevices();
-        refreshAvailableDevices();
+        System.out.println("*** DEBUG: init() started for SchemeEditorController ***");
+
+        // Проверяем DAO (если null — init() вызван слишком рано, выходим)
+        if (deviceDAO == null) {
+            System.out.println("ERROR: deviceDAO is null — init() called before setDeviceDAO!");
+            return;
+        }
+        if (schemeDAO == null) {
+            System.out.println("ERROR: schemeDAO is null");
+            return;
+        }
+        if (deviceLocationDAO == null) {
+            System.out.println("ERROR: deviceLocationDAO is null");
+            return;
+        }
+
+        System.out.println("DEBUG: DAO are ready");
+
+        // НОВЫЙ ПОРЯДОК: Сначала загружаем устройства, потом схемы (чтобы deviceList был готов)
+        loadDevices();  // Загружаем приборы первым делом
+        loadSchemes();  // Теперь схемы — будет работать с deviceList
+
+        // Принудительно выбираем первую схему (если контроллер новый)
+        if (!schemeComboBox.getItems().isEmpty() && schemeComboBox.getValue() == null) {
+            Scheme firstScheme = schemeComboBox.getItems().get(0);
+            schemeComboBox.setValue(firstScheme);
+            currentScheme = firstScheme;
+            loadScheme(firstScheme);  // Загрузит схему, добавит иконки из БД, обновит список
+        }
+
+        System.out.println("*** DEBUG: init() finished (one-time only) ***");
     }
 
     private void loadSchemes() {
-        List<String> locations = deviceDAO.getDistinctLocations();
-        List<Scheme> schemesFromLocations = new ArrayList<>();
+        System.out.println("*** DEBUG: loadSchemes called ***");
 
+        List<String> locations = deviceDAO.getDistinctLocations();
+        System.out.println("DEBUG: Distinct locations: " + locations);
+
+        List<Scheme> schemesFromLocations = new ArrayList<>();
         for (String location : locations) {
-            // Пытаемся найти схему с именем, равным location
+            System.out.println("DEBUG: Processing location: '" + location + "'");
             Scheme scheme = schemeDAO.findSchemeByName(location);
             if (scheme == null) {
-                // Если не нашли — создаем новую пустую схему с таким именем
+                System.out.println("DEBUG: Scheme for '" + location + "' not found, creating new");
                 scheme = new Scheme(0, location, "Автоматически созданная схема", "{}");
                 boolean created = schemeDAO.addScheme(scheme);
                 if (!created) {
-                    System.out.println("Не удалось создать схему для места установки: " + location);
-                    continue; // переходим к следующей локации
+                    System.out.println("DEBUG: Failed to create scheme for location: " + location);
+                    continue;
                 }
+            } else {
+                System.out.println("DEBUG: Found existing scheme for '" + location + "'");
             }
             schemesFromLocations.add(scheme);
         }
 
+        System.out.println("DEBUG: Total schemes created/found: " + schemesFromLocations.size());
+
         ObservableList<Scheme> schemeList = FXCollections.observableArrayList(schemesFromLocations);
         schemeComboBox.setItems(schemeList);
 
-        if (!schemeList.isEmpty()) {
-            schemeComboBox.getSelectionModel().select(0);
+        // УБРАН: schemeComboBox.getSelectionModel().select(0); — теперь в init(), чтобы контролировать вызов
+        // Только если нет элементов — ошибка
+        if (schemeList.isEmpty()) {
+            System.out.println("ERROR: No schemes to load");
         }
+
+        System.out.println("*** DEBUG: loadSchemes finished ***");
     }
 
     private void loadDevices() {
+        System.out.println("*** DEBUG: loadDevices called ***");
+        if (deviceDAO == null) {
+            System.out.println("ERROR: deviceDAO is null in loadDevices");
+            return;
+        }
         deviceList = FXCollections.observableArrayList(deviceDAO.getAllDevices());
+        System.out.println("DEBUG: Loaded " + deviceList.size() + " devices");
+        for (Device d : deviceList) {
+            System.out.println("DEBUG: Device id=" + d.getId() + ", location='" + d.getLocation() + "'");
+        }
+        // Устанавливаем временно в deviceComboBox для теста (потом refreshAvailableDevices() перезапишет)
         deviceComboBox.setItems(deviceList);
+        System.out.println("*** DEBUG: loadDevices finished ***");
     }
 
+
     private void refreshAvailableDevices() {
-        if (deviceList == null || deviceLocationDAO == null || schemeComboBox.getValue() == null) {
+        System.out.println("*** DEBUG: refreshAvailableDevices called ***");
+
+        if (deviceList == null || deviceList.isEmpty()) {
+            System.out.println("ERROR: deviceList is null or empty — cannot filter");
             availableDevicesList = FXCollections.observableArrayList();
             deviceComboBox.setItems(availableDevicesList);
+            System.out.println("*** DEBUG: refreshAvailableDevices finished (empty list) ***");
             return;
         }
 
-        String selectedSchemeName = schemeComboBox.getValue().getName();
-
-        // Получаем список ID приборов, использованных в других схемах
-        List<Integer> usedDeviceIds = deviceLocationDAO.getAllUsedDeviceIds();
-        List<Integer> currentSchemeDeviceIds = new ArrayList<>();
-
-        if (currentScheme != null) {
-            List<DeviceLocation> currentLocations = deviceLocationDAO.getLocationsBySchemeId(currentScheme.getId());
-            for (DeviceLocation loc : currentLocations) {
-                currentSchemeDeviceIds.add(loc.getDeviceId());
-            }
-            // Исключаем приборы текущей схемы из usedDeviceIds, чтобы позволить повторное использование на той же схеме
-            usedDeviceIds.removeAll(currentSchemeDeviceIds);
+        if (currentScheme == null) {
+            System.out.println("ERROR: currentScheme is null — cannot filter by location");
+            availableDevicesList = FXCollections.observableArrayList();
+            deviceComboBox.setItems(availableDevicesList);
+            System.out.println("*** DEBUG: refreshAvailableDevices finished (no scheme) ***");
+            return;
         }
 
-        // Фильтруем приборы по location == selectedSchemeName и исключаем занятые
-        availableDevicesList = FXCollections.observableArrayList();
+        String selectedSchemeName = currentScheme.getName();
+        System.out.println("DEBUG: Filtering for scheme: '" + selectedSchemeName + "'");
 
+        // Получаем ID приборов на ТЕКУЩЕЙ схеме (чтобы исключить дубликаты на ней)
+        List<Integer> currentSchemeDeviceIds = new ArrayList<>();
+        List<DeviceLocation> currentLocations = deviceLocationDAO.getLocationsBySchemeId(currentScheme.getId());
+        for (DeviceLocation loc : currentLocations) {
+            currentSchemeDeviceIds.add(loc.getDeviceId());
+        }
+        System.out.println("DEBUG: Devices on current scheme: " + currentSchemeDeviceIds);
+
+        // Получаем ID приборов из привязок к ДРУГИМ схемам (занятые elsewhere)
+        List<DeviceLocation> allLocations = deviceLocationDAO.getAllLocations();
+        System.out.println("DEBUG: Total locations in DB: " + allLocations.size());
+
+        List<Integer> usedDeviceIds = new ArrayList<>();  // Только из других схем
+        for (DeviceLocation loc : allLocations) {
+            if (loc.getSchemeId() != currentScheme.getId()) {
+                if (!usedDeviceIds.contains(loc.getDeviceId())) {
+                    usedDeviceIds.add(loc.getDeviceId());
+                }
+            }
+        }
+        System.out.println("DEBUG: Used devices in other schemes: " + usedDeviceIds + " (current scheme ID: " + currentScheme.getId() + ")");
+
+        // Фильтрация: Только приборы с location = schemeName, НЕ used elsewhere И НЕ на current scheme
+        availableDevicesList = FXCollections.observableArrayList();
+        int addedCount = 0;
         for (Device device : deviceList) {
             int devId = device.getId();
-            // Добавляем только приборы с подходящим location
             if (selectedSchemeName.equals(device.getLocation())) {
                 boolean isUsedElsewhere = usedDeviceIds.contains(devId);
                 boolean isOnCurrentScheme = currentSchemeDeviceIds.contains(devId);
-                if (!isUsedElsewhere && !isOnCurrentScheme) {
+
+                System.out.println("DEBUG: Device " + devId + " (" + device.getName() + "): usedElsewhere=" + isUsedElsewhere + ", onCurrentScheme=" + isOnCurrentScheme);
+
+                if (!isUsedElsewhere && !isOnCurrentScheme) {  // Исключаем и с текущей схемы (нет дубликатов!)
                     availableDevicesList.add(device);
+                    addedCount++;
+                    System.out.println("DEBUG: Added available device: " + device.getName() + " (ID " + devId + ")");
+                } else if (isOnCurrentScheme) {
+                    System.out.println("DEBUG: Excluded device " + devId + " — already on current scheme (no duplicates allowed)");
+                } else {
+                    System.out.println("DEBUG: Excluded device " + devId + " — used in other scheme");
                 }
+            } else {
+                System.out.println("DEBUG: Device " + devId + " location '" + device.getLocation() + "' does not match scheme '" + selectedSchemeName + "'");
             }
         }
 
         deviceComboBox.setItems(availableDevicesList);
 
+        System.out.println("DEBUG: Final available devices count: " + addedCount);
+
         if (!availableDevicesList.isEmpty()) {
             deviceComboBox.getSelectionModel().selectFirst();
+            System.out.println("DEBUG: Selected first available device: " + availableDevicesList.get(0).getName());
         } else {
             deviceComboBox.getSelectionModel().clearSelection();
+            System.out.println("DEBUG: No available devices, cleared selection");
         }
+
+        statusLabel.setText("Доступных приборов: " + addedCount);  // Обновляем статус (опционально)
+        System.out.println("*** DEBUG: refreshAvailableDevices finished ***");
     }
 
     private void clearPreview() {
@@ -408,6 +518,7 @@ public class SchemeEditorController {
             public void execute() {
                 schemePane.getChildren().remove(shapeToRemove);
             }
+
             @Override
             public void undo() {
                 schemePane.getChildren().add(shapeToRemove);
@@ -424,9 +535,9 @@ public class SchemeEditorController {
         double[] x = {rect.getX(), rect.getX() + rect.getWidth() / 2, rect.getX() + rect.getWidth()};
         double[] y = {rect.getY(), rect.getY() + rect.getHeight() / 2, rect.getY() + rect.getHeight()};
         int index = 0;
-        for (int i=0; i<3; i++) {
-            for (int j=0; j<3; j++) {
-                if (i == 1 && j ==1) continue; // центр пропускаем
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                if (i == 1 && j == 1) continue; // центр пропускаем
                 Circle handle = createResizeHandle(x[i], y[j], index);
                 resizeHandles[index++] = handle;
                 schemePane.getChildren().add(handle);
@@ -466,11 +577,11 @@ public class SchemeEditorController {
             double currX = e.getX();
             double currY = e.getY();
             if (selectedNode instanceof Rectangle) {
-                resizeRectangleByHandle((Rectangle)selectedNode, resizeCorner, currX, currY);
+                resizeRectangleByHandle((Rectangle) selectedNode, resizeCorner, currX, currY);
             } else if (selectedNode instanceof Ellipse) {
-                resizeEllipseByHandle((Ellipse)selectedNode, resizeCorner, currX, currY);
+                resizeEllipseByHandle((Ellipse) selectedNode, resizeCorner, currX, currY);
             } else if (selectedNode instanceof Line) {
-                resizeLineByHandle((Line)selectedNode, resizeCorner, currX, currY);
+                resizeLineByHandle((Line) selectedNode, resizeCorner, currX, currY);
             }
             updateResizeHandles();
             e.consume();
@@ -610,9 +721,9 @@ public class SchemeEditorController {
             double[] x = {rect.getX(), rect.getX() + rect.getWidth() / 2, rect.getX() + rect.getWidth()};
             double[] y = {rect.getY(), rect.getY() + rect.getHeight() / 2, rect.getY() + rect.getHeight()};
             int index = 0;
-            for (int i=0; i<3; i++) {
-                for (int j=0; j<3; j++) {
-                    if (i == 1 && j ==1) continue;
+            for (int i = 0; i < 3; i++) {
+                for (int j = 0; j < 3; j++) {
+                    if (i == 1 && j == 1) continue;
                     if (resizeHandles[index] != null) {
                         resizeHandles[index].setCenterX(x[i]);
                         resizeHandles[index].setCenterY(y[j]);
@@ -649,33 +760,43 @@ public class SchemeEditorController {
     // -----------------------------------------------------------------
     // Загрузить схему
     private void loadScheme(Scheme scheme) {
-        if (scheme == null) return;
+        System.out.println("*** DEBUG: loadScheme called for scheme: " + (scheme != null ? scheme.getName() : "null") + " ***");
+
+        if (scheme == null) {
+            System.out.println("DEBUG: scheme is null, exiting loadScheme");
+            return;
+        }
         currentScheme = scheme;
+        System.out.println("DEBUG: currentScheme set to: " + currentScheme.getName());
+
         schemePane.getChildren().clear();
         deselectShape();
         undoStack.clear();
         redoStack.clear();
 
         List<SchemeObject> objects = deserializeSchemeData(scheme.getData());
+        System.out.println("DEBUG: Loaded " + objects.size() + " scheme objects from data");
+
         for (SchemeObject obj : objects) {
             schemePane.getChildren().add(obj.toNode());
         }
 
         List<DeviceLocation> locations = deviceLocationDAO.getLocationsBySchemeId(scheme.getId());
+        System.out.println("DEBUG: Found " + locations.size() + " device locations for this scheme");
+
+        // ... добавление иконок из БД ...
         for (DeviceLocation loc : locations) {
             Device device = deviceDAO.getDeviceById(loc.getDeviceId());
             if (device != null) {
-                Circle circle = new Circle(loc.getX(), loc.getY(), 10, Color.BLUE);
-                circle.setCursor(Cursor.HAND);
-                circle.setUserData(device);
-                addContextMenuToCircle(circle, device);
-                addMovementHandlersToCircle(circle);
-                schemePane.getChildren().add(circle);
+                Node deviceNode = createDeviceIcon(loc.getX(), loc.getY(), device);
+                schemePane.getChildren().add(deviceNode);
+                System.out.println("DEBUG: Restored device icon from DB: " + device.getName());
             }
         }
 
         refreshAvailableDevices();
         statusLabel.setText("Загружена схема: " + scheme.getName());
+        System.out.println("*** DEBUG: loadScheme finished for " + scheme.getName() + " ***");
     }
 
     // Сохранить текущую схему
@@ -935,24 +1056,144 @@ public class SchemeEditorController {
             alert.show();
             return;
         }
-        Circle circle = new Circle(x, y, 10, Color.BLUE);
-        circle.setCursor(Cursor.HAND);
-        circle.setUserData(selected);
 
-        addContextMenuToCircle(circle, selected);
-        addMovementHandlersToCircle(circle);
+        Node deviceNode = createDeviceIcon(x, y, selected);  // Теперь Node (ImageView или Circle)
+        schemePane.getChildren().add(deviceNode);
 
-        schemePane.getChildren().add(circle);
         if (currentScheme != null) {
             DeviceLocation loc = new DeviceLocation(selected.getId(), currentScheme.getId(), x, y);
             deviceLocationDAO.addDeviceLocation(loc);
+            System.out.println("DEBUG: Added location to DB for device " + selected.getName() + " at (" + x + ", " + y + ")");
         }
-        availableDevicesList.remove(selected);
-        deviceComboBox.getSelectionModel().clearSelection();
+
+        refreshAvailableDevices();  // Теперь прибор пропадёт из списка (isOnCurrentScheme = true)
+        statusLabel.setText("Прибор добавлен: " + selected.getName());
+        System.out.println("DEBUG: Device added to scheme: " + selected.getName());
     }
 
-    // Добавление контекстного меню к приборам
-    private void addContextMenuToCircle(Circle circle, Device device) {
+    private void addContextMenuToIcon(ImageView icon, Device device) {
+        ContextMenu contextMenu = new ContextMenu();
+        MenuItem deleteItem = new MenuItem("Удалить прибор");
+        MenuItem infoItem = new MenuItem("Показать информацию");
+        deleteItem.setOnAction(event -> {
+            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+            confirm.setTitle("Подтверждение удаления");
+            confirm.setHeaderText("Вы уверены, что хотите удалить прибор " + device.getName() + "?");
+            confirm.setContentText("Это действие нельзя будет отменить.");
+            confirm.showAndWait().ifPresent(result -> {
+                if (result == ButtonType.OK) {
+                    deviceLocationDAO.deleteDeviceLocation(device.getId(), currentScheme.getId());
+                    schemePane.getChildren().remove(icon);
+                    refreshAvailableDevices();
+                    statusLabel.setText("Прибор удалён");
+                }
+            });
+        });
+        infoItem.setOnAction(event -> {
+            Alert infoAlert = new Alert(Alert.AlertType.INFORMATION);
+            infoAlert.setTitle("Информация о приборе");
+            infoAlert.setHeaderText(device.getName() + " (" + device.getInventoryNumber() + ")");
+            infoAlert.setContentText(
+                    "Место: " + device.getLocation() + "\n" +
+                            "Статус: " + device.getStatus() + "\n" +
+                            "Дополнительно: " + device.getAdditionalInfo()
+            );
+            infoAlert.show();
+        });
+        contextMenu.getItems().addAll(deleteItem, infoItem);
+        icon.setOnContextMenuRequested(event -> {
+            contextMenu.show(icon, event.getScreenX(), event.getScreenY());
+            event.consume();
+        });
+    }
+
+    private void addMovementHandlersToIcon(ImageView icon) {
+        final boolean[] dragged = {false};
+        final double[] offsetX = new double[1];
+        final double[] offsetY = new double[1];
+        icon.setOnMousePressed(event -> {
+            if (event.isPrimaryButtonDown()) {
+                // Рассчитываем смещение относительно центра иконки (поскольку layout посередине)
+                offsetX[0] = event.getX() - icon.getLayoutX() - icon.getFitWidth() / 2;
+                offsetY[0] = event.getY() - icon.getLayoutY() - icon.getFitHeight() / 2;
+                dragged[0] = false;
+                icon.setCursor(Cursor.MOVE);
+            }
+        });
+        icon.setOnMouseDragged(event -> {
+            if (event.isPrimaryButtonDown()) {
+                double newX = event.getX() - offsetX[0];
+                double newY = event.getY() - offsetY[0];
+                icon.setLayoutX(newX);
+                icon.setLayoutY(newY);
+                dragged[0] = true;
+            }
+        });
+        icon.setOnMouseReleased(event -> {
+            icon.setCursor(Cursor.HAND);
+            if (currentScheme != null && dragged[0]) {
+                Device device = (Device) icon.getUserData();
+                DeviceLocation loc = new DeviceLocation(device.getId(), currentScheme.getId(), icon.getLayoutX(), icon.getLayoutY());
+                deviceLocationDAO.updateDeviceLocation(loc);
+            }
+            statusLabel.setText("Прибор перемещён");
+        });
+    }
+
+    private Node createDeviceIcon(double x, double y, Device device) {
+        Node iconNode;
+        try {
+            // Загружаем иконку — путь относительно resources
+            Image iconImage = new Image(getClass().getResourceAsStream("/images/manometr.png"));
+
+            // Проверка на ошибку загрузки (файл не найден, повреждён и т.д.)
+            if (iconImage.isError()) {
+                throw new Exception("Image load error: " + iconImage.getException());
+            }
+
+            ImageView deviceIcon = new ImageView(iconImage);
+            deviceIcon.setFitWidth(24);  // Ширина иконки
+            deviceIcon.setFitHeight(24); // Высота иконки
+            deviceIcon.setPreserveRatio(true);  // Сохраняем соотношение сторон
+            deviceIcon.setSmooth(true);  // Плавное масштабирование
+            deviceIcon.setCursor(Cursor.HAND);  // Курсор по умолчанию
+
+            iconNode = deviceIcon;
+            System.out.println("DEBUG: Created ImageView icon for device: " + device.getName());
+
+        } catch (Exception e) {
+            System.err.println("Не удалось загрузить иконку прибора '" + device.getName() + "': " + e.getMessage() + " — fallback to Circle");
+
+            // Fallback: Создаём видимый синий круг, как в оригинальном коде
+            Circle fallbackCircle = new Circle(10, Color.BLUE);
+            fallbackCircle.setCursor(Cursor.HAND);
+            fallbackCircle.setStroke(Color.GRAY);  // Обводка для видимости
+            fallbackCircle.setStrokeWidth(1);
+
+            iconNode = fallbackCircle;
+            System.out.println("DEBUG: Created Circle fallback for device: " + device.getName());
+        }
+
+        // Общие настройки для любого Node (ImageView или Circle)
+        iconNode.setLayoutX(x);
+        iconNode.setLayoutY(y);
+        iconNode.setUserData(device);  // Сохраняем ссылку на Device
+
+        // Добавляем контекстное меню (общий метод для Node, но адаптируем)
+        addContextMenuToNode(iconNode, device);  // Новый общий метод, см. ниже
+
+        // Добавляем обработчики перемещения (общий метод)
+        addMovementHandlersToNode(iconNode);  // Новый общий метод, см. ниже
+
+        return iconNode;
+    }
+
+    /**
+     * Добавляет контекстное меню к Node (работает для ImageView и Circle).
+     * @param node - узел (иконка или круг)
+     * @param device - устройство
+     */
+    private void addContextMenuToNode(Node node, Device device) {
         ContextMenu contextMenu = new ContextMenu();
         MenuItem deleteItem = new MenuItem("Удалить прибор");
         MenuItem infoItem = new MenuItem("Показать информацию");
@@ -964,13 +1205,11 @@ public class SchemeEditorController {
             confirm.setContentText("Это действие нельзя будет отменить.");
             confirm.showAndWait().ifPresent(result -> {
                 if (result == ButtonType.OK) {
-                    if (currentScheme != null) {
-                        deviceLocationDAO.deleteDeviceLocation(device.getId(), currentScheme.getId());
-                    }
-                    schemePane.getChildren().remove(circle);
-                    refreshAvailableDevices();
+                    deviceLocationDAO.deleteDeviceLocation(device.getId(), currentScheme.getId());
+                    schemePane.getChildren().remove(node);
+                    refreshAvailableDevices();  // Обновляем список после удаления
                     statusLabel.setText("Прибор удалён");
-                    schemeComboBox.setValue(currentScheme);
+                    System.out.println("DEBUG: Device deleted from scheme: " + device.getName());
                 }
             });
         });
@@ -988,52 +1227,93 @@ public class SchemeEditorController {
         });
 
         contextMenu.getItems().addAll(deleteItem, infoItem);
-        circle.setOnContextMenuRequested(event -> {
-            contextMenu.show(circle, event.getScreenX(), event.getScreenY());
+
+        node.setOnContextMenuRequested(event -> {
+            contextMenu.show(node, event.getScreenX(), event.getScreenY());
             event.consume();
         });
+
+        System.out.println("DEBUG: Context menu added to node for device: " + device.getName());
     }
 
-    private void addMovementHandlersToCircle(Circle circle) {
+    /**
+     * Добавляет обработчики перемещения к Node (работает для ImageView и Circle).
+     * @param node - узел (иконка или круг)
+     */
+    private void addMovementHandlersToNode(Node node) {
         final boolean[] dragged = {false};
         final double[] offsetX = new double[1];
         final double[] offsetY = new double[1];
 
-        circle.setOnMousePressed(event -> {
+        node.setOnMousePressed(event -> {
             if (event.isPrimaryButtonDown()) {
-                offsetX[0] = event.getX() - circle.getCenterX();
-                offsetY[0] = event.getY() - circle.getCenterY();
+                // Рассчитываем смещение от точки клика до центра элемента
+                double centerOffsetX = 0, centerOffsetY = 0;
+                if (node instanceof ImageView iv) {
+                    centerOffsetX = iv.getFitWidth() / 2;
+                    centerOffsetY = iv.getFitHeight() / 2;
+                } else if (node instanceof Circle c) {
+                    centerOffsetX = c.getRadius();
+                    centerOffsetY = c.getRadius();
+                }
+                offsetX[0] = event.getSceneX() - (node.getLayoutX() + centerOffsetX);
+                offsetY[0] = event.getSceneY() - (node.getLayoutY() + centerOffsetY);
                 dragged[0] = false;
-                circle.setCursor(Cursor.MOVE);
+                node.setCursor(Cursor.MOVE);
+                System.out.println("DEBUG: Drag started for node at (" + node.getLayoutX() + ", " + node.getLayoutY() + ")");
             }
         });
 
-        circle.setOnMouseDragged(event -> {
+        node.setOnMouseDragged(event -> {
             if (event.isPrimaryButtonDown()) {
-                double newX = event.getX() - offsetX[0];
-                double newY = event.getY() - offsetY[0];
-                circle.setCenterX(newX);
-                circle.setCenterY(newY);
+                // Обновляем позицию: новая мышь минус offset (для следования за кликом)
+                double newLayoutX = event.getSceneX() - offsetX[0];
+                double newLayoutY = event.getSceneY() - offsetY[0];
+
+                // Ограничиваем позицию границами pane (опционально, чтобы не выезжало за край)
+                newLayoutX = Math.max(0, Math.min(newLayoutX, schemePane.getWidth() - 50));  // 50 — размер иконки/круга
+                newLayoutY = Math.max(0, Math.min(newLayoutY, schemePane.getHeight() - 50));
+
+                node.setLayoutX(newLayoutX);
+                node.setLayoutY(newLayoutY);
                 dragged[0] = true;
+                System.out.println("DEBUG: Node dragged to (" + newLayoutX + ", " + newLayoutY + ")");
             }
         });
 
-        circle.setOnMouseReleased(event -> {
-            circle.setCursor(Cursor.HAND);
-            if (currentScheme != null) {
-                Device device = (Device) circle.getUserData();
-                DeviceLocation loc = new DeviceLocation(device.getId(), currentScheme.getId(), circle.getCenterX(), circle.getCenterY());
-                deviceLocationDAO.updateDeviceLocation(loc);
+        node.setOnMouseReleased(event -> {
+            node.setCursor(Cursor.HAND);  // Возвращаем стандартный курсор
+            if (currentScheme != null && dragged[0]) {
+                // Извлекаем Device из userData
+                Device device = (Device) node.getUserData();
+                if (device != null) {
+                    // Создаём обновлённую DeviceLocation с новой позицией
+                    DeviceLocation loc = new DeviceLocation(device.getId(), currentScheme.getId(), node.getLayoutX(), node.getLayoutY());
+                    deviceLocationDAO.updateDeviceLocation(loc);  // Сохраняем в БД
+
+                    // Обновляем список доступных (иногда нужно, если позиция влияет на фильтр)
+                    refreshAvailableDevices();
+
+                    statusLabel.setText("Прибор перемещён");
+                    System.out.println("DEBUG: Device " + device.getName() + " position updated in DB to (" + node.getLayoutX() + ", " + node.getLayoutY() + ")");
+                } else {
+                    System.out.println("WARN: No Device in userData for node");
+                }
+            } else if (!dragged[0]) {
+                System.out.println("DEBUG: Clicked but no drag on node");
             }
-            statusLabel.setText("Прибор перемещён");
+            dragged[0] = false;  // Сброс для следующего раза
         });
+
+        System.out.println("DEBUG: Movement handlers added to node");
     }
 
     // -----------------------------------------------------------------
     // ВНУТРЕННИЙ КЛАСС ДЛЯ ОБЪЕКТОВ СХЕМЫ
     // -----------------------------------------------------------------
     private static class SchemeObject {
-        enum Type { LINE, RECTANGLE, ELLIPSE, TEXT }
+        enum Type {LINE, RECTANGLE, ELLIPSE, TEXT}
+
         Type type;
         double x1, y1, x2, y2, width, height, radiusX, radiusY;
         String text;
@@ -1041,13 +1321,24 @@ public class SchemeEditorController {
         SchemeObject(Type t, double... coords) {
             this.type = t;
             if (t == Type.LINE) {
-                x1 = coords[0]; y1 = coords[1]; x2 = coords[2]; y2 = coords[3];
+                x1 = coords[0];
+                y1 = coords[1];
+                x2 = coords[2];
+                y2 = coords[3];
             } else if (t == Type.RECTANGLE) {
-                x1 = coords[0]; y1 = coords[1]; width = coords[2]; height = coords[3];
+                x1 = coords[0];
+                y1 = coords[1];
+                width = coords[2];
+                height = coords[3];
             } else if (t == Type.ELLIPSE) {
-                x1 = coords[0]; y1 = coords[1]; radiusX = coords[2]; radiusY = coords[3];
+                x1 = coords[0];
+                y1 = coords[1];
+                radiusX = coords[2];
+                radiusY = coords[3];
             } else if (t == Type.TEXT) {
-                x1 = coords[0]; y1 = coords[1]; text = coords.length > 2 ? String.valueOf(coords[2]) : "Текст";
+                x1 = coords[0];
+                y1 = coords[1];
+                text = coords.length > 2 ? String.valueOf(coords[2]) : "Текст";
             }
         }
 

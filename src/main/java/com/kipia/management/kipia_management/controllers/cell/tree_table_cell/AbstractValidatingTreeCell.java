@@ -1,37 +1,47 @@
 package com.kipia.management.kipia_management.controllers.cell.tree_table_cell;
 
 import com.kipia.management.kipia_management.controllers.DevicesGroupedController;
-import javafx.scene.control.Alert;
-import javafx.scene.control.TextField;
+import com.kipia.management.kipia_management.controllers.cell.ValidatingCellEditor;
+import com.kipia.management.kipia_management.controllers.cell.ValidationCallback;
 import javafx.scene.control.TreeTableCell;
 
 /**
+ * Абстрактный класс для валидации числовых данных в дереве-таблице приборов.
+ * Теперь использует ValidatingCellEditor для делегирования общей логики.
  * @author vladimir_shi
  * @since 13.09.2025
  */
+public abstract class AbstractValidatingTreeCell<T> extends TreeTableCell<DevicesGroupedController.TreeRowItem, T> implements ValidationCallback {
+    private ValidatingCellEditor editor = new ValidatingCellEditor(this);  // Композиция для общей логики
 
-public abstract class AbstractValidatingTreeCell<T> extends TreeTableCell<DevicesGroupedController.TreeRowItem, T> {
-    protected TextField textField;
-    private boolean isShowingAlert = false;
-
+    /**
+     * Запускает редактирование ячейки.
+     */
     @Override
     public void startEdit() {
         super.startEdit();
-        if (textField == null) createTextField();
         setText(null);
-        setGraphic(textField);
-        textField.setText(getItem() == null ? "" : getItem().toString());
-        textField.selectAll();
-        textField.requestFocus();
+        setGraphic(editor.getTextField());
+        editor.getTextField().setText(getItemAsString());
+        editor.getTextField().selectAll();
+        editor.getTextField().requestFocus();
     }
 
+    /**
+     * Отменяет редактирование ячейки.
+     */
     @Override
     public void cancelEdit() {
         super.cancelEdit();
-        setText(getItem() == null ? "" : getItem().toString());
+        setText(getItemAsString());
         setGraphic(null);
     }
 
+    /**
+     * Обновляет ячейку.
+     * @param item - новое значение
+     * @param empty - является ли ячейка пустой
+     */
     @Override
     protected void updateItem(T item, boolean empty) {
         super.updateItem(item, empty);
@@ -39,49 +49,28 @@ public abstract class AbstractValidatingTreeCell<T> extends TreeTableCell<Device
             setText(null);
             setGraphic(null);
         } else if (isEditing()) {
-            if (textField != null) {
-                textField.setText(item == null ? "" : item.toString());
-            }
+            editor.getTextField().setText(item == null ? "" : item.toString());
             setText(null);
-            setGraphic(textField);
+            setGraphic(editor.getTextField());
         } else {
             setText(item == null ? "" : item.toString());
             setGraphic(null);
         }
     }
 
-    private void createTextField() {
-        textField = new TextField();
-        textField.setOnAction(e -> processEdit());
-        textField.focusedProperty().addListener((obs, oldVal, newVal) -> {
-            if (!newVal) processEdit();
-        });
+    /**
+     * Вспомогательный метод для безопасного преобразования элемента в строку.
+     * @return строку элемента или пустую строку, если элемент null
+     */
+    protected String getItemAsString() {
+        return getItem() == null ? "" : getItem().toString();
     }
 
-    protected void processEdit() {
-        String input = textField.getText().trim();
-        if (input.contains(",")) {
-            showAlert("Используйте точку вместо запятой.");
-            cancelEdit();
-            return;
-        }
-        if (input.isEmpty()) {
-            commitEdit(null);
-            return;
-        }
-        validateAndCommit(input);
-    }
-
-    protected abstract void validateAndCommit(String input);
-
-    protected void showAlert(String msg) {
-        if (isShowingAlert) return;
-        isShowingAlert = true;
-        Alert alert = new Alert(Alert.AlertType.WARNING);
-        alert.setTitle("Ошибка ввода");
-        alert.setHeaderText(null);
-        alert.setContentText(msg);
-        alert.showAndWait();
-        isShowingAlert = false;
-    }
+    /**
+     * Реализация callback: специфичная валидация и коммит.
+     * Делегируется ValidatingCellEditor в processEdit().
+     * @param input строка ввода для валидации
+     */
+    @Override
+    public abstract void validateAndCommit(String input);
 }

@@ -118,17 +118,39 @@ public class DeviceLocationDAO {
     }
 
     /**
-     * Удаление всех привязок для схемы (если схема удаляется)
+     * Получение списка всех привязок приборов к схемам.
      *
-     * @param schemeId ID схемы
+     * @return список всех объектов DeviceLocation
      */
-    public void deleteLocationsBySchemeId(int schemeId) {
-        String sql = "DELETE FROM device_locations WHERE scheme_id = ?";
-        try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
-            stmt.setInt(1, schemeId);
-            stmt.executeUpdate();
+    public List<DeviceLocation> getAllLocations() {
+        List<DeviceLocation> locations = new ArrayList<>();
+        String sql = "SELECT * FROM device_locations";
+        try (Statement stmt = databaseService.getConnection().createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                DeviceLocation loc = new DeviceLocation();
+                loc.setDeviceId(rs.getInt("device_id"));
+                loc.setSchemeId(rs.getInt("scheme_id"));
+                loc.setX(rs.getDouble("x"));
+                loc.setY(rs.getDouble("y"));
+                locations.add(loc);
+            }
         } catch (SQLException e) {
-            System.out.println("Ошибка удаления локаций схемы: " + e.getMessage());
+            System.out.println("Ошибка получения всех локаций: " + e.getMessage());
+        }
+        return locations;
+    }
+
+    /**
+     * Удаление всех привязок (для тестирования или сброса).
+     */
+    public void deleteAllLocations() {
+        String sql = "DELETE FROM device_locations";
+        try (Statement stmt = databaseService.getConnection().createStatement()) {
+            int deleted = stmt.executeUpdate(sql);
+            System.out.println("DEBUG: Deleted " + deleted + " device locations");
+        } catch (SQLException e) {
+            System.out.println("Ошибка удаления всех локаций: " + e.getMessage());
         }
     }
 }

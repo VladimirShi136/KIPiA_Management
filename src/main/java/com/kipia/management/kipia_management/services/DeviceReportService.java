@@ -13,6 +13,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
@@ -23,10 +24,12 @@ import java.util.stream.Collectors;
  */
 
 public class DeviceReportService {
+    // логгер для сообщений
+    private static final Logger logger = Logger.getLogger(DeviceReportService.class.getName());
 
     // Возвращает map подсчёта по выбранному критерию
     public Map<String, Long> getReportData(List<Device> devices, String reportKey) {
-        return switch (reportKey) {
+        Map<String, Long> result = switch (reportKey) {
             case "Status" -> groupBy(devices, Device::getStatus);
             case "Type" -> groupBy(devices, Device::getType);
             case "Manufacturer" -> groupBy(devices, Device::getManufacturer);
@@ -36,6 +39,8 @@ public class DeviceReportService {
                     .collect(Collectors.groupingBy(d -> d.getYear().toString(), Collectors.counting()));
             default -> Collections.emptyMap();
         };
+        logger.info("Сгенерированы данные отчета для '" + reportKey + "': " + result.size() + " записей");  // Logger для success
+        return result;
     }
 
     private Map<String, Long> groupBy(List<Device> devices, Function<Device, String> classifier) {
@@ -46,9 +51,13 @@ public class DeviceReportService {
 
     // Метод построения JFreeChart диаграммы с обновлением темы
     public ChartViewer buildPieChart(Map<String, Long> dataMap, String chartTitle, BorderPane chartPane, boolean isDarkTheme) {
+        if (dataMap.isEmpty()) {
+            logger.warning("Пустые данные для графика '" + chartTitle + "' — график не создан");  // Logger для предупреждения
+            // Не возвращаем ничего или null; контроллер xử lý
+            return null;
+        }
         org.jfree.data.general.DefaultPieDataset dataset = new org.jfree.data.general.DefaultPieDataset();
         dataMap.forEach(dataset::setValue);
-
         JFreeChart chart = ChartFactory.createPieChart(
                 chartTitle,
                 dataset,
@@ -56,7 +65,6 @@ public class DeviceReportService {
                 true,
                 false
         );
-
         PiePlot plot = (PiePlot) chart.getPlot();
         if (isDarkTheme) {
             styleChartForDarkTheme(chart, plot);
@@ -65,10 +73,10 @@ public class DeviceReportService {
         }
         plot.setOutlineVisible(true);
         plot.setLabelFont(new Font("Dialog", Font.BOLD, 12));
-
         ChartViewer chartViewer = new ChartViewer(chart);
         chartViewer.setPrefSize(600, 400);
         chartPane.setCenter(chartViewer);
+        logger.info("График '" + chartTitle + "' построен успешно");  // Logger для success
         return chartViewer;
     }
 

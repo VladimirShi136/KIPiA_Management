@@ -1,8 +1,8 @@
 package com.kipia.management.kipia_management.services;
 
 import com.kipia.management.kipia_management.models.Device;
-
 import java.sql.*;
+import java.util.logging.Logger;
 
 /**
  * Класс DatabaseService предоставляет функционал для подключения к SQLite базе данных,
@@ -11,13 +11,13 @@ import java.sql.*;
  * @author vladimir_shi
  * @since 29.08.2025
  */
-
 public class DatabaseService {
     // URL подключения к базе данных SQLite (файл kipia_management.db)
     private static final String DB_URL = "jdbc:sqlite:kipia_management.db";
-
     // Объект подключения к базе данных
     private Connection connection;
+    // логгер для сообщений
+    private static final Logger LOGGER = Logger.getLogger(DatabaseService.class.getName());
 
     // Конструктор класса: устанавливает соединение
     public DatabaseService() {
@@ -32,9 +32,10 @@ public class DatabaseService {
     private void connect() {
         try {
             connection = DriverManager.getConnection(DB_URL);
-            System.out.println("Подключение к SQLite установлено!");
+            LOGGER.info("Подключение к SQLite установлено!");  // Замена println на logger
         } catch (SQLException e) {
-            System.out.println("Ошибка подключения: " + e.getMessage());
+            LOGGER.severe("Ошибка подключения: " + e.getMessage());  // Замена println на logger
+            throw new RuntimeException(e);  // Выбрасываем исключение, чтобы Main.java обработал и показал alert
         }
     }
 
@@ -102,9 +103,10 @@ public class DatabaseService {
         // Выполнение SQL-запроса для создания таблиц
         try (Statement stmt = connection.createStatement()) {
             stmt.executeUpdate(sql1 + sql2.toString() + sql3);
-            System.out.println("Таблицы созданы успешно!");
+            LOGGER.info("Таблицы созданы успешно!");  // Замена println на logger
         } catch (SQLException e) {
-            System.out.println("Ошибка создания таблиц: " + e.getMessage());
+            LOGGER.severe("Ошибка создания таблиц: " + e.getMessage());  // Замена println на logger
+            throw new RuntimeException(e);  // Выбрасываем исключение
         }
     }
 
@@ -125,10 +127,10 @@ public class DatabaseService {
         try {
             if (connection != null) {
                 connection.close();
-                System.out.println("Подключение закрыто.");
+                LOGGER.info("Подключение закрыто.");  // Замена println на logger
             }
         } catch (SQLException e) {
-            System.out.println("Ошибка закрытия подключения: " + e.getMessage());
+            LOGGER.severe("Ошибка закрытия подключения: " + e.getMessage());  // Замена println на logger
         }
     }
 
@@ -148,7 +150,7 @@ public class DatabaseService {
 
     public void addTestData() {
         if (hasData()) {
-            System.out.println("Тестовые данные уже существуют");
+            LOGGER.info("Тестовые данные уже существуют");
             return;
         }
         DeviceDAO deviceDAO = new DeviceDAO(this);
@@ -205,9 +207,10 @@ public class DatabaseService {
             stmtScheme.setString(2, "Тестовая схема с линиями");
             stmtScheme.setString(3, serializedScheme);
             stmtScheme.executeUpdate();
-            System.out.println("Тестовая схема добавлена");
+            LOGGER.info("Тестовая схема добавлена");  // Замена println
         } catch (SQLException e) {
-            System.out.println("Ошибка добавления тестовой схемы: " + e.getMessage());
+            LOGGER.severe("Ошибка добавления тестовой схемы: " + e.getMessage());  // Замена println
+            // Не выбрасываем здесь, так как это не критично; но можно, если нужно
         }
 
         // НОВЫЕ: Добавить тестовые привязки приборов (device_locations)
@@ -229,12 +232,11 @@ public class DatabaseService {
             stmtLoc.setDouble(3, 350);
             stmtLoc.executeUpdate();
 
-            System.out.println("Тестовые привязки приборов добавлены");
+            LOGGER.info("Тестовые привязки приборов добавлены");  // Замена println
         } catch (SQLException e) {
-            System.out.println("Ошибка добавления тестовых локаций: " + e.getMessage());
+            LOGGER.severe("Ошибка добавления тестовых локаций: " + e.getMessage());  // Замена println
         }
-
-        System.out.println("Тестовые данные добавлены");
+        LOGGER.info("Тестовые данные добавлены");  // Замена println
     }
 
     private boolean hasData() {
