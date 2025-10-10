@@ -8,6 +8,8 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Класс SchemeDAO (Data Access Object) предоставляет методы для работы с данными схем в базе данных.
@@ -20,6 +22,8 @@ import java.util.List;
 public class SchemeDAO {
     // Сервис для работы с базой данных
     private final DatabaseService databaseService;
+    // логгер для сообщений
+    private static final Logger LOGGER = Logger.getLogger(SchemeDAO.class.getName());
 
     /**
      * Конструктор класса SchemeDAO
@@ -51,7 +55,7 @@ public class SchemeDAO {
             }
             return false;
         } catch (SQLException e) {
-            System.out.println("Ошибка добавления схемы: " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "Ошибка добавления схемы: " + e.getMessage());
             return false;
         }
     }
@@ -69,45 +73,25 @@ public class SchemeDAO {
                 schemes.add(createSchemeFromResultSet(rs));
             }
         } catch (SQLException e) {
-            System.out.println("Ошибка получения схем: " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "Ошибка получения схем: " + e.getMessage());
         }
         return schemes;
     }
 
     /**
      * Обновление данных схемы в базе данных
+     *
      * @param scheme объект схемы с обновленными данными
-     * @return true - если обновление прошло успешно, false - в случае ошибки
      */
-    public boolean updateScheme(Scheme scheme) {
+    public void updateScheme(Scheme scheme) {
         String sql = "UPDATE schemes SET name = ?, description = ?, data = ? WHERE id = ?";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
             stmt.setString(1, scheme.getName());
             stmt.setString(2, scheme.getDescription());
             stmt.setString(3, scheme.getData());
             stmt.setInt(4, scheme.getId());
-            int rowsAffected = stmt.executeUpdate();
-            return rowsAffected > 0;
         } catch (SQLException e) {
-            System.out.println("Ошибка обновления схемы: " + e.getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Удаление схемы из базы данных по идентификатору
-     * @param id идентификатор схемы для удаления
-     * @return true - если удаление прошло успешно, false - в случае ошибки
-     */
-    public boolean deleteScheme(int id) {
-        String sql = "DELETE FROM schemes WHERE id = ?";
-        try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
-            stmt.setInt(1, id);
-            int rowsAffected = stmt.executeUpdate();
-            return rowsAffected > 0;
-        } catch (SQLException e) {
-            System.out.println("Ошибка удаления схемы: " + e.getMessage());
-            return false;
+            LOGGER.log(Level.SEVERE, "Ошибка обновления схемы: " + e.getMessage());
         }
     }
 
@@ -125,7 +109,7 @@ public class SchemeDAO {
                 return createSchemeFromResultSet(rs);
             }
         } catch (SQLException e) {
-            System.out.println("Ошибка поиска схемы: " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "Ошибка поиска схемы: " + e.getMessage());
         }
         return null;
     }
@@ -144,7 +128,7 @@ public class SchemeDAO {
                 return createSchemeFromResultSet(rs);
             }
         } catch (SQLException e) {
-            System.out.println("Ошибка получения схемы по ID: " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "Ошибка получения схемы по ID: " + e.getMessage());
         }
         return null;
     }

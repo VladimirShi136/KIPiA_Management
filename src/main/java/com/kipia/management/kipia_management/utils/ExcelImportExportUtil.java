@@ -3,7 +3,6 @@ package com.kipia.management.kipia_management.utils;
 import com.kipia.management.kipia_management.controllers.DevicesGroupedController;
 import com.kipia.management.kipia_management.models.Device;
 import com.kipia.management.kipia_management.services.DeviceDAO;
-import javafx.scene.control.Alert;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableView;
 import javafx.stage.FileChooser;
@@ -16,6 +15,8 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Класс с утилитами для работы с импортом и экспортом таблицы БД
@@ -25,6 +26,9 @@ import java.util.List;
  */
 
 public class ExcelImportExportUtil {
+
+
+    private static final Logger LOGGER = Logger.getLogger(ExcelImportExportUtil.class.getName());
 
     // --- Список заголовков столбцов ---
     private static final String[] HEADERS = {
@@ -40,32 +44,30 @@ public class ExcelImportExportUtil {
      *
      * @param ownerWindow окно, которое вызвало экспорт
      * @param devices     список приборов
+     * @return true если экспорт успешен, false если ошибка (с логгированием)
      */
-    public static void exportDevicesToExcel(Window ownerWindow, List<Device> devices) {
+    public static boolean exportDevicesToExcel(Window ownerWindow, List<Device> devices) {
         File file = showSaveDialog(ownerWindow, "Экспорт в Excel");
-        if (file == null) return;
-
+        if (file == null) return false;  // Пользователь отменил
         try (Workbook wb = new XSSFWorkbook()) {
             Sheet sheet = wb.createSheet("Devices");
             setupSheetForPrinting(sheet);
             CellStyle headerStyle = createHeaderStyle(wb);
             CellStyle cellStyle = createCellStyle(wb);
-
             createHeaderRow(sheet, headerStyle);
-
             for (int i = 0; i < devices.size(); i++) {
                 Row row = sheet.createRow(i + 1);
                 fillDeviceRow(devices.get(i), row, cellStyle);
             }
-
             setColumnWidths(sheet);
-
             try (FileOutputStream fos = new FileOutputStream(file)) {
                 wb.write(fos);
             }
-            showAlert(Alert.AlertType.INFORMATION, "Экспорт завершён: " + file.getAbsolutePath());
+            LOGGER.info("Экспорт завершён: " + file.getAbsolutePath());  // Logger для уведомлений
+            return true;
         } catch (Exception e) {
-            showAlert(Alert.AlertType.ERROR, "Ошибка экспорта: " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "Ошибка экспорта: " + e.getMessage());  // Logger для ошибок
+            return false;
         }
     }
 
@@ -76,33 +78,32 @@ public class ExcelImportExportUtil {
      * @param deviceDAO   сервис работы с БД
      * @param onSuccessUpdate действие после успешного импорта
      * @param onError действие при ошибке импорта
+     * @return результат импорта
      */
-    public static void importDevicesFromExcel(Window ownerWindow,
-                                              DeviceDAO deviceDAO,
-                                              Runnable onSuccessUpdate,
-                                              Runnable onError) {
+    public static String importDevicesFromExcel(Window ownerWindow,
+                                                DeviceDAO deviceDAO,
+                                                Runnable onSuccessUpdate,
+                                                Runnable onError) {
         File file = showOpenDialog(ownerWindow, "Импорт из Excel");
-        if (file == null) return;
-
+        if (file == null) return null;  // Пользователь отменил
         try (FileInputStream fis = new FileInputStream(file);
              Workbook wb = new XSSFWorkbook(fis)) {
-
             Sheet sheet = wb.getSheet("Devices");
             if (sheet == null) {
-                showAlert(Alert.AlertType.ERROR, "Лист 'Devices' не найден в файле");
+                LOGGER.severe("Лист 'Devices' не найден в файле");  // Логгирование ошибки
                 runSafe(onError);
-                return;
+                return null;
             }
-
             List<Device> devices = parseDevicesFromSheet(sheet, 1);
             int[] counts = processDevices(deviceDAO, devices);
             runSafe(onSuccessUpdate);
-            showAlert(Alert.AlertType.INFORMATION,
-                    "Импорт завершён!\nДобавлено: " + counts[0] + "\nОбновлено: " + counts[1]);
-
+            String result = "Импорт завершён!\nДобавлено: " + counts[0] + "\nОбновлено: " + counts[1];
+            LOGGER.info(result);  // Логгирование успеха
+            return result;
         } catch (Exception e) {
-            showAlert(Alert.AlertType.ERROR, "Ошибка импорта: " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "Ошибка импорта: " + e.getMessage());  // Логгирование ошибки
             runSafe(onError);
+            return null;
         }
     }
 
@@ -111,20 +112,18 @@ public class ExcelImportExportUtil {
      *
      * @param ownerWindow окно, которое вызвало экспорт
      * @param treeTable   группированная таблица
+     * @return true если экспорт успешен, false если ошибка (с логгированием)
      */
-    public static void exportGroupedTreeTableToExcel(Window ownerWindow,
-                                                     TreeTableView<DevicesGroupedController.TreeRowItem> treeTable) {
+    public static boolean exportGroupedTreeTableToExcel(Window ownerWindow,
+                                                        TreeTableView<DevicesGroupedController.TreeRowItem> treeTable) {
         File file = showSaveDialog(ownerWindow, "Экспорт группированной таблицы в Excel");
-        if (file == null) return;
-
+        if (file == null) return false;  // Пользователь отменил
         try (Workbook wb = new XSSFWorkbook()) {
             Sheet sheet = wb.createSheet("GroupedDevices");
             setupSheetForPrinting(sheet);
-
             CellStyle groupStyle = createGroupStyle(wb);
             CellStyle headerStyle = createHeaderStyle(wb);
             CellStyle cellStyle = createCellStyle(wb);
-
             int rowNum = 0;
             for (TreeItem<DevicesGroupedController.TreeRowItem> groupNode : treeTable.getRoot().getChildren()) {
                 if (groupNode.getValue() instanceof DevicesGroupedController.GroupItem group) {
@@ -132,7 +131,6 @@ public class ExcelImportExportUtil {
                     Cell groupCell = groupRow.createCell(0);
                     groupCell.setCellValue(group.location());
                     groupCell.setCellStyle(groupStyle);
-
                     Row headerRow = sheet.createRow(rowNum++);
                     headerRow.setHeightInPoints(40);
                     for (int i = 0; i < HEADERS.length; i++) {
@@ -140,7 +138,6 @@ public class ExcelImportExportUtil {
                         cell.setCellValue(HEADERS[i]);
                         cell.setCellStyle(headerStyle);
                     }
-
                     for (TreeItem<DevicesGroupedController.TreeRowItem> deviceNode : groupNode.getChildren()) {
                         if (deviceNode.getValue() instanceof DevicesGroupedController.DeviceItem deviceItem) {
                             Row row = sheet.createRow(rowNum++);
@@ -149,54 +146,50 @@ public class ExcelImportExportUtil {
                     }
                 }
             }
-
             setColumnWidths(sheet);
-
             try (FileOutputStream fos = new FileOutputStream(file)) {
                 wb.write(fos);
             }
-            showAlert(Alert.AlertType.INFORMATION, "Экспорт завершён: " + file.getAbsolutePath());
+            LOGGER.info("Экспорт завершён: " + file.getAbsolutePath());  // Логгирование успеха
+            return true;
         } catch (Exception e) {
-            showAlert(Alert.AlertType.ERROR, "Ошибка экспорта: " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "Ошибка экспорта: " + e.getMessage());  // Логгирование ошибки
+            return false;
         }
     }
 
     /**
      * Импорт группированной таблицы из Excel
      *
-     * @param ownerWindow окно, которое вызвало импорт
-     * @param deviceDAO   сервис работы с БД
-     * @param treeTable   группированная таблица
+     * @param ownerWindow       окно, которое вызвало импорт
+     * @param deviceDAO         сервис работы с БД
+     * @param treeTable         группированная таблица
      * @param onSuccessUpdate действие после успешного импорта
-     * @param onError действие при ошибке импорта
+     * @param onError         действие при ошибке импорта
+     * @return результат импорта (строка с детали "Импорт завершён!\nДобавлено: X\nОбновлено: Y") или null при ошибке (с логгированием)
      */
-    public static void importGroupedTreeTableFromExcel(Window ownerWindow,
-                                                       DeviceDAO deviceDAO,
-                                                       TreeTableView<DevicesGroupedController.TreeRowItem> treeTable,
-                                                       Runnable onSuccessUpdate,
-                                                       Runnable onError) {
+    public static String importGroupedTreeTableFromExcel(Window ownerWindow,
+                                                         DeviceDAO deviceDAO,
+                                                         TreeTableView<DevicesGroupedController.TreeRowItem> treeTable,
+                                                         Runnable onSuccessUpdate,
+                                                         Runnable onError) {
         File file = showOpenDialog(ownerWindow, "Импорт группированной таблицы из Excel");
-        if (file == null) return;
-
+        if (file == null) return null;  // Пользователь отменил
         try (FileInputStream fis = new FileInputStream(file);
              Workbook wb = new XSSFWorkbook(fis)) {
-
             Sheet sheet = wb.getSheet("GroupedDevices");
             if (sheet == null) {
-                showAlert(Alert.AlertType.ERROR, "Лист 'GroupedDevices' не найден в файле");
+                LOGGER.severe("Лист 'GroupedDevices' не найден в файле");  // Логгирование ошибки
                 runSafe(onError);
-                return;
+                return null;
             }
-
             TreeItem<DevicesGroupedController.TreeRowItem> root = new TreeItem<>();
             root.setExpanded(true);
             TreeItem<DevicesGroupedController.TreeRowItem> currentGroupNode = null;
             int imported = 0, updated = 0;
-
             for (int i = 0; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
                 if (row == null) continue;
-
                 String firstCellValue = getStringCell(row, 0);
                 boolean otherCellsEmpty = true;
                 for (int col = 1; col <= 10; col++) {
@@ -205,7 +198,6 @@ public class ExcelImportExportUtil {
                         break;
                     }
                 }
-
                 if (otherCellsEmpty && !isBlank(firstCellValue)) {
                     DevicesGroupedController.GroupItem groupItem = new DevicesGroupedController.GroupItem(firstCellValue);
                     currentGroupNode = new TreeItem<>(groupItem);
@@ -214,7 +206,6 @@ public class ExcelImportExportUtil {
                 } else if (currentGroupNode != null) {
                     Device d = parseDeviceFromRow(row);
                     if (isBlank(d.getInventoryNumber())) continue;
-
                     int[] result = processDevice(deviceDAO, d);
                     imported += result[0];
                     updated += result[1];
@@ -223,15 +214,15 @@ public class ExcelImportExportUtil {
                     currentGroupNode.getChildren().add(deviceNode);
                 }
             }
-
             treeTable.setRoot(root);
             runSafe(onSuccessUpdate);
-            showAlert(Alert.AlertType.INFORMATION,
-                    "Импорт завершён!\nДобавлено: " + imported + "\nОбновлено: " + updated);
-
+            String result = "Импорт завершён!\nДобавлено: " + imported + "\nОбновлено: " + updated;
+            LOGGER.info(result);  // Логгирование успеха
+            return result;
         } catch (Exception e) {
-            showAlert(Alert.AlertType.ERROR, "Ошибка импорта: " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "Ошибка импорта: " + e.getMessage());  // Логгирование ошибки
             runSafe(onError);
+            return null;
         }
     }
 
@@ -321,8 +312,8 @@ public class ExcelImportExportUtil {
     /**
      * Заполняет строку прибора
      *
-     * @param d    прибор
-     * @param row  строка
+     * @param d     прибор
+     * @param row   строка
      * @param style стиль
      */
     private static void fillDeviceRow(Device d, Row row, CellStyle style) {
@@ -342,7 +333,7 @@ public class ExcelImportExportUtil {
     /**
      * Считывает приборы из листа
      *
-     * @param sheet лист
+     * @param sheet    лист
      * @param startRow начало чтения
      * @return список приборов
      */
@@ -373,14 +364,16 @@ public class ExcelImportExportUtil {
         if (!yearStr.isBlank()) {
             try {
                 d.setYear(Integer.valueOf(yearStr));
-            } catch (NumberFormatException ignored) {}
+            } catch (NumberFormatException ignored) {
+            }
         }
         d.setMeasurementLimit(getStringCell(row, 5));
         String accStr = getStringCell(row, 6);
         if (!accStr.isBlank()) {
             try {
                 d.setAccuracyClass(Double.valueOf(accStr));
-            } catch (NumberFormatException ignored) {}
+            } catch (NumberFormatException ignored) {
+            }
         }
         d.setLocation(getStringCell(row, 7));
         d.setValveNumber(getStringCell(row, 8));
@@ -521,10 +514,10 @@ public class ExcelImportExportUtil {
     /**
      * Заполняет ячейку
      *
-     * @param row  строка
+     * @param row      строка
      * @param colIndex индекс ячейки
-     * @param value  значение
-     * @param style  стиль
+     * @param value    значение
+     * @param style    стиль
      */
     private static void createCell(Row row, int colIndex, String value, CellStyle style) {
         Cell cell = row.createCell(colIndex);
@@ -535,7 +528,7 @@ public class ExcelImportExportUtil {
     /**
      * Возвращает значение ячейки, если она не null, иначе пустую строку
      *
-     * @param row   строка
+     * @param row    строка
      * @param colIdx индекс ячейки
      * @return строка
      */
@@ -554,16 +547,5 @@ public class ExcelImportExportUtil {
      */
     private static String nullToEmpty(String s) {
         return s == null ? "" : s;
-    }
-
-    /**
-     * Показывает сообщение пользователю
-     *
-     * @param type тип сообщения
-     * @param text текст сообщения
-     */
-    private static void showAlert(Alert.AlertType type, String text) {
-        Alert alert = new Alert(type, text);
-        alert.show();
     }
 }

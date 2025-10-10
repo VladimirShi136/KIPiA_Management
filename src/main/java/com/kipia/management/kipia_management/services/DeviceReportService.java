@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 
 public class DeviceReportService {
     // логгер для сообщений
-    private static final Logger logger = Logger.getLogger(DeviceReportService.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(DeviceReportService.class.getName());
 
     // Возвращает map подсчёта по выбранному критерию
     public Map<String, Long> getReportData(List<Device> devices, String reportKey) {
@@ -39,7 +39,7 @@ public class DeviceReportService {
                     .collect(Collectors.groupingBy(d -> d.getYear().toString(), Collectors.counting()));
             default -> Collections.emptyMap();
         };
-        logger.info("Сгенерированы данные отчета для '" + reportKey + "': " + result.size() + " записей");  // Logger для success
+        LOGGER.info("Сгенерированы данные отчета для '" + reportKey + "': " + result.size() + " записей");  // Logger для success
         return result;
     }
 
@@ -52,7 +52,7 @@ public class DeviceReportService {
     // Метод построения JFreeChart диаграммы с обновлением темы
     public ChartViewer buildPieChart(Map<String, Long> dataMap, String chartTitle, BorderPane chartPane, boolean isDarkTheme) {
         if (dataMap.isEmpty()) {
-            logger.warning("Пустые данные для графика '" + chartTitle + "' — график не создан");  // Logger для предупреждения
+            LOGGER.warning("Пустые данные для графика '" + chartTitle + "' — график не создан");  // Logger для предупреждения
             // Не возвращаем ничего или null; контроллер xử lý
             return null;
         }
@@ -76,7 +76,7 @@ public class DeviceReportService {
         ChartViewer chartViewer = new ChartViewer(chart);
         chartViewer.setPrefSize(600, 400);
         chartPane.setCenter(chartViewer);
-        logger.info("График '" + chartTitle + "' построен успешно");  // Logger для success
+        LOGGER.info("График '" + chartTitle + "' построен успешно");  // Logger для success
         return chartViewer;
     }
 

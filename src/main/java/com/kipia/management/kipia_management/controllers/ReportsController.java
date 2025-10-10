@@ -4,12 +4,16 @@ import com.kipia.management.kipia_management.models.Device;
 import com.kipia.management.kipia_management.services.DeviceDAO;
 import com.kipia.management.kipia_management.services.DeviceReportService;
 import com.kipia.management.kipia_management.services.ExcelExportReportsService;
+import com.kipia.management.kipia_management.utils.CustomAlert;
 import com.kipia.management.kipia_management.utils.StyleUtils;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import org.jfree.chart.fx.ChartViewer;
+
+import java.io.File;
 import java.util.List;
 import java.util.Map;
 
@@ -48,7 +52,21 @@ public class ReportsController {
         exportReportButton.setOnAction(event -> {
             String reportKey = getCurrentReportKey();
             if (reportKey.isEmpty()) return;
-            excelService.exportReport(allDevices, reportKey, primaryStage);
+
+            // Открываем диалог выбора файла здесь (перенесено из сервиса)
+            FileChooser chooser = new FileChooser();
+            chooser.setTitle("Экспорт отчёта " + reportKey + " в Excel");
+            chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Excel файлы", "*.xlsx"));
+            File file = chooser.showSaveDialog(primaryStage);
+            if (file == null) return;  // Пользователь отменил
+
+            // Вызываем экспорт с файлом, получаем результат
+            boolean success = excelService.exportReport(allDevices, reportKey, file);
+            if (success) {
+                CustomAlert.showInfo("Экспорт", "Отчёт " + reportKey + " экспортирован: " + file.getAbsolutePath());
+            } else {
+                CustomAlert.showError("Экспорт", "Ошибка при экспорте отчёта " + reportKey);
+            }
         });
 
         // Применение стилей и hover (если нужно, пример)

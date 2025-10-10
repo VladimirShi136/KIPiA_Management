@@ -4,6 +4,7 @@ import com.kipia.management.kipia_management.controllers.cell.table_cell.Validat
 import com.kipia.management.kipia_management.controllers.cell.table_cell.ValidatingIntegerCell;
 import com.kipia.management.kipia_management.models.Device;
 import com.kipia.management.kipia_management.services.DeviceDAO;
+import com.kipia.management.kipia_management.utils.CustomAlert;
 import com.kipia.management.kipia_management.utils.ExcelImportExportUtil;
 import com.kipia.management.kipia_management.utils.StyleUtils;
 import javafx.collections.FXCollections;
@@ -23,9 +24,11 @@ import javafx.util.Callback;
 import java.io.File;
 import java.util.List;
 import java.util.function.BiConsumer;
+import java.util.logging.Logger;
 
 /**
  * Контроллер, отвечающий за отображение и работу с таблицей приборов.
+ *
  * @author vladimir_shi
  * @since 11.09.2025
  */
@@ -54,6 +57,9 @@ public class DevicesTableController {
     @FXML
     private Label brokenDevicesLabel;
 
+    // логгер для сообщений
+    private static final Logger logger = Logger.getLogger(DevicesTableController.class.getName());
+
     // ---------- Сервисы ----------
     private DeviceDAO deviceDAO;
 
@@ -78,7 +84,8 @@ public class DevicesTableController {
     }
 
     /**
-     *  Инициализация контроллера редактирования схемы.
+     * Инициализация контроллера редактирования схемы.
+     *
      * @param controller - контроллер
      */
     public void setSchemeEditorController(SchemeEditorController controller) {
@@ -181,6 +188,7 @@ public class DevicesTableController {
 
     /**
      * Колонка, редактируемая через ValidatingIntegerCell
+     *
      * @return - колонка
      */
     private TableColumn<Device, Integer> createYearColumn() {
@@ -203,6 +211,7 @@ public class DevicesTableController {
 
     /**
      * Колонка, редактируемая через ValidatingDoubleCell
+     *
      * @return - колонка
      */
     private TableColumn<Device, Double> createAccuracyClassColumn() {
@@ -295,7 +304,7 @@ public class DevicesTableController {
             private void viewPhotos(Device device) {
                 List<String> list = device.getPhotos();
                 if (list == null || list.isEmpty()) {
-                    showAlert(Alert.AlertType.INFORMATION, "Фотографии не добавлены");
+                    CustomAlert.showInfo("Просмотр фото", "Фотографии не добавлены");
                     return;
                 }
                 Stage stage = new Stage();
@@ -391,59 +400,63 @@ public class DevicesTableController {
     private void deleteSelectedDevice() {
         Device selected = deviceTable.getSelectionModel().getSelectedItem();
         if (selected == null) {
-            showAlert(Alert.AlertType.WARNING, "Выберите прибор для удаления");
+            CustomAlert.showWarning("Удаление", "Выберите прибор для удаления");
             return;
         }
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
-                "Удалить прибор \"" + selected.getName() + "\"?",
-                ButtonType.YES, ButtonType.NO);
-        confirm.showAndWait().ifPresent(r -> {
-            if (r == ButtonType.YES) {
-                boolean ok = deviceDAO.deleteDevice(selected.getId());
-                if (ok) {
-                    filteredList.getSource().remove(selected);
-                    updateStatistics();
-                    if (schemeEditorController != null) {
-                        schemeEditorController.refreshSchemesAndDevices();
-                    }
-                } else {
-                    showAlert(Alert.AlertType.ERROR, "Не удалось удалить запись из БД");
+        // showConfirmation возвращает boolean: true — YES, false — NO/CANCEL
+        boolean confirmed = CustomAlert.showConfirmation("Подтверждение", "Удалить прибор \"" + selected.getName() + "\"?");
+        if (confirmed) {
+            logger.info("Начато удаление прибора: " + selected.getName());
+            boolean ok = deviceDAO.deleteDevice(selected.getId());
+            if (ok) {
+                filteredList.getSource().remove(selected);
+                updateStatistics();
+                if (schemeEditorController != null) {
+                    schemeEditorController.refreshSchemesAndDevices();
                 }
+                logger.info("Прибор успешно удалён: " + selected.getName());
+            } else {
+                CustomAlert.showError("Удаление", "Не удалось удалить запись из БД");
+                logger.severe("Не удалось удалить прибор: " + selected.getName());
             }
-        });
+        } else {
+            logger.info("Удаление отменено пользователем для прибора: " + selected.getName());
+        }
     }
 
     // -----------------------------------------------------------------
     //   Экспорт / импорт Excel (используем Apache POI)
     // -----------------------------------------------------------------
     private void exportToExcel() {
-        ExcelImportExportUtil.exportDevicesToExcel(deviceTable.getScene().getWindow(), deviceTable.getItems());
+        //ExcelImportExportUtil.exportDevicesToExcel(deviceTable.getScene().getWindow(), deviceTable.getItems());
+        boolean success = ExcelImportExportUtil.exportDevicesToExcel(deviceTable.getScene().getWindow(), deviceTable.getItems());
+        if (success) {
+            CustomAlert.showInfo("Экспорт", "Экспорт завершён успешно");
+            logger.info("Экспорт устройств в Excel завершён успешно");
+        } else {
+            CustomAlert.showError("Экспорт", "Ошибка экспорта в Excel");
+            logger.severe("Ошибка экспорта устройств в Excel");
+        }
     }
 
     private void importFromExcel() {
-        ExcelImportExportUtil.importDevicesFromExcel(deviceTable.getScene().getWindow(), deviceDAO,
+        String result = ExcelImportExportUtil.importDevicesFromExcel(deviceTable.getScene().getWindow(), deviceDAO,
                 () -> {
                     loadDataFromDao();
                     updateStatistics();
                     if (schemeEditorController != null) {
                         schemeEditorController.refreshSchemesAndDevices();
                     }
-                },
-                () -> {
-                    // Ошибка при импорте
-                    Alert errorAlert = new Alert(Alert.AlertType.ERROR);
-                    errorAlert.setTitle("Ошибка импорта");
-                    errorAlert.setHeaderText("Не удалось импортировать данные из Excel");
-                    errorAlert.setContentText("""
-                            Возможные причины:
-                            - Неправильный формат файла (проверьте заголовки и типы данных).
-                            - Ошибка доступа базе данных.
-                            - Инвентарный номер не указан или дублируется.
-                            
-                            Попробуйте проверить файл и повторить.""");
-                    errorAlert.showAndWait();
-                }
-        );
+                    logger.info("Импорт устройств завершён успешно");
+                }, () -> {
+                    // onError
+                    CustomAlert.showError("Импорт", "Ошибка импорта данных из Excel");
+                    logger.severe("Ошибка импорта устройств");
+                });
+        if (result != null) {
+            CustomAlert.showInfo("Импорт", result);  // result — строка "Импорт завершён..."
+            logger.info("Импорт завершён: " + result);
+        }
     }
 
     // -----------------------------------------------------------------
@@ -515,16 +528,5 @@ public class DevicesTableController {
                 }
             }
         });
-    }
-
-    /**
-     * Метод для вывода уведомления
-     *
-     * @param type - тип уведомления
-     * @param text - текст уведомления
-     */
-    private void showAlert(Alert.AlertType type, String text) {
-        Alert a = new Alert(type, text);
-        a.show();
     }
 }

@@ -1,16 +1,14 @@
 package com.kipia.management.kipia_management.services;
 
 import com.kipia.management.kipia_management.models.Device;
-import javafx.scene.control.Alert;
-import javafx.stage.FileChooser;
-import javafx.stage.Stage;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
+import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 /**
@@ -21,13 +19,15 @@ import java.util.stream.Collectors;
  */
 
 public class ExcelExportReportsService {
+    // логгер для сообщений
+    private static final Logger LOGGER = Logger.getLogger(ExcelExportReportsService.class.getName());
 
-    public void exportReport(List<Device> devices, String reportKey, Stage primaryStage) {
-        FileChooser chooser = new FileChooser();
-        chooser.setTitle("Экспорт отчёта " + reportKey + " в Excel");
-        chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Excel файлы", "*.xlsx"));
-        File file = chooser.showSaveDialog(primaryStage);
-        if (file == null) return;
+    // Обновлено: принимает File, возвращает boolean
+    public boolean exportReport(List<Device> devices, String reportKey, File file) {
+        if (file == null) {
+            LOGGER.warning("Файл для экспорта не указан");
+            return false;
+        }
 
         try (Workbook workbook = new XSSFWorkbook()) {
             Sheet sheet = workbook.createSheet("Report");
@@ -36,7 +36,6 @@ public class ExcelExportReportsService {
             headerRow.createCell(1).setCellValue("Количество");
 
             Map<String, Long> countMap = getCountMap(devices, reportKey);
-
             int rowNum = 1;
             for (Map.Entry<String, Long> entry : countMap.entrySet()) {
                 if (entry.getKey() == null || entry.getKey().isEmpty()) continue;
@@ -49,11 +48,11 @@ public class ExcelExportReportsService {
                 workbook.write(out);
             }
 
-            Alert alert = new Alert(Alert.AlertType.INFORMATION, "Отчёт " + reportKey + " экспортирован: " + file.getAbsolutePath());
-            alert.show();
+            LOGGER.info("Отчёт " + reportKey + " успешно экспортирован: " + file.getAbsolutePath());  // Logger вместо Alert
+            return true;
         } catch (Exception e) {
-            Alert alert = new Alert(Alert.AlertType.ERROR, "Ошибка: " + e.getMessage());
-            alert.show();
+            LOGGER.log(Level.SEVERE, "Ошибка экспорта отчёта " + reportKey + ": " + e.getMessage());  // Logger вместо Alert
+            return false;
         }
     }
 

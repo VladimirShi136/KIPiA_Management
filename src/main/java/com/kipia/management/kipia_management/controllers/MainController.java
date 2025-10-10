@@ -3,6 +3,7 @@ package com.kipia.management.kipia_management.controllers;
 import com.kipia.management.kipia_management.services.DeviceDAO;
 import com.kipia.management.kipia_management.services.DeviceLocationDAO;
 import com.kipia.management.kipia_management.services.SchemeDAO;
+import com.kipia.management.kipia_management.utils.CustomAlert;
 import com.kipia.management.kipia_management.utils.StyleUtils;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -14,12 +15,16 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 
 import java.io.IOException;
+import java.util.Objects;
+import java.util.logging.Logger;
 
 /**
  * Главный контроллер – отвечает за навигацию
  * (переключение представлений, переключение темы, выход из приложения).
  */
 public class MainController {
+    // Новый: логгер для логирования
+    private static final Logger LOGGER = Logger.getLogger(MainController.class.getName());
 
     // ── Кнопки меню ─────────────────────────────────────
     public Button devicesBtn;
@@ -45,9 +50,6 @@ public class MainController {
     // ── Экземпляр редактора схем для передачи в другие контроллеры ─
     private SchemeEditorController schemeEditorController;
     private Parent schemeEditorView;  // Сохранённый Root Node из FXML
-
-    private DevicesTableController devicesTableController;
-    private Parent devicesTableView;
 
     // ── Тема ─────────────────────────────────────────────
     private Scene scene;
@@ -98,18 +100,18 @@ public class MainController {
     @FXML
     private void toggleTheme() {
         if (scene == null) {
-            System.out.println("Ошибка: Scene не передана");
+            CustomAlert.showError("Ошибка", "Scene не передана");
             return;
         }
         if (isDarkTheme) {
             scene.getStylesheets().clear();
-            scene.getStylesheets().add(getClass().getResource("/styles/light-theme.css")
+            scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource("/styles/light-theme.css"))
                     .toExternalForm());
             themeToggleBtn.setText("Тёмная тема");
             isDarkTheme = false;
         } else {
             scene.getStylesheets().clear();
-            scene.getStylesheets().add(getClass().getResource("/styles/dark-theme.css")
+            scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource("/styles/dark-theme.css"))
                     .toExternalForm());
             themeToggleBtn.setText("Светлая тема");
             isDarkTheme = true;
@@ -147,11 +149,12 @@ public class MainController {
                 ctrl.setSchemeEditorController(schemeEditorController);
             }
             ctrl.init();                     // инициализируем таблицу
-
             contentArea.getChildren().add(view);
+            LOGGER.info("Список приборов загружен успешно");
         } catch (IOException e) {
             statusLabel.setText("Ошибка загрузки списка приборов: " + e.getMessage());
-            e.printStackTrace();
+            CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить список приборов");  // Добавлено: алерт для ошибки
+            LOGGER.severe("Ошибка загрузки списка приборов: " + e.getMessage());
         }
     }
 
@@ -174,11 +177,12 @@ public class MainController {
                 ctrl.setSchemeEditorController(schemeEditorController);
             }
             ctrl.init();
-
             contentArea.getChildren().add(view);
+            LOGGER.info("Группированный список приборов загружен успешно");
         } catch (Exception ex) {
-            System.err.println("Ошибка загрузки списка приборов по месту установки: " + ex.getMessage());
-            ex.printStackTrace();
+            System.err.println("Ошибка загрузки списка приборов по месту установки: " + ex.getMessage());  // Замена на System.err для консistency, но лучше logger
+            CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить группированный список приборов");  // Добавлено: алерт для ошибки
+            LOGGER.severe("Ошибка загрузки группированного списка приборов: " + ex.getMessage());
         }
     }
 
@@ -193,7 +197,7 @@ public class MainController {
         if (schemeEditorView != null && schemeEditorController != null) {
             contentArea.getChildren().clear();
             contentArea.getChildren().add(schemeEditorView);
-            System.out.println("DEBUG: SchemeEditor — showing existing view (state preserved)");
+            LOGGER.info("Показан существующий редактор схем (состояние сохранено)");
             return;  // Не перезагружаем, иконки/приборы остаются
         }
 
@@ -203,7 +207,7 @@ public class MainController {
             schemeEditorView = loader.load();  // Сохраняем Root Node (Parent)
 
             schemeEditorController = loader.getController();
-            System.out.println("DEBUG: SchemeEditorController created first time, setting DAO...");
+            LOGGER.info("Создан новый контроллер редактора схем");
 
             // Внедряем DAO (только один раз)
             schemeEditorController.setDeviceDAO(deviceDAO);
@@ -218,11 +222,11 @@ public class MainController {
             contentArea.getChildren().clear();
             contentArea.getChildren().add(schemeEditorView);
 
-            System.out.println("DEBUG: SchemeEditor loaded first time successfully");
-
+            LOGGER.info("Редактор схем загружен впервые успешно");  // Замена println
         } catch (IOException e) {
             statusLabel.setText("Ошибка загрузки редактора схем: " + e.getMessage());
-            e.printStackTrace();
+            CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить редактор схем");  // Добавлено: алерт для ошибки
+            LOGGER.severe("Ошибка загрузки редактора схем: " + e.getMessage());  // Логгирование ошибки
         }
     }
 
@@ -245,9 +249,11 @@ public class MainController {
                 ctrl.setSchemeEditorController(schemeEditorController);
             }
             contentArea.getChildren().add(view);
+            LOGGER.info("Форма добавления прибора загружена успешно");  // Логгирование успеха
         } catch (IOException e) {
             statusLabel.setText("Ошибка загрузки формы: " + e.getMessage());
-            e.printStackTrace();
+            CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить форму добавления");  // Добавлено: алерт для ошибки
+            LOGGER.severe("Ошибка загрузки формы: " + e.getMessage());  // Логгирование ошибки
         }
     }
 
@@ -268,9 +274,11 @@ public class MainController {
             ctrl.init(deviceDAO, (Stage) contentArea.getScene().getWindow());
 
             contentArea.getChildren().add(view);
+            LOGGER.info("Отчёты загружены успешно");  // Логгирование успеха
         } catch (IOException e) {
             statusLabel.setText("Ошибка загрузки отчётов: " + e.getMessage());
-            e.printStackTrace();
+            CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить отчёты");  // Добавлено: алерт для ошибки
+            LOGGER.severe("Ошибка загрузки отчётов: " + e.getMessage());  // Логгирование ошибки
         }
     }
 }

@@ -10,6 +10,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
+ * Класс CustomAlert предоставляет методы для создания и отображения пользовательских alerts.
+ *
  * @author vladimir_shi
  * @since 10.10.2025
  */
