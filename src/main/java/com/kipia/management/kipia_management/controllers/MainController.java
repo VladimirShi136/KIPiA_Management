@@ -215,7 +215,6 @@ public class MainController {
             schemeEditorController.setDeviceLocationDAO(deviceLocationDAO);
 
             // Вызываем init() только один раз
-            System.out.println("DEBUG: Calling init() for SchemeEditorController (first time)");
             schemeEditorController.init();
 
             // Добавляем view в contentArea

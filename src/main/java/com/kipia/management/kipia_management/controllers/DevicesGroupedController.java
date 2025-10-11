@@ -4,6 +4,7 @@ import com.kipia.management.kipia_management.models.Device;
 import com.kipia.management.kipia_management.services.DeviceDAO;
 import com.kipia.management.kipia_management.utils.ExcelImportExportUtil;
 import com.kipia.management.kipia_management.utils.StyleUtils;
+import com.kipia.management.kipia_management.utils.CustomAlert;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.collections.FXCollections;
 import javafx.collections.transformation.FilteredList;
@@ -20,11 +21,15 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 import javafx.util.converter.DefaultStringConverter;
+import java.util.logging.Logger;
 
 import java.io.File;
 import java.util.*;
 
 public class DevicesGroupedController {
+
+    // логгер для сообщений
+    private static final Logger logger = Logger.getLogger(DevicesGroupedController.class.getName());
 
     @FXML
     private TreeTableView<TreeRowItem> treeTable;
@@ -45,6 +50,7 @@ public class DevicesGroupedController {
 
     /**
      * Инициализация контроллера редактирования схемы.
+     *
      * @param controller - контроллер
      */
     public void setSchemeEditorController(SchemeEditorController controller) {
@@ -63,6 +69,7 @@ public class DevicesGroupedController {
 
     public void init() {
         loadData();
+        logger.info("Контроллер группированных устройств инициализирован");
     }
 
     // --- Типы строк дерева ---
@@ -89,12 +96,12 @@ public class DevicesGroupedController {
                 Device::getName,
                 Device::setName);
 
-        //Колонка "Производитель"
+        // Колонка "Производитель"
         TreeTableColumn<TreeRowItem, String> manufacturerCol = createEditableStringColumn("Завод изготовитель", 115,
                 Device::getManufacturer,
                 Device::setManufacturer);
 
-        //Колонка "Инвентарный номер"
+        // Колонка "Инвентарный номер"
         TreeTableColumn<TreeRowItem, String> inventoryCol = createEditableStringColumn("Инв. №", 70,
                 Device::getInventoryNumber,
                 Device::setInventoryNumber);
@@ -132,7 +139,7 @@ public class DevicesGroupedController {
                     setText(null);
                     // Удаление графического представления
                     setGraphic(null);
-                // Если ячейка является прибором
+                    // Если ячейка является прибором
                 } else {
                     // Разрешение редактирования
                     setEditable(true);
@@ -346,8 +353,8 @@ public class DevicesGroupedController {
             private void viewPhotos(Device device) {
                 List<String> photos = device.getPhotos();
                 if (photos == null || photos.isEmpty()) {
-                    Alert alert = new Alert(Alert.AlertType.INFORMATION, "Фотографии не добавлены");
-                    alert.show();
+                    CustomAlert.showInfo("Просмотр фото", "Фотографии не добавлены");
+                    logger.warning("Просмотр фото: нет фото для устройства " + device.getName());
                     return;
                 }
                 Stage stage = new Stage();
@@ -367,6 +374,7 @@ public class DevicesGroupedController {
                 }
                 stage.setScene(new javafx.scene.Scene(new ScrollPane(vbox), 300, 600));
                 stage.show();
+                logger.info("Показ фото для устройства: " + device.getName());
             }
 
             @Override
@@ -568,8 +576,16 @@ public class DevicesGroupedController {
         }
         if (exportButton != null) {
             StyleUtils.applyHoverAndAnimation(exportButton, "button-export", "button-export-hover");
-            exportButton.setOnAction(e ->
-                    ExcelImportExportUtil.exportGroupedTreeTableToExcel(treeTable.getScene().getWindow(), treeTable));
+            exportButton.setOnAction(e -> {
+                boolean success = ExcelImportExportUtil.exportGroupedTreeTableToExcel(treeTable.getScene().getWindow(), treeTable);
+                if (success) {
+                    CustomAlert.showInfo("Экспорт", "Группированный экспорт завершён");
+                    logger.info("Экспорт группированной таблицы успешен");
+                } else {
+                    CustomAlert.showError("Экспорт", "Ошибка экспорта группы в Excel");
+                    logger.severe("Ошибка экспорта группированной таблицы");
+                }
+            });
         }
         if (importButton != null) {
             StyleUtils.applyHoverAndAnimation(importButton, "button-import", "button-import-hover");
@@ -581,43 +597,42 @@ public class DevicesGroupedController {
                                 if (schemeEditorController != null) {
                                     schemeEditorController.refreshSchemesAndDevices();
                                 }
+                                logger.info("Импорт группированной таблицы успешен");
                             },
                             () -> {
-                                Alert error = new Alert(Alert.AlertType.ERROR);
-                                error.setTitle("Ошибка импорта");
-                                error.setHeaderText(null);
-                                error.setContentText("Не удалось импортировать данные из Excel");
-                                error.showAndWait();
-                            }));
+                                CustomAlert.showError("Импорт", "Не удалось импортировать данные из Excel");
+                                logger.severe("Ошибка импорта группированной таблицы");
+                            })
+            );
         }
     }
 
     private void deleteSelectedDevice() {
         TreeItem<TreeRowItem> selected = treeTable.getSelectionModel().getSelectedItem();
         if (selected == null || !(selected.getValue() instanceof DeviceItem)) {
-            Alert alert = new Alert(Alert.AlertType.WARNING, "Выберите прибор для удаления");
-            alert.show();
+            CustomAlert.showWarning("Удаление", "Выберите прибор для удаления");
             return;
         }
         Device dev = ((DeviceItem) selected.getValue()).device();
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
-                "Удалить прибор \"" + dev.getName() + "\"?", ButtonType.YES, ButtonType.NO);
-        confirm.showAndWait().ifPresent(b -> {
-            if (b == ButtonType.YES) {
-                boolean success = deviceDAO.deleteDevice(dev.getId());
-                if (success) {
-                    filteredList.getSource().remove(dev);
-                    updateTreeItems();
-                    updateStatistics();
-                    if (schemeEditorController != null) {
-                        schemeEditorController.refreshSchemesAndDevices();
-                    }
-                } else {
-                    Alert error = new Alert(Alert.AlertType.ERROR, "Ошибка удаления из базы");
-                    error.show();
+        boolean confirmed = CustomAlert.showConfirmation("Подтверждение", "Удалить прибор \"" + dev.getName() + "\"?");  // Возвращает boolean
+        if (confirmed) {  // True = YES, false = NO/CANCEL
+            logger.info("Начато удаление прибора: " + dev.getName());
+            boolean success = deviceDAO.deleteDevice(dev.getId());
+            if (success) {
+                filteredList.getSource().remove(dev);
+                updateTreeItems();
+                updateStatistics();
+                if (schemeEditorController != null) {
+                    schemeEditorController.refreshSchemesAndDevices();
                 }
+                logger.info("Прибор удалён: " + dev.getName());
+            } else {
+                CustomAlert.showError("Ошибка удаления", "Не удалось удалить прибор из базы данных");
+                logger.severe("Ошибка удаления прибора: " + dev.getName());
             }
-        });
+        } else {
+            logger.info("Удаление отменено пользователем: " + dev.getName());
+        }
     }
 
     private void configureRowFactory() {

@@ -88,8 +88,10 @@ public class SchemeDAO {
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
             stmt.setString(1, scheme.getName());
             stmt.setString(2, scheme.getDescription());
-            stmt.setString(3, scheme.getData());
+            stmt.setString(3, scheme.getData());  // ОБЯЗАТЕЛЬНО: сохраняем data
             stmt.setInt(4, scheme.getId());
+            int rowsAffected = stmt.executeUpdate();  // НОВОЕ: выполнение запроса
+            LOGGER.log(Level.INFO, "Update scheme rows affected: " + rowsAffected);  // НОВОЕ: логирование
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Ошибка обновления схемы: " + e.getMessage());
         }
