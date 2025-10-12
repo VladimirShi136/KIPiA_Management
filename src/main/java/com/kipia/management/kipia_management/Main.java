@@ -29,7 +29,7 @@ public class Main extends Application {
     private DeviceDAO deviceDAO;
     private SchemeDAO schemeDAO;
     private DeviceLocationDAO deviceLocationDAO;
-    // Поле для логирования
+    // Логгер для сообщений
     private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
 
     /**
@@ -77,7 +77,7 @@ public class Main extends Application {
                 Image icon = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/images/icon.png")));
                 primaryStage.getIcons().add(icon);
             } catch (Exception e) {
-                LOGGER.warning("Иконка не найдена, используется стандартная");  // Замена println на logger для consistent
+                LOGGER.warning("Иконка не найдена, используется стандартная");
             }
             // Обработка закрытия окна - закрываем соединение с БД
             primaryStage.setOnCloseRequest(event -> {
@@ -94,7 +94,6 @@ public class Main extends Application {
             } else if (result == CustomAlert.CANCEL_BUTTON) {
                 handleCancel("Ошибка запуска приложения");
             }
-            // OK — ничего
         }
     }
 
@@ -117,7 +116,7 @@ public class Main extends Application {
             deviceLocationDAO = new DeviceLocationDAO(databaseService);
             // Добавляем тестовые данные если таблицы пустые
             databaseService.addTestData();
-            LOGGER.info("Сервисы базы данных успешно инициализированы");  // Замена println на logger для consistent
+            LOGGER.info("Сервисы базы данных успешно инициализированы");
         } catch (Exception e) {
             ButtonType result = CustomAlert.showAdvancedError("Ошибка базы данных", "Не удалось подключиться к базе данных", e);
             if (result == CustomAlert.RETRY_BUTTON) {
@@ -125,7 +124,6 @@ public class Main extends Application {
             } else if (result == CustomAlert.CANCEL_BUTTON) {
                 handleCancel("Ошибка базы данных");
             }
-            // OK — ничего
         }
     }
 
@@ -142,12 +140,10 @@ public class Main extends Application {
                 try {
                     app.initializeServices();
                 } catch (Exception e) {
-                    // Замена: используем CustomAlert.showAdvancedError вместо showErrorDialog
                     ButtonType retryResult = CustomAlert.showAdvancedError("Ошибка базы данных", "Повторная инициализация не удалась", e);
                     if (retryResult == CustomAlert.RETRY_BUTTON) {
                         handleRetry("Ошибка базы данных");
                     }
-                    // CANCEL/OK — не обрабатываем для упрощения
                 }
             });
         } else if ("Ошибка запуска приложения".equals(context)) {
@@ -156,16 +152,14 @@ public class Main extends Application {
                 try {
                     new Main().start(new Stage());
                 } catch (Exception e) {
-                    // Замена: используем CustomAlert.showAdvancedError вместо showErrorDialog
                     ButtonType retryResult = CustomAlert.showAdvancedError("Ошибка перезапуска", "Не удалось перезапустить приложение", e);
                     if (retryResult == CustomAlert.RETRY_BUTTON) {
                         handleRetry("Ошибка запуска приложения");
                     }
-                    // CANCEL/OK — не обрабатываем
                 }
             });
         } else {
-            LOGGER.info("Повторение действия...");  // Замена println на logger
+            LOGGER.info("Повторение действия...");
         }
     }
 
@@ -179,7 +173,7 @@ public class Main extends Application {
             Platform.exit();
             System.exit(0);
         } else {
-            LOGGER.info("Отмена действия...");  // Замена println на logger
+            LOGGER.info("Отмена действия...");
         }
     }
 }

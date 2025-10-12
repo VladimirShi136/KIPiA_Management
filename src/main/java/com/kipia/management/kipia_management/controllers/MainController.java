@@ -23,9 +23,8 @@ import java.util.logging.Logger;
  * (переключение представлений, переключение темы, выход из приложения).
  */
 public class MainController {
-    // Новый: логгер для логирования
+    // ── Логгер для сообщений ────────
     private static final Logger LOGGER = Logger.getLogger(MainController.class.getName());
-
     // ── Кнопки меню ─────────────────────────────────────
     public Button devicesBtn;
     public Button addDeviceBtn;
@@ -33,26 +32,23 @@ public class MainController {
     public Button schemesBtn;
     public Button reportsBtn;
     public Button exitBtn;
-
-    // ── UI‑элементы, которые остаются в main.fxml ────────
+    // ── UI‑элементы из main.fxml ────────
     @FXML
     private Label statusLabel;
     @FXML
     private VBox contentArea;
     @FXML
     private Button themeToggleBtn;
-
     // ── Сервисы доступа к БД ───────────────────────────────
     private DeviceDAO deviceDAO;
     private SchemeDAO schemeDAO;
     private DeviceLocationDAO deviceLocationDAO;
-
     // ── Экземпляр редактора схем для передачи в другие контроллеры ─
     private SchemeEditorController schemeEditorController;
     private Parent schemeEditorView;  // Сохранённый Root Node из FXML
-
-    // ── Тема ─────────────────────────────────────────────
+    // ── Сцена ─────────────────────────────────────────────
     private Scene scene;
+    // ── Тема ─────────────────────────────────────────────
     private boolean isDarkTheme = false;
 
     // ---------------------------------------------------------
@@ -66,9 +62,13 @@ public class MainController {
         this.deviceDAO = dao;
     }
 
-    public void setSchemeDAO(SchemeDAO dao) { this.schemeDAO = dao; }
+    public void setSchemeDAO(SchemeDAO dao) {
+        this.schemeDAO = dao;
+    }
 
-    public void setDeviceLocationDAO (DeviceLocationDAO dao) { this.deviceLocationDAO = dao; }
+    public void setDeviceLocationDAO(DeviceLocationDAO dao) {
+        this.deviceLocationDAO = dao;
+    }
 
     /**
      * Передаём сцену, чтобы можно было менять стили.
@@ -148,12 +148,12 @@ public class MainController {
             if (schemeEditorController != null) {
                 ctrl.setSchemeEditorController(schemeEditorController);
             }
-            ctrl.init();                     // инициализируем таблицу
+            ctrl.init();  // инициализируем таблицу
             contentArea.getChildren().add(view);
             LOGGER.info("Список приборов загружен успешно");
         } catch (IOException e) {
             statusLabel.setText("Ошибка загрузки списка приборов: " + e.getMessage());
-            CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить список приборов");  // Добавлено: алерт для ошибки
+            CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить список приборов");
             LOGGER.severe("Ошибка загрузки списка приборов: " + e.getMessage());
         }
     }
@@ -180,8 +180,8 @@ public class MainController {
             contentArea.getChildren().add(view);
             LOGGER.info("Группированный список приборов загружен успешно");
         } catch (Exception ex) {
-            System.err.println("Ошибка загрузки списка приборов по месту установки: " + ex.getMessage());  // Замена на System.err для консistency, но лучше logger
-            CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить группированный список приборов");  // Добавлено: алерт для ошибки
+            System.err.println("Ошибка загрузки списка приборов по месту установки: " + ex.getMessage());
+            CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить группированный список приборов");
             LOGGER.severe("Ошибка загрузки группированного списка приборов: " + ex.getMessage());
         }
     }
@@ -221,11 +221,11 @@ public class MainController {
             contentArea.getChildren().clear();
             contentArea.getChildren().add(schemeEditorView);
 
-            LOGGER.info("Редактор схем загружен впервые успешно");  // Замена println
+            LOGGER.info("Редактор схем загружен впервые успешно");
         } catch (IOException e) {
             statusLabel.setText("Ошибка загрузки редактора схем: " + e.getMessage());
-            CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить редактор схем");  // Добавлено: алерт для ошибки
-            LOGGER.severe("Ошибка загрузки редактора схем: " + e.getMessage());  // Логгирование ошибки
+            CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить редактор схем");
+            LOGGER.severe("Ошибка загрузки редактора схем: " + e.getMessage());
         }
     }
 
@@ -248,11 +248,11 @@ public class MainController {
                 ctrl.setSchemeEditorController(schemeEditorController);
             }
             contentArea.getChildren().add(view);
-            LOGGER.info("Форма добавления прибора загружена успешно");  // Логгирование успеха
+            LOGGER.info("Форма добавления прибора загружена успешно");
         } catch (IOException e) {
             statusLabel.setText("Ошибка загрузки формы: " + e.getMessage());
-            CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить форму добавления");  // Добавлено: алерт для ошибки
-            LOGGER.severe("Ошибка загрузки формы: " + e.getMessage());  // Логгирование ошибки
+            CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить форму добавления");
+            LOGGER.severe("Ошибка загрузки формы: " + e.getMessage());
         }
     }
 
@@ -273,11 +273,11 @@ public class MainController {
             ctrl.init(deviceDAO, (Stage) contentArea.getScene().getWindow());
 
             contentArea.getChildren().add(view);
-            LOGGER.info("Отчёты загружены успешно");  // Логгирование успеха
+            LOGGER.info("Отчёты загружены успешно");
         } catch (IOException e) {
             statusLabel.setText("Ошибка загрузки отчётов: " + e.getMessage());
-            CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить отчёты");  // Добавлено: алерт для ошибки
-            LOGGER.severe("Ошибка загрузки отчётов: " + e.getMessage());  // Логгирование ошибки
+            CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить отчёты");
+            LOGGER.severe("Ошибка загрузки отчётов: " + e.getMessage());
         }
     }
 }

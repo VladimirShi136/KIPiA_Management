@@ -19,10 +19,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.Node;
 import javafx.scene.paint.Color;
-import javafx.scene.shape.Circle;
-import javafx.scene.shape.Line;
-import javafx.scene.shape.Rectangle;
-import javafx.scene.shape.Ellipse;
+import javafx.scene.shape.*;
 import javafx.scene.text.Text;
 import javafx.scene.Cursor;
 
@@ -45,7 +42,7 @@ public class SchemeEditorController {
     @FXML
     private ComboBox<Device> deviceComboBox;
     @FXML
-    private Button newSchemeBtn, saveSchemeBtn, deleteSchemeBtn, selectToolBtn, lineToolBtn, rectToolBtn, addDeviceToolBtn;
+    private Button saveSchemeBtn, selectToolBtn, lineToolBtn, rectToolBtn, addDeviceToolBtn, rhombusToolBtn;
     @FXML
     private Button undoBtn, redoBtn, ellipseToolBtn, textToolBtn;
     @FXML
@@ -125,11 +122,6 @@ public class SchemeEditorController {
         schemePane.setFocusTraversable(true);
         shapeManager = new ShapeManager(schemePane);  // НОВОЕ: инициализация менеджера
         setupToolButtons();
-        // кнопки не видны и не управляются
-        newSchemeBtn.setVisible(false);
-        deleteSchemeBtn.setVisible(false);
-        newSchemeBtn.setManaged(false);
-        deleteSchemeBtn.setManaged(false);
         saveSchemeBtn.setOnAction(e -> saveCurrentScheme());
         applyButtonStyles();
         LOGGER.info("Контроллер редактора схемы инициализирован");
@@ -298,15 +290,17 @@ public class SchemeEditorController {
             currentTool = ShapeManager.Tool.ADD_DEVICE;
             statusLabel.setText("Инструмент: Добавить прибор");
         });
+        rhombusToolBtn.setOnAction(e -> {
+            currentTool = ShapeManager.Tool.RHOMBUS;
+            statusLabel.setText("Инструмент: Ромб");
+        });
     }
 
     private void applyButtonStyles() {
-        for (Button btn : List.of(selectToolBtn, undoBtn, redoBtn, lineToolBtn, rectToolBtn, ellipseToolBtn, textToolBtn, addDeviceToolBtn)) {
+        for (Button btn : List.of(selectToolBtn, undoBtn, redoBtn, lineToolBtn, rectToolBtn, ellipseToolBtn, textToolBtn, addDeviceToolBtn, rhombusToolBtn)) {
             StyleUtils.applyHoverAndAnimation(btn, "tool-button", "tool-button-hover");
         }
-        StyleUtils.applyHoverAndAnimation(newSchemeBtn, "new-scheme-button", "new-scheme-button-hover");
         StyleUtils.applyHoverAndAnimation(saveSchemeBtn, "save-scheme-button", "save-scheme-button-hover");
-        StyleUtils.applyHoverAndAnimation(deleteSchemeBtn, "delete-scheme-button", "delete-scheme-button-hover");
     }
 
     // -----------------------------------------------------------------
@@ -588,13 +582,13 @@ public class SchemeEditorController {
     }
 
     // -----------------------------------------------------------------
-// ВНУТРЕННИЙ КЛАСС ДЛЯ ОБЪЕКТОВ СХЕМЫ
-// -----------------------------------------------------------------
+    // ВНУТРЕННИЙ КЛАСС ДЛЯ ОБЪЕКТОВ СХЕМЫ
+    // -----------------------------------------------------------------
     private static class SchemeObject {
-        enum Type {LINE, RECTANGLE, ELLIPSE, TEXT}
+        enum Type {LINE, RECTANGLE, ELLIPSE, RHOMBUS, TEXT}
 
         Type type;
-        double x1, y1, x2, y2, width, height, radiusX, radiusY;
+        double x1, y1, x2, y2, width, height, radiusX, radiusY, topX, topY, bottomX, bottomY, leftX, leftY, rightX, rightY;
         String text;
 
         // Конструктор для геометрических фигур
@@ -636,6 +630,15 @@ public class SchemeEditorController {
             this.text = text;
         }
 
+        // Конструктор для RHOMBUS
+        SchemeObject(Type t, double topX, double topY, double rightX, double rightY, double bottomX, double bottomY, double leftX, double leftY) {
+            this.type = t;
+            this.topX = topX; this.topY = topY;
+            this.rightX = rightX; this.rightY = rightY;
+            this.bottomX = bottomX; this.bottomY = bottomY;
+            this.leftX = leftX; this.leftY = leftY;
+        }
+
         Node toNode() {
             switch (type) {
                 case LINE:
@@ -652,6 +655,18 @@ public class SchemeEditorController {
                     ellipse.setFill(Color.TRANSPARENT);
                     ellipse.setStroke(Color.BLACK);
                     return ellipse;
+                case RHOMBUS:
+                    Path rhombus = new Path();
+                    rhombus.setFill(Color.TRANSPARENT);
+                    rhombus.setStroke(Color.BLACK);
+                    rhombus.getElements().addAll(
+                            new MoveTo(topX, topY),
+                            new LineTo(rightX, rightY),
+                            new LineTo(bottomX, bottomY),
+                            new LineTo(leftX, leftY),
+                            new ClosePath()
+                    );
+                    return rhombus;
                 case TEXT:
                     return new Text(x1, y1, text != null ? text : "Текст");
                 default:
@@ -669,6 +684,8 @@ public class SchemeEditorController {
                     return type.name() + "|" + x1 + "|" + y1 + "|" + radiusX + "|" + radiusY;
                 case TEXT:
                     return type.name() + "|" + x1 + "|" + y1 + "|" + (text != null ? text : "");  // Текст может содержать запятые
+                case RHOMBUS:
+                    return type.name() + "|" + topX + "|" + topY + "|" + rightX + "|" + rightY + "|" + bottomX + "|" + bottomY + "|" + leftX + "|" + leftY;
                 default:
                     return "";
             }
@@ -694,6 +711,16 @@ public class SchemeEditorController {
                         double radiusX = Double.parseDouble(parts[3]);
                         double radiusY = Double.parseDouble(parts[4]);
                         return new SchemeObject(t, x1, y1, radiusX, radiusY);
+                    case RHOMBUS:
+                        double topX = Double.parseDouble(parts[1]);
+                        double topY = Double.parseDouble(parts[2]);
+                        double rightX = Double.parseDouble(parts[3]);
+                        double rightY = Double.parseDouble(parts[4]);
+                        double bottomX = Double.parseDouble(parts[5]);
+                        double bottomY = Double.parseDouble(parts[6]);
+                        double leftX = Double.parseDouble(parts[7]);
+                        double leftY = Double.parseDouble(parts[8]);
+                        return new SchemeObject(Type.RHOMBUS, topX, topY, rightX, rightY, bottomX, bottomY, leftX, leftY);
                     case TEXT:
                         String text = parts.length > 3 ? parts[3] : "Текст";  // Текст может быть пустым или содержать ","
                         return new SchemeObject(t, x1, y1, text);
@@ -714,6 +741,13 @@ public class SchemeEditorController {
                 return new SchemeObject(Type.ELLIPSE, ellipse.getCenterX(), ellipse.getCenterY(), ellipse.getRadiusX(), ellipse.getRadiusY());
             } else if (node instanceof Text text) {
                 return new SchemeObject(Type.TEXT, text.getX(), text.getY(), text.getText());
+            }  else if (node instanceof Path path && path.getElements().size() == 5) {  // Проверка на ромб
+                MoveTo move = (MoveTo) path.getElements().get(0);
+                LineTo line1 = (LineTo) path.getElements().get(1);
+                LineTo line2 = (LineTo) path.getElements().get(2);
+                LineTo line3 = (LineTo) path.getElements().get(3);
+                return new SchemeObject(Type.RHOMBUS, move.getX(), move.getY(), line1.getX(), line1.getY(),
+                        line2.getX(), line2.getY(), line3.getX(), line3.getY());
             }
             return null;
         }

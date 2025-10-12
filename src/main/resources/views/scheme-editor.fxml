@@ -24,16 +24,6 @@
             <HBox spacing="10" alignment="CENTER_LEFT">
                 <Label text="Схема:" styleClass="scheme-label"/>
                 <ComboBox fx:id="schemeComboBox" prefWidth="200"/>
-                <Button fx:id="newSchemeBtn" styleClass="new-scheme-button">
-                    <graphic>
-                        <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
-                            <Image url="@../images/new-scheme.png"/>
-                        </ImageView>
-                    </graphic>
-                    <tooltip>
-                        <Tooltip text="Создать новую схему"/>
-                    </tooltip>
-                </Button>
                 <Button fx:id="saveSchemeBtn" styleClass="save-scheme-button">
                     <graphic>
                         <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
@@ -41,17 +31,7 @@
                         </ImageView>
                     </graphic>
                     <tooltip>
-                        <Tooltip text="Сохранить новую схему"/>
-                    </tooltip>
-                </Button>
-                <Button fx:id="deleteSchemeBtn" styleClass="delete-scheme-button">
-                    <graphic>
-                        <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
-                            <Image url="@../images/delete.png"/>
-                        </ImageView>
-                    </graphic>
-                    <tooltip>
-                        <Tooltip text="Удалить схему"/>
+                        <Tooltip text="Сохранить схему"/>
                     </tooltip>
                 </Button>
             </HBox>
@@ -116,6 +96,16 @@
                     </graphic>
                     <tooltip>
                         <Tooltip text="Эллипс"/>
+                    </tooltip>
+                </Button>
+                <Button fx:id="rhombusToolBtn" styleClass="tool-button">
+                    <graphic>
+                        <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
+                            <Image url="@../images/valve.png"/>
+                        </ImageView>
+                    </graphic>
+                    <tooltip>
+                        <Tooltip text="Кран"/>
                     </tooltip>
                 </Button>
                 <Button fx:id="textToolBtn" styleClass="tool-button">

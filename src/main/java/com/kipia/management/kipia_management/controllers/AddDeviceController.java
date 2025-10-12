@@ -9,8 +9,7 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-
-import java.util.logging.Logger;  // Новый импорт для логирования
+import java.util.logging.Logger;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,12 +20,9 @@ import java.util.List;
  * @author vladimir_shi
  * @since 29.08.2025
  */
-
 public class AddDeviceController {
-
-    // логгер для сообщений
+    // ----- логгер для сообщений --------
     private static final Logger LOGGER = Logger.getLogger(AddDeviceController.class.getName());
-
     // ---------- FXML‑элементы ----------
     @FXML
     private TextField nameField;
@@ -45,30 +41,26 @@ public class AddDeviceController {
     @FXML
     private TextField locationField;
     @FXML
-    private TextField valveNumberField;  // Добавлено поле для "Кран №"
+    private TextField valveNumberField;
     @FXML
     private ComboBox<String> statusComboBox;
     @FXML
     private TextArea additionalInfoField;
     @FXML
-    private TextField photoPathField;  // Текст для одного фото (опционально)
+    private TextField photoPathField;
     @FXML
-    private ListView<String> selectedPhotosListView;  // Список выбранных фото
+    private ListView<String> selectedPhotosListView;
     @FXML
-    private Button photoChooseBtn;  // Кнопка выбора файла
+    private Button photoChooseBtn;
     @FXML
     private Label messageLabel;
-
     // ---------- Кнопки -----------
     public Button cancelBtn;
     public Button addBtn;
-
     // ---------- Список выбранных фото ----------
     private final List<String> selectedPhotos = new ArrayList<>();
-
     // ---------- Сервисы ----------
     private DeviceDAO deviceDAO;
-
     // ---------- Контроллеры ----------
     private SchemeEditorController schemeEditorController;
 
