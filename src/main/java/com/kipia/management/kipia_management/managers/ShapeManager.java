@@ -4,6 +4,7 @@ import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.shape.*;
+import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.paint.Color;
 import javafx.scene.Cursor;
@@ -30,7 +31,7 @@ public class ShapeManager {
     // Ссылка на панель схемы
     private final AnchorPane pane;
     // Поля для фигур и состояния
-    private static final double THICKNESS_THRESHOLD = 10.0;  // Ширина области клика вокруг линии (в пикселях)
+    private static final double THICKNESS_THRESHOLD = 5.0;  // Ширина области клика вокруг линии (в пикселях)
     private final Stack<Command> undoStack = new Stack<>();
     private final Stack<Command> redoStack = new Stack<>();
     private Node selectedNode;
@@ -39,7 +40,7 @@ public class ShapeManager {
     private boolean isResizing;
     private int resizeCorner;
     private double dragOffsetX, dragOffsetY;
-    private double pressX, pressY;  // Для расчёта дельты при resize, чтобы избежать ульёта
+    private double pressX, pressY;  // Для расчёта дельты при resize
     private double initialX, initialY, initialW, initialH;  // Начальные bounds при pressed для delta-resize
     // Preview для рисования
     private Line previewLine;
@@ -185,6 +186,12 @@ public class ShapeManager {
             s.setStroke(Color.RED);
             s.setStrokeWidth(3);
         }
+        if (shape instanceof Text text) {  // НОВОЕ: Выделение для текста (красный fill + bold для visibility)
+            text.setFill(Color.RED);
+            text.setStyle("-fx-font-weight: bold;");  // Или красный fill
+            // Для resize приоритета: добавим базовые handles (2: для move и resize как Rectangle)
+            addTextResizeHandles(text);
+        }
         if (shape instanceof Path path) {  // Упрощённо для любой Path (включая бабочку)
             addRhombusResizeHandles(path);
         }
@@ -209,27 +216,37 @@ public class ShapeManager {
 
     // Resize-методы
     private void addResizeHandles(Node shape) {
-        if (resizeHandles != null) return;  // Уже есть
-        resizeHandles = new Circle[8];  // Для Rectangle/Ellipse: 8, для Line: 2
-        if (shape instanceof Rectangle) {
-            addRectangleResizeHandles((Rectangle) shape);
-        } else if (shape instanceof Ellipse) {
-            addEllipseResizeHandles((Ellipse) shape);
-        } else if (shape instanceof Line) {
-            addLineResizeHandles((Line) shape);
-        } else if (shape instanceof Path path && path.getElements().size() == 5) {  // Проверить на ромб
+        if (resizeHandles != null) return;
+        if (shape instanceof Rectangle rect) {
+            addRectangleResizeHandles(rect);  // Вернуться к старому
+        } else if (shape instanceof Ellipse ell) {
+            double cx = ell.getCenterX(), cy = ell.getCenterY();
+            double rx = ell.getRadiusX(), ry = ell.getRadiusY();
+            Circle left = createResizeHandle(cx - rx, cy, 0);
+            Circle right = createResizeHandle(cx + rx, cy, 1);
+            Circle top = createResizeHandle(cx, cy - ry, 2);
+            Circle bottom = createResizeHandle(cx, cy + ry, 3);
+            resizeHandles = new Circle[]{left, right, top, bottom};  // Только для Ellipse
+            pane.getChildren().addAll(left, right, top, bottom);
+        } else if (shape instanceof Line line) {
+            addLineResizeHandles(line);
+        } else if (shape instanceof Text text) {
+            addTextResizeHandles(text);
+        } else if (shape instanceof Path path && path.getElements().size() == 5) {
             addRhombusResizeHandles(path);
         }
     }
 
     private void addRectangleResizeHandles(Rectangle rect) {
+        if (resizeHandles != null) return;
+        resizeHandles = new Circle[8];
         double x0 = rect.getX(), y0 = rect.getY(), w = rect.getWidth(), h = rect.getHeight();
         double[] x = {x0, x0 + w / 2, x0 + w};
         double[] y = {y0, y0 + h / 2, y0 + h};
         int index = 0;
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++) {
-                if (i == 1 && j == 1) continue; // центр пропускаем
+                if (i == 1 && j == 1) continue;
                 Circle handle = createResizeHandle(x[i], y[j], index);
                 resizeHandles[index++] = handle;
                 pane.getChildren().add(handle);
@@ -259,17 +276,7 @@ public class ShapeManager {
         double y0 = rhombus.getBoundsInLocal().getMinY();
         double w = rhombus.getBoundsInLocal().getWidth();
         double h = rhombus.getBoundsInLocal().getHeight();
-        double[] xs = {x0, x0 + w / 2, x0 + w};
-        double[] ys = {y0, y0 + h / 2, y0 + h};
-        int idx = 0;
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                if (i == 1 && j == 1) continue;  // Пропустить центр
-                Circle handle = createResizeHandle(xs[i], ys[j], idx);  // Теперь createResizeHandle обрабатывает Path
-                resizeHandles[idx++] = handle;
-                pane.getChildren().add(handle);
-            }
-        }
+        createAndAddResizeHandles(x0, y0, w, h, resizeHandles, pane, 0);
     }
 
     private void addLineResizeHandles(Line line) {
@@ -278,6 +285,27 @@ public class ShapeManager {
         resizeHandles[0] = startHandle;
         resizeHandles[1] = endHandle;
         pane.getChildren().addAll(startHandle, endHandle);
+    }
+
+    // NEW: addTextResizeHandles — копирует logic для Rectangle, но для Text
+    private void addTextResizeHandles(Text text) {
+        if (resizeHandles != null) return;  // Уже есть
+        resizeHandles = new Circle[8];  // 8 handles как для Rectangle
+        double x0 = text.getBoundsInLocal().getMinX();
+        double y0 = text.getBoundsInLocal().getMinY();
+        double w = text.getBoundsInLocal().getWidth();
+        double h = text.getBoundsInLocal().getHeight();
+        double[] xs = {x0, x0 + w / 2, x0 + w};  // Как в createAndAddResizeHandles
+        double[] ys = {y0, y0 + h / 2, y0 + h};
+        int index = 0;
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                if (i == 1 && j == 1) continue;  // Центр пропускаем
+                Circle handle = createResizeHandle(xs[i], ys[j], index);
+                resizeHandles[index++] = handle;
+                pane.getChildren().add(handle);
+            }
+        }
     }
 
     private Circle createResizeHandle(double x, double y, int handleIndex) {
@@ -296,39 +324,56 @@ public class ShapeManager {
                 initialY = bounds.getMinY();
                 initialW = bounds.getWidth();
                 initialH = bounds.getHeight();
+            } else if (selectedNode instanceof Ellipse ell) {
+                Bounds bounds = ell.getBoundsInLocal();
+                initialX = bounds.getMinX();
+                initialY = bounds.getMinY();
+                initialW = bounds.getWidth();
+                initialH = bounds.getHeight();
             }
             hideSnapHighlight();
             e.consume();
         });
         handle.setOnMouseDragged(e -> {
             if (!isResizing) return;
-            // Конвертируем в pane-координаты
             Point2D currPane = pane.sceneToLocal(e.getSceneX(), e.getSceneY());
-            Point2D pressPane = pane.sceneToLocal(pressX, pressY);
-            double deltaX = currPane.getX() - pressPane.getX();  // Дельта движения
+            Point2D pressPane = pane.sceneToLocal(pressX, pressY);  // pressX,Y — scene из pressed
+            double deltaX = currPane.getX() - pressPane.getX();
             double deltaY = currPane.getY() - pressPane.getY();
-
-            if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) return;  // Игнор минимального движения
+            if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) return;
 
             if (selectedNode instanceof Rectangle rect) {
-                // Для Rectangle оставляем абсолют (как работало), но с currX/currY из pane
-                resizeRectangleByHandle(rect, resizeCorner, currPane.getX(), currPane.getY());
+                resizeShapeByHandle(rect, resizeCorner, currPane.getX(), currPane.getY());
             } else if (selectedNode instanceof Ellipse ell) {
+                // ФИКС: Используем resizeEllipseByHandle с позицией мыши (local), не delta и не bounding
                 resizeEllipseByHandle(ell, resizeCorner, currPane.getX(), currPane.getY());
             } else if (selectedNode instanceof Line line) {
                 resizeLineByHandle(line, resizeCorner, currPane.getX(), currPane.getY());
             } else if (selectedNode instanceof Path path) {
-                // НОВОЕ: Delta-resize для Path (бабочка)
-                resizePathByDelta(path, resizeCorner, deltaX, deltaY);
+                resizePathByDelta(path, resizeCorner, deltaX, deltaY);  // Delta для Path
+            } else if (selectedNode instanceof Text text) {
+                // Для Text — bounding, как раньше
+                resizeShapeByHandle(text, resizeCorner, currPane.getX(), currPane.getY());
             }
-            updateResizeHandles();  // Обновляем handles после изменения
+            updateResizeHandles();
             e.consume();
         });
-        handle.setOnMouseReleased(e -> {
-            isResizing = false;
-            resizeCorner = -1;
+
+// В setOnMousePressed: Уже сохраняем pressX/Y = e.getSceneX/Y, ok
+        handle.setOnMousePressed(e -> {
+            isResizing = true;
+            resizeCorner = handleIndex;
+            pressX = e.getSceneX();
+            pressY = e.getSceneY();
+            // Initial bounds для delta (для Path/Text, etc.)
+            if (selectedNode != null) {
+                Bounds bounds = selectedNode.getBoundsInLocal();
+                initialX = bounds.getMinX();
+                initialY = bounds.getMinY();
+                initialW = bounds.getWidth();
+                initialH = bounds.getHeight();
+            }
             hideSnapHighlight();
-            updateResizeHandles();
             e.consume();
         });
         return handle;
@@ -412,103 +457,223 @@ public class ShapeManager {
         double rightBaseX = centerX + side;
 
         // Перестройка Path
-        path.getElements().clear();
-        // Левый треугольник
-        path.getElements().addAll(
-                new MoveTo(leftBaseX, leftTopY),
-                new LineTo(centerX, centerY),
-                new LineTo(leftBaseX, leftBottomY),
-                new ClosePath()
-        );
-        // Правый треугольник
-        path.getElements().addAll(
-                new MoveTo(rightBaseX, leftTopY),  // rightTopX = rightBaseX, rightTopY = leftTopY
-                new LineTo(centerX, centerY),
-                new LineTo(rightBaseX, leftBottomY),  // rightBottomX = rightBaseX, rightBottomY = leftBottomY
-                new ClosePath()
-        );
+        rebuildButterflyPath(path, leftBaseX, leftTopY, centerX, centerY, leftBottomY, rightBaseX);
         path.setStrokeWidth(1);
         path.setStroke(Color.BLACK);
     }
 
-    private void resizeRectangleByHandle(Rectangle rect, int handleIdx, double x, double y) {
-        double x0 = rect.getX(), y0 = rect.getY(), w0 = rect.getWidth(), h0 = rect.getHeight();
-        double newX = x0, newY = y0, newWidth = w0, newHeight = h0;
-        switch (handleIdx) {
-            case 0:
-                newX = x;
-                newY = y;
-                newWidth = w0 + (x0 - x);
-                newHeight = h0 + (y0 - y);
-                break;
-            case 1:
-                newX = x;
-                newWidth = w0 + (x0 - x);
-                break;
-            case 2:
-                newX = x;
-                newHeight = y - y0;
-                newWidth = w0 + (x0 - x);
-                break;
-            case 3:
-                newY = y;
-                newHeight = h0 + (y0 - y);
-                break;
-            case 4:
-                newHeight = y - y0;
-                break;
-            case 5:
-                newWidth = x - x0;
-                newY = y;
-                newHeight = h0 + (y0 - y);
-                break;
-            case 6:
-                newWidth = x - x0;
-                break;
-            case 7:
-                newWidth = x - x0;
-                newHeight = y - y0;
-                break;
+    private void resizeShapeByHandle(Node shape, int handleIdx, double x, double y) {
+        if (shape instanceof Rectangle rect) {
+            double x0 = rect.getX(), y0 = rect.getY(), w0 = rect.getWidth(), h0 = rect.getHeight();
+            double newX = x0, newY = y0, newWidth = w0, newHeight = h0;
+            switch (handleIdx) {
+                case 0:
+                    newX = x;
+                    newY = y;
+                    newWidth = w0 + (x0 - x);
+                    newHeight = h0 + (y0 - y);
+                    break;
+                case 1:
+                    newX = x;
+                    newWidth = w0 + (x0 - x);
+                    break;
+                case 2:
+                    newX = x;
+                    newHeight = y - y0;
+                    newWidth = w0 + (x0 - x);
+                    break;
+                case 3:
+                    newY = y;
+                    newHeight = h0 + (y0 - y);
+                    break;
+                case 4:
+                    newHeight = y - y0;
+                    break;
+                case 5:
+                    newWidth = x - x0;
+                    newY = y;
+                    newHeight = h0 + (y0 - y);
+                    break;
+                case 6:
+                    newWidth = x - x0;
+                    break;
+                case 7:
+                    newWidth = x - x0;
+                    newHeight = y - y0;
+                    break;
+            }
+            if (newWidth < 0) {
+                newWidth = Math.abs(newWidth);
+                newX = newX - newWidth;
+                if (handleIdx == 0) resizeCorner = 5;
+                else if (handleIdx == 1) resizeCorner = 6;
+                else if (handleIdx == 2) resizeCorner = 7;
+                else if (handleIdx == 5) resizeCorner = 0;
+                else if (handleIdx == 6) resizeCorner = 1;
+                else if (handleIdx == 7) resizeCorner = 2;
+            }
+            if (newHeight < 0) {
+                newHeight = Math.abs(newHeight);
+                newY = newY - newHeight;
+                if (handleIdx == 0) resizeCorner = 2;
+                else if (handleIdx == 3) resizeCorner = 4;
+                else if (handleIdx == 5) resizeCorner = 7;
+                else if (handleIdx == 2) resizeCorner = 0;
+                else if (handleIdx == 4) resizeCorner = 3;
+                else if (handleIdx == 7) resizeCorner = 5;
+            }
+            if (newX != x0) rect.setX(newX);
+            if (newY != y0) rect.setY(newY);
+            if (newWidth != w0) rect.setWidth(newWidth);
+            if (newHeight != h0) rect.setHeight(newHeight);
+        } else if (shape instanceof Text text) {
+            Bounds initialBounds = text.getBoundsInLocal();
+            double initialX = text.getX(), initialY = text.getY();
+            double initialFontSize = text.getFont().getSize();
+            double newX = initialX, newY = initialY;
+            double newWidth = initialBounds.getWidth(), newHeight = initialBounds.getHeight();
+            switch (handleIdx) {
+                case 0: // top-left
+                    newX = x;
+                    newY = y;
+                    newWidth = Math.abs(initialBounds.getMinX() - x) * 2;
+                    newHeight = Math.abs(initialBounds.getMinY() - y) * 2;
+                    break;
+                case 1: // top-center
+                    newY = y;
+                    newHeight = Math.abs(initialBounds.getMinY() - y) * 2;
+                    break;
+                case 2: // top-right
+                    newY = y;
+                    newWidth = Math.abs(x - initialBounds.getMaxX());
+                    newHeight = Math.abs(initialBounds.getMinY() - y) * 2;
+                    break;
+                case 3: // middle-left
+                    newX = x;
+                    newWidth = Math.abs(initialBounds.getMinX() - x) * 2;
+                    break;
+                case 4: // middle-bottom
+                    newHeight = Math.abs(y - initialBounds.getMaxY());
+                    break;
+                case 5: // middle-right
+                    newWidth = Math.abs(x - initialBounds.getMaxX());
+                    break;
+                case 6: // bottom-left
+                    newX = x;
+                    newHeight = Math.abs(y - initialBounds.getMaxY());
+                    newWidth = Math.abs(initialBounds.getMinX() - x) * 2;
+                    break;
+                case 7: // bottom-right
+                    newHeight = Math.abs(y - initialBounds.getMaxY());
+                    newWidth = Math.abs(x - initialBounds.getMaxX());
+                    break;
+            }
+            text.setX(newX);
+            text.setY(newY);
+            // Масштабирование fontSize
+            if (initialBounds.getWidth() > 0 && initialBounds.getHeight() > 0) {
+                double scaleFactor = Math.sqrt((newWidth / initialBounds.getWidth()) * (newHeight / initialBounds.getHeight()));
+                text.setFont(Font.font(text.getFont().getFamily(), initialFontSize * scaleFactor));
+            }
+        } else if (shape instanceof Ellipse ell) {
+            // Используем stored initial bounds для корректного масштабирования без накопления
+            if (initialX == 0 && initialY == 0 && initialW == 0 && initialH == 0) return;  // Проверка (если не инициализировано)
+            double x0 = initialX, y0 = initialY, w0 = initialW, h0 = initialH;
+            double newX = x0, newY = y0, newWidth = w0, newHeight = h0;
+
+            // Switch: стандартно как для Rectangle (масштабирование границ)
+            switch (handleIdx) {
+                case 0:  // top-left
+                    newX = x;
+                    newY = y;
+                    newWidth = w0 + (x0 - x);
+                    newHeight = h0 + (y0 - y);
+                    break;
+                case 1:  // top-center (только высота)
+                    newY = y;
+                    newHeight = h0 + (y0 - y);
+                    break;
+                case 2:  // top-right
+                    newWidth = x - x0;
+                    newY = y;
+                    newHeight = h0 + (y0 - y);
+                    break;
+                case 3:  // middle-left (только ширина)
+                    newX = x;
+                    newWidth = w0 + (x0 - x);
+                    break;
+                case 4:  // middle-center (нет изменения)
+                    return;  // Пропускаем
+                case 5:  // middle-right (только ширина)
+                    newWidth = x - x0;
+                    break;
+                case 6:  // bottom-left
+                    newX = x;
+                    newHeight = y - y0;
+                    newWidth = w0 + (x0 - x);
+                    break;
+                case 7:  // bottom-right
+                    newWidth = x - x0;
+                    newHeight = y - y0;
+                    break;
+            }
+
+            // Flip-логика (реверс при отрицательных размерах)
+            if (newWidth < 0) {
+                newWidth = Math.abs(newWidth);
+                newX = newX - newWidth - (newWidth - w0);  // Корректировка для flip
+                if (handleIdx == 0) resizeCorner = 5;
+                else if (handleIdx == 1) resizeCorner = 6;
+                else if (handleIdx == 2) resizeCorner = 7;
+                else if (handleIdx == 5) resizeCorner = 0;
+                else if (handleIdx == 6) resizeCorner = 1;
+                else if (handleIdx == 7) resizeCorner = 2;
+            }
+            if (newHeight < 0) {
+                newHeight = Math.abs(newHeight);
+                newY = newY - newHeight - (newHeight - h0);
+                if (handleIdx == 0) resizeCorner = 2;
+                else if (handleIdx == 3) resizeCorner = 4;
+                else if (handleIdx == 5) resizeCorner = 7;
+                else if (handleIdx == 2) resizeCorner = 0;
+                else if (handleIdx == 4) resizeCorner = 3;
+                else if (handleIdx == 7) resizeCorner = 5;
+            }
+
+            // Минимальные размеры (предотвращаем исчезновение)
+            double minSize = 20.0;
+            newWidth = Math.max(minSize, newWidth);
+            newHeight = Math.max(minSize, newHeight);
+
+            // Применяем: центр как центр нового bounding box, радиусы = половинка размеров
+            ell.setCenterX(newX + newWidth / 2);
+            ell.setCenterY(newY + newHeight / 2);
+            ell.setRadiusX(newWidth / 2);
+            ell.setRadiusY(newHeight / 2);
         }
-        if (newWidth < 0) {
-            newWidth = Math.abs(newWidth);
-            newX = newX - newWidth;
-            if (handleIdx == 0) resizeCorner = 5;
-            else if (handleIdx == 1) resizeCorner = 6;
-            else if (handleIdx == 2) resizeCorner = 7;
-            else if (handleIdx == 5) resizeCorner = 0;
-            else if (handleIdx == 6) resizeCorner = 1;
-            else if (handleIdx == 7) resizeCorner = 2;
-        }
-        if (newHeight < 0) {
-            newHeight = Math.abs(newHeight);
-            newY = newY - newHeight;
-            if (handleIdx == 0) resizeCorner = 2;
-            else if (handleIdx == 3) resizeCorner = 4;
-            else if (handleIdx == 5) resizeCorner = 7;
-            else if (handleIdx == 2) resizeCorner = 0;
-            else if (handleIdx == 4) resizeCorner = 3;
-            else if (handleIdx == 7) resizeCorner = 5;
-        }
-        if (newX != x0) rect.setX(newX);
-        if (newY != y0) rect.setY(newY);
-        if (newWidth != w0) rect.setWidth(newWidth);
-        if (newHeight != h0) rect.setHeight(newHeight);
     }
 
     private void resizeEllipseByHandle(Ellipse ellipse, int handleIdx, double x, double y) {
+        double minRadius = 10.0;  // Минимальный радиус, чтобы эллипс не исчезал/не коверкался
+        double centerX = ellipse.getCenterX();
+        double centerY = ellipse.getCenterY();
+
         switch (handleIdx) {
-            case 0:
-                ellipse.setRadiusX(Math.abs(ellipse.getCenterX() - x));
+            case 0:  // Левая ручка: устанавливает radiusX по расстоянию мыши слева от центра (без смешивания с Y)
+                double newRadiusXLeft = Math.max(minRadius, Math.abs(centerX - x));  // Всегда положительно
+                ellipse.setRadiusX(newRadiusXLeft);
                 break;
-            case 1:
-                ellipse.setRadiusX(Math.abs(x - ellipse.getCenterX()));
+            case 1:  // Правая ручка: устанавливает radiusX по расстоянию мыши справа от центра
+                double newRadiusXRight = Math.max(minRadius, Math.abs(x - centerX));
+                ellipse.setRadiusX(newRadiusXRight);
                 break;
-            case 2:
-                ellipse.setRadiusY(Math.abs(ellipse.getCenterY() - y));
+            case 2:  // Верхняя ручка: устанавливает radiusY по расстоянию мыши сверху от центра (без смешивания с X)
+                double newRadiusYTop = Math.max(minRadius, Math.abs(centerY - y));
+                ellipse.setRadiusY(newRadiusYTop);
                 break;
-            case 3:
-                ellipse.setRadiusY(Math.abs(y - ellipse.getCenterY()));
+            case 3:  // Нижняя ручка: устанавливает radiusY по расстоянию мыши снизу от центра
+                double newRadiusYBottom = Math.max(minRadius, Math.abs(y - centerY));
+                ellipse.setRadiusY(newRadiusYBottom);
                 break;
         }
     }
@@ -560,6 +725,87 @@ public class ShapeManager {
         }
     }
 
+    /**
+     * Вспомогательный метод: создаёт и добавляет resize handles в массив и на панель.
+     * Расставляет 8 кругов по периметру bounding box (лево, центр, право × верх, центр, низ, пропуская центр).
+     */
+    private void createAndAddResizeHandles(double x0, double y0, double w, double h, Circle[] resizeHandles, AnchorPane pane, int startIndex) {
+        double[] xs = {x0, x0 + w / 2, x0 + w};
+        double[] ys = {y0, y0 + h / 2, y0 + h};
+        int index = startIndex;
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                if (i == 1 && j == 1) continue;  // Пропустить центр
+                Circle handle = createResizeHandle(xs[i], ys[j], index);
+                resizeHandles[index] = handle;
+                pane.getChildren().add(handle);
+                index++;
+            }
+        }
+    }
+
+    /**
+     * Вспомогательный метод: обновляет позиции существующих resize handles (без пересоздания).
+     */
+    private static void updateResizeHandlesPositions(double x0, double y0, double w, double h, Circle[] resizeHandles) {
+        if (resizeHandles == null) return;
+        double[] xs = {x0, x0 + w / 2, x0 + w};
+        double[] ys = {y0, y0 + h / 2, y0 + h};
+        int index = 0;
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                if (i == 1 && j == 1) continue;  // Пропустить центр
+                if (index < resizeHandles.length && resizeHandles[index] != null) {
+                    resizeHandles[index].setCenterX(xs[i]);
+                    resizeHandles[index].setCenterY(ys[j]);
+                }
+                index++;
+            }
+        }
+    }
+
+    /**
+     * Вспомогательный метод: перестраивает Path для ромба/бабочки из двух треугольников на основе заданных координат.
+     */
+    private static void rebuildButterflyPath(Path path, double leftBaseX, double leftTopY, double centerX, double centerY, double leftBottomY, double rightBaseX) {
+        path.getElements().clear();
+        // Левый треугольник
+        path.getElements().addAll(
+                new MoveTo(leftBaseX, leftTopY),
+                new LineTo(centerX, centerY),
+                new LineTo(leftBaseX, leftBottomY),
+                new ClosePath()
+        );
+        // Правый треугольник (rightTopY == leftTopY, rightBottomY == leftBottomY)
+        path.getElements().addAll(
+                new MoveTo(rightBaseX, leftTopY),
+                new LineTo(centerX, centerY),
+                new LineTo(rightBaseX, leftBottomY),
+                new ClosePath()
+        );
+    }
+
+    /**
+     * Вспомогательный метод: рассчитывает координаты для ромба/бабочки на основе мышиных координат и начальной точки.
+     * Возвращает массив: {leftBaseX, leftTopY, centerX, centerY, leftBottomY, rightBaseX}.
+     */
+    private static double[] calculateButterflyCoordinates(double x, double y, double startX, double startY) {
+        double totalWidth = Math.abs(x - startX) * 2;
+        double mouseHeight = Math.abs(y - startY);
+        double side = totalWidth / 2;
+        double triangleHeight = (Math.sqrt(3) / 2) * side;
+        double finalHeight = Math.min(mouseHeight, triangleHeight * 2);
+        double leftBaseX = startX - side;
+        double centerTopY = startY - finalHeight / 2;
+        double centerBottomY = startY + finalHeight / 2;
+        double calculate = (finalHeight / 2) * (1 - Math.sqrt(3) / 3);
+        double leftTopY = centerTopY + calculate;
+        double leftBottomY = centerBottomY - calculate;
+        double rightBaseX = startX + side;
+        // Возвращаем массив в порядке: leftBaseX, leftTopY, centerX, centerY, leftBottomY, rightBaseX
+        return new double[]{leftBaseX, leftTopY, startX, startY, leftBottomY, rightBaseX};
+    }
+
     private void updateResizeHandles() {
         if (selectedNode instanceof Rectangle rect && resizeHandles != null) {
             double[] x = {rect.getX(), rect.getX() + rect.getWidth() / 2, rect.getX() + rect.getWidth()};
@@ -575,25 +821,23 @@ public class ShapeManager {
                     index++;
                 }
             }
-        } else if (selectedNode instanceof Ellipse ellipse && resizeHandles != null) {
-            double cx = ellipse.getCenterX(), cy = ellipse.getCenterY();
-            double rx = ellipse.getRadiusX(), ry = ellipse.getRadiusY();
-            if (resizeHandles[0] != null) {
-                resizeHandles[0].setCenterX(cx - rx);
-                resizeHandles[0].setCenterY(cy);
-            }
-            if (resizeHandles[1] != null) {
-                resizeHandles[1].setCenterX(cx + rx);
-                resizeHandles[1].setCenterY(cy);
-            }
-            if (resizeHandles[2] != null) {
-                resizeHandles[2].setCenterX(cx);
-                resizeHandles[2].setCenterY(cy - ry);
-            }
-            if (resizeHandles[3] != null) {
-                resizeHandles[3].setCenterX(cx);
-                resizeHandles[3].setCenterY(cy + ry);
-            }
+        } else if (selectedNode instanceof Ellipse ell && resizeHandles != null && resizeHandles.length == 4) {
+            double cx = ell.getCenterX();
+            double cy = ell.getCenterY();
+            double rx = ell.getRadiusX();
+            double ry = ell.getRadiusY();
+            // Left (0)
+            resizeHandles[0].setCenterX(cx - rx);
+            resizeHandles[0].setCenterY(cy);
+            // Right (1)
+            resizeHandles[1].setCenterX(cx + rx);
+            resizeHandles[1].setCenterY(cy);
+            // Top (2)
+            resizeHandles[2].setCenterX(cx);
+            resizeHandles[2].setCenterY(cy - ry);
+            // Bottom (3)
+            resizeHandles[3].setCenterX(cx);
+            resizeHandles[3].setCenterY(cy + ry);
         } else if (selectedNode instanceof Line line && resizeHandles != null) {
             if (resizeHandles[0] != null) {
                 resizeHandles[0].setCenterX(line.getStartX());
@@ -617,28 +861,25 @@ public class ShapeManager {
                 } else {
                     hideSnapHighlight();
                 }
-            }
-        } else if (selectedNode instanceof Path path && resizeHandles != null) {
-            Bounds bounds = path.getBoundsInLocal();  // Актуальные после resize
-            double x0 = bounds.getMinX();
-            double y0 = bounds.getMinY();
-            double w = bounds.getWidth();
-            double h = bounds.getHeight();
-            double[] xs = {x0, x0 + w / 2, x0 + w};
-            double[] ys = {y0, y0 + h / 2, y0 + h};
-            int idx = 0;
-            for (int i = 0; i < 3; i++) {
-                for (int j = 0; j < 3; j++) {
-                    if (i == 1 && j == 1) continue;  // Центр пропускаем
-                    if (idx < resizeHandles.length && resizeHandles[idx] != null) {
-                        resizeHandles[idx].setCenterX(xs[i]);
-                        resizeHandles[idx].setCenterY(ys[j]);
+            } else if (resizeHandles != null) {
+                for (int i = 0; i < resizeHandles.length; i++) {
+                    if (resizeHandles[i] != null) {
+                        double handleX = resizeHandles[i].getCenterX();
+                        double handleY = resizeHandles[i].getCenterY();
+                        // Clipp ручки к pane bounds
+                        handleX = Math.max(5, Math.min(pane.getWidth() - 5, handleX));  // +-5 для visibility
+                        handleY = Math.max(5, Math.min(pane.getHeight() - 5, handleY));
+                        resizeHandles[i].setCenterX(handleX);
+                        resizeHandles[i].setCenterY(handleY);
                     }
-                    idx++;
                 }
             }
-            // ДЕБАГ: Опционально, принт bounds после update
-            System.out.println("Update Handles: BOUNDS X=" + x0 + ", Y=" + y0 + ", W=" + w + ", H=" + h);
+        } else if (selectedNode instanceof Path path && resizeHandles != null) {
+            Bounds bounds = path.getBoundsInLocal();
+            updateResizeHandlesPositions(bounds.getMinX(), bounds.getMinY(), bounds.getWidth(), bounds.getHeight(), resizeHandles);
+        } else if (selectedNode instanceof Text text && resizeHandles != null) {
+            Bounds bounds = text.getBoundsInLocal();
+            updateResizeHandlesPositions(bounds.getMinX(), bounds.getMinY(), bounds.getWidth(), bounds.getHeight(), resizeHandles);
         }
     }
 
@@ -653,7 +894,7 @@ public class ShapeManager {
         if (addingText) {
             previewText = new Text(startX, startY, text);
             previewText.setFill(Color.BLACK);
-            pane.getChildren().add(previewText);
+            pane.getChildren().add(previewText);  // ВЕРНУТЬ: Теперь preview на панели (не добавлять повторно в addShape)
             addingText = false;
         }
     }
@@ -693,22 +934,40 @@ public class ShapeManager {
     }
 
     private void handleSelectOnPress(double x, double y) {
+        // ТЕСТ: Предполагаем, что x,y УЖЕ pane-local (из pane mouse handler, не scene)
+        // Если нет — клик на фигуру должен выделять (no conversion)
+        final double finalX = x;
+        final double finalY = y;
+        // Debug (покажи coords и pane size)
+        System.out.println("Direct coords: (" + finalX + "," + finalY + ") paneSize(" + pane.getWidth() + "x" + pane.getHeight() + ")");
         Node hovered = pane.getChildren().stream()
                 .filter(n -> {
                     if (n instanceof Line line) {
-                        // Проверяем расстояние от точки клика до линии
-                        return lineDistance(x, y, line.getStartX(), line.getStartY(), line.getEndX(), line.getEndY()) < THICKNESS_THRESHOLD;
+                        double dist = lineDistance(finalX, finalY, line.getStartX(), line.getStartY(), line.getEndX(), line.getEndY());
+                        if (dist < THICKNESS_THRESHOLD) {
+                            System.out.println("!!! Line selected: dist=" + dist);
+                            return true;
+                        }
+                        return false;
                     } else if (n instanceof javafx.scene.shape.Shape shape && !(n instanceof Circle && ((Circle) n).getFill() == Color.BLUE)) {
-                        return shape.contains(x, y);
+                        boolean isInside = shape.getBoundsInParent().contains(finalX, finalY);
+                        System.out.println("Shape " + shape.getClass() + ": coords(" + finalX + "," + finalY + ") contains -> " + isInside + " (bounds: " + shape.getBoundsInParent() + ")");
+                        return isInside;
                     }
                     return false;
                 })
                 .findFirst().orElse(null);
+
         if (hovered != null) {
             selectShape(hovered);
             isDraggingSelected = true;
-            dragOffsetX = x - getShapeX(hovered);
-            dragOffsetY = y - getShapeY(hovered);
+            if (hovered instanceof Ellipse e) {
+                dragOffsetX = finalX - e.getCenterX();
+                dragOffsetY = finalY - e.getCenterY();
+            } else {
+                dragOffsetX = finalX - getShapeX(hovered);
+                dragOffsetY = finalY - getShapeY(hovered);
+            }
             hideSnapHighlight();
         } else {
             deselectShape();
@@ -716,20 +975,24 @@ public class ShapeManager {
         }
     }
 
-    public void onMouseDraggedForTool(Tool tool, double x, double y) {
+    public void  onMouseDraggedForTool(Tool tool, double x, double y) {
+        double paneX = x;
+        double paneY = y;
+
         if (isDraggingSelected && selectedNode != null && tool == Tool.SELECT) {
-            double newX = x - dragOffsetX, newY = y - dragOffsetY;
+            double newX = paneX - dragOffsetX;
+            double newY = paneY - dragOffsetY;
+
+            // Clipping, чтобы не пропадало (ограничить в pane bounds)
+            double shapeWidth = selectedNode.getBoundsInLocal().getWidth();
+            double shapeHeight = selectedNode.getBoundsInLocal().getHeight();
+            newX = Math.max(0, Math.min(pane.getWidth() - shapeWidth, newX));  // Лево/право
+            newY = Math.max(0, Math.min(pane.getHeight() - shapeHeight, newY));  // Верх/низ
+
             setShapePosition(selectedNode, newX, newY);
             updateResizeHandles();
         } else if (isResizing && selectedNode != null) {
-            switch (selectedNode) {
-                case Rectangle rect -> resizeRectangleByHandle(rect, resizeCorner, x, y);
-                case Ellipse ell -> resizeEllipseByHandle(ell, resizeCorner, x, y);
-                case Line line -> resizeLineByHandle(line, resizeCorner, x, y);
-                default -> {
-                }
-            }
-            updateResizeHandles();
+            return;
         } else {
             if (tool == Tool.LINE && previewLine != null) {
                 double endX = x;
@@ -765,62 +1028,27 @@ public class ShapeManager {
                 previewRect.setWidth(w);
                 previewRect.setHeight(h);
             } else if (tool == Tool.ELLIPSE && previewEllipse != null) {
-                double rx = Math.abs(x - startX) / 2, ry = Math.abs(y - startY) / 2;
+                double rx = Math.abs(paneX - startX) / 2;  // Используй paneX для правильности
+                double ry = Math.abs(paneY - startY) / 2;
                 previewEllipse.setRadiusX(rx);
                 previewEllipse.setRadiusY(ry);
-                previewEllipse.setCenterX((startX + x) / 2);
-                previewEllipse.setCenterY((startY + y) / 2);
+                previewEllipse.setCenterX((startX + paneX) / 2);
+                previewEllipse.setCenterY((startY + paneY) / 2);
             } else if (tool == Tool.RHOMBUS && previewRhombus != null) {
-                double totalWidth = Math.abs(x - startX) * 2;  // Общая ширина: по стороне на каждый треугольник
-                double mouseHeight = Math.abs(y - startY);
-                double side = totalWidth / 2;  // Side для одного треугольника (от основания до центра)
-                double triangleHeight = (Math.sqrt(3) / 2) * side;  // Равносторонняя высота
-                double finalHeight = Math.min(mouseHeight, triangleHeight * 2);  // Подгоняем под мышь, чтобы не искажать; *2 для двух треугольников сверху/снизу от центра
-
-                // Координаты для левого треугольника (вершина в центре, основание слева)
-                double leftBaseX = startX - side;
-                double centerTopY = startY - finalHeight / 2;
-                double centerBottomY = startY + finalHeight / 2;
-                double leftTopX = leftBaseX;
-                double leftTopY = centerTopY + (finalHeight / 2) * (1 - Math.sqrt(3) / 3);  // Корректировка для 60° угла (точная геометрия)
-                double leftBottomX = leftBaseX;
-                double leftBottomY = centerBottomY - (finalHeight / 2) * (1 - Math.sqrt(3) / 3);
-
-                // Координаты для правого треугольника (вершина в центре, основание справа)
-                double rightBaseX = startX + side;
-                double rightTopX = rightBaseX;
-                double rightTopY = centerTopY + (finalHeight / 2) * (1 - Math.sqrt(3) / 3);
-                double rightBottomX = rightBaseX;
-                double rightBottomY = centerBottomY - (finalHeight / 2) * (1 - Math.sqrt(3) / 3);
-
-                previewRhombus.getElements().clear();
-
-                // Левый треугольник: основание сверху/снизу к центру (вершина вправо)
-                previewRhombus.getElements().addAll(
-                        new MoveTo(leftTopX, leftTopY),      // Верх левого основания
-                        new LineTo(startX, startY),          // К центру (вершина)
-                        new LineTo(leftBottomX, leftBottomY), // К низу левого основания
-                        new ClosePath()                      // Замыкаем левый треугольник
-                );
-
-                // Правый треугольник: основание справа, вершина влево к центру
-                previewRhombus.getElements().addAll(
-                        new MoveTo(rightTopX, rightTopY),    // Верх правого основания
-                        new LineTo(startX, startY),          // К центру (вершина)
-                        new LineTo(rightBottomX, rightBottomY), // К низу правого основания
-                        new ClosePath()                      // Замыкаем правый треугольник
-                );
+                double[] coords = calculateButterflyCoordinates(x, y, startX, startY);
+                rebuildButterflyPath(previewRhombus, coords[0], coords[1], coords[2], coords[3], coords[4], coords[5]);
             }
         }
     }
 
     private void setShapePosition(Node shape, double x, double y) {
+
         if (shape instanceof Rectangle r) {
             r.setX(x);
             r.setY(y);
         } else if (shape instanceof Ellipse e) {
             e.setCenterX(x);
-            e.setCenterY(y);
+            e.setCenterY(y);  // Теперь offset от центра, так что следует точно за мышью
         } else if (shape instanceof Text t) {
             t.setX(x);
             t.setY(y);
@@ -889,55 +1117,35 @@ public class ShapeManager {
             ((Rectangle) finalShape).setStroke(Color.BLACK);
             addShape(finalShape);  // Добавлено: вызываем addShape здесь
         } else if (tool == Tool.ELLIPSE && previewEllipse != null) {
-            finalShape = new Ellipse(previewEllipse.getCenterX(), previewEllipse.getCenterY(), previewEllipse.getRadiusX(), previewEllipse.getRadiusY());
+            double minR = 10.0;
+            double rx = Math.max(minR, previewEllipse.getRadiusX());
+            double ry = Math.max(minR, previewEllipse.getRadiusY());
+            finalShape = new Ellipse(previewEllipse.getCenterX(), previewEllipse.getCenterY(), rx, ry);
             ((Ellipse) finalShape).setFill(Color.TRANSPARENT);
             ((Ellipse) finalShape).setStroke(Color.BLACK);
-            addShape(finalShape);  // Добавлено: вызываем addShape здесь
+            addShape(finalShape);
+            clearPreview();
         } else if (tool == Tool.RHOMBUS && previewRhombus != null) {
-            double totalWidth = Math.abs(x - startX) * 2;
-            double mouseHeight = Math.abs(y - startY);
-            double side = totalWidth / 2;
-            double triangleHeight = (Math.sqrt(3) / 2) * side;
-            double finalHeight = Math.min(mouseHeight, triangleHeight * 2);
-            // Те же координаты, что в dragged
-            double leftBaseX = startX - side;
-            double centerTopY = startY - finalHeight / 2;
-            double centerBottomY = startY + finalHeight / 2;
-            // Убрали локальные переменные, используем базовые напрямую
-            double leftTopY = centerTopY + (finalHeight / 2) * (1 - Math.sqrt(3) / 3);
-            double leftBottomY = centerBottomY - (finalHeight / 2) * (1 - Math.sqrt(3) / 3);
-            double rightBaseX = startX + side;
-            double rightTopY = centerTopY + (finalHeight / 2) * (1 - Math.sqrt(3) / 3);  // rightTopY = leftTopY, но вычисляем явно
-            double rightBottomY = centerBottomY - (finalHeight / 2) * (1 - Math.sqrt(3) / 3);
+            // Расчёты координат — заменить дублированный фрагмент на метод
+            double[] coords = calculateButterflyCoordinates(x, y, startX, startY);
+
             Path butterfly = new Path();  // Финальная фигура
             butterfly.setFill(Color.TRANSPARENT);
             butterfly.setStroke(Color.BLACK);
             butterfly.setStrokeWidth(1);
-            // Левый треугольник (прямое использование leftBaseX)
-            butterfly.getElements().addAll(
-                    new MoveTo(leftBaseX, leftTopY),  // leftTopX заменён на leftBaseX
-                    new LineTo(startX, startY),
-                    new LineTo(leftBaseX, leftBottomY),  // leftBottomX заменён на leftBaseX
-                    new ClosePath()
-            );
-            // Правый треугольник (прямое использование rightBaseX)
-            butterfly.getElements().addAll(
-                    new MoveTo(rightBaseX, rightTopY),  // rightTopX заменён на rightBaseX
-                    new LineTo(startX, startY),
-                    new LineTo(rightBaseX, rightBottomY),  // rightBottomX заменён на rightBaseX
-                    new ClosePath()
-            );
+
+            // Перестройка Path — заменить ручное addAll на метод
+            rebuildButterflyPath(butterfly, coords[0], coords[1], coords[2], coords[3], coords[4], coords[5]);
+
             finalShape = butterfly;
             addShape(finalShape);  // Добавляем (как в исправленной версии ранее)
             clearPreview();
             hideSnapHighlight();
         } else if (tool == Tool.TEXT && previewText != null) {
             finalShape = previewText;
-            addShape(finalShape);  // Добавлено: вызываем addShape здесь
+            clearPreview();
+            hideSnapHighlight();
         }
-        if (tool == Tool.TEXT) addingText = false;
-        isDraggingSelected = false;
-        isResizing = false;
     }
 
     private double[] findNearestEdgeSnap(double x, double y) {

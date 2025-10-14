@@ -139,7 +139,6 @@
     <center>
         <ScrollPane>
             <AnchorPane fx:id="schemePane"
-                        styleClass="scheme-pane"
                         prefWidth="800"
                         prefHeight="600"
                         onMousePressed="#onPaneMousePressed"
