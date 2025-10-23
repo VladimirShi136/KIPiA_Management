@@ -21,10 +21,6 @@ module com.kipia.management.kipia_management {
     // Открывает модели. Нужно, если FXML использует биндинги или DataFX для рефлексии моделей.
     opens com.kipia.management.kipia_management.models to javafx.fxml;
 
-    // Если сервисы не нужны для рефлексии, их не обязательно открывать
-    // Но если используете рефлексию или DI, можно открыть
-    // opens com.kipia.management.kipia_management.services to javafx.fxml;
-
     // Экспортируем пакеты, которые должны быть видимы другим модулям (например, для тестов или внешних библиотек)
     exports com.kipia.management.kipia_management;
     exports com.kipia.management.kipia_management.controllers;

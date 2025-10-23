@@ -12,7 +12,7 @@ import javafx.scene.control.TreeTableCell;
  * @since 13.09.2025
  */
 public abstract class AbstractValidatingTreeCell<T> extends TreeTableCell<DevicesGroupedController.TreeRowItem, T> implements ValidationCallback {
-    private ValidatingCellEditor editor = new ValidatingCellEditor(this);  // Композиция для общей логики
+    private final ValidatingCellEditor editor = new ValidatingCellEditor(this);  // Композиция для общей логики
 
     /**
      * Запускает редактирование ячейки.

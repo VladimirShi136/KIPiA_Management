@@ -45,7 +45,6 @@ public class DevicesTableController {
     private Button exportButton;
     @FXML
     private Button importButton;
-
     @FXML
     private Label totalDevicesLabel;
     @FXML

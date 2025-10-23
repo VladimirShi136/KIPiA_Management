@@ -21,6 +21,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 import javafx.util.converter.DefaultStringConverter;
+
 import java.util.logging.Logger;
 
 import java.io.File;
@@ -106,7 +107,149 @@ public class DevicesGroupedController {
                 Device::getInventoryNumber,
                 Device::setInventoryNumber);
 
-        // Год выпуска - числовая колонка с кастомной ячейкой и проверкой
+        // Год выпуска - числовая колонка с custom ячейкой и проверкой
+        TreeTableColumn<TreeRowItem, Integer> yearCol = getTreeRowItemIntegerTreeTableColumn();
+
+        // Колонка "Предел измерений"
+        TreeTableColumn<TreeRowItem, String> measurementLimitCol = createEditableStringColumn("Предел измерений", 100,
+                Device::getMeasurementLimit,
+                Device::setMeasurementLimit);
+
+        // Колонка "Класс точности" - числовая колонка с валидацией
+        TreeTableColumn<TreeRowItem, Double> accuracyClassCol = getTreeRowItemDoubleTreeTableColumn();
+
+        // Колонка "Кран №"
+        TreeTableColumn<TreeRowItem, String> valveNumberCol = createEditableStringColumn("Кран №", 70,
+                Device::getValveNumber,
+                Device::setValveNumber);
+
+        // Колонка Статус с ComboBox и запретом редактирования для групп
+        TreeTableColumn<TreeRowItem, String> statusCol = getTreeRowItemStringTreeTableColumn();
+
+        //Колонка "Фото"
+        TreeTableColumn<TreeRowItem, Void> photoCol = new TreeTableColumn<>("Фото");
+        photoCol.setPrefWidth(145);
+        photoCol.setCellFactory(createPhotoCellFactory());
+
+        // Колонка "Доп. Информация."
+        TreeTableColumn<TreeRowItem, String> additionalInfoCol = createEditableStringColumn("Доп. информация", 205,
+                Device::getAdditionalInfo,
+                Device::setAdditionalInfo);
+
+        // Добавление колонок в таблицу
+        treeTable.getColumns().addAll(locationCol, nameCol, manufacturerCol, inventoryCol, yearCol, measurementLimitCol, accuracyClassCol, valveNumberCol, statusCol, photoCol, additionalInfoCol);
+    }
+
+    private TreeTableColumn<TreeRowItem, String> getTreeRowItemStringTreeTableColumn() {
+        TreeTableColumn<TreeRowItem, String> statusCol = new TreeTableColumn<>("Статус");
+        statusCol.setPrefWidth(70);
+        statusCol.setCellValueFactory(param -> {
+            TreeRowItem val = param.getValue().getValue();
+            if (val instanceof DeviceItem(Device device))
+                return new ReadOnlyObjectWrapper<>(device.getStatus());
+            else
+                return new ReadOnlyObjectWrapper<>("");
+        });
+
+        statusCol.setCellFactory(column -> new ComboBoxTreeTableCell<>("Хранение", "В работе", "Утерян", "Испорчен") {
+            @Override
+            public void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setGraphic(null);
+                    setEditable(false);
+                } else {
+                    TreeRowItem val = getTreeTableRow() == null ? null : getTreeTableRow().getItem();
+                    if (val instanceof GroupItem) {
+                        setEditable(false);
+                        setText(item);
+                        // Убираем combobox для групповых строк
+                        setGraphic(null);
+                        setStyle("-fx-alignment: center; -fx-font-weight: bold;");
+                    } else {
+                        setEditable(true);
+                        setStyle("");
+                    }
+                }
+            }
+
+            @Override
+            public void startEdit() {
+                TreeRowItem val = getTreeTableRow() == null ? null : getTreeTableRow().getItem();
+                if (val instanceof GroupItem) {
+                    cancelEdit();
+                } else {
+                    super.startEdit();
+                }
+            }
+        });
+
+        statusCol.setEditable(true);
+        statusCol.setOnEditCommit(event -> {
+            TreeRowItem val = event.getRowValue().getValue();
+            if (val instanceof DeviceItem(Device device)) {
+                device.setStatus(event.getNewValue());
+                deviceDAO.updateDevice(device);
+                updateStatistics();
+                treeTable.refresh();
+            }
+        });
+        return statusCol;
+    }
+
+    private TreeTableColumn<TreeRowItem, Double> getTreeRowItemDoubleTreeTableColumn() {
+        TreeTableColumn<TreeRowItem, Double> accuracyClassCol = new TreeTableColumn<>("Класс точности");
+        accuracyClassCol.setPrefWidth(90);
+        accuracyClassCol.setCellValueFactory(param -> {
+            TreeRowItem val = param.getValue().getValue();
+            if (val instanceof DeviceItem(Device device)) {
+                return new ReadOnlyObjectWrapper<>(device.getAccuracyClass());
+            } else {
+                return new ReadOnlyObjectWrapper<>(null);
+            }
+        });
+        accuracyClassCol.setCellFactory(col -> new com.kipia.management.kipia_management.controllers.cell.tree_table_cell.ValidatingDoubleTreeCell() {
+            {
+                getStyleClass().add("numeric-cell");
+            }
+
+            @Override
+            public void updateItem(Double item, boolean empty) {
+                TreeRowItem val = getTreeTableRow() == null ? null : getTreeTableRow().getItem();
+                if (!(val instanceof DeviceItem)) {
+                    setEditable(false);
+                    setText(null);
+                    setGraphic(null);
+                } else {
+                    setEditable(true);
+                    super.updateItem(item, empty);
+                }
+            }
+
+            @Override
+            public void startEdit() {
+                TreeRowItem val = getTreeTableRow() == null ? null : getTreeTableRow().getItem();
+                if (!(val instanceof DeviceItem)) {
+                    cancelEdit();
+                } else {
+                    super.startEdit();
+                }
+            }
+        });
+        accuracyClassCol.setEditable(true);
+        accuracyClassCol.setOnEditCommit(event -> {
+            TreeRowItem val = event.getRowValue().getValue();
+            if (val instanceof DeviceItem(Device device)) {
+                device.setAccuracyClass(event.getNewValue());
+                deviceDAO.updateDevice(device);
+                treeTable.refresh();
+            }
+        });
+        return accuracyClassCol;
+    }
+
+    private TreeTableColumn<TreeRowItem, Integer> getTreeRowItemIntegerTreeTableColumn() {
         TreeTableColumn<TreeRowItem, Integer> yearCol = new TreeTableColumn<>("Год выпуска");
         yearCol.setPrefWidth(90);
         yearCol.setCellValueFactory(param -> {
@@ -167,134 +310,7 @@ public class DevicesGroupedController {
                 treeTable.refresh();
             }
         });
-
-        // Колонка "Предел измерений"
-        TreeTableColumn<TreeRowItem, String> measurementLimitCol = createEditableStringColumn("Предел измерений", 100,
-                Device::getMeasurementLimit,
-                Device::setMeasurementLimit);
-
-        // Колонка "Класс точности" - числовая колонка с валидацией
-        TreeTableColumn<TreeRowItem, Double> accuracyClassCol = new TreeTableColumn<>("Класс точности");
-        accuracyClassCol.setPrefWidth(90);
-        accuracyClassCol.setCellValueFactory(param -> {
-            TreeRowItem val = param.getValue().getValue();
-            if (val instanceof DeviceItem(Device device)) {
-                return new ReadOnlyObjectWrapper<>(device.getAccuracyClass());
-            } else {
-                return new ReadOnlyObjectWrapper<>(null);
-            }
-        });
-        accuracyClassCol.setCellFactory(col -> new com.kipia.management.kipia_management.controllers.cell.tree_table_cell.ValidatingDoubleTreeCell() {
-            {
-                getStyleClass().add("numeric-cell");
-            }
-
-            @Override
-            public void updateItem(Double item, boolean empty) {
-                TreeRowItem val = getTreeTableRow() == null ? null : getTreeTableRow().getItem();
-                if (!(val instanceof DeviceItem)) {
-                    setEditable(false);
-                    setText(null);
-                    setGraphic(null);
-                } else {
-                    setEditable(true);
-                    super.updateItem(item, empty);
-                }
-            }
-
-            @Override
-            public void startEdit() {
-                TreeRowItem val = getTreeTableRow() == null ? null : getTreeTableRow().getItem();
-                if (!(val instanceof DeviceItem)) {
-                    cancelEdit();
-                } else {
-                    super.startEdit();
-                }
-            }
-        });
-        accuracyClassCol.setEditable(true);
-        accuracyClassCol.setOnEditCommit(event -> {
-            TreeRowItem val = event.getRowValue().getValue();
-            if (val instanceof DeviceItem(Device device)) {
-                device.setAccuracyClass(event.getNewValue());
-                deviceDAO.updateDevice(device);
-                treeTable.refresh();
-            }
-        });
-
-        // Колонка "Кран №"
-        TreeTableColumn<TreeRowItem, String> valveNumberCol = createEditableStringColumn("Кран №", 70,
-                Device::getValveNumber,
-                Device::setValveNumber);
-
-        // Колонка Статус с ComboBox и запретом редактирования для групп
-        TreeTableColumn<TreeRowItem, String> statusCol = new TreeTableColumn<>("Статус");
-        statusCol.setPrefWidth(70);
-        statusCol.setCellValueFactory(param -> {
-            TreeRowItem val = param.getValue().getValue();
-            if (val instanceof DeviceItem(Device device))
-                return new ReadOnlyObjectWrapper<>(device.getStatus());
-            else
-                return new ReadOnlyObjectWrapper<>("");
-        });
-
-        statusCol.setCellFactory(column -> new ComboBoxTreeTableCell<>("Хранение", "В работе", "Утерян", "Испорчен") {
-            @Override
-            public void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    setGraphic(null);
-                    setEditable(false);
-                } else {
-                    TreeRowItem val = getTreeTableRow() == null ? null : getTreeTableRow().getItem();
-                    if (val instanceof GroupItem) {
-                        setEditable(false);
-                        setText(item);
-                        // Убираем комбобокс для групповых строк
-                        setGraphic(null);
-                        setStyle("-fx-alignment: center; -fx-font-weight: bold;");
-                    } else {
-                        setEditable(true);
-                        setStyle("");
-                    }
-                }
-            }
-
-            @Override
-            public void startEdit() {
-                TreeRowItem val = getTreeTableRow() == null ? null : getTreeTableRow().getItem();
-                if (val instanceof GroupItem) {
-                    cancelEdit();
-                } else {
-                    super.startEdit();
-                }
-            }
-        });
-
-        statusCol.setEditable(true);
-        statusCol.setOnEditCommit(event -> {
-            TreeRowItem val = event.getRowValue().getValue();
-            if (val instanceof DeviceItem(Device device)) {
-                device.setStatus(event.getNewValue());
-                deviceDAO.updateDevice(device);
-                updateStatistics();
-                treeTable.refresh();
-            }
-        });
-
-        //Колонка "Фото"
-        TreeTableColumn<TreeRowItem, Void> photoCol = new TreeTableColumn<>("Фото");
-        photoCol.setPrefWidth(145);
-        photoCol.setCellFactory(createPhotoCellFactory());
-
-        // Колонка "Доп. Информация."
-        TreeTableColumn<TreeRowItem, String> additionalInfoCol = createEditableStringColumn("Доп. информация", 205,
-                Device::getAdditionalInfo,
-                Device::setAdditionalInfo);
-
-        // Добавление колонок в таблицу
-        treeTable.getColumns().addAll(locationCol, nameCol, manufacturerCol, inventoryCol, yearCol, measurementLimitCol, accuracyClassCol, valveNumberCol, statusCol, photoCol, additionalInfoCol);
+        return yearCol;
     }
 
     private Callback<TreeTableColumn<TreeRowItem, Void>, TreeTableCell<TreeRowItem, Void>> createPhotoCellFactory() {

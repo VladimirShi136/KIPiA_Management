@@ -24,12 +24,9 @@ import java.util.logging.Logger;
  * @author vladimir_shi
  * @since 12.09.2025
  */
-
 public class ExcelImportExportUtil {
-
-
+    // --- Логгер ---
     private static final Logger LOGGER = Logger.getLogger(ExcelImportExportUtil.class.getName());
-
     // --- Список заголовков столбцов ---
     private static final String[] HEADERS = {
             "Тип прибора", "Модель", "Завод изготовитель", "Инв. №", "Год выпуска",
@@ -74,10 +71,10 @@ public class ExcelImportExportUtil {
     /**
      * Импорт списка приборов из Excel
      *
-     * @param ownerWindow окно, которое вызвало импорт
-     * @param deviceDAO   сервис работы с БД
+     * @param ownerWindow     окно, которое вызвало импорт
+     * @param deviceDAO       сервис работы с БД
      * @param onSuccessUpdate действие после успешного импорта
-     * @param onError действие при ошибке импорта
+     * @param onError         действие при ошибке импорта
      * @return результат импорта
      */
     public static String importDevicesFromExcel(Window ownerWindow,
@@ -126,10 +123,10 @@ public class ExcelImportExportUtil {
             CellStyle cellStyle = createCellStyle(wb);
             int rowNum = 0;
             for (TreeItem<DevicesGroupedController.TreeRowItem> groupNode : treeTable.getRoot().getChildren()) {
-                if (groupNode.getValue() instanceof DevicesGroupedController.GroupItem group) {
+                if (groupNode.getValue() instanceof DevicesGroupedController.GroupItem(String location)) {
                     Row groupRow = sheet.createRow(rowNum++);
                     Cell groupCell = groupRow.createCell(0);
-                    groupCell.setCellValue(group.location());
+                    groupCell.setCellValue(location);
                     groupCell.setCellStyle(groupStyle);
                     Row headerRow = sheet.createRow(rowNum++);
                     headerRow.setHeightInPoints(40);
@@ -139,9 +136,9 @@ public class ExcelImportExportUtil {
                         cell.setCellStyle(headerStyle);
                     }
                     for (TreeItem<DevicesGroupedController.TreeRowItem> deviceNode : groupNode.getChildren()) {
-                        if (deviceNode.getValue() instanceof DevicesGroupedController.DeviceItem deviceItem) {
+                        if (deviceNode.getValue() instanceof DevicesGroupedController.DeviceItem(Device device)) {
                             Row row = sheet.createRow(rowNum++);
-                            fillDeviceRow(deviceItem.device(), row, cellStyle);
+                            fillDeviceRow(device, row, cellStyle);
                         }
                     }
                 }
@@ -161,27 +158,26 @@ public class ExcelImportExportUtil {
     /**
      * Импорт группированной таблицы из Excel
      *
-     * @param ownerWindow       окно, которое вызвало импорт
-     * @param deviceDAO         сервис работы с БД
-     * @param treeTable         группированная таблица
+     * @param ownerWindow     окно, которое вызвало импорт
+     * @param deviceDAO       сервис работы с БД
+     * @param treeTable       группированная таблица
      * @param onSuccessUpdate действие после успешного импорта
      * @param onError         действие при ошибке импорта
-     * @return результат импорта (строка с детали "Импорт завершён!\nДобавлено: X\nОбновлено: Y") или null при ошибке (с логгированием)
      */
-    public static String importGroupedTreeTableFromExcel(Window ownerWindow,
-                                                         DeviceDAO deviceDAO,
-                                                         TreeTableView<DevicesGroupedController.TreeRowItem> treeTable,
-                                                         Runnable onSuccessUpdate,
-                                                         Runnable onError) {
+    public static void importGroupedTreeTableFromExcel(Window ownerWindow,
+                                                       DeviceDAO deviceDAO,
+                                                       TreeTableView<DevicesGroupedController.TreeRowItem> treeTable,
+                                                       Runnable onSuccessUpdate,
+                                                       Runnable onError) {
         File file = showOpenDialog(ownerWindow, "Импорт группированной таблицы из Excel");
-        if (file == null) return null;  // Пользователь отменил
+        if (file == null) return;  // Пользователь отменил
         try (FileInputStream fis = new FileInputStream(file);
              Workbook wb = new XSSFWorkbook(fis)) {
             Sheet sheet = wb.getSheet("GroupedDevices");
             if (sheet == null) {
                 LOGGER.severe("Лист 'GroupedDevices' не найден в файле");  // Логгирование ошибки
                 runSafe(onError);
-                return null;
+                return;
             }
             TreeItem<DevicesGroupedController.TreeRowItem> root = new TreeItem<>();
             root.setExpanded(true);
@@ -218,11 +214,9 @@ public class ExcelImportExportUtil {
             runSafe(onSuccessUpdate);
             String result = "Импорт завершён!\nДобавлено: " + imported + "\nОбновлено: " + updated;
             LOGGER.info(result);  // Логгирование успеха
-            return result;
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Ошибка импорта: " + e.getMessage());  // Логгирование ошибки
             runSafe(onError);
-            return null;
         }
     }
 

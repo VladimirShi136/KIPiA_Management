@@ -5,7 +5,7 @@ import javafx.scene.control.TextField;
 
 /**
  * Вспомогательный класс для инкапсуляции общей логики редактирования валидируемых ячеек таблиц.
- * Обеспечивает создание TextField, обработку ввода, показ алертов и вспомогательные методы.
+ * Обеспечивает создание TextField, обработку ввода, показ alert и вспомогательные методы.
  * Использует ValidationCallback для делегирования специфичной валидации подклассам.
  * @author vladimir_shi
  * @since 10.10.2025
@@ -14,7 +14,7 @@ import javafx.scene.control.TextField;
 public class ValidatingCellEditor {
     protected TextField textField;  // Поле для ввода текста
     private boolean isShowingAlert = false;  // Флаг для предотвращения множественных предупреждений
-    private ValidationCallback callback;  // Callback для валидации и коммита
+    private final ValidationCallback callback;  // Callback для валидации и commiting
 
     /**
      * Конструктор. Принимает callback для обработки валидации.
@@ -42,10 +42,10 @@ public class ValidatingCellEditor {
         String input = textField.getText().trim();
         if (input.contains(",")) {
             showAlert("Используйте точку вместо запятой.");
-            return;  // Не коммитим, подкласс должен вызвать cancelEdit
+            return;  // No commit, подкласс должен вызвать cancelEdit
         }
         if (input.isEmpty()) {
-            callback.validateAndCommit(null);  // Пустое значение — подкласс решит, как коммитить
+            callback.validateAndCommit(null);  // Пустое значение — подкласс решит, как делать commit
             return;
         }
         callback.validateAndCommit(input);  // Делегируем валидацию специфичной логике

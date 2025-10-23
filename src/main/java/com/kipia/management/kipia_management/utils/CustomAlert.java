@@ -15,7 +15,6 @@ import java.util.logging.Logger;
  * @author vladimir_shi
  * @since 10.10.2025
  */
-
 public class CustomAlert {
     private static final Logger LOGGER = Logger.getLogger(CustomAlert.class.getName());
 
@@ -41,8 +40,6 @@ public class CustomAlert {
         alert.initStyle(StageStyle.UTILITY);
         alert.setTitle(title);
         alert.setHeaderText(null);
-        // Кастомизация: добавьте CSS, если хотите
-        // alert.getDialogPane().getStylesheets().add(getClass().getResource("/styles/alert-styles.css").toExternalForm());
         alert.showAndWait();
         return alert.getResult() == ButtonType.YES;
     }
@@ -89,8 +86,6 @@ public class CustomAlert {
         alert.initStyle(StageStyle.UTILITY);
         alert.setTitle(title);
         alert.setHeaderText(null);
-        // Кастомизация: добавьте CSS
-        // alert.getDialogPane().getStylesheets().add(getClass().getResource("/styles/alert-styles.css").toExternalForm());
         alert.showAndWait();
     }
 }

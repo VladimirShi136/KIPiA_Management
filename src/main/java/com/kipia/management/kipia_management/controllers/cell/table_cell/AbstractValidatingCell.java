@@ -8,11 +8,12 @@ import javafx.scene.control.TableCell;
 /**
  * Абстрактный класс для валидации числовых данных в таблице приборов.
  * Теперь использует ValidatingCellEditor для делегирования общей логики.
+ *
  * @author vladimir_shi
  * @since 13.09.2025
  */
 public abstract class AbstractValidatingCell<T> extends TableCell<Device, T> implements ValidationCallback {
-    private ValidatingCellEditor editor = new ValidatingCellEditor(this);  // Композиция
+    private final ValidatingCellEditor editor = new ValidatingCellEditor(this);  // Композиция
 
     @Override
     public void startEdit() {

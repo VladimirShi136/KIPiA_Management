@@ -5,6 +5,7 @@ import com.kipia.management.kipia_management.utils.CustomAlert;
 /**
  * Класс для валидации чисел с плавающей точкой.
  * Теперь использует композицию с ValidatingCellEditor для делегирования сообщений об ошибках.
+ *
  * @author vladimir_shi
  * @since 13.09.2025
  */
