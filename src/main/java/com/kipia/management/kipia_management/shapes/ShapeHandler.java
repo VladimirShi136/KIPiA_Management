@@ -1,6 +1,5 @@
 package com.kipia.management.kipia_management.shapes;
 
-import javafx.scene.Node;
 import javafx.geometry.Point2D;
 import java.util.function.Consumer;
 
@@ -55,9 +54,11 @@ public interface ShapeHandler {
      */
     Point2D getCenterOffset(double mouseX, double mouseY);
     /**
-     * Добавляет контекстное меню к фигуре (например, "Удалить").
+     * Добавление контекстного меню к фигуре
+     *
+     * @param deleteAction действие при удалении фигуры
      */
-    void addContextMenu(Consumer<Node> deleteAction);
+    void addContextMenu(Consumer<ShapeHandler> deleteAction);
     /**
      * Подсвечивает фигуру как выделенную (красный stroke).
      */

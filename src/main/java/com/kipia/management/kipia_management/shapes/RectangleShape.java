@@ -1,97 +1,146 @@
 package com.kipia.management.kipia_management.shapes;
 
-
-import javafx.scene.Node;
+import com.kipia.management.kipia_management.managers.ShapeManager;
 import javafx.scene.layout.AnchorPane;
-import javafx.scene.shape.Circle;
-import javafx.scene.shape.Rectangle;
 import javafx.scene.paint.Color;
-import javafx.scene.control.ContextMenu;
-import javafx.scene.control.MenuItem;
+import javafx.scene.shape.Rectangle;
+import javafx.scene.shape.StrokeType;
 
 import java.util.function.Consumer;
 
 /**
- * Конкретная реализация ShapeHandler для прямоугольника (Rectangle).
- * Теперь наследуется от ShapeBase для унификации drag/resize.
+ * Класс прямоугольной фигуры с поддержкой выделения, изменения размера и перемещения
+ *
  * @author vladimir_shi
- * @since 21.10.2025
+ * @since 22.10.2025
  */
 public class RectangleShape extends ShapeBase {
-    private Rectangle rectangle;
-    private Color defaultFill = Color.LIGHTGRAY;
-    private Color defaultStroke = Color.BLACK;
-    private double defaultStrokeWidth = 1.0;
-    private Color selectedStroke = Color.DODGERBLUE;
-    private double selectedStrokeWidth = 2.5;
 
+    // ============================================================
+    // STYLE CONSTANTS
+    // ============================================================
 
-    public RectangleShape(double x, double y, double width, double height, AnchorPane pane, Consumer statusSetter, Consumer onSelectCallback) {
-        super(pane, statusSetter, onSelectCallback);
-        rectangle = new Rectangle(0, 0, Math.max(1, width), Math.max(1, height)); // локальные coords: x=0,y=0
-        rectangle.setFill(defaultFill);
-        rectangle.setStroke(defaultStroke);
-        rectangle.setStrokeWidth(defaultStrokeWidth);
-        rectangle.setPickOnBounds(true);
+    private static final Color DEFAULT_FILL = Color.TRANSPARENT;
+    private static final Color DEFAULT_STROKE = Color.BLACK;
+    private static final double DEFAULT_STROKE_WIDTH = 2.0;
+
+    private static final Color SELECTED_FILL = Color.TRANSPARENT;
+    private static final Color SELECTED_STROKE = Color.BLUE;
+    private static final double SELECTED_STROKE_WIDTH = 3.0;
+
+    // ============================================================
+    // COMPONENTS
+    // ============================================================
+
+    private final Rectangle rectangle;
+
+    // ============================================================
+    // CONSTRUCTORS
+    // ============================================================
+
+    /**
+     * Конструктор прямоугольника по координатам и размерам
+     *
+     * @param x координата X левого верхнего угла
+     * @param y координата Y левого верхнего угла
+     * @param width ширина прямоугольника
+     * @param height высота прямоугольника
+     * @param pane панель для отображения
+     * @param statusSetter колбэк для статуса
+     * @param onSelectCallback колбэк при выборе
+     */
+    public RectangleShape(double x, double y, double width, double height,
+                          AnchorPane pane, Consumer<String> statusSetter,
+                          Consumer<ShapeHandler> onSelectCallback, ShapeManager shapeManager) {
+        super(pane, statusSetter, onSelectCallback, shapeManager);
+
+        this.rectangle = createRectangle();
+        setCurrentDimensions(width, height);
+        initializeShape(x, y, width, height);
+    }
+
+    // ============================================================
+    // INITIALIZATION
+    // ============================================================
+
+    /**
+     * Создание базового прямоугольника
+     */
+    private Rectangle createRectangle() {
+        Rectangle rect = new Rectangle();
+        applyDefaultStyle(rect);
+        return rect;
+    }
+
+    /**
+     * Инициализация фигуры
+     */
+    private void initializeShape(double x, double y, double width, double height) {
+        setPosition(x, y);
+        resizeShape(width, height);
         getChildren().add(rectangle);
-
-
-// Позиция самого Shape — через layoutX/layoutY
-        setPosition(x, y);
-
-// Обновляем handles позиции (если уже созданы)
-        updateHandles();
-
     }
 
+    // ============================================================
+    // SHAPEBase IMPLEMENTATION
+    // ============================================================
 
-    @Override
-    protected void drawShape(double startX, double startY, double endX, double endY) {
-        double x = Math.min(startX, endX);
-        double y = Math.min(startY, endY);
-        double w = Math.abs(endX - startX);
-        double h = Math.abs(endY - startY);
-        // Позиция в координатах pane родителя — используем setPosition
-        setPosition(x, y);
-        resizeShape(w, h);
-    }
-
-
+    /**
+     * Изменение размера прямоугольника
+     */
     @Override
     protected void resizeShape(double width, double height) {
-        rectangle.setWidth(width);
-        rectangle.setHeight(height);
-        updateHandles();
-    }
-
-
-    @Override
-    protected void updateHandles() {
-        // Базовая логика расположения handles уже реализована в ShapeBase.updateResizeHandles()
-        updateResizeHandles();
-    }
-
-
-    @Override
-    public void highlightAsSelected() {
-        rectangle.setStroke(selectedStroke);
-        rectangle.setStrokeWidth(selectedStrokeWidth);
-        // После смены stroke размеры bounds могли измениться — обновим handles
-        updateHandles();
-        makeResizeHandlesVisible();
-    }
-
-
-    @Override
-    public void resetHighlight() {
-        rectangle.setStroke(defaultStroke);
-        rectangle.setStrokeWidth(defaultStrokeWidth);
-        // Скрываем handles
-        if (resizeHandles != null) {
-            for (int i = 0; i < resizeHandles.length; i++) {
-                if (resizeHandles[i] != null) resizeHandles[i].setVisible(false);
-            }
+        if (rectangle != null) {
+            rectangle.setWidth(width);
+            rectangle.setHeight(height);
+            // Твоя логика, если есть (e.g., arc для rounded rect)
         }
-        updateHandles();
+        // Новое: Set stored exact
+        setCurrentDimensions(width, height);
+    }
+
+    /**
+     * Применение стиля выделения
+     */
+    @Override
+    protected void applySelectedStyle() {
+        applyStyle(rectangle, SELECTED_FILL, SELECTED_STROKE, SELECTED_STROKE_WIDTH);
+    }
+
+    /**
+     * Применение стандартного стиля
+     */
+    @Override
+    protected void applyDefaultStyle() {
+        applyStyle(rectangle, DEFAULT_FILL, DEFAULT_STROKE, DEFAULT_STROKE_WIDTH);
+    }
+
+    /**
+     * Получение типа фигуры
+     */
+    @Override
+    protected String getShapeType() {
+        return "RECTANGLE";
+    }
+
+    // ============================================================
+    // STYLE MANAGEMENT
+    // ============================================================
+
+    /**
+     * Применение стиля к прямоугольнику
+     */
+    private void applyStyle(Rectangle rect, Color fill, Color stroke, double strokeWidth) {
+        rect.setFill(fill);
+        rect.setStroke(stroke);
+        rect.setStrokeWidth(strokeWidth);
+        rect.setStrokeType(StrokeType.INSIDE);
+    }
+
+    /**
+     * Применение стандартного стиля (для инициализации)
+     */
+    private void applyDefaultStyle(Rectangle rect) {
+        applyStyle(rect, DEFAULT_FILL, DEFAULT_STROKE, DEFAULT_STROKE_WIDTH);
     }
 }

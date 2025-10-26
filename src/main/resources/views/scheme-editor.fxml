@@ -108,6 +108,16 @@
                         <Tooltip text="Кран"/>
                     </tooltip>
                 </Button>
+                <Button fx:id="textToolBtn" styleClass="tool-button">
+                    <graphic>
+                        <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
+                            <Image url="@../images/text.png"/>
+                        </ImageView>
+                    </graphic>
+                    <tooltip>
+                        <Tooltip text="Текст"/>
+                    </tooltip>
+                </Button>
                 <Button fx:id="addDeviceToolBtn" styleClass="tool-button">
                     <graphic>
                         <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">

@@ -3,9 +3,11 @@ package com.kipia.management.kipia_management.utils;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
 import javafx.stage.StageStyle;
 
+import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -17,24 +19,19 @@ import java.util.logging.Logger;
  */
 public class CustomAlert {
     private static final Logger LOGGER = Logger.getLogger(CustomAlert.class.getName());
-
     // Статические константы для кнопок (для consistency и сравнения)
     public static final ButtonType RETRY_BUTTON = new ButtonType("Повторить");
     public static final ButtonType CANCEL_BUTTON = new ButtonType("Отмена");
-
     // Простые статические методы для базовых алертов (замена стандартных Alert.alert)
     public static void showInfo(String title, String message) {
         showSimpleAlert(Alert.AlertType.INFORMATION, title, message);
     }
-
     public static void showWarning(String title, String message) {
         showSimpleAlert(Alert.AlertType.WARNING, title, message);
     }
-
     public static void showError(String title, String message) {
         showSimpleAlert(Alert.AlertType.ERROR, title, message);
     }
-
     public static boolean showConfirmation(String title, String message) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION, message, ButtonType.YES, ButtonType.NO);
         alert.initStyle(StageStyle.UTILITY);
@@ -43,7 +40,23 @@ public class CustomAlert {
         alert.showAndWait();
         return alert.getResult() == ButtonType.YES;
     }
+    // Новый метод для ввода текста (для редактирования TEXT фигур)
+    public static Optional<String> showTextInputDialog(String title, String message, String defaultValue) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.initStyle(StageStyle.UTILITY);
+        alert.setTitle(title);
+        alert.setHeaderText(message);
+        TextField textField = new TextField(defaultValue != null ? defaultValue : "");
+        alert.setGraphic(textField);
+        alert.getButtonTypes().setAll(ButtonType.OK, ButtonType.CANCEL);
 
+        Optional<ButtonType> result = alert.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            return Optional.of(textField.getText());
+        } else {
+            return Optional.empty();
+        }
+    }
     // Расширенный метод для ошибок с кнопками, expandable content и логгингом (заменяет showErrorDialog)
     public static ButtonType showAdvancedError(String title, String message, Throwable exception) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
@@ -51,10 +64,8 @@ public class CustomAlert {
         alert.setTitle(title);
         alert.setHeaderText("Произошла ошибка!");
         alert.setContentText(message);
-
         // Кнопки: OK, Retry, Cancel (используем статические константы)
         alert.getButtonTypes().setAll(ButtonType.OK, RETRY_BUTTON, CANCEL_BUTTON);
-
         // Expandable контент для stack trace (если есть exception)
         if (exception != null) {
             TextArea textArea = new TextArea(exception.toString());
@@ -68,19 +79,16 @@ public class CustomAlert {
             alert.getDialogPane().setExpandableContent(gridPane);
             alert.setResizable(true);
         }
-
         // Логгинг
         if (exception != null) {
             LOGGER.log(Level.SEVERE, "Ошибка: " + message, exception);
         } else {
             LOGGER.log(Level.SEVERE, "Ошибка: " + message);
         }
-
         // Показ диалога и возврат нажатой кнопки
         alert.showAndWait();
         return alert.getResult();
     }
-
     private static void showSimpleAlert(Alert.AlertType type, String title, String message) {
         Alert alert = new Alert(type, message, ButtonType.OK);
         alert.initStyle(StageStyle.UTILITY);

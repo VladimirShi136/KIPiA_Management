@@ -1,176 +1,306 @@
 package com.kipia.management.kipia_management.managers;
 
-import com.kipia.management.kipia_management.shapes.ShapeBase;
-import com.kipia.management.kipia_management.shapes.ShapeHandler;
-import com.kipia.management.kipia_management.shapes.RectangleShape;
-
+import com.kipia.management.kipia_management.shapes.*;
 import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.shape.*;
 import javafx.scene.paint.Color;
-import javafx.geometry.Point2D;
 
 import java.util.Arrays;
 import java.util.Stack;
 import java.util.function.Consumer;
 
 /**
- * Класс-менеджер для управления фигурами на панели схемы
+ * Менеджер для управления фигурами на панели схемы.
+ * Отвечает за undo/redo, выделение и координацию работы с фигурами.
  *
  * @author vladimir_shi
  * @since 11.10.2025
  */
 public class ShapeManager {
-    // Tool enum: определён здесь для независимости
-    public enum Tool {SELECT, LINE, RECTANGLE, ELLIPSE, RHOMBUS, ADD_DEVICE}
 
-    // Поля для snap-позиционирования
+    /** Enum инструментов редактора */
+    public enum Tool { SELECT, LINE, RECTANGLE, ELLIPSE, RHOMBUS, TEXT, ADD_DEVICE }
+
+    // Константы для snap-позиционирования
     private static final double SNAP_THRESHOLD = 10;
     private static final double SNAP_EDGE_THRESHOLD = 20.0;
-    private boolean snappedHorizontal = false;
-    private boolean snappedVertical = false;
-    private Circle snapHighlight;  // Кружок для подсветки snap точки
-    // Ссылка на панель схемы
+
+    // Основные зависимости
     private final AnchorPane pane;
-    // Поля для фигур и состояния
-    private static final double THICKNESS_THRESHOLD = 5.0;  // Ширина области клика вокруг линии (в пикселях)
+    private ShapeService shapeService;
+
+    // Стеки для undo/redo
     private final Stack<Command> undoStack = new Stack<>();
     private final Stack<Command> redoStack = new Stack<>();
+
+    // Состояние выделения и перемещения
     private ShapeHandler selectedShape;
-    private boolean isDraggingSelected;
     private boolean wasDraggedInSelect;
+    private boolean wasResized;
+
+    // Колбэки для взаимодействия с UI
     private Consumer<ShapeHandler> onSelectCallback;
-    private Consumer<String> statusSetter;  // Callback для установки статуса без ссылок на контроллер
-    private boolean wasResized;  // Флаг: было ли изменение размера в сессии (для контроллера)
-    public boolean isResizing;
-    // Preview для рисования
-    private Line previewLine;
-    private Rectangle previewRect;
-    private Ellipse previewEllipse;
-    private Path previewRhombus;  // Превью ромба
-    private double startX, startY;  // Для временного хранения координат
+    private Consumer<String> statusSetter;
 
+    // Поля для временных preview-фигур
+    private Shape previewShape;
+    private double startX, startY;
+    private Circle snapHighlight;
 
-    // Интерфейс команд
+    private double previewEndX, previewEndY;
+
+    private boolean isSelectToolActive = false;
+
+    private Runnable onShapeAdded;  // Callback для auto-save после добавления
+    private Runnable onShapeRemoved;  // Callback для auto-save после удаления (опционально)
+
+    /**
+     * Интерфейс команды для паттерна Command
+     */
     public interface Command {
         void execute();
-
         void undo();
     }
 
-    // Команда добавления фигуры
-    public record AddShapeCommand(AnchorPane pane, Node shape) implements Command {
+    // Команда добавления (execute: ничего, уже добавлено; undo: remove из pane + shapes)
+    public class AddShapeCommand implements Command {
+        private final Node shape;
+        private final AnchorPane pane;
+        public AddShapeCommand(AnchorPane pane, Node shape) {
+            this.pane = pane;
+            this.shape = shape;
+        }
         @Override
         public void execute() {
+            // Уже добавлено в shapeService.addShape, так что ничего (или add в pane если нужно)
             if (!pane.getChildren().contains(shape)) {
                 pane.getChildren().add(shape);
             }
+            System.out.println("DEBUG: Add execute - shape in pane, shapes count=" + shapeService.getShapeCount());
         }
-
         @Override
         public void undo() {
             pane.getChildren().remove(shape);
+            shapeService.removeShapeFromList((ShapeBase) shape);  // Удаляем из списка
+            if (shape instanceof ShapeBase base) {
+                base.removeResizeHandles();  // Clear handles
+            }
+            System.out.println("DEBUG: Undo add - shape removed from pane/shapes, count=" + shapeService.getShapeCount());
         }
     }
 
-    // Команда удаления (обновлена для Node)
-    public record RemoveShapeCommand(AnchorPane pane, Node shape) implements Command {
+    // Команда удаления (execute: remove из pane + shapes; undo: add в pane + shapes)
+    public class RemoveShapeCommand implements Command {
+        private final Node shape;
+        private final AnchorPane pane;
+        public RemoveShapeCommand(AnchorPane pane, Node shape) {
+            this.pane = pane;
+            this.shape = shape;
+        }
         @Override
         public void execute() {
             pane.getChildren().remove(shape);
+            shapeService.removeShapeFromList((ShapeBase) shape);  // Удаляем из списка
+            if (shape instanceof ShapeBase base) {
+                base.removeResizeHandles();  // Clear handles
+            }
+            System.out.println("DEBUG: Remove execute - shape removed from pane/shapes, count=" + shapeService.getShapeCount());
         }
-
         @Override
         public void undo() {
-            pane.getChildren().add(shape);
+            if (!pane.getChildren().contains(shape)) {
+                pane.getChildren().add(shape);
+            }
+            shapeService.addShapeToList((ShapeBase) shape);  // Добавляем в список
+            // Не select автоматически, только возвращаем (handles создаст select если нужно)
+            System.out.println("DEBUG: Undo remove - shape added back to pane/shapes, count=" + shapeService.getShapeCount());
         }
     }
 
-    // Конструктор: принимает pane
-    public ShapeManager(AnchorPane pane) {
+    /**
+     * Конструктор менеджера фигур
+     *
+     * @param pane панель для отображения фигур
+     * @param shapeService сервис для создания фигур
+     */
+    public ShapeManager(AnchorPane pane, ShapeService shapeService) {
         this.pane = pane;
+        this.shapeService = shapeService;
+    }
+
+    // -----------------------------------------------------------------
+    // PUBLIC API - УПРАВЛЕНИЕ ФИГУРАМИ
+    // -----------------------------------------------------------------
+
+    /**
+     * Обработка нажатия мыши для указанного инструмента
+     */
+    public void onMousePressedForTool(Tool tool, double x, double y) {
+        clearPreview();
+        setStartCoordinates(x, y);
+
+        switch (tool) {
+            case SELECT -> handleSelectOnPress(x, y);
+            case LINE, RECTANGLE, ELLIPSE, RHOMBUS -> createPreviewShape(tool, x, y);
+            // ADD_DEVICE и TEXT обрабатываются в контроллере
+        }
+    }
+
+    /**
+     * Обработка перемещения мыши для указанного инструмента
+     */
+    public void onMouseDraggedForTool(Tool tool, double x, double y) {
+        if (previewShape != null) {
+            updatePreviewShape(tool, x, y);
+        }
+    }
+
+    /**
+     * Обработка отпускания мыши для указанного инструмента
+     */
+    public void onMouseReleasedForTool(Tool tool, double x, double y) {
+        if (tool == Tool.SELECT) return;
+        if (previewShape == null) return;
+
+        createFinalShape(tool, x, y);
         clearPreview();
     }
 
-    // Очистка preview
-    public void clearPreview() {
-        if (previewLine != null) {
-            pane.getChildren().remove(previewLine);
-            previewLine = null;
-        }
-        if (previewRect != null) {
-            pane.getChildren().remove(previewRect);
-            previewRect = null;
-        }
-        if (previewEllipse != null) {
-            pane.getChildren().remove(previewEllipse);
-            previewEllipse = null;
-        }
-        if (previewRhombus != null) {
-            pane.getChildren().remove(previewRhombus);
-            previewRhombus = null;
-        }
-        hideSnapHighlight();
-    }
-
-    // Добавление/удаление фигур с командами
+    /**
+     * Добавление фигуры с записью в undo-стек
+     */
     public void addShape(Node shape) {
+        // shape уже добавлена в shapes/pane через shapeService.addShape (в createFinalShape или контроллере)
         AddShapeCommand cmd = new AddShapeCommand(pane, shape);
-        cmd.execute();
+        cmd.execute();  // На всякий: убедиться в pane
         undoStack.push(cmd);
-        redoStack.clear();
+        redoStack.clear();  // Стандартно: стираем redo при новом действии
+        if (onShapeAdded != null) {
+            onShapeAdded.run();
+        }
+        System.out.println("DEBUG: AddShape pushed to undoStack, count=" + shapeService.getShapeCount());
     }
 
+    /**
+     * Удаление фигуры с записью в undo-стек
+     */
     public void removeShape(Node shape) {
+        System.out.println("DEBUG: removeShape called, before count=" + shapeService.getShapeCount());
         RemoveShapeCommand cmd = new RemoveShapeCommand(pane, shape);
-        cmd.execute();
+        cmd.execute();  // Удаляем сразу
         undoStack.push(cmd);
         redoStack.clear();
+        if (onShapeRemoved != null) {
+            onShapeRemoved.run();
+        }
+        System.out.println("DEBUG: removeShape pushed to undoStack, after count=" + shapeService.getShapeCount());
     }
 
-    // Undo/Redo/Clear
+    // -----------------------------------------------------------------
+    // UNDO/REDO MANAGEMENT
+    // -----------------------------------------------------------------
+
+    /**
+     * Отмена последнего действия
+     */
     public void undo() {
         if (!undoStack.isEmpty()) {
             Command cmd = undoStack.pop();
-            cmd.undo();
-            redoStack.push(cmd);
+            cmd.undo();  // Отменяем последнее действие
+            redoStack.push(cmd);  // Сохраняем для redo
+            updateSelectionAfterUndoRedo();
+            System.out.println("DEBUG: Undo executed, undoStack size=" + undoStack.size() + ", redoStack size=" + redoStack.size() + ", shapes count=" + shapeService.getShapeCount());
+        } else {
+            System.out.println("DEBUG: Undo - stack empty");
         }
-        updateResizeHandles();  // Обновляем handles после undo
-        deselectShape();  // Для простоты — всегда deselect, чтобы избежать несоответствий
     }
 
+    /**
+     * Повтор последнего отмененного действия
+     */
     public void redo() {
         if (!redoStack.isEmpty()) {
             Command cmd = redoStack.pop();
-            cmd.execute();
-            undoStack.push(cmd);
+            cmd.execute();  // Повторяем отменённое действие
+            undoStack.push(cmd);  // Сохраняем для повторного undo
+            updateSelectionAfterUndoRedo();
+            System.out.println("DEBUG: Redo executed, undoStack size=" + undoStack.size() + ", redoStack size=" + redoStack.size() + ", shapes count=" + shapeService.getShapeCount());
+        } else {
+            System.out.println("DEBUG: Redo - stack empty");
         }
-        updateResizeHandles();  // Аналогично для redo
-        deselectShape();  // Для простоты
     }
 
+    /**
+     * Очистка стеков undo/redo
+     */
     public void clearUndoRedo() {
         undoStack.clear();
         redoStack.clear();
     }
 
-    // Геттеры для контроллера
+    // -----------------------------------------------------------------
+    // SELECTION MANAGEMENT
+    // -----------------------------------------------------------------
+
+    /**
+     * Выделение указанной фигуры
+     */
+    public void selectShape(ShapeHandler shapeHandler) {
+        if (selectedShape == shapeHandler) {
+            selectedShape.makeResizeHandlesVisible();
+            selectedShape.updateResizeHandles();
+            return;
+        }
+
+        deselectShape();
+        selectedShape = shapeHandler;
+
+        if (selectedShape != null) {
+            selectedShape.highlightAsSelected();
+            selectedShape.makeResizeHandlesVisible();
+            selectedShape.updateResizeHandles();
+
+            if (onSelectCallback != null) {
+                onSelectCallback.accept(selectedShape);
+            }
+        }
+    }
+
+    /**
+     * Снятие выделения с текущей фигуры
+     */
+    public void deselectShape() {
+        if (selectedShape != null) {
+            selectedShape.resetHighlight();  // Уже есть: стиль + hide handles
+
+            // Новое: Полный сброс handles для selectedShape (удаление из pane)
+            if (selectedShape instanceof ShapeBase base) {  // Cast к ShapeBase для доступа
+                base.removeResizeHandles();  // Вызов public метода — удалит handles полностью
+            }
+        }
+        selectedShape = null;
+        wasResized = false;
+        hideSnapHighlight();
+    }
+
+    // -----------------------------------------------------------------
+    // GETTERS & SETTERS
+    // -----------------------------------------------------------------
+
     public ShapeHandler getSelectedShape() {
         return selectedShape;
     }
 
-    // Геттер для поля wasResized (для статуса в контроллере)
     public boolean wasResized() {
         return wasResized;
     }
 
-    // Сброс флага wasResized
     public void resetWasResized() {
         wasResized = false;
     }
 
-    // Геттер для wasDraggedInSelect
     public boolean wasDraggedInSelect() {
         return wasDraggedInSelect;
     }
@@ -179,92 +309,193 @@ public class ShapeManager {
         this.statusSetter = statusSetter;
     }
 
-    // Setter for onSelectCallback
     public void setOnSelectCallback(Consumer<ShapeHandler> onSelectCallback) {
         this.onSelectCallback = onSelectCallback;
     }
 
-    // Добавь публичный updateResizeHandles (если не было)
-    public void updateResizeHandles() {
-        if (selectedShape != null) {
-            selectedShape.updateResizeHandles();
-        }
+    public boolean isSelectToolActive() {
+        return isSelectToolActive;
     }
 
-    // Расчет расстояния до линии
-    private double lineDistance(double px, double py, double x1, double y1, double x2, double y2) {
-        double dx = x2 - x1;
-        double dy = y2 - y1;
-        if (dx == 0 && dy == 0) {
-            return Math.hypot(px - x1, py - y1);
-        }
-        double t = ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy);
-        t = Math.max(0, Math.min(1, t));
-        double closestX = x1 + t * dx;
-        double closestY = y1 + t * dy;
-        return Math.hypot(px - closestX, py - closestY);
+    public void setSelectToolActive(boolean active) {
+        this.isSelectToolActive = active;
     }
 
-    // Выделение/сброс
-    public void selectShape(ShapeHandler shapeHandler) {
-        if (selectedShape == shapeHandler) {
-            // Уже выбрана, просто обновляем handles
-            shapeHandler.updateResizeHandles();
-            return;
-        }
-
-        // Логирование позиции перед изменениями
-        System.out.println("selectShape: Before deselect, selectedShape position: " + (selectedShape != null ? Arrays.toString(selectedShape.getPosition()) : "null"));
-
-        // Сбрасываем предыдущую
-        if (selectedShape != null) {
-            selectedShape.resetHighlight();
-            selectedShape.removeResizeHandles();
-        }
-
-        // Устанавливаем новую
-        selectedShape = shapeHandler;
-
-        // Логирование после установки
-        System.out.println("selectShape: After set selectedShape, position: " + Arrays.toString(selectedShape.getPosition()));
-
-        // Подсвечиваем и показываем handles
-        selectedShape.highlightAsSelected();
-        selectedShape.makeResizeHandlesVisible();
-        selectedShape.updateResizeHandles();
-
-        // Логирование после highlight и handles
-        System.out.println("selectShape: After highlight and handles, position: " + Arrays.toString(selectedShape.getPosition()));
+    public void setShapeService(ShapeService shapeService) {
+        this.shapeService = shapeService;
     }
 
+    // Setter для добавления фигур
+    public void setOnShapeAdded(Runnable callback) {
+        this.onShapeAdded = callback;
+    }
 
-    public void deselectShape() {
-        if (selectedShape != null) {
-            selectedShape.resetHighlight();
-            selectedShape.removeResizeHandles();
-        }
-        wasResized = false;  // Сброс флага
-        selectedShape = null;
-        isDraggingSelected = false;
-        isResizing = false;
-        hideSnapHighlight();
-        System.out.println("Deselected: full cleanup");
+    // Setter для удаления фигур (если нужно)
+    public void setOnShapeRemoved(Runnable callback) {
+        this.onShapeRemoved = callback;
+    }
+
+    public AnchorPane getPane() {
+        return pane;
+    }
+    // -----------------------------------------------------------------
+    // PRIVATE METHODS - PREVIEW SHAPES
+    // -----------------------------------------------------------------
+
+    /**
+     * Установка начальных координат для создания фигуры
+     */
+    private void setStartCoordinates(double x, double y) {
+        startX = x;
+        startY = y;
     }
 
     /**
-     * Вспомогательный метод: перестраивает Path для ромба/бабочки из двух треугольников на основе заданных координат.
+     * Создание preview-фигуры для указанного инструмента
      */
-    private static void rebuildButterflyPath(Path path, double leftBaseX, double leftTopY, double centerX, double centerY, double leftBottomY, double rightBaseX) {
-        path.getElements().clear();
+    private void createPreviewShape(Tool tool, double x, double y) {
+        previewShape = createPreviewShapeByTool(tool, x, y);
+        if (previewShape != null) {
+            pane.getChildren().add(previewShape);
+        }
+    }
+
+    /**
+     * Создание конкретной preview-фигуры по типу инструмента
+     */
+    private Shape createPreviewShapeByTool(Tool tool, double x, double y) {
+        return switch (tool) {
+            case LINE -> createLinePreview(x, y);
+            case RECTANGLE -> createRectanglePreview(x, y);
+            case ELLIPSE -> createEllipsePreview(x, y);
+            case RHOMBUS -> createRhombusPreview(x, y);
+            default -> null;
+        };
+    }
+
+    private Line createLinePreview(double x, double y) {
+        Line line = new Line(startX, startY, x, y);
+        line.setStroke(Color.GRAY);
+        line.setStrokeWidth(1);
+        return line;
+    }
+
+    private Rectangle createRectanglePreview(double x, double y) {
+        Rectangle rect = new Rectangle(
+                Math.min(startX, x),
+                Math.min(startY, y),
+                Math.abs(x - startX),
+                Math.abs(y - startY)
+        );
+        rect.setFill(Color.TRANSPARENT);
+        rect.setStroke(Color.GRAY);
+        rect.setStrokeWidth(1);
+        return rect;
+    }
+
+    private Ellipse createEllipsePreview(double x, double y) {
+        double centerX = (startX + x) / 2;
+        double centerY = (startY + y) / 2;
+        double radiusX = Math.abs(x - startX) / 2;
+        double radiusY = Math.abs(y - startY) / 2;
+
+        Ellipse ellipse = new Ellipse(centerX, centerY, radiusX, radiusY);
+        ellipse.setFill(Color.TRANSPARENT);
+        ellipse.setStroke(Color.GRAY);
+        ellipse.setStrokeWidth(1);
+        return ellipse;
+    }
+
+    private Path createRhombusPreview(double x, double y) {
+        Path path = new Path();
+        path.setFill(Color.TRANSPARENT);
+        path.setStroke(Color.GRAY);
+        path.setStrokeWidth(1);
+        rebuildButterflyPath(path, x, y);  // Используем общий код бабочки
+        return path;
+    }
+
+    /**
+     * Обновление preview-фигуры при перемещении мыши
+     */
+    private void updatePreviewShape(Tool tool, double x, double y) {
+        switch (tool) {
+            case LINE -> updateLinePreview((Line) previewShape, x, y);
+            case RECTANGLE -> updateRectanglePreview((Rectangle) previewShape, x, y);
+            case ELLIPSE -> updateEllipsePreview((Ellipse) previewShape, x, y);
+            case RHOMBUS -> updateRhombusPreview((Path) previewShape, x, y);
+        }
+    }
+
+    private void updateLinePreview(Line line, double x, double y) {
+        // Изменённого: начальная линия snapped + ortho logic
+        double startX = this.startX;  // Stored из onPressed
+        double startY = this.startY;
+        double endX = applySnapLogic(x, startX, true);   // Алгоритм с ortho
+        double endY = applySnapLogic(y, startY, false);
+        // Ortho (если близко к горизонтали, выставить по X)
+        if (Math.abs(endX - startX) > Math.abs(endY - startY)) {
+            endY = startY;  // Горизонтальная
+        } else {
+            endX = startX;  // Вертикальная
+        }
+        this.previewEndX = endX;  // Новое: store snapped end для createFinalShape
+        this.previewEndY = endY;
+        line.setEndX(endX);
+        line.setEndY(endY);
+        if (endX != x  || endY != y) {
+            showSnapHighlight(endX, endY);
+        } else {
+            hideSnapHighlight();
+        }
+    }
+
+
+    private void updateRectanglePreview(Rectangle rect, double x, double y) {
+        rect.setX(Math.min(startX, x));
+        rect.setY(Math.min(startY, y));
+        rect.setWidth(Math.abs(x - startX));
+        rect.setHeight(Math.abs(y - startY));
+    }
+
+    private void updateEllipsePreview(Ellipse ellipse, double x, double y) {
+        ellipse.setCenterX((startX + x) / 2);
+        ellipse.setCenterY((startY + y) / 2);
+        ellipse.setRadiusX(Math.abs(x - startX) / 2);
+        ellipse.setRadiusY(Math.abs(y - startY) / 2);
+    }
+
+    // Замени updateRhombusPreview на:
+    private void updateRhombusPreview(Path path, double x, double y) {
+        rebuildButterflyPath(path, x, y);
+    }
+
+    // Добавь общий метод (из RhombusShape)
+    private void rebuildButterflyPath(Path rhombusPath, double endX, double endY) {
+        double width = Math.abs(endX - startX);
+        double height = Math.abs(endY - startY);
+        rhombusPath.getElements().clear();
+        double side = width / 2;
+        double triangleHeight = (Math.sqrt(3) / 2) * side;
+        double finalHeight = Math.min(height, triangleHeight * 2);
+        double centerX = startX + width / 2;
+        double centerY = startY + height / 2;
+        double leftBaseX = startX;
+        double centerTopY = centerY - finalHeight / 2;
+        double centerBottomY = centerY + finalHeight / 2;
+        double calculate = (finalHeight / 2) * (1 - Math.sqrt(3) / 3);
+        double leftTopY = centerTopY + calculate;
+        double leftBottomY = centerBottomY - calculate;
+        double rightBaseX = startX + width;
         // Левый треугольник
-        path.getElements().addAll(
+        rhombusPath.getElements().addAll(
                 new MoveTo(leftBaseX, leftTopY),
                 new LineTo(centerX, centerY),
                 new LineTo(leftBaseX, leftBottomY),
                 new ClosePath()
         );
-        // Правый треугольник (rightTopY == leftTopY, rightBottomY == leftBottomY)
-        path.getElements().addAll(
+        // Правый треугольник
+        rhombusPath.getElements().addAll(
                 new MoveTo(rightBaseX, leftTopY),
                 new LineTo(centerX, centerY),
                 new LineTo(rightBaseX, leftBottomY),
@@ -273,223 +504,134 @@ public class ShapeManager {
     }
 
     /**
-     * Вспомогательный метод: рассчитывает координаты для ромба/бабочки.
-     * Возвращает массив: {leftBaseX, leftTopY, centerX, centerY, leftBottomY, rightBaseX}.
+     * Создание финальной фигуры при отпускании мыши
      */
-    private static double[] calculateButterflyCoordinates(double x, double y, double startX, double startY) {
-        double totalWidth = Math.abs(x - startX) * 2;
-        double mouseHeight = Math.abs(y - startY);
-        double side = totalWidth / 2;
-        double triangleHeight = (Math.sqrt(3) / 2) * side;
-        double finalHeight = Math.min(mouseHeight, triangleHeight * 2);
-        double leftBaseX = startX - side;
-        double centerTopY = startY - finalHeight / 2;
-        double centerBottomY = startY + finalHeight / 2;
-        double calculate = (finalHeight / 2) * (1 - Math.sqrt(3) / 3);
-        double leftTopY = centerTopY + calculate;
-        double leftBottomY = centerBottomY - calculate;
-        double rightBaseX = startX + side;
-        // Возвращаем массив в порядке: leftBaseX, leftTopY, centerX, centerY, leftBottomY, rightBaseX
-        return new double[]{leftBaseX, leftTopY, startX, startY, leftBottomY, rightBaseX};
-    }
+    private void createFinalShape(Tool tool, double x, double y) {
+        ShapeType shapeType = convertToolToShapeType(tool);
+        if (shapeType == null) return;
 
-    // Методы для обработки событий мыши (адаптированные из контроллера)
-    public void setStartCoordinates(double x, double y) {
-        startX = x;
-        startY = y;
-    }
+        double[] coordinates = calculateFinalCoordinates(shapeType, x, y);
+        if (tool == Tool.LINE) {
+            coordinates = calculateFinalCoordinates(ShapeType.LINE, previewEndX, previewEndY);
+        }
 
-    /**
-     * Метод для обработки начала инструмента (pressed).
-     * Завершает preview для других инструментов, для SELECT — fallback выбор.
-     */
-    public void onMousePressedForTool(Tool tool, double x, double y) {
-        setStartCoordinates(x, y);
-        System.out.println("Press for tool=" + tool + ": startX=" + startX + " startY=" + startY);
-        clearPreview();  // Убирает старые preview
-        hideSnapHighlight();
-        if (tool == Tool.SELECT) {
-            handleSelectOnPress(x, y);
-        } else if (tool == Tool.LINE) {
-            // Создание preview для линии
-            previewLine = new Line(startX, startY, startX, startY);
-            previewLine.setStroke(Color.GRAY);
-            previewLine.setStrokeWidth(1);
-            pane.getChildren().add(previewLine);
-        } else if (tool == Tool.RECTANGLE) {
-            // Создание preview для прямоугольника
-            previewRect = new Rectangle(startX, startY, 0, 0);
-            previewRect.setFill(Color.TRANSPARENT);
-            previewRect.setStroke(Color.GRAY);
-            previewRect.setStrokeWidth(1);
-            pane.getChildren().add(previewRect);
-        } else if (tool == Tool.ELLIPSE) {
-            // Создание preview для эллипса
-            previewEllipse = new Ellipse(startX, startY, 0, 0);
-            previewEllipse.setFill(Color.TRANSPARENT);
-            previewEllipse.setStroke(Color.GRAY);
-            previewEllipse.setStrokeWidth(1);
-            pane.getChildren().add(previewEllipse);
-        } else if (tool == Tool.RHOMBUS) {
-            // Создание preview для ромба (как Path)
-            previewRhombus = new Path();
-            previewRhombus.setFill(Color.TRANSPARENT);
-            previewRhombus.setStroke(Color.GRAY);
-            previewRhombus.setStrokeWidth(1);
-            pane.getChildren().add(previewRhombus);
+        try {
+            System.out.println("DEBUG: Creating shape: " + tool + " at (" + x + ", " + y + "), coords: " + Arrays.toString(coordinates));
+            ShapeBase shape = shapeService.addShape(shapeType, coordinates);
+            if (shape != null) {
+                addShape(shape);
+                setStatus("Фигура добавлена");
+            }
+        } catch (Exception e) {
+            setStatus("Ошибка создания фигуры");
+            System.err.println("ERROR creating shape: " + e.getMessage());
         }
     }
 
+    // -----------------------------------------------------------------
+    // PRIVATE UTILITY METHODS
+    // -----------------------------------------------------------------
+
     /**
-     * Вспомогательный метод: обработка выбора при pressed (упрощён — теперь фигура сама уведомляет через callback).
-     * Используется fallback для случаев, когда фигура не является ShapeHandler.
+     * Обработка выбора фигуры при нажатии (fallback для не-ShapeHandler фигур)
      */
     private void handleSelectOnPress(double x, double y) {
-        System.out.println("handleSelectOnPress: coords(" + x + "," + y + ") — fallback для non-ShapeHandler");
         deselectShape();
     }
 
     /**
-     * Метод для обработки перетаскивания (dragged).
-     * Preview обновляется для создаваемых фигур, drag фигуры теперь в самой фигуре (unified).
+     * Обновление состояния выделения после undo/redo
      */
-    public void onMouseDraggedForTool(Tool tool, double x, double y) {
-        if (tool == Tool.LINE && previewLine != null) {
-            double endX = x, endY = y;
-            snappedHorizontal = false;
-            snappedVertical = false;
-            if (Math.abs(endX - startX) < SNAP_THRESHOLD) {
-                endX = startX;
-                snappedHorizontal = true;
-            }
-            if (Math.abs(endY - startY) < SNAP_THRESHOLD) {
-                endY = startY;
-                snappedVertical = true;
-            }
-            double[] snappedEnd = findNearestEdgeSnap(endX, endY);
-            endX = snappedEnd[0];
-            endY = snappedEnd[1];
-            previewLine.setEndX(endX);
-            previewLine.setEndY(endY);
-            if (!(endX == x && endY == y)) {
-                showSnapHighlight(endX, endY);
-            } else {
-                hideSnapHighlight();
-            }
-        } else if (tool == Tool.RECTANGLE && previewRect != null) {
-            double w = Math.abs(x - startX), h = Math.abs(y - startY);
-            System.out.println("Drag for RECTANGLE: w=" + w + " h=" + h);  // Лог для проверки размеров во время drag
-            previewRect.setX(Math.min(startX, x));
-            previewRect.setY(Math.min(startY, y));
-            previewRect.setWidth(w);
-            previewRect.setHeight(h);
-        } else if (tool == Tool.ELLIPSE && previewEllipse != null) {
-            double rx = Math.abs(x - startX) / 2;
-            double ry = Math.abs(y - startY) / 2;
-            previewEllipse.setRadiusX(rx);
-            previewEllipse.setRadiusY(ry);
-            previewEllipse.setCenterX((startX + x) / 2);
-            previewEllipse.setCenterY((startY + y) / 2);
-        } else if (tool == Tool.RHOMBUS && previewRhombus != null) {
-            double[] coords = calculateButterflyCoordinates(x, y, startX, startY);
-            rebuildButterflyPath(previewRhombus, coords[0], coords[1], coords[2], coords[3], coords[4], coords[5]);
-        }
+    private void updateSelectionAfterUndoRedo() {
+        deselectShape();  // Сброс выделения (не мешает возврату фигур)
+        // Опционально: если нужно восстановить выделение последней фигуры, добавь логику поиска
+        System.out.println("DEBUG: Selection updated after undo/redo");
     }
 
-    public void onMouseReleasedForTool(Tool tool, double x, double y) {
-        System.out.println("onMouseReleasedForTool: tool=" + tool + " coords(" + x + "," + y + ")");
-
-        // Убрана логика для SELECT — drag и resize unified в фигуре (release там обрабатывается)
-        // Оставлена только установка статуса для SELECT (если нужно, но флаг wasResized не используется здесь)
-        if (tool == Tool.SELECT) {
-            // Minimal: установ_status, но без drag-check (фигура сама sends status)
-            if (statusSetter != null) {
-                // Например, стаб устанавливается в фигуре on release
-            }
-            return;  // Ничего больше для SELECT
+    /**
+     * Очистка preview-фигуры
+     */
+    private void clearPreview() {
+        if (previewShape != null) {
+            pane.getChildren().remove(previewShape);
+            previewShape = null;
         }
+        hideSnapHighlight();
+    }
 
-        // Для создания фигур из preview
-        Node finalShape;
-        if (tool == Tool.RECTANGLE && previewRect != null) {
-            double rx = previewRect.getX(), ry = previewRect.getY(), rw = previewRect.getWidth(), rh = previewRect.getHeight();
-            System.out.println("Release for RECTANGLE: startX=" + startX + " startY=" + startY + " releaseX=" + x + " releaseY=" + y + " rw=" + rw + " rh=" + rh);
-
-            clearPreview();  // <-- Удаляем preview ДО создания финальной фигуры
-
-            if (rw > 0 && rh > 0) {
-                System.out.println("Adding RectangleShape: rx=" + rx + " ry=" + ry + " rw=" + rw + " rh=" + rh);
-                RectangleShape rectShape = new RectangleShape(rx, ry, rw, rh, pane, statusSetter, onSelectCallback);  // Все 7 аргументов!
-                addShape(rectShape);
-                statusSetter.accept("Прямоугольник добавлен");
-            } else {
-                System.out.println("Skipping RectangleShape: rw=" + rw + " rh=" + rh + " (must be >0 for both)");
-                statusSetter.accept("drag слишком короткий — попробуй потянуть дальше");
-            }
-        } else if (tool == Tool.LINE && previewLine != null) {
-            double finalEndX = x, finalEndY = y;
-            if (snappedHorizontal) finalEndX = startX;
-            if (snappedVertical) finalEndY = startY;
-            double[] snappedFinalEnd = findNearestEdgeSnap(finalEndX, finalEndY);
-            finalEndX = snappedFinalEnd[0];
-            finalEndY = snappedFinalEnd[1];
-            finalShape = new Line(startX, startY, finalEndX, finalEndY);
-            ((Line) finalShape).setStroke(Color.BLACK);
-            addShape(finalShape);
-            hideSnapHighlight();
-        } else if (tool == Tool.ELLIPSE && previewEllipse != null) {
-            double minR = 10.0;
-            double rx = Math.max(minR, previewEllipse.getRadiusX());
-            double ry = Math.max(minR, previewEllipse.getRadiusY());
-            finalShape = new Ellipse(previewEllipse.getCenterX(), previewEllipse.getCenterY(), rx, ry);
-            ((Ellipse) finalShape).setFill(Color.TRANSPARENT);
-            ((Ellipse) finalShape).setStroke(Color.BLACK);
-            addShape(finalShape);
-        } else if (tool == Tool.RHOMBUS && previewRhombus != null) {
-            double[] coords = calculateButterflyCoordinates(x, y, startX, startY);
-            Path butterfly = new Path();
-            butterfly.setFill(Color.TRANSPARENT);
-            butterfly.setStroke(Color.BLACK);
-            butterfly.setStrokeWidth(1);
-            rebuildButterflyPath(butterfly, coords[0], coords[1], coords[2], coords[3], coords[4], coords[5]);
-            finalShape = butterfly;
-            addShape(finalShape);
-            hideSnapHighlight();
-        }
-
-        clearPreview();
-        isResizing = false;
+    /**
+     * Установка статуса через колбэк
+     */
+    private void setStatus(String message) {
         if (statusSetter != null) {
-            statusSetter.accept("Фигура добавлена");
+            statusSetter.accept(message);
         }
     }
 
-    private double[] findNearestEdgeSnap(double x, double y) {
-        double[] closest = {x, y};
+    // -----------------------------------------------------------------
+    // COORDINATE CALCULATION METHODS
+    // -----------------------------------------------------------------
+
+    private double[] calculateFinalCoordinates(ShapeType type, double endX, double endY) {
+        return switch (type) {
+            case RECTANGLE, ELLIPSE -> {
+                double x = Math.min(startX, endX);
+                double y = Math.min(startY, endY);
+                double width = Math.abs(endX - startX);
+                double height = Math.abs(endY - startY);
+                yield new double[]{x, y, width, height};
+            }
+            case RHOMBUS -> new double[]{startX, startY, endX, endY};  // Новое: Точные start/end для бабочки (не min/width)
+            case LINE -> new double[]{startX, startY, endX, endY};
+            case TEXT -> new double[]{startX, startY, 0};
+            default -> new double[]{};
+        };
+    }
+
+    private double applySnapLogic(double current, double start, boolean isXAxis) {
+        if (Math.abs(current - start) < SNAP_THRESHOLD) {
+            return start;
+        }
+
+        double snapped = findNearestEdgeSnap(current, isXAxis);
+        return (Math.abs(snapped - current) < SNAP_EDGE_THRESHOLD) ? snapped : current;
+    }
+
+    private double findNearestEdgeSnap(double coord, boolean isXAxis) {
         double minDist = Double.MAX_VALUE;
+        double bestCoord = coord;
         for (Node node : pane.getChildren()) {
-            if (node instanceof Line line && node != previewLine && node != selectedShape) {  // Проверяем только линии, исключаем превью
-                double distToStart = Math.hypot(x - line.getStartX(), y - line.getStartY());  // Расстояние до start
-                double distToEnd = Math.hypot(x - line.getEndX(), y - line.getEndY());       // Расстояние до enda
-                double minDistForLine = Math.min(distToStart, distToEnd);  // Ближайшая граница этой линии
-                if (minDistForLine < minDist) {
-                    minDist = minDistForLine;
-                    if (distToStart <= distToEnd) {
-                        closest[0] = line.getStartX();
-                        closest[1] = line.getStartY();
-                    } else {
-                        closest[0] = line.getEndX();
-                        closest[1] = line.getEndY();
-                    }
+            if (node instanceof Line line && node != previewShape) {
+                double dist1 = isXAxis ? Math.abs(coord - line.getStartX()) : Math.abs(coord - line.getStartY());
+                double dist2 = isXAxis ? Math.abs(coord - line.getEndX()) : Math.abs(coord - line.getEndY());
+                if (dist1 < minDist) { minDist = dist1; bestCoord = isXAxis ? line.getStartX() : line.getStartY(); }
+                if (dist2 < minDist) { minDist = dist2; bestCoord = isXAxis ? line.getEndX() : line.getEndY(); }
+            } else if (node instanceof ShapeBase shape && node != previewShape) {  // Новое: snap к bounds любой фигуры
+                Bounds bounds = shape.getBoundsInParent();
+                double[] coords = isXAxis ? new double[]{bounds.getMinX(), bounds.getMaxX()} : new double[]{bounds.getMinY(), bounds.getMaxY()};
+                for (double snapCoord : coords) {
+                    double dist = Math.abs(coord - snapCoord);
+                    if (dist < minDist) { minDist = dist; bestCoord = snapCoord; }
                 }
             }
         }
-        if (minDist < SNAP_EDGE_THRESHOLD) {
-            return closest;  // Прилипаем
-        } else {
-            return new double[]{x, y};  // Не прилипаем
-        }
+        return minDist < SNAP_EDGE_THRESHOLD ? bestCoord : coord;
     }
+
+    private ShapeType convertToolToShapeType(Tool tool) {
+        return switch (tool) {
+            case RECTANGLE -> ShapeType.RECTANGLE;
+            case LINE -> ShapeType.LINE;
+            case ELLIPSE -> ShapeType.ELLIPSE;
+            case RHOMBUS -> ShapeType.RHOMBUS;
+            case TEXT -> ShapeType.TEXT;
+            default -> null;
+        };
+    }
+
+    // -----------------------------------------------------------------
+    // SNAP HIGHLIGHT METHODS
+    // -----------------------------------------------------------------
 
     private void showSnapHighlight(double x, double y) {
         if (snapHighlight == null) {
@@ -508,4 +650,3 @@ public class ShapeManager {
         }
     }
 }
-

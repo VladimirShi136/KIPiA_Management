@@ -6,8 +6,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -61,39 +59,61 @@ public class SchemeDAO {
     }
 
     /**
-     * Получение списка всех схем из базы данных
-     * @return список объектов Scheme, отсортированный по названию
-     */
-    public List<Scheme> getAllSchemes() {
-        List<Scheme> schemes = new ArrayList<>();
-        String sql = "SELECT * FROM schemes ORDER BY name";
-        try (Statement stmt = databaseService.getConnection().createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-            while (rs.next()) {
-                schemes.add(createSchemeFromResultSet(rs));
-            }
-        } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Ошибка получения схем: " + e.getMessage());
-        }
-        return schemes;
-    }
-
-    /**
      * Обновление данных схемы в базе данных
      *
      * @param scheme объект схемы с обновленными данными
+     * @return true если обновлено (rows >0), false - ошибка
      */
-    public void updateScheme(Scheme scheme) {
-        String sql = "UPDATE schemes SET name = ?, description = ?, data = ? WHERE id = ?";
-        try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
-            stmt.setString(1, scheme.getName());
-            stmt.setString(2, scheme.getDescription());
-            stmt.setString(3, scheme.getData());  // ОБЯЗАТЕЛЬНО: сохраняем data
-            stmt.setInt(4, scheme.getId());
-            int rowsAffected = stmt.executeUpdate();  // НОВОЕ: выполнение запроса
-            LOGGER.log(Level.INFO, "Update scheme rows affected: " + rowsAffected);  // НОВОЕ: логирование
+    public boolean updateScheme(Scheme scheme) {
+        if (scheme == null || scheme.getId() <= 0) {
+            LOGGER.warning("DAO updateScheme: Invalid scheme (null or id <=0)");
+            return false;
+        }
+
+        // Фикс: Таблица 'schemes' (как в INSERT/SELECT), + description в SET
+        String sql = "UPDATE schemes SET name=?, description=?, data=? WHERE id=?";
+
+        try (PreparedStatement pstmt = databaseService.getConnection().prepareStatement(sql)) {
+            pstmt.setString(1, scheme.getName() != null ? scheme.getName() : "");
+            pstmt.setString(2, scheme.getDescription() != null ? scheme.getDescription() : "");  // Добавлено: description
+            pstmt.setString(3, scheme.getData() != null ? scheme.getData() : "{}");
+            pstmt.setInt(4, scheme.getId());
+
+            int rows = pstmt.executeUpdate();
+            boolean success = rows > 0;
+
+            // Улучшенный лог: Безопасный (escape для data, если long), всегда выводится
+            String dataPreview = scheme.getData() != null && scheme.getData().length() > 50
+                    ? scheme.getData().substring(0, 47) + "..."
+                    : (scheme.getData() != null ? scheme.getData() : "{}");
+            System.out.println("DAO updateScheme: Executing UPDATE schemes SET name='" + scheme.getName() +
+                    "', description len=" + (scheme.getDescription() != null ? scheme.getDescription().length() : 0) +
+                    "', data preview='" + dataPreview + "' WHERE id=" + scheme.getId() +
+                    " → rows affected=" + rows + ", success=" + success);
+
+            if (!success) {
+                // Warning: Если rows=0 — id не найден (но таблица OK)
+                System.out.println("WARNING: No rows updated for scheme ID=" + scheme.getId() +
+                        " — check if exists (SELECT * FROM schemes WHERE id=" + scheme.getId() + ")");
+                LOGGER.warning("Update failed: 0 rows for scheme ID=" + scheme.getId());
+            }
+
+            return success;
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Ошибка обновления схемы: " + e.getMessage());
+            // Полный лог: Класс, message, state/code
+            System.err.println("DAO updateScheme ERROR for scheme ID=" + scheme.getId() + " (name='" + scheme.getName() + "'):");
+            System.err.println("SQL: " + sql);
+            System.err.println("Exception: " + e.getClass().getSimpleName() + " - Message: " + e.getMessage());
+            if (e.getSQLState() != null) System.err.println("SQL State: " + e.getSQLState() + ", Error Code: " + e.getErrorCode());
+            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "SQLException in updateScheme: " + e.getMessage(), e);
+
+            // Если table-related — подсказка
+            if (e.getMessage().toLowerCase().contains("scheme") || e.getMessage().toLowerCase().contains("table")) {
+                System.err.println("Likely table name issue — ensure 'schemes' table exists (run CREATE in DB tool)");
+            }
+
+            return false;
         }
     }
 
@@ -112,25 +132,6 @@ public class SchemeDAO {
             }
         } catch (SQLException e) {
             LOGGER.log(Level.SEVERE, "Ошибка поиска схемы: " + e.getMessage());
-        }
-        return null;
-    }
-
-    /**
-     * Получение схемы по ID
-     * @param id идентификатор схемы
-     * @return объект Scheme если найден, null - иначе
-     */
-    public Scheme getSchemeById(int id) {
-        String sql = "SELECT * FROM schemes WHERE id = ?";
-        try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
-            stmt.setInt(1, id);
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                return createSchemeFromResultSet(rs);
-            }
-        } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Ошибка получения схемы по ID: " + e.getMessage());
         }
         return null;
     }
