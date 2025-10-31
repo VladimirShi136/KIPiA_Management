@@ -37,9 +37,9 @@ public class DeviceIconService {
     private static final double FALLBACK_CIRCLE_RADIUS = 10.0;
     private static final String DEFAULT_ICON_PATH = "/images/manometer.png";
 
-    private Runnable onDeviceDeletedCallback;
+    private final Runnable onDeviceDeletedCallback;
 
-    // Обнови конструкторы (добавить парметр)
+    // Обнови конструкторы (добавить параметр)
     public DeviceIconService(AnchorPane schemePane, BiConsumer<Node, Device> onDeviceMovedCallback, DeviceLocationDAO deviceLocationDAO, Runnable onDeviceDeletedCallback) {
         this.schemePane = schemePane;
         this.onDeviceMovedCallback = onDeviceMovedCallback;
@@ -47,17 +47,12 @@ public class DeviceIconService {
         this.onDeviceDeletedCallback = onDeviceDeletedCallback;
     }
 
-    // Для обратной совместимости (добавь или оставь)
-    public DeviceIconService(AnchorPane schemePane, BiConsumer<Node, Device> onDeviceMovedCallback) {
-        this(schemePane, onDeviceMovedCallback, null, null);
-    }
-
     /**
      * Создание иконки устройства на указанных координатах
      *
-     * @param x координата X
-     * @param y координата Y
-     * @param device устройство для отображения
+     * @param x             координата X
+     * @param y             координата Y
+     * @param device        устройство для отображения
      * @param currentScheme текущая схема (может быть null)
      * @return созданный узел иконки устройства
      */
@@ -269,9 +264,10 @@ public class DeviceIconService {
         private final Node node;
         private final AnchorPane pane;
         private final BiConsumer<Node, Device> onMoveCallback;
-
         private boolean isDragging = false;
         private double dragOffsetX, dragOffsetY;
+        private double initialMouseX, initialMouseY;
+        private double initialLayoutX, initialLayoutY;
 
         public DragHandler(Node node, AnchorPane pane, BiConsumer<Node, Device> onMoveCallback) {
             this.node = node;
@@ -286,30 +282,57 @@ public class DeviceIconService {
             node.setOnMousePressed(this::handleMousePressed);
             node.setOnMouseDragged(this::handleMouseDragged);
             node.setOnMouseReleased(this::handleMouseReleased);
+
+            // Важно для улучшения отслеживания
+            node.setOnDragDetected(event -> {
+                node.startFullDrag();
+                event.consume();
+            });
         }
 
         private void handleMousePressed(javafx.scene.input.MouseEvent event) {
             if (event.isPrimaryButtonDown()) {
+                // Сохраняем начальные позиции для относительного перемещения
+                initialMouseX = event.getSceneX();
+                initialMouseY = event.getSceneY();
+                initialLayoutX = node.getLayoutX();
+                initialLayoutY = node.getLayoutY();
+
+                // Смещение относительно центра узла
                 double centerOffsetX = calculateCenterOffsetX();
                 double centerOffsetY = calculateCenterOffsetY();
 
                 dragOffsetX = event.getSceneX() - (node.getLayoutX() + centerOffsetX);
                 dragOffsetY = event.getSceneY() - (node.getLayoutY() + centerOffsetY);
+
                 isDragging = false;
                 node.setCursor(Cursor.MOVE);
+                event.consume(); // Важно для предотвращения лагов
             }
         }
 
         private void handleMouseDragged(javafx.scene.input.MouseEvent event) {
             if (!event.isPrimaryButtonDown()) return;
 
-            double newX = calculateNewPositionX(event.getSceneX());
-            double newY = calculateNewPositionY(event.getSceneY());
+            // Используем ОТНОСИТЕЛЬНОЕ перемещение - это ключевое исправление!
+            double deltaX = event.getSceneX() - initialMouseX;
+            double deltaY = event.getSceneY() - initialMouseY;
 
+            double newX = initialLayoutX + deltaX;
+            double newY = initialLayoutY + deltaY;
+
+            // Применяем ограничения
+            newX = applyBoundsX(newX);
+            newY = applyBoundsY(newY);
+
+            // Немедленно обновляем позицию
             node.setLayoutX(newX);
             node.setLayoutY(newY);
+
             isDragging = true;
+            event.consume(); // Критически важно!
         }
+
 
         private void handleMouseReleased(javafx.scene.input.MouseEvent event) {
             if (!event.isPrimaryButtonDown()) return;
@@ -322,6 +345,25 @@ public class DeviceIconService {
             }
 
             isDragging = false;
+            event.consume();
+        }
+
+        /**
+         * Применение границ по X с учетом реального размера pane
+         */
+        private double applyBoundsX(double x) {
+            double nodeWidth = (node instanceof ImageView) ? DEFAULT_ICON_SIZE : FALLBACK_CIRCLE_RADIUS * 2;
+            double maxX = pane.getWidth() - nodeWidth;
+            return Math.max(0, Math.min(x, maxX));
+        }
+
+        /**
+         * Применение границ по Y с учетом реального размера pane
+         */
+        private double applyBoundsY(double y) {
+            double nodeHeight = (node instanceof ImageView) ? DEFAULT_ICON_SIZE : FALLBACK_CIRCLE_RADIUS * 2;
+            double maxY = pane.getHeight() - nodeHeight;
+            return Math.max(0, Math.min(y, maxY));
         }
 
         private double calculateCenterOffsetX() {
@@ -330,20 +372,6 @@ public class DeviceIconService {
 
         private double calculateCenterOffsetY() {
             return (node instanceof ImageView) ? DEFAULT_ICON_SIZE / 2 : FALLBACK_CIRCLE_RADIUS;
-        }
-
-        private double calculateNewPositionX(double sceneX) {
-            double newX = sceneX - dragOffsetX;
-            double maxX = pane.getWidth() -
-                    ((node instanceof ImageView) ? DEFAULT_ICON_SIZE : FALLBACK_CIRCLE_RADIUS * 2);
-            return Math.max(0, Math.min(newX, maxX));
-        }
-
-        private double calculateNewPositionY(double sceneY) {
-            double newY = sceneY - dragOffsetY;
-            double maxY = pane.getHeight() -
-                    ((node instanceof ImageView) ? DEFAULT_ICON_SIZE : FALLBACK_CIRCLE_RADIUS * 2);
-            return Math.max(0, Math.min(newY, maxY));
         }
     }
 }

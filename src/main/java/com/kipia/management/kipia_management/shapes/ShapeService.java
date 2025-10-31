@@ -65,7 +65,7 @@ public class ShapeService {
             if (data != null && !data.trim().isEmpty()) {
                 try {
                     ShapeBase shape = ShapeBase.deserialize(data.trim(),
-                            factory.getPane(), factory.getStatusSetter(), factory.getOnSelectCallback(), factory.getShapeManager());
+                            factory.pane(), factory.statusSetter(), factory.onSelectCallback(), factory.shapeManager());
 
                     if (shape != null) {
                         shapes.add(shape);
@@ -128,8 +128,6 @@ public class ShapeService {
             }
         }
         shapes.clear();  // Clear list
-
-        System.out.println("Cleared " + shapes.size() + " old shapes from pane/service");  // Лог (удали после)
     }
 
     /**
@@ -147,12 +145,11 @@ public class ShapeService {
      * Удаление фигуры из списка (без удаления из pane — для undo/redo синхронности).
      * Используется в ShapeManager для команд execute/remove.
      */
-    public boolean removeShapeFromList(ShapeBase shape) {
+    public void removeShapeFromList(ShapeBase shape) {
         boolean removed = shapes.remove(shape);
         if (removed) {
             System.out.println("DEBUG: Removed shape from list, count now: " + shapes.size());
         }
-        return removed;
     }
 
     public int getShapeCount() {

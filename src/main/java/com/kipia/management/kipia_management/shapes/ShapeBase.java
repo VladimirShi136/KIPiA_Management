@@ -11,6 +11,9 @@ import javafx.scene.paint.Color;
 import javafx.scene.Cursor;
 import javafx.geometry.Point2D;
 import javafx.geometry.Bounds;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontPosture;
+import javafx.scene.text.FontWeight;
 
 import java.util.Arrays;
 import java.util.function.Consumer;
@@ -144,7 +147,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     /**
      * Создание одной ручки изменения размера
      */
-    private Circle createResizeHandle() {
+    protected Circle createResizeHandle() {
         Circle handle = new Circle(0, 0, RESIZE_HANDLE_RADIUS, RESIZE_HANDLE_COLOR);
         handle.setCursor(Cursor.CROSSHAIR);
         handle.setVisible(false);
@@ -239,9 +242,11 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         setupResizeHandleHandlers();
 
         // Делаем видимыми и обновляем позиции
-        for (Circle handle : resizeHandles) {
-            if (handle != null) {
-                handle.setVisible(true);
+        if (resizeHandles != null) {  // <-- ДОБАВЬ ЭТУ ЗАЩИТУ (новая строка!)
+            for (Circle handle : resizeHandles) {
+                if (handle != null) {
+                    handle.setVisible(true);
+                }
             }
         }
         updateResizeHandles();  // Обновляет позиции
@@ -376,11 +381,15 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      */
     private void handleDragDragged(MouseEvent event) {
         isDragging = true;
-        Point2D panePos = pane.sceneToLocal(event.getSceneX(), event.getSceneY());
-
-        double newX = calculateNewPositionX(panePos.getX());
-        double newY = calculateNewPositionY(panePos.getY());
-
+        Point2D scenePos = new Point2D(event.getSceneX(), event.getSceneY());
+        Point2D panePos = pane.sceneToLocal(scenePos);
+        // Adjust для scale зума (если есть ZoomManager integration, передайте scale)
+        // Предполагаем, что zoomManager.getCurrentZoom() доступен, иначе жестко закодируй 1.0 пока
+        double currentZoom = 1.0;  // Замени на zoomManager.getCurrentZoom() после integration
+        double adjustedX = panePos.getX() / currentZoom;  // Корректируем для scale
+        double adjustedY = panePos.getY() / currentZoom;
+        double newX = calculateNewPositionX(adjustedX);
+        double newY = calculateNewPositionY(adjustedY);
         setPosition(newX, newY);
         updateResizeHandles();
         event.consume();
@@ -391,8 +400,9 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      */
     private double calculateNewPositionX(double mouseX) {
         double newX = mouseX - dragOffsetX;
-        double maxX = pane.getWidth() - getBoundsInLocal().getWidth();
-        return Math.max(0, Math.min(newX, maxX));
+        double paneW = 1600;
+        double figureW = getCurrentWidth(); // Используем реальную ширину
+        return Math.max(0, Math.min(newX, paneW - figureW));
     }
 
     /**
@@ -400,8 +410,9 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      */
     private double calculateNewPositionY(double mouseY) {
         double newY = mouseY - dragOffsetY;
-        double maxY = pane.getHeight() - getBoundsInLocal().getHeight();
-        return Math.max(0, Math.min(newY, maxY));
+        double paneH = 1200;
+        double figureH = getCurrentHeight(); // Используем реальную высоту
+        return Math.max(0, Math.min(newY, paneH - figureH));
     }
 
     /**
@@ -410,6 +421,11 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     private void handleDragReleased(MouseEvent event) {
         if (isDragging && statusSetter != null) {
             statusSetter.accept("Позиция фигуры изменена");
+
+            // ДЕБАГ: проверяем границы после перемещения
+            if (this instanceof RhombusShape) {
+                ((RhombusShape) this).debugBounds();
+            }
         }
         isDragging = false;
         updateResizeHandles();
@@ -797,30 +813,30 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
                                                   Consumer<String> statusSetter,
                                                   Consumer<ShapeHandler> onSelectCallback, ShapeManager shapeManager) {
         if (parts.length < 5) {
-            System.out.println("SKIP: Недостаточно частей в данных: " + Arrays.toString(parts));  // Debug, удали после
+            System.out.println("SKIP: Недостаточно частей в данных: " + Arrays.toString(parts));
             return null;
         }
         String type = parts[0];
         try {
-            // Фикс: Заменяем запятую на точку во всех частях (для старых данных с ",")
-            // Это robust: не сломает "." в новых данных (replace не change)
+            // Фикс: Заменяем запятую на точку во всех частях
             String[] fixedParts = new String[parts.length];
             for (int i = 0; i < parts.length; i++) {
-                fixedParts[i] = parts[i].replace(",", ".");  // "70,00" → "70.00"
+                fixedParts[i] = parts[i].replace(",", ".");
             }
             double x = Double.parseDouble(fixedParts[1]);
             double y = Double.parseDouble(fixedParts[2]);
             double width = Double.parseDouble(fixedParts[3]);
             double height = Double.parseDouble(fixedParts[4]);
-            // Проверки на NaN/negative (для стабильности)
+
             if (Double.isNaN(x) || Double.isNaN(y) || Double.isNaN(width) || Double.isNaN(height) ||
-                    width <= 0 || height <= 0) {  // Для TEXT width/height ~0 ok, но проверь
+                    width <= 0 || height <= 0) {
                 System.out.println("SKIP: Некорректные координаты для " + type + ": x=" + x + ", y=" + y + ", w=" + width + ", h=" + height);
                 return null;
             }
-            // Безопасный sample в лог (debug)
+
             System.out.println("Parsing OK: " + type + " at (" + x + ", " + y + ") size (" + width + ", " + height + ") — creating instance");
-            return switch (type.toUpperCase()) {  // .toUpperCase() для robustness (если "rectangle")
+
+            return switch (type.toUpperCase()) {
                 case "RECTANGLE" ->
                         new RectangleShape(x, y, width, height, pane, statusSetter, onSelectCallback, shapeManager);
                 case "LINE" ->
@@ -828,7 +844,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
                 case "ELLIPSE" -> {
                     double centerX = x + width / 2;
                     double centerY = y + height / 2;
-                    double radiusX = Math.max(1.0, width / 2);  // Min 1.0 для видимости
+                    double radiusX = Math.max(1.0, width / 2);
                     double radiusY = Math.max(1.0, height / 2);
                     yield new EllipseShape(centerX, centerY, radiusX, radiusY, pane, statusSetter, onSelectCallback, shapeManager);
                 }
@@ -836,9 +852,47 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
                         new RhombusShape(x, y, width, height, pane, statusSetter, onSelectCallback, shapeManager);
                 case "TEXT" -> {
                     String actualText = (fixedParts.length > 5) ? fixedParts[5] : "Новый текст";
-                    // Фикс: заменить escape если был
-                    actualText = actualText.replace("\\|", "|");  // Если escapили
-                    yield new TextShape(x, y, actualText, pane, statusSetter, onSelectCallback, shapeManager);
+                    actualText = actualText.replace("\\|", "|");
+
+                    // СОЗДАЕМ TextShape
+                    TextShape textShape = new TextShape(x, y, actualText, pane, statusSetter, onSelectCallback, shapeManager);
+
+                    // ВОССТАНАВЛИВАЕМ размер шрифта если он сохранен
+                    if (fixedParts.length > 6) {
+                        try {
+                            double fontSize = Double.parseDouble(fixedParts[6]);
+                            // Ограничиваем размер шрифта
+                            fontSize = Math.max(8, Math.min(72, fontSize));
+
+                            // Восстанавливаем шрифт
+                            String fontFamily = fixedParts.length > 7 ? fixedParts[7] : "Arial";
+                            String fontStyle = fixedParts.length > 8 ? fixedParts[8] : "Regular";
+
+                            // СОЗДАЕМ шрифт с восстановленными параметрами
+                            FontWeight fontWeight = FontWeight.NORMAL;
+                            FontPosture fontPosture = FontPosture.REGULAR;
+
+                            if (fontStyle.contains("Bold")) {
+                                fontWeight = FontWeight.BOLD;
+                            }
+                            if (fontStyle.contains("Italic")) {
+                                fontPosture = FontPosture.ITALIC;
+                            }
+
+                            Font restoredFont = Font.font(fontFamily, fontWeight, fontPosture, fontSize);
+                            textShape.setFont(restoredFont);
+
+                            System.out.println("Восстановлен шрифт: " + fontSize + "px, " + fontFamily + ", " + fontStyle);
+
+                        } catch (NumberFormatException e) {
+                            System.out.println("Ошибка восстановления размера шрифта, используется значение по умолчанию");
+                        }
+                    }
+
+                    // ПЕРЕСЧИТЫВАЕМ размеры с восстановленным шрифтом
+                    javafx.application.Platform.runLater(textShape::calculateTextSize);
+
+                    yield textShape;
                 }
                 default -> {
                     System.out.println("SKIP: Неизвестный тип фигуры: " + type);
@@ -847,11 +901,10 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
             };
         } catch (NumberFormatException e) {
             System.out.println("SKIP: Ошибка парсинга чисел в " + type + ": " + e.getMessage() + " (parts: " + Arrays.toString(parts) + ")");
-            System.out.println("  Возможная причина: Некорректный формат (e.g., ',', буквы). Raw: '" + Arrays.toString(parts) + "'");
             return null;
         } catch (Exception e) {
             System.out.println("SKIP: Общая ошибка в создании " + type + ": " + e.getMessage());
-            e.printStackTrace();  // Для других ошибок (e.g., constructor fail)
+            e.printStackTrace();
             return null;
         }
     }

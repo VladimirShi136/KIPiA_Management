@@ -1,10 +1,10 @@
 package com.kipia.management.kipia_management.services;
 
 import com.kipia.management.kipia_management.models.DeviceLocation;
-
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
 /**
  * Класс DeviceLocationDAO (Data Access Object) предоставляет методы для работы с данными
@@ -18,6 +18,7 @@ import java.util.List;
 public class DeviceLocationDAO {
     // Сервис для работы с БД
     private final DatabaseService databaseService;
+    private static final Logger LOGGER = Logger.getLogger(DeviceLocationDAO.class.getName());
 
     /**
      * Конструктор класса DeviceLocationDAO
@@ -73,22 +74,29 @@ public class DeviceLocationDAO {
     }
 
     /**
-     * Получить список device_id всех приборов, которые установлены на любых схемах.
-     *
-     * @return список id приборов, которые заняты на схемах
+     * Удаление всех привязок для конкретной схемы
+     * @param schemeId - ID схемы
+     * @return - количество удаленных записей
      */
-    public List<Integer> getAllUsedDeviceIds() {
-        List<Integer> ids = new ArrayList<>();
-        String sql = "SELECT DISTINCT device_id FROM device_locations";
-        try (Statement stmt = databaseService.getConnection().createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-            while (rs.next()) {
-                ids.add(rs.getInt("device_id"));
+    public int deleteAllLocationsForScheme(int schemeId) {
+        String sql = "DELETE FROM device_locations WHERE scheme_id = ?";
+        try {
+            Connection conn = databaseService.getConnection();
+            if (conn == null || conn.isClosed()) {
+                LOGGER.severe("Нет соединения с БД для удаления приборов схемы " + schemeId);
+                return 0;
+            }
+
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setInt(1, schemeId);
+                int deletedCount = pstmt.executeUpdate();
+                LOGGER.info("Удалено приборов для схемы " + schemeId + ": " + deletedCount);
+                return deletedCount;
             }
         } catch (SQLException e) {
-            System.out.println("Ошибка получения занятых приборов: " + e.getMessage());
+            LOGGER.severe("Ошибка удаления приборов для схемы " + schemeId + ": " + e.getMessage());
+            return 0;
         }
-        return ids;
     }
 
     /**
@@ -139,18 +147,5 @@ public class DeviceLocationDAO {
             System.out.println("Ошибка получения всех локаций: " + e.getMessage());
         }
         return locations;
-    }
-
-    /**
-     * Удаление всех привязок (для тестирования или сброса).
-     */
-    public void deleteAllLocations() {
-        String sql = "DELETE FROM device_locations";
-        try (Statement stmt = databaseService.getConnection().createStatement()) {
-            int deleted = stmt.executeUpdate(sql);
-            System.out.println("DEBUG: Deleted " + deleted + " device locations");
-        } catch (SQLException e) {
-            System.out.println("Ошибка удаления всех локаций: " + e.getMessage());
-        }
     }
 }

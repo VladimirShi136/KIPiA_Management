@@ -10,19 +10,8 @@ import java.util.function.Consumer;
  * @since 25.10.2025
  */
 
-public class ShapeFactory {
-    private final AnchorPane pane;
-    private final Consumer<String> statusSetter;
-    private Consumer<ShapeHandler> onSelectCallback;
-    private final ShapeManager shapeManager;
-
-    public ShapeFactory(AnchorPane pane, Consumer<String> statusSetter,
-                        Consumer<ShapeHandler> onSelectCallback, ShapeManager shapeManager) {
-        this.pane = pane;
-        this.statusSetter = statusSetter;
-        this.onSelectCallback = onSelectCallback;
-        this.shapeManager = shapeManager;
-    }
+public record ShapeFactory(AnchorPane pane, Consumer<String> statusSetter, Consumer<ShapeHandler> onSelectCallback,
+                           ShapeManager shapeManager) {
 
     public ShapeBase createShape(ShapeType type, double... coordinates) {
         type.validateCoordinates(coordinates);
@@ -71,19 +60,5 @@ public class ShapeFactory {
         double x = coords[0], y = coords[1];
         String text = "Текст";
         return new TextShape(x, y, text, pane, statusSetter, onSelectCallback, shapeManager);
-    }
-
-    // Геттеры для доступа к зависимостям
-    public AnchorPane getPane() { return pane; }
-    public Consumer<String> getStatusSetter() { return statusSetter; }
-    public Consumer<ShapeHandler> getOnSelectCallback() { return onSelectCallback; }
-
-    // Добавляем сеттер для обновления callback
-    public void setOnSelectCallback(Consumer<ShapeHandler> onSelectCallback) {
-        this.onSelectCallback = onSelectCallback;
-    }
-
-    public ShapeManager getShapeManager() {
-        return shapeManager;
     }
 }

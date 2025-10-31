@@ -1,6 +1,7 @@
 package com.kipia.management.kipia_management.controllers;
 
 import com.kipia.management.kipia_management.managers.ShapeManager;
+import com.kipia.management.kipia_management.managers.ZoomManager;
 import com.kipia.management.kipia_management.models.Device;
 import com.kipia.management.kipia_management.models.Scheme;
 import com.kipia.management.kipia_management.models.DeviceLocation;
@@ -14,7 +15,10 @@ import com.kipia.management.kipia_management.utils.StyleUtils;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.geometry.Bounds;
+import javafx.geometry.Point2D;
 import javafx.scene.control.*;
+import javafx.scene.effect.DropShadow;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
@@ -39,6 +43,8 @@ import java.util.stream.Collectors;
  */
 public class SchemeEditorController {
 
+    private Rectangle borderRect;
+
     // ============================================================
     // FXML COMPONENTS
     // ============================================================
@@ -50,9 +56,11 @@ public class SchemeEditorController {
     @FXML
     private Button saveSchemeBtn, selectToolBtn, lineToolBtn, rectToolBtn, textToolBtn, addDeviceToolBtn, rhombusToolBtn;
     @FXML
-    private Button undoBtn, redoBtn, ellipseToolBtn;
+    private Button undoBtn, redoBtn, ellipseToolBtn, zoomInBtn, zoomOutBtn, clearSchemeBtn;
     @FXML
     private AnchorPane schemePane;
+    @FXML
+    private ScrollPane schemeScrollPane;
     @FXML
     private Label statusLabel;
 
@@ -61,14 +69,13 @@ public class SchemeEditorController {
     // ============================================================
 
     private static final Logger LOGGER = Logger.getLogger(SchemeEditorController.class.getName());
-
     private DeviceDAO deviceDAO;
     private SchemeDAO schemeDAO;
     private DeviceLocationDAO deviceLocationDAO;
-
     private ShapeManager shapeManager;
     private ShapeService shapeService;
     private DeviceIconService deviceIconService;
+    private ZoomManager zoomManager;
 
     // ============================================================
     // DATA MODELS
@@ -118,23 +125,42 @@ public class SchemeEditorController {
      */
     @FXML
     private void initialize() {
-        setupComboBoxes();
-        setupPaneEventHandlers();
-        setupShapeSystem();
-        setupToolButtons();
-        applyButtonStyles();
-
-        LOGGER.info("Контроллер редактора схем инициализирован");
+        try {
+            setupComboBoxes();  // Non-DAO
+            setupPaneEventHandlers();  // Non-DAO
+            setupShapeSystem();  // Placeholder
+            setupToolButtons();  // Non-DAO
+            applyButtonStyles();  // Non-DAO
+            addVisibleBorder();  // Fix below
+            if (schemePane != null) {
+                schemePane.setPrefWidth(1000);  // Match рамка
+                schemePane.setPrefHeight(1000);
+                schemePane.setMinWidth(0.0);  // Allow shrink, but events cover full
+                schemePane.setMinHeight(0.0);
+                System.out.println("DEBUG: Pane grown to 1000x1000 for full events coverage");
+            }
+            LOGGER.info("Контроллер редактора схем инициализирован");
+        } catch (Exception e) {
+            LOGGER.severe("Ошибка в initialize(): " + e.getMessage());
+            e.printStackTrace();
+            if (statusLabel != null) statusLabel.setText("Ошибка инициализации: " + e.getMessage());
+        }
     }
 
     /**
      * Основная инициализация после внедрения зависимостей
      */
     public void init() {
-        validateDAODependencies();
-        initializeServices();
-        loadInitialData();
-        setupInitialScheme();
+        try {
+            validateDAODependencies();
+            initializeServices();
+            loadInitialData();  // DAO-dependent
+            setupInitialScheme();  // DAO
+        } catch (Exception e) {
+            LOGGER.severe("Ошибка в init(): " + e.getMessage());
+            e.printStackTrace();
+            if (statusLabel != null) statusLabel.setText("Ошибка запуска: " + e.getMessage());
+        }
     }
 
     /**
@@ -179,6 +205,22 @@ public class SchemeEditorController {
                 deviceLocationDAO,
                 this::refreshAvailableDevices  // Новое: колбэк для обновления списка приборов
         );
+
+        // Инициализация ZoomManager с pane, статусом и callback для обновления handles
+        this.zoomManager = new ZoomManager(
+                schemePane,
+                schemeScrollPane,
+                statusLabel::setText,
+                () -> {
+                    // Только обновление handles
+                    ShapeHandler selected = shapeManager.getSelectedShape();
+                    if (selected != null) {
+                        selected.updateResizeHandles();
+                    }
+                }
+        );
+
+        zoomManager.setZoom(0.33);
     }
 
     /**
@@ -259,9 +301,22 @@ public class SchemeEditorController {
      * Настройка обработчиков событий панели
      */
     private void setupPaneEventHandlers() {
-        schemePane.setOnMouseClicked(e -> schemePane.requestFocus());
-        schemePane.setFocusTraversable(true);
-
+        if (schemePane != null) {
+            schemePane.setOnMouseClicked(e -> schemePane.requestFocus());
+            schemePane.setFocusTraversable(true);
+        }
+        // Wheel зум на ScrollPane (работает по всему viewport)
+        if (schemeScrollPane != null) {
+            schemeScrollPane.setOnScroll(event -> {
+                if (event.isControlDown() && zoomManager != null) {
+                    double factor = (event.getDeltaY() > 0) ? 1.2 : 1.0 / 1.2;
+                    // Convert scene mouse pos to pane local (since pivot на mouse)
+                    Point2D localPos = schemeScrollPane.sceneToLocal(event.getSceneX(), event.getSceneY());
+                    zoomManager.zoom(factor, localPos.getX(), localPos.getY());  // Pass local x/y
+                    event.consume();
+                }
+            });
+        }
         setupPaneKeyHandlers();
     }
 
@@ -324,6 +379,9 @@ public class SchemeEditorController {
         undoBtn.setOnAction(e -> shapeManager.undo());
         redoBtn.setOnAction(e -> shapeManager.redo());
         saveSchemeBtn.setOnAction(e -> saveCurrentScheme());
+        zoomInBtn.setOnAction(e -> zoomManager.zoomIn());
+        zoomOutBtn.setOnAction(e -> zoomManager.zoomOut());
+        clearSchemeBtn.setOnAction(e -> clearScheme());
     }
 
     /**
@@ -354,7 +412,9 @@ public class SchemeEditorController {
     private void applyActionButtonStyles() {
         StyleUtils.applyHoverAndAnimation(undoBtn, "tool-button", "tool-button-hover");
         StyleUtils.applyHoverAndAnimation(redoBtn, "tool-button", "tool-button-hover");
-        StyleUtils.applyHoverAndAnimation(saveSchemeBtn, "save-scheme-button", "save-scheme-button-hover");
+        StyleUtils.applyHoverAndAnimation(saveSchemeBtn, "tool-button", "tool-button-hover");
+        StyleUtils.applyHoverAndAnimation(zoomInBtn, "tool-button", "tool-button-hover");
+        StyleUtils.applyHoverAndAnimation(zoomOutBtn, "tool-button", "tool-button-hover");
     }
 
     // ============================================================
@@ -479,7 +539,7 @@ public class SchemeEditorController {
      */
     private void setupInitialScheme() {
         if (!schemeComboBox.getItems().isEmpty() && schemeComboBox.getValue() == null) {
-            Scheme firstScheme = schemeComboBox.getItems().get(0);
+            Scheme firstScheme = schemeComboBox.getItems().getFirst();
             schemeComboBox.setValue(firstScheme);
         }
     }
@@ -496,9 +556,16 @@ public class SchemeEditorController {
             currentScheme = scheme;
             clearSchemePane();
             loadSchemeContent(scheme);
-            refreshAvailableDevices();
-            statusLabel.setText("Загружена схема: " + scheme.getName());
+            addVisibleBorder();  // Пересоздаем квадрат
 
+            // Автоматически центрируем на квадрате
+            if (zoomManager != null) {
+                zoomManager.setZoom(0.33);
+                zoomManager.centerOnBorder();
+            }
+
+            refreshAvailableDevices();
+            statusLabel.setText("Загружена схема: " + scheme.getName() + " (зум 33%)");
         } catch (Exception e) {
             handleSchemeLoadError(scheme, e);
         }
@@ -523,37 +590,82 @@ public class SchemeEditorController {
     }
 
     /**
+     * Очистка схемы (полная: pane, селекты, undo, статус)
+     */
+    private void clearScheme() {
+        boolean confirm = CustomAlert.showConfirmation("Очистка схемы",
+                "Это действие удалит ВСЕ фигуры и приборы с панели. Продолжить?");
+        if (!confirm) return;
+
+        try {
+            // ВАЖНО: Сначала работа с БД, потом с UI
+            if (currentScheme != null) {
+                // 1. Удаляем приборы из БД
+                if (deviceLocationDAO != null) {
+                    int deletedCount = deviceLocationDAO.deleteAllLocationsForScheme(currentScheme.getId());
+                    System.out.println("Удалено приборов из БД: " + deletedCount);
+                }
+
+                // 2. Сохраняем пустую схему (без фигур) в БД
+                currentScheme.setData("{}");
+                if (schemeDAO != null) {
+                    boolean saved = schemeDAO.updateScheme(currentScheme);
+                    System.out.println("Схема сохранена в БД: " + saved);
+                }
+            }
+
+            // 3. Очищаем UI (панель, фигуры, etc.)
+            clearSchemePane();
+
+            // 4. ВОССТАНАВЛИВАЕМ КВАДРАТ - это ключевое исправление!
+            addVisibleBorder();
+
+            // 5. Обновляем доступные приборы
+            refreshAvailableDevices();
+
+            // 6. Центрируем на квадрате
+            if (zoomManager != null) {
+                zoomManager.setZoom(0.33);
+                zoomManager.centerOnBorder();
+            }
+
+            statusLabel.setText("Схема полностью очищена (зум 33%)");
+
+        } catch (Exception e) {
+            LOGGER.severe("Ошибка при очистке схемы: " + e.getMessage());
+            CustomAlert.showError("Ошибка", "Не удалось полностью очистить схему: " + e.getMessage());
+        }
+    }
+
+    /**
      * Загрузка фигур из схемы
      */
     private void loadShapesFromScheme(Scheme scheme) {
-        // Новое: Очищаем старые фигуры с pane/service перед загрузкой (фикс накопления)
-        shapeService.clearAllShapes();  // Clear list + remove from pane (добавь метод в ShapeService ниже)
         statusLabel.setText("Очистка старых фигур...");
-
+        if (shapeService != null) {
+            try {
+                shapeService.clearAllShapes();  // Если метод есть
+            } catch (Exception e) {  // Fallback если no clearAllShapes
+                LOGGER.warning("clearAllShapes failed: " + e.getMessage() + " — fallback to manual");
+                if (schemePane != null) schemePane.getChildren().clear();
+                // Manual clear list in service (add method to ShapeService if needed)
+                try {
+                    shapeService.removeAllShapes();  // Existing method
+                } catch (Exception ex) {
+                    LOGGER.warning("removeAllShapes also failed");
+                }
+            }
+        }
         String schemeData = scheme.getData();
-
         // Лог: полная инфа о данных (безопасно)
         System.out.println("=== Загрузка фигур для схемы: " + scheme.getName() + " ===");
-        System.out.println("Длина scheme.data: " + (schemeData != null ? schemeData.length() : 0));
-        if (schemeData != null && schemeData.length() > 0) {
-            System.out.println("Содержимое scheme.data: " + safeSubstring(schemeData, 100));  // Показать до 100, чтобы увидеть pattern
+        // ... (остальной код без изменений: System.out, if (isValidSchemeData), parse, deserialize, etc.)
+        if (schemeData != null && !schemeData.isEmpty()) {
+            System.out.println("Содержимое scheme.data: " + safeSubstring(schemeData, 100));
         }
-
-        if (isValidSchemeData(schemeData)) {
+        if (isValidSchemeData(schemeData) && shapeService != null) {
             List<String> shapeData = parseShapeData(schemeData);
-            System.out.println("Parsed shapeData: " + shapeData.size() + " элементов");
-
-            if (!shapeData.isEmpty()) {
-                // Безопасный sample
-                String sample = safeSubstring(shapeData.get(0), 50);
-                System.out.println("Пример shapeData[0]: '" + sample + "'");
-                if (shapeData.size() > 1) {
-                    System.out.println("Пример shapeData[1]: '" + safeSubstring(shapeData.get(1), 50) + "'");
-                }
-            } else {
-                System.out.println("Parse вернул пустой список — нет фигур для загрузки");
-            }
-
+            // ... (log, sample)
             int beforeCount = shapeService.getShapeCount();
             shapeService.deserializeAndAddAll(shapeData);
             int afterCount = shapeService.getShapeCount();
@@ -566,10 +678,71 @@ public class SchemeEditorController {
     }
 
     /**
+     * Добавление видимого красного прямоугольника
+     */
+    private void addVisibleBorder() {
+        if (borderRect != null && schemePane != null) {
+            schemePane.getChildren().remove(borderRect);
+        }
+
+        // ПРЯМОУГОЛЬНЫЕ размеры (шире чем выше)
+        double borderWidth = 1600;  // Ширина
+        double borderHeight = 1200; // Высота
+        borderRect = new Rectangle(borderWidth, borderHeight);
+        borderRect.setId("visibleBorder");
+        borderRect.setStroke(Color.DARKRED); // Темно-красный вместо марун
+        borderRect.setStrokeWidth(10.0);     // Еще жирнее
+        borderRect.setStrokeType(StrokeType.OUTSIDE); // Обводка снаружи
+        borderRect.setFill(Color.TRANSPARENT);
+        borderRect.setMouseTransparent(true);
+
+        // Добавляем эффект тени для лучшей видимости
+        DropShadow shadow = new DropShadow();
+        shadow.setColor(Color.color(0.7, 0.7, 0.7, 0.7));
+        shadow.setRadius(5);
+        shadow.setOffsetX(2);
+        shadow.setOffsetY(2);
+        borderRect.setEffect(shadow);
+
+        borderRect.setLayoutX(0);
+        borderRect.setLayoutY(0);
+
+        schemePane.getChildren().addFirst(borderRect);
+        schemePane.setPrefWidth(borderWidth);
+        schemePane.setPrefHeight(borderHeight);
+
+        System.out.println("DEBUG: Rectangular border created at (0,0) with size " +
+                borderWidth + "x" + borderHeight);
+    }
+
+    /**
      * Проверка валидности данных схемы
      */
     private boolean isValidSchemeData(String schemeData) {
         return schemeData != null && !schemeData.trim().isEmpty();
+    }
+
+    /**
+     * Проверяет, выходят ли figure'ы за видимую область ScrollPane (viewport).
+     * Возвращает true, если хотя бы одна figure не видна полностью без scroll'a — тогда нужен fitZoom.
+     */
+    private boolean hasInvisibleFigures() {
+        if (schemeScrollPane == null || schemePane == null) return false;
+        Bounds viewportBounds = schemeScrollPane.getViewportBounds();
+        if (viewportBounds == null || viewportBounds.getWidth() == 0 || viewportBounds.getHeight() == 0) {
+            return false;
+        }
+        for (Node node : schemePane.getChildren()) {
+            if (node instanceof ShapeBase shape) {
+                Bounds shapeBounds = shape.getBoundsInParent();
+                if (shapeBounds != null &&
+                        (!viewportBounds.contains(shapeBounds.getMinX(), shapeBounds.getMinY()) ||
+                                !viewportBounds.contains(shapeBounds.getMaxX(), shapeBounds.getMaxY()))) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**
@@ -701,7 +874,16 @@ public class SchemeEditorController {
 
     @FXML
     private void onPaneMousePressed(MouseEvent event) {
-        double x = event.getX(), y = event.getY();
+        if (schemePane == null || shapeManager == null) return;
+
+        // ПРАВИЛЬНОЕ преобразование координат с учетом скролла
+        Point2D panePoint = getAbsolutePaneCoordinates(event.getSceneX(), event.getSceneY());
+        double x = panePoint.getX();
+        double y = panePoint.getY();
+
+        System.out.println("DEBUG: Mouse pressed at scene(" + event.getSceneX() + "," + event.getSceneY() +
+                ") -> pane(" + x + "," + y + ")");
+
         shapeManager.resetWasResized();
         if (currentTool == ShapeManager.Tool.ADD_DEVICE) {
             addDeviceAt(x, y);
@@ -713,30 +895,30 @@ public class SchemeEditorController {
     @FXML
     private void onPaneMouseDragged(MouseEvent event) {
         if (currentTool != ShapeManager.Tool.ADD_DEVICE) {
-            shapeManager.onMouseDraggedForTool(currentTool, event.getX(), event.getY());
+            Point2D panePoint = getAbsolutePaneCoordinates(event.getSceneX(), event.getSceneY());
+            shapeManager.onMouseDraggedForTool(currentTool, panePoint.getX(), panePoint.getY());
         }
     }
 
     @FXML
     private void onPaneMouseReleased(MouseEvent event) {
-        if (currentTool == ShapeManager.Tool.ADD_DEVICE) {
-            // ADD_DEVICE обрабатывается в onPaneMousePressed
-        } else if (currentTool == ShapeManager.Tool.TEXT) {
-            // Специальная обработка для TEXT: открываем диалог ввода, создаём и добавляем фигуру
-            double x = event.getX(), y = event.getY();
+        if (currentTool == ShapeManager.Tool.TEXT) {
+            Point2D panePoint = getAbsolutePaneCoordinates(event.getSceneX(), event.getSceneY());
+            double x = panePoint.getX();
+            double y = panePoint.getY();
+
             Optional<String> result = CustomAlert.showTextInputDialog("Добавление текста", "Введите текст для добавления на схему:", "Новый текст");
             if (result.isPresent()) {
                 String newText = result.get().trim();
                 if (!newText.isEmpty()) {
-                    // Создаём и добавляем TextShape
-                    double[] coords = {x, y, 0};  // x, y, width=0
+                    double[] coords = {x, y, 0};
                     try {
                         ShapeBase shape = shapeService.addShape(ShapeType.TEXT, coords);
                         if (shape instanceof TextShape textShape) {
-                            textShape.setText(newText);  // Устанавливаем введённый текст
-                            shapeManager.addShape(shape);  // Регистрируем в менеджере (undo/select etc.)
+                            textShape.setText(newText);
+                            shapeManager.addShape(shape);
                             statusLabel.setText("Текст добавлен: '" + newText + "'");
-                            autoSaveScheme();  // Auto-save сразу после добавления
+                            autoSaveScheme();
                         }
                     } catch (Exception e) {
                         LOGGER.severe("ERROR adding TEXT: " + e.getMessage());
@@ -747,11 +929,51 @@ public class SchemeEditorController {
                 }
             }
         } else if (currentTool != ShapeManager.Tool.SELECT) {
-            // Оригинальная логика для других инструментов
-            shapeManager.onMouseReleasedForTool(currentTool, event.getX(), event.getY());
+            Point2D panePoint = getAbsolutePaneCoordinates(event.getSceneX(), event.getSceneY());
+            shapeManager.onMouseReleasedForTool(currentTool, panePoint.getX(), panePoint.getY());
             autoSaveScheme();
         }
         updateStatusAfterMouseRelease();
+    }
+
+    /**
+     * ПРАВИЛЬНОЕ преобразование координат с учетом скролла и зума
+     */
+    private Point2D getAbsolutePaneCoordinates(double sceneX, double sceneY) {
+        if (schemeScrollPane == null || schemePane == null) {
+            return new Point2D(sceneX, sceneY);
+        }
+
+        try {
+            // 1. Преобразуем scene coordinates в scrollPane local coordinates
+            Point2D scrollLocal = schemeScrollPane.sceneToLocal(sceneX, sceneY);
+
+            // 2. Получаем смещение скролла
+            double scrollX = schemeScrollPane.getHvalue() * (schemePane.getWidth() - schemeScrollPane.getViewportBounds().getWidth());
+            double scrollY = schemeScrollPane.getVvalue() * (schemePane.getHeight() - schemeScrollPane.getViewportBounds().getHeight());
+
+            // 3. Учитываем скролл и возвращаем абсолютные координаты pane
+            double absoluteX = scrollLocal.getX() + scrollX;
+            double absoluteY = scrollLocal.getY() + scrollY;
+
+            // 4. Ограничиваем координаты рамкой красного прямоугольника
+            absoluteX = Math.max(0, Math.min(absoluteX, 1600)); // Ширина прямоугольника
+            absoluteY = Math.max(0, Math.min(absoluteY, 1200)); // Высота прямоугольника
+
+            // ОТЛАДОЧНЫЙ ВЫВОД - можно убрать после проверки
+            if (absoluteY > 1000) { // Логируем только для нижней части
+                System.out.println("DEBUG COORDS: scene(" + sceneX + "," + sceneY +
+                        ") -> scrollLocal(" + scrollLocal.getX() + "," + scrollLocal.getY() +
+                        ") + scrollOffset(" + scrollX + "," + scrollY +
+                        ") -> absolute(" + absoluteX + "," + absoluteY + ")");
+            }
+
+            return new Point2D(absoluteX, absoluteY);
+
+        } catch (Exception e) {
+            System.err.println("ERROR in coordinate conversion: " + e.getMessage());
+            return new Point2D(sceneX, sceneY);
+        }
     }
 
     /**
@@ -772,9 +994,10 @@ public class SchemeEditorController {
     // ============================================================
 
     /**
-     * Добавление устройства на схему
+     * Добавление устройства на схему в заданную позицию
      */
     private void addDeviceAt(double x, double y) {
+        // Уже используем правильные координаты из getAbsolutePaneCoordinates
         Device selectedDevice = deviceComboBox.getValue();
         if (selectedDevice == null) {
             CustomAlert.showWarning("Добавление прибора", "Выберите прибор из списка!");
@@ -782,21 +1005,20 @@ public class SchemeEditorController {
         }
 
         try {
-            Node deviceNode = deviceIconService.createDeviceIcon(x, y, selectedDevice, currentScheme);
-            schemePane.getChildren().add(deviceNode);
-
-            if (currentScheme != null) {
-                DeviceLocation location = new DeviceLocation(
-                        selectedDevice.getId(), currentScheme.getId(), x, y
-                );
-                deviceLocationDAO.addDeviceLocation(location);
-                autoSaveScheme();
+            if (deviceIconService != null) {
+                Node deviceNode = deviceIconService.createDeviceIcon(x, y, selectedDevice, currentScheme);
+                if (schemePane != null) schemePane.getChildren().add(deviceNode);
+                if (currentScheme != null && deviceLocationDAO != null) {
+                    DeviceLocation location = new DeviceLocation(
+                            selectedDevice.getId(), currentScheme.getId(), x, y
+                    );
+                    deviceLocationDAO.addDeviceLocation(location);
+                    autoSaveScheme();
+                }
+                refreshAvailableDevices();
+                if (statusLabel != null) statusLabel.setText("Прибор добавлен: " + selectedDevice.getName());
+                CustomAlert.showInfo("Добавление", "Прибор '" + selectedDevice.getName() + "' добавлен на схему");
             }
-
-            refreshAvailableDevices();
-            statusLabel.setText("Прибор добавлен: " + selectedDevice.getName());
-            CustomAlert.showInfo("Добавление", "Прибор '" + selectedDevice.getName() + "' добавлен на схему");
-
         } catch (Exception e) {
             LOGGER.severe("Ошибка добавления устройства: " + e.getMessage());
             CustomAlert.showError("Ошибка", "Не удалось добавить прибор: " + e.getMessage());
@@ -808,20 +1030,19 @@ public class SchemeEditorController {
      */
     private void saveDeviceLocation(Node node, Device device) {
         if (device != null && currentScheme != null) {
-            if (device != null && currentScheme != null) {
-                double x = node.getLayoutX();
-                double y = node.getLayoutY();
+            double x = node.getLayoutX();
+            double y = node.getLayoutY();
 
-                // Корректировка для Circle (центр вместо левого верхнего угла)
-                if (node instanceof Circle) {
-                    x -= 10;
-                    y -= 10;
-                }
-
-                DeviceLocation location = new DeviceLocation(device.getId(), currentScheme.getId(), x, y);
-                deviceLocationDAO.updateDeviceLocation(location);
+            // Корректировка для Circle (центр вместо левого верхнего угла)
+            if (node instanceof Circle) {
+                x -= 10;
+                y -= 10;
             }
+
+            DeviceLocation location = new DeviceLocation(device.getId(), currentScheme.getId(), x, y);
+            deviceLocationDAO.updateDeviceLocation(location);
         }
+
     }
     // ============================================================
     // SCHEME SAVING

@@ -32,10 +32,12 @@ public class DatabaseService {
     private void connect() {
         try {
             connection = DriverManager.getConnection(DB_URL);
-            LOGGER.info("Подключение к SQLite установлено!");  // Замена println на logger
+            // Включаем автоматическое пересоздание соединения
+            connection.setAutoCommit(true);
+            LOGGER.info("Подключение к SQLite установлено!");
         } catch (SQLException e) {
-            LOGGER.severe("Ошибка подключения: " + e.getMessage());  // Замена println на logger
-            throw new RuntimeException(e);  // Выбрасываем исключение, чтобы Main.java обработал и показал alert
+            LOGGER.severe("Ошибка подключения: " + e.getMessage());
+            throw new RuntimeException(e);
         }
     }
 
@@ -115,7 +117,18 @@ public class DatabaseService {
      * Может использоваться для выполнения других запросов вне класса.
      */
     public Connection getConnection() {
-        return connection;
+        try {
+            if (connection == null || connection.isClosed()) {
+                LOGGER.warning("Соединение с БД закрыто, пересоздаем...");
+                connect();
+            }
+            return connection;
+        } catch (SQLException e) {
+            LOGGER.severe("Ошибка при проверке соединения: " + e.getMessage());
+            // Пытаемся пересоздать соединение
+            connect();
+            return connection;
+        }
     }
 
     /**
@@ -125,12 +138,23 @@ public class DatabaseService {
      */
     public void closeConnection() {
         try {
-            if (connection != null) {
+            if (connection != null && !connection.isClosed()) {
                 connection.close();
-                LOGGER.info("Подключение закрыто.");  // Замена println на logger
+                LOGGER.info("Подключение закрыто.");
             }
         } catch (SQLException e) {
-            LOGGER.severe("Ошибка закрытия подключения: " + e.getMessage());  // Замена println на logger
+            LOGGER.severe("Ошибка закрытия подключения: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Проверяет, активно ли соединение с БД
+     */
+    public boolean isConnectionValid() {
+        try {
+            return connection != null && !connection.isClosed() && connection.isValid(2);
+        } catch (SQLException e) {
+            return false;
         }
     }
 

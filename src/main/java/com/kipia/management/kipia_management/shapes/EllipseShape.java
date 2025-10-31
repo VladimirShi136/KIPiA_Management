@@ -65,10 +65,6 @@ public class EllipseShape extends ShapeBase {
             double newRadiusX = newWidth / 2;
             double newRadiusY = newHeight / 2;
 
-            // Центр: recalculate для new bounds (left-top shift в applyResize, но center relative)
-            double centerX = getLayoutX() + newWidth / 2;  // New centerX
-            double centerY = getLayoutY() + newHeight / 2;
-
             ellipse.setCenterX(newWidth / 2);  // Relative в группе (fixed offset)
             ellipse.setCenterY(newHeight / 2);
             ellipse.setRadiusX(newRadiusX);
@@ -99,9 +95,5 @@ public class EllipseShape extends ShapeBase {
         ellipse.setStroke(stroke);
         ellipse.setStrokeWidth(strokeWidth);
         ellipse.setStrokeType(StrokeType.INSIDE);
-    }
-
-    private void applyDefaultStyle(Ellipse ellipse) {
-        applyStyle(ellipse, DEFAULT_FILL, DEFAULT_STROKE, DEFAULT_STROKE_WIDTH);
     }
 }

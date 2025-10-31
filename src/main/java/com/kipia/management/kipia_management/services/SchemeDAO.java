@@ -2,10 +2,7 @@ package com.kipia.management.kipia_management.services;
 
 import com.kipia.management.kipia_management.models.Scheme;
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -70,49 +67,34 @@ public class SchemeDAO {
             return false;
         }
 
-        // Фикс: Таблица 'schemes' (как в INSERT/SELECT), + description в SET
         String sql = "UPDATE schemes SET name=?, description=?, data=? WHERE id=?";
 
-        try (PreparedStatement pstmt = databaseService.getConnection().prepareStatement(sql)) {
-            pstmt.setString(1, scheme.getName() != null ? scheme.getName() : "");
-            pstmt.setString(2, scheme.getDescription() != null ? scheme.getDescription() : "");  // Добавлено: description
-            pstmt.setString(3, scheme.getData() != null ? scheme.getData() : "{}");
-            pstmt.setInt(4, scheme.getId());
+        try {
+            // Получаем соединение через getConnection() который гарантирует активное соединение
+            Connection conn = databaseService.getConnection();
 
-            int rows = pstmt.executeUpdate();
-            boolean success = rows > 0;
-
-            // Улучшенный лог: Безопасный (escape для data, если long), всегда выводится
-            String dataPreview = scheme.getData() != null && scheme.getData().length() > 50
-                    ? scheme.getData().substring(0, 47) + "..."
-                    : (scheme.getData() != null ? scheme.getData() : "{}");
-            System.out.println("DAO updateScheme: Executing UPDATE schemes SET name='" + scheme.getName() +
-                    "', description len=" + (scheme.getDescription() != null ? scheme.getDescription().length() : 0) +
-                    "', data preview='" + dataPreview + "' WHERE id=" + scheme.getId() +
-                    " → rows affected=" + rows + ", success=" + success);
-
-            if (!success) {
-                // Warning: Если rows=0 — id не найден (но таблица OK)
-                System.out.println("WARNING: No rows updated for scheme ID=" + scheme.getId() +
-                        " — check if exists (SELECT * FROM schemes WHERE id=" + scheme.getId() + ")");
-                LOGGER.warning("Update failed: 0 rows for scheme ID=" + scheme.getId());
+            // Дополнительная проверка
+            if (conn == null || conn.isClosed()) {
+                LOGGER.severe("Не удалось получить активное соединение с БД");
+                return false;
             }
 
-            return success;
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, scheme.getName() != null ? scheme.getName() : "");
+                pstmt.setString(2, scheme.getDescription() != null ? scheme.getDescription() : "");
+                pstmt.setString(3, scheme.getData() != null ? scheme.getData() : "{}");
+                pstmt.setInt(4, scheme.getId());
+
+                int rows = pstmt.executeUpdate();
+                boolean success = rows > 0;
+
+                // Логирование для отладки
+                LOGGER.info("Схема обновлена: " + scheme.getName() + " (ID: " + scheme.getId() + "), строк затронуто: " + rows);
+
+                return success;
+            }
         } catch (SQLException e) {
-            // Полный лог: Класс, message, state/code
-            System.err.println("DAO updateScheme ERROR for scheme ID=" + scheme.getId() + " (name='" + scheme.getName() + "'):");
-            System.err.println("SQL: " + sql);
-            System.err.println("Exception: " + e.getClass().getSimpleName() + " - Message: " + e.getMessage());
-            if (e.getSQLState() != null) System.err.println("SQL State: " + e.getSQLState() + ", Error Code: " + e.getErrorCode());
-            e.printStackTrace();
             LOGGER.log(Level.SEVERE, "SQLException in updateScheme: " + e.getMessage(), e);
-
-            // Если table-related — подсказка
-            if (e.getMessage().toLowerCase().contains("scheme") || e.getMessage().toLowerCase().contains("table")) {
-                System.err.println("Likely table name issue — ensure 'schemes' table exists (run CREATE in DB tool)");
-            }
-
             return false;
         }
     }
