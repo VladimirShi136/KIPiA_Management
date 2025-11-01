@@ -92,6 +92,17 @@ public class MainController {
         StyleUtils.applyHoverAndAnimation(exitBtn, "button-exit", "button-exit-hover");
         StyleUtils.applyHoverAndAnimation(groupedDevicesBtn, "button-grouped", "button-grouped-hover");
         StyleUtils.applyHoverAndAnimation(schemesBtn, "button-schemes", "button-schemes-hover");
+
+        // Подключаем CSS Alerts к сцене, если она уже доступна
+        if (scene != null) {
+            try {
+                scene.getStylesheets().add(
+                        Objects.requireNonNull(getClass().getResource("/styles/light-theme.css")).toExternalForm()
+                );
+            } catch (Exception e) {
+                System.err.println("Не удалось загрузить CSS Alerts: " + e.getMessage());
+            }
+        }
     }
 
     /**

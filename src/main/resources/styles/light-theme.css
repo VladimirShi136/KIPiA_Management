@@ -5,15 +5,17 @@
 
 /* Общие стили для кнопок */
 .button {
+    -fx-text-fill: white;
+    -fx-padding: 5 10;
     -fx-background-radius: 5px;
     -fx-border-radius: 5px;
     -fx-font-size: 14px;
     -fx-font-weight: bold;
-    -fx-text-fill: white;
     -fx-cursor: hand;
-    -fx-padding: 8 12 8 12;
-    /* Плавный переход для фонового цвета и эффекта */
+    -fx-min-width: 40px;
+    -fx-pref-width: 40px;
     -fx-transition: background-color 0.3s ease, effect 0.3s ease;
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
 }
 
 /* Верхняя панель */
@@ -32,8 +34,8 @@
 .left {
     -fx-background-color: #527091;
     -fx-padding: 10px;
-    -fx-min-width: 200px; /* чтобы левая панель не сжималась */
-    -fx-pref-width: 160px; /* фиксированная ширина */
+    -fx-min-width: 200px;
+    -fx-pref-width: 160px;
 }
 
 .button-devices {
@@ -209,16 +211,6 @@
 /* Кнопки экспорт и импорт*/
 .button-export {
     -fx-background-color: #4CAF50;
-    -fx-text-fill: white;
-    -fx-padding: 5 10;
-    -fx-background-radius: 5px;
-    -fx-border-radius: 5px;
-    -fx-font-weight: bold;
-    -fx-cursor: hand;
-    -fx-min-width: 40px;
-    -fx-pref-width: 40px;
-    -fx-transition: background-color 0.3s ease, effect 0.3s ease;
-    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
 }
 
 .button-export-hover {
@@ -230,16 +222,6 @@
 
 .button-import {
     -fx-background-color: #2196F3;
-    -fx-text-fill: white;
-    -fx-padding: 5 10;
-    -fx-background-radius: 5px;
-    -fx-border-radius: 5px;
-    -fx-font-weight: bold;
-    -fx-cursor: hand;
-    -fx-min-width: 40px;
-    -fx-pref-width: 40px;
-    -fx-transition: background-color 0.3s ease, effect 0.3s ease;
-    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
 }
 
 .button-import-hover {
@@ -504,16 +486,6 @@
 /* Scheme-editor.fxml */
 .new-scheme-button {
     -fx-background-color: #93bc04;
-    -fx-text-fill: white;
-    -fx-padding: 5 10;
-    -fx-background-radius: 5px;
-    -fx-border-radius: 5px;
-    -fx-font-weight: bold;
-    -fx-cursor: hand;
-    -fx-min-width: 40px;
-    -fx-pref-width: 40px;
-    -fx-transition: background-color 0.3s ease, effect 0.3s ease;
-    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
 }
 
 .new-scheme-button-hover {
@@ -525,16 +497,6 @@
 
 .save-scheme-button {
     -fx-background-color: #04a68e;
-    -fx-text-fill: white;
-    -fx-padding: 5 10;
-    -fx-background-radius: 5px;
-    -fx-border-radius: 5px;
-    -fx-font-weight: bold;
-    -fx-cursor: hand;
-    -fx-min-width: 40px;
-    -fx-pref-width: 40px;
-    -fx-transition: background-color 0.3s ease, effect 0.3s ease;
-    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
 }
 
 .save-scheme-button-hover {
@@ -546,16 +508,6 @@
 
 .delete-scheme-button {
     -fx-background-color: #d63525;
-    -fx-text-fill: white;
-    -fx-padding: 5 10;
-    -fx-background-radius: 5px;
-    -fx-border-radius: 5px;
-    -fx-font-weight: bold;
-    -fx-cursor: hand;
-    -fx-min-width: 40px;
-    -fx-pref-width: 40px;
-    -fx-transition: background-color 0.3s ease, effect 0.3s ease;
-    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
 }
 
 .delete-scheme-button-hover {
@@ -681,7 +633,6 @@
     -fx-text-alignment: center; /* Выравнивание текста по центру */
 }
 
-/* Обеспечиваем, что текст внутри label заголовка может переноситься */
 .table-view .column-header .label,
 .tree-table-view .column-header .label {
     -fx-wrap-text: true;
@@ -693,7 +644,7 @@
     -fx-max-height: 96px;
 }
 
-/* --- Ячейки данных (обычные строки, не группы) --- Одинаковые шрифт и размер */
+/* Ячейки данных (обычные строки, не группы) */
 .tree-table-cell {
     -fx-font-family: "Arial"; /* Шрифт Arial */
     -fx-font-size: 12px; /* Размер 12px (компактный, но читаемый) */
@@ -723,26 +674,22 @@
     -fx-border-color: transparent #d0d0d0 transparent transparent; /* Светло-серая линия справа */
 }
 
-/* В групповых строках убираем все вертикальные границы, оставляем только нижнюю (для визуального отделения группы) */
 .tree-table-row-cell.group-row > .tree-table-cell {
     -fx-border-width: 0 0 1px 0 !important; /* Только нижняя граница */
     -fx-border-color: transparent transparent #bbb transparent !important; /* Цвет нижней границы */
 }
 
-/* --- Выделение строк --- */
 .tree-table-row-cell:selected,
 .tree-table-row-cell:selected > .tree-table-cell {
     -fx-background-color: #a0c8ff;
 }
 
-/* Убираем фон и границы у выделенных ячеек (чтобы фон был ровным) */
 .tree-table-cell:selected,
 .tree-table-cell:selected:focused {
     -fx-background-color: transparent;
     -fx-border-color: transparent;
 }
 
-/* --- Убираем вертикальные полосы в групповых строках при выделении --- */
 .tree-table-row-cell.group-row:selected > .tree-table-cell {
     -fx-border-width: 0 !important;
     -fx-border-color: transparent !important;
@@ -755,13 +702,126 @@
     -fx-background-color: #a0c8ff !important;
 }
 
-/* Убираем границы у всех элементов внутри выделенных групповых ячеек (на всякий случай) */
 .tree-table-row-cell.group-row:selected > .tree-table-cell * {
     -fx-border-width: 0 !important;
     -fx-border-color: transparent !important;
 }
 
 /* CustomAlert */
+/* Общие стили для всех кастомных алертов */
+.custom-alert {
+    -fx-border-color: #ccc;
+    -fx-border-width: 2px;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 10, 0, 0, 2);
+}
 
+/* Стили для информационного алерта (синие оттенки) */
+.info-alert {
+    -fx-background-color: linear-gradient(to bottom, #e3f2fd, #bbdefb);
+    -fx-border-color: #2196F3;
+}
+
+.info-alert .header-panel {
+    -fx-background-color: #2196F3;
+}
+
+.info-alert .content {
+    -fx-text-fill: #0d47a1;
+}
+
+/* Стили для предупреждения (оранжевые/желтые оттенки) */
+.warning-alert {
+    -fx-background-color: linear-gradient(to bottom, #fff3e0, #ffcc80);
+    -fx-border-color: #ff9800;
+}
+
+.warning-alert .header-panel {
+    -fx-background-color: #ff9800;
+}
+
+.warning-alert .content {
+    -fx-text-fill: #e65100;
+}
+
+/* Стили для ошибок (красные оттенки) */
+.error-alert {
+    -fx-background-color: linear-gradient(to bottom, #ffebee, #ffcdd2);
+    -fx-border-color: #f44336;
+}
+
+.error-alert .header-panel {
+    -fx-background-color: #f44336;
+}
+
+.error-alert .content {
+    -fx-text-fill: #b71c1c;
+}
+
+/* Стили для подтверждения (фиолетовые оттенки) */
+.confirm-alert {
+    -fx-background-color: linear-gradient(to bottom, #f3e5f5, #e1bee7);
+    -fx-border-color: #9c27b0;
+}
+
+.confirm-alert .header-panel {
+    -fx-background-color: #9c27b0;
+}
+
+.confirm-alert .content {
+    -fx-text-fill: #4a148c;
+}
+
+/* Стили для успешных операций (зеленые оттенки) */
+.success-alert {
+    -fx-background-color: linear-gradient(to bottom, #e8f5e8, #c8e6c9);
+    -fx-border-color: #4caf50;
+}
+
+.success-alert .header-panel {
+    -fx-background-color: #4caf50;
+}
+
+.success-alert .content {
+    -fx-text-fill: #1b5e20;
+}
+
+/* Стилизация кнопок */
+.custom-alert .button {
+    -fx-background-color: linear-gradient(to bottom, #ffffff, #f5f5f5);
+    -fx-border-color: #ddd;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-text-fill: #333;
+    -fx-padding: 8px 16px;
+}
+
+.custom-alert .button:hover {
+    -fx-background-color: linear-gradient(to bottom, #f5f5f5, #e0e0e0);
+}
+
+.custom-alert .button:pressed {
+    -fx-background-color: linear-gradient(to bottom, #e0e0e0, #d0d0d0);
+}
+
+/* Стилизация текстовых полей в диалогах ввода */
+.custom-alert .text-field {
+    -fx-border-color: #2196F3;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-padding: 8px;
+}
+
+/* Стилизация области расширенного контента */
+.custom-alert .text-area {
+    -fx-border-color: #ccc;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+}
+
+.custom-alert .text-area .content {
+    -fx-background-color: #f9f9f9;
+}
 
 

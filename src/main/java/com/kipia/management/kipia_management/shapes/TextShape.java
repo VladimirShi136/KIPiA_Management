@@ -24,10 +24,10 @@ import java.util.function.Consumer;
  */
 
 public class TextShape extends ShapeBase {
-    private Text text;
-    private Color defaultFill = Color.BLACK;
-    private Color selectedFill = Color.DODGERBLUE;
-    private ShapeManager shapeManager;
+    private final Text text;
+    private final Color defaultFill = Color.BLACK;
+    private final Color selectedFill = Color.DODGERBLUE;
+    private final ShapeManager shapeManager;
     private final Consumer<String> statusSetter;
 
     public TextShape(double x, double y, String content,
@@ -180,8 +180,7 @@ public class TextShape extends ShapeBase {
                     FontWeight weight = boldCheckBox.isSelected() ? FontWeight.BOLD : FontWeight.NORMAL;
                     FontPosture posture = italicCheckBox.isSelected() ? FontPosture.ITALIC : FontPosture.REGULAR;
 
-                    Font newFont = Font.font(fontFamily, weight, posture, fontSize);
-                    return newFont;
+                    return Font.font(fontFamily, weight, posture, fontSize);
                 } catch (NumberFormatException e) {
                     CustomAlert.showError("Ошибка", "Введите корректный размер шрифта");
                 }
@@ -194,28 +193,6 @@ public class TextShape extends ShapeBase {
             text.setFont(newFont);
             calculateTextSize(); // ПЕРЕСЧИТЫВАЕМ размеры
             statusSetter.accept("Шрифт изменен");
-        });
-    }
-
-    /**
-     * ЦЕНТРИРОВАНИЕ текста при изменении
-     */
-    private void updateTextPosition() {
-        javafx.application.Platform.runLater(() -> {
-            text.applyCss();
-
-            Bounds textBounds = text.getBoundsInLocal();
-            double currentWidth = getCurrentWidth();
-            double currentHeight = getCurrentHeight();
-
-            // ЦЕНТРИРУЕМ текст
-            double centerX = (currentWidth - textBounds.getWidth()) / 2;
-            text.setX(centerX);
-
-            // Верхняя граница = 0 (благодаря VPos.TOP)
-            text.setY(2); // Небольшой отступ сверху
-
-            System.out.println("Text positioned at: " + text.getX() + "," + text.getY());
         });
     }
 

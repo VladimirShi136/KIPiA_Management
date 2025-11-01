@@ -5,10 +5,15 @@ import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.ScaleTransition;
 import javafx.animation.Timeline;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.RadioButton;
 import javafx.scene.effect.Glow;
+import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 import javafx.util.Duration;
+
+import java.util.Objects;
 
 /**
  * Класс с утилитами для работы со стилями CSS
@@ -17,6 +22,12 @@ import javafx.util.Duration;
  * @since 08.09.2025
  */
 public class StyleUtils {
+    // CSS классы для разных типов алертов
+    private static final String INFO_ALERT = "info-alert";
+    private static final String WARNING_ALERT = "warning-alert";
+    private static final String ERROR_ALERT = "error-alert";
+    private static final String CONFIRM_ALERT = "confirm-alert";
+    private static final String SUCCESS_ALERT = "success-alert";
 
     /**
      * Метод для применения CSS классов с плавной сменой классов при наведении мыши.
@@ -113,6 +124,48 @@ public class StyleUtils {
             scaleOut.setInterpolator(Interpolator.EASE_OUT);
             scaleOut.play();
         });
+    }
+
+    /**
+     * Настройка стилей для Alert
+     *
+     * @param alert Alert для настройки
+     * @param title заголовок
+     * @param styleClass CSS класс для стилизации
+     */
+    public static void setupAlertStyle(Alert alert, String title, String styleClass) {
+        alert.initStyle(StageStyle.UTILITY);
+        alert.setTitle(title);
+
+        // Добавляем CSS классы к DialogPane
+        alert.getDialogPane().getStyleClass().add(styleClass);
+        alert.getDialogPane().getStyleClass().add("custom-alert");
+
+        // Подключаем CSS файл
+        try {
+            alert.getDialogPane().getStylesheets().add(
+                    Objects.requireNonNull(StyleUtils.class.getResource("/styles/light-theme.css")).toExternalForm()
+            );
+        } catch (Exception e) {
+            System.err.println("Не удалось загрузить CSS файл для алертов: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Получить CSS класс для типа алерта
+     *
+     * @param alertType тип алерта
+     * @return CSS класс
+     */
+    public static String getAlertStyleClass(String alertType) {
+        return switch (alertType.toLowerCase()) {
+            case "info" -> INFO_ALERT;
+            case "warning" -> WARNING_ALERT;
+            case "error" -> ERROR_ALERT;
+            case "confirm" -> CONFIRM_ALERT;
+            case "success" -> SUCCESS_ALERT;
+            default -> INFO_ALERT;
+        };
     }
 }
 

@@ -13,6 +13,9 @@
   * Окно отчетов *
 -->
 
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.control.Tooltip?>
 <VBox xmlns="http://javafx.com/javafx/23" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.kipia.management.kipia_management.controllers.ReportsController"
       spacing="20" styleClass="reports-root">
@@ -29,12 +32,22 @@
         <RadioButton text="По годам выпуска" toggleGroup="$reportTypeGroup" fx:id="yearReportBtn" styleClass="report-radio"/>
     </HBox>
 
-    <!-- Этот Label будет содержать название отчета -->
-    <Label fx:id="titleLabel" text="Отчёт по устройствам — По статусу" styleClass="report-title"/>
+    <!-- 2️ HBox с заголовком отчета и кнопка экспорта -->
+    <HBox alignment="CENTER_LEFT" spacing="10">
+        <Label fx:id="titleLabel" text="Отчёт по устройствам — По статусу" styleClass="report-title"/>
+        <!-- Кнопка экспорта отчета в Excel -->
+        <Button fx:id="exportReportButton" styleClass="report-export-button">
+            <graphic>
+                <ImageView fitWidth="24" fitHeight="24" preserveRatio="true">
+                    <Image url="@../images/export.png"/>
+                </ImageView>
+            </graphic>
+            <tooltip>
+                <Tooltip text="Экспортировать отчёт в Excel"/>
+            </tooltip>
+        </Button>
+    </HBox>
 
-    <!-- Этот BorderPane будет содержать график -->
+    <!-- BorderPane с графиком -->
     <BorderPane fx:id="chartPane" prefWidth="600" prefHeight="400" styleClass="chart-pane"/>
-
-    <!-- Кнопка экспорта отчета в Excel -->
-    <Button fx:id="exportReportButton" text="Экспортировать отчёт в Excel" styleClass="report-export-button"/>
 </VBox>

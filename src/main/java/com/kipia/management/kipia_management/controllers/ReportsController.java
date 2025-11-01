@@ -53,7 +53,7 @@ public class ReportsController {
             String reportKey = getCurrentReportKey();
             if (reportKey.isEmpty()) return;
 
-            // Открываем диалог выбора файла здесь (перенесено из сервиса)
+            // Открываем диалог выбора файла здесь
             FileChooser chooser = new FileChooser();
             chooser.setTitle("Экспорт отчёта " + reportKey + " в Excel");
             chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Excel файлы", "*.xlsx"));
@@ -63,13 +63,13 @@ public class ReportsController {
             // Вызываем экспорт с файлом, получаем результат
             boolean success = excelService.exportReport(allDevices, reportKey, file);
             if (success) {
-                CustomAlert.showInfo("Экспорт", "Отчёт " + reportKey + " экспортирован: " + file.getAbsolutePath());
+                CustomAlert.showSuccess("Экспорт", "Отчёт " + reportKey + " экспортирован: " + file.getAbsolutePath());
             } else {
                 CustomAlert.showError("Экспорт", "Ошибка при экспорте отчёта " + reportKey);
             }
         });
 
-        // Применение стилей и hover (если нужно, пример)
+        // Применение стилей и hover анимации
         if (exportReportButton != null) {
             exportReportButton.getStyleClass().add("report-export-button");
             StyleUtils.applyHoverAndAnimation(exportReportButton, "report-export-button", "report-export-button-hover");

@@ -268,8 +268,8 @@ public class DevicesTableController {
 
             {
                 // стили и размеры
-                addBtn.getStyleClass().addAll("table-button-add");
-                viewBtn.getStyleClass().addAll("table-button-view");
+                addBtn.getStyleClass().add("table-button-add");
+                viewBtn.getStyleClass().add("table-button-view");
                 StyleUtils.applyHoverAndAnimation(addBtn,
                         "table-button-add", "table-button-add-hover");
                 StyleUtils.applyHoverAndAnimation(viewBtn,

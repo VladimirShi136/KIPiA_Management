@@ -428,22 +428,37 @@ public class ShapeManager {
     }
 
     private void updateLinePreview(Line line, double x, double y) {
-        // Изменённого: начальная линия snapped + ortho logic
-        double startX = this.startX;  // Stored из onPressed
+        double startX = this.startX;
         double startY = this.startY;
-        double endX = applySnapLogic(x, startX, true);   // Алгоритм с ortho
+
+        // Применяем snap логику к конечным точкам
+        double endX = applySnapLogic(x, startX, true);
         double endY = applySnapLogic(y, startY, false);
-        // Ortho (если близко к горизонтали, выставить по X)
-        if (Math.abs(endX - startX) > Math.abs(endY - startY)) {
-            endY = startY;  // Горизонтальная
-        } else {
-            endX = startX;  // Вертикальная
+
+        // "Умная" фиксация: проверяем близость к вертикали/горизонтали
+        double deltaX = Math.abs(endX - startX);
+        double deltaY = Math.abs(endY - startY);
+
+        // Порог для фиксации (в пикселях)
+        double snapThreshold = 15.0;
+
+        // Если линия близка к горизонтали (deltaY маленькая относительно deltaX)
+        if (deltaY < snapThreshold && deltaX > deltaY) {
+            endY = startY; // Фиксируем по горизонтали
         }
-        this.previewEndX = endX;  // Новое: store snapped end для createFinalShape
+        // Если линия близка к вертикали (deltaX маленькая относительно deltaY)
+        else if (deltaX < snapThreshold && deltaY > deltaX) {
+            endX = startX; // Фиксируем по вертикали
+        }
+        // В противном случае - оставляем как есть (любое направление)
+
+        this.previewEndX = endX;
         this.previewEndY = endY;
         line.setEndX(endX);
         line.setEndY(endY);
-        if (endX != x  || endY != y) {
+
+        // Показываем индикатор snap, если произошла фиксация
+        if (endX != x || endY != y) {
             showSnapHighlight(endX, endY);
         } else {
             hideSnapHighlight();
@@ -589,10 +604,12 @@ public class ShapeManager {
     }
 
     private double applySnapLogic(double current, double start, boolean isXAxis) {
+        // Для линий snap к начальной точке (чтобы можно было сделать точку)
         if (Math.abs(current - start) < SNAP_THRESHOLD) {
             return start;
         }
 
+        // Snap к другим объектам
         double snapped = findNearestEdgeSnap(current, isXAxis);
         return (Math.abs(snapped - current) < SNAP_EDGE_THRESHOLD) ? snapped : current;
     }
