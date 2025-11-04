@@ -1,21 +1,24 @@
 package com.kipia.management.kipia_management.shapes;
 
 import com.kipia.management.kipia_management.managers.ShapeManager;
+import javafx.geometry.Insets;
 import javafx.scene.Group;
-import javafx.scene.control.ContextMenu;
-import javafx.scene.control.MenuItem;
+import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.GridPane;
 import javafx.scene.shape.Circle;
 import javafx.scene.paint.Color;
 import javafx.scene.Cursor;
 import javafx.geometry.Point2D;
 import javafx.geometry.Bounds;
+import javafx.scene.shape.Line;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
 
 import java.util.Arrays;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 /**
@@ -36,6 +39,9 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     protected static final double RESIZE_HANDLE_RADIUS = 6.0;
     protected static final int RESIZE_HANDLE_COUNT = 8;
     protected static final Color RESIZE_HANDLE_COLOR = Color.CORAL;
+    // Добавляем поля для цветов
+    protected Color strokeColor = Color.BLACK;
+    protected Color fillColor = Color.TRANSPARENT;
 
     // ============================================================
     // DEPENDENCIES
@@ -64,6 +70,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
 
     private double currentWidth = -1.0;  // -1 = not set (initial)
     private double currentHeight = -1.0;
+    private ContextMenu contextMenu; // Сохраняем ссылку на меню
 
     // ============================================================
     // CONSTRUCTOR
@@ -79,13 +86,14 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     public ShapeBase(AnchorPane pane,
                      Consumer<String> statusSetter,
                      Consumer<ShapeHandler> onSelectCallback,
-                     ShapeManager shapeManager) {  // Добавлен параметр shapeManager
+                     ShapeManager shapeManager) {
         this.pane = pane;
         this.statusSetter = statusSetter;
         this.onSelectCallback = onSelectCallback;
-        this.shapeManager = shapeManager;  // Сохраняем ссылку
+        this.shapeManager = shapeManager;
         initializeState();
         setupEventHandlers();
+        setupContextMenu(); // Создаем контекстное меню по умолчанию
     }
 
     /**
@@ -136,11 +144,11 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     @Override
     public void createResizeHandles() {
         if (resizeHandles != null) return;
-
         resizeHandles = new Circle[RESIZE_HANDLE_COUNT];
         for (int i = 0; i < RESIZE_HANDLE_COUNT; i++) {
             resizeHandles[i] = createResizeHandle();
             pane.getChildren().add(resizeHandles[i]);
+            resizeHandles[i].setVisible(false); // НЕ показываем сразу!
         }
     }
 
@@ -153,6 +161,16 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         handle.setVisible(false);
         return handle;
     }
+
+    /**
+     * Получение максимального X относительно позиции фигуры
+     */
+    protected abstract double getMaxRelativeX();
+
+    /**
+     * Получение максимального Y относительно позиции фигуры
+     */
+    protected abstract double getMaxRelativeY();
 
     /**
      * Обновление позиций ручек изменения размера
@@ -233,23 +251,26 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      */
     @Override
     public void makeResizeHandlesVisible() {
-        // Если handles нет — создаём
-        if (resizeHandles == null) {
-            createResizeHandles();  // Создаёт массив Circle и добавляет в pane
+        // Проверяем, что инструмент SELECT активен И фигура выделена
+        if (shapeManager != null && !shapeManager.isSelectToolActive()) {
+            hideResizeHandles();
+            return;
         }
 
-        // Привязываем/перепривязываем события на handles (ключевой фикс!)
+        if (resizeHandles == null) {
+            createResizeHandles();
+        }
+
         setupResizeHandleHandlers();
 
-        // Делаем видимыми и обновляем позиции
-        if (resizeHandles != null) {  // <-- ДОБАВЬ ЭТУ ЗАЩИТУ (новая строка!)
+        if (resizeHandles != null) {
             for (Circle handle : resizeHandles) {
                 if (handle != null) {
                     handle.setVisible(true);
                 }
             }
         }
-        updateResizeHandles();  // Обновляет позиции
+        updateResizeHandles();
     }
 
     // ============================================================
@@ -261,7 +282,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      */
     private void setupEventHandlers() {
         setupDragHandlers();
-        setupContextMenu();
     }
 
     /**
@@ -283,10 +303,9 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         }
 
         for (int i = 0; i < resizeHandles.length; i++) {
-            final int handleIndex = i;
             Circle handle = resizeHandles[i];
             if (handle != null) {
-                setupResizeHandleHandler(handle, handleIndex);  // Привязка для каждой ручки
+                setupResizeHandleHandler(handle, i);  // Привязка для каждой ручки
             } else {
                 System.err.println("Warning: Handle at index " + i + " is null!");  // Debug, удали позже
             }
@@ -371,7 +390,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     /**
      * Инициализация параметров перетаскивания
      */
-    private void initializeDrag(Point2D mousePos) {
+    protected void initializeDrag(Point2D mousePos) {
         dragOffsetX = mousePos.getX() - getLayoutX();
         dragOffsetY = mousePos.getY() - getLayoutY();
     }
@@ -383,14 +402,40 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         isDragging = true;
         Point2D scenePos = new Point2D(event.getSceneX(), event.getSceneY());
         Point2D panePos = pane.sceneToLocal(scenePos);
-        // Adjust для scale зума (если есть ZoomManager integration, передайте scale)
-        // Предполагаем, что zoomManager.getCurrentZoom() доступен, иначе жестко закодируй 1.0 пока
-        double currentZoom = 1.0;  // Замени на zoomManager.getCurrentZoom() после integration
-        double adjustedX = panePos.getX() / currentZoom;  // Корректируем для scale
+
+        double currentZoom = 1.0;
+        double adjustedX = panePos.getX() / currentZoom;
         double adjustedY = panePos.getY() / currentZoom;
-        double newX = calculateNewPositionX(adjustedX);
-        double newY = calculateNewPositionY(adjustedY);
-        setPosition(newX, newY);
+
+        // УНИВЕРСАЛЬНАЯ ЛОГИКА ДЛЯ ВСЕХ ФИГУР
+        double newX = adjustedX - dragOffsetX;
+        double newY = adjustedY - dragOffsetY;
+
+        // Для линии проверяем обе точки
+        if (this instanceof LineShape lineShape) {
+            Line line = lineShape.getLine();
+
+            // Вычисляем абсолютные координаты обеих точек после перемещения
+            double newStartX = newX + line.getStartX();
+            double newStartY = newY + line.getStartY();
+            double newEndX = newX + line.getEndX();
+            double newEndY = newY + line.getEndY();
+
+            // Проверяем границы для обеих точек
+            boolean startInBounds = newStartX >= 0 && newStartX <= 1600 && newStartY >= 0 && newStartY <= 1200;
+            boolean endInBounds = newEndX >= 0 && newEndX <= 1600 && newEndY >= 0 && newEndY <= 1200;
+
+            // Если обе точки остаются в пределах - перемещаем
+            if (startInBounds && endInBounds) {
+                setPosition(newX, newY);
+            }
+        } else {
+            // Для остальных фигур - обычная логика
+            newX = calculateNewPositionX(adjustedX);
+            newY = calculateNewPositionY(adjustedY);
+            setPosition(newX, newY);
+        }
+
         updateResizeHandles();
         event.consume();
     }
@@ -398,21 +443,21 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     /**
      * Расчет новой позиции по X с учетом границ
      */
-    private double calculateNewPositionX(double mouseX) {
+    protected double calculateNewPositionX(double mouseX) {
         double newX = mouseX - dragOffsetX;
         double paneW = 1600;
-        double figureW = getCurrentWidth(); // Используем реальную ширину
-        return Math.max(0, Math.min(newX, paneW - figureW));
+        double maxRelativeX = getMaxRelativeX();
+        return Math.max(0, Math.min(newX, paneW - maxRelativeX));
     }
 
     /**
      * Расчет новой позиции по Y с учетом границ
      */
-    private double calculateNewPositionY(double mouseY) {
+    protected double calculateNewPositionY(double mouseY) {
         double newY = mouseY - dragOffsetY;
         double paneH = 1200;
-        double figureH = getCurrentHeight(); // Используем реальную высоту
-        return Math.max(0, Math.min(newY, paneH - figureH));
+        double maxRelativeY = getMaxRelativeY();
+        return Math.max(0, Math.min(newY, paneH - maxRelativeY));
     }
 
     /**
@@ -599,15 +644,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     /**
      * Вспомогательный класс для параметров изменения размера
      */
-    private static class ResizeParams {
-        final double x, y, width, height;
-
-        ResizeParams(double x, double y, double width, double height) {
-            this.x = x;
-            this.y = y;
-            this.width = width;
-            this.height = height;
-        }
+    private record ResizeParams(double x, double y, double width, double height) {
     }
 
     // ============================================================
@@ -615,32 +652,19 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     // ============================================================
 
     /**
-     * Настройка контекстного меню
+     * Применяет текущие цвета к фигуре
+     */
+    protected abstract void applyCurrentStyle();
+
+    /**
+     * Настройка контекстного меню по умолчанию (без действия удаления)
      */
     private void setupContextMenu() {
-        ContextMenu contextMenu = createContextMenu();
+        contextMenu = new ContextMenu();
         setOnContextMenuRequested(event -> {
             contextMenu.show(this, event.getScreenX(), event.getScreenY());
             event.consume();
         });
-    }
-
-    /**
-     * Создание контекстного меню
-     */
-    private ContextMenu createContextMenu() {
-        ContextMenu menu = new ContextMenu();
-        MenuItem deleteItem = new MenuItem("Удалить");
-        deleteItem.setOnAction(event -> handleDelete());
-        menu.getItems().add(deleteItem);
-        return menu;
-    }
-
-    /**
-     * Обработка удаления фигуры
-     */
-    private void handleDelete() {
-        // Реализация будет в конкретном контексте использования
     }
 
     /**
@@ -648,24 +672,35 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      *
      * @param deleteAction действие при удалении фигуры
      */
+    // Обновляем метод добавления контекстного меню
     @Override
     public void addContextMenu(Consumer<ShapeHandler> deleteAction) {
-        ContextMenu contextMenu = createContextMenu(deleteAction);
-        setOnContextMenuRequested(event -> {
-            contextMenu.show(this, event.getScreenX(), event.getScreenY());
-            event.consume();
-        });
-    }
+        if (contextMenu == null) {
+            setupContextMenu();
+        }
 
-    /**
-     * Создание контекстного меню с действием удаления
-     */
-    private ContextMenu createContextMenu(Consumer<ShapeHandler> deleteAction) {
-        ContextMenu menu = new ContextMenu();
+        contextMenu.getItems().clear();
+
+        // Пункт "Изменить цвет контура"
+        MenuItem strokeColorItem = new MenuItem("Изменить цвет контура");
+        strokeColorItem.setOnAction(event -> changeStrokeColor());
+
+        // Пункт "Изменить цвет заливки" (только для фигур с заливкой)
+        MenuItem fillColorItem = new MenuItem("Изменить цвет заливки");
+        fillColorItem.setOnAction(event -> changeFillColor());
+
+        // Разделитель
+        SeparatorMenuItem separator = new SeparatorMenuItem();
+
+        // Пункт "Удалить"
         MenuItem deleteItem = new MenuItem("Удалить");
-        deleteItem.setOnAction(event -> deleteAction.accept(this));
-        menu.getItems().add(deleteItem);
-        return menu;
+        deleteItem.setOnAction(event -> {
+            if (deleteAction != null) {
+                deleteAction.accept(this);
+            }
+        });
+
+        contextMenu.getItems().addAll(strokeColorItem, fillColorItem, separator, deleteItem);
     }
 
     // ============================================================
@@ -678,7 +713,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     @Override
     public void highlightAsSelected() {
         applySelectedStyle();
-        makeResizeHandlesVisible();
+        makeResizeHandlesVisible(); // Только здесь показываем handles!
     }
 
     /**
@@ -765,7 +800,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      * Удаление фигуры с панели
      */
     public void removeFromPane() {
-        if (pane != null && pane.getChildren().contains(this)) {
+        if (pane != null) {
             pane.getChildren().remove(this);  // Remove группу
         }
     }
@@ -798,119 +833,235 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
                                         Consumer<ShapeHandler> onSelectCallback, ShapeManager shapeManager) {
         if (data == null || data.trim().isEmpty()) return null;
         String[] parts = data.split("\\|");
-        if (parts.length < 5) return null;  // Минимум для всех фигур, для TEXT с текстом может быть >5
-        try {
-            return createShapeFromParts(parts, pane, statusSetter, onSelectCallback, shapeManager);
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
+        if (parts.length < 5) return null;
 
-    /**
-     * Создание фигуры из частей строки (с фиксом локали: "," → ".")
-     */
-    private static ShapeBase createShapeFromParts(String[] parts, AnchorPane pane,
-                                                  Consumer<String> statusSetter,
-                                                  Consumer<ShapeHandler> onSelectCallback, ShapeManager shapeManager) {
-        if (parts.length < 5) {
-            System.out.println("SKIP: Недостаточно частей в данных: " + Arrays.toString(parts));
-            return null;
-        }
-        String type = parts[0];
         try {
-            // Фикс: Заменяем запятую на точку во всех частях
             String[] fixedParts = new String[parts.length];
             for (int i = 0; i < parts.length; i++) {
                 fixedParts[i] = parts[i].replace(",", ".");
             }
+
+            String type = fixedParts[0];
             double x = Double.parseDouble(fixedParts[1]);
             double y = Double.parseDouble(fixedParts[2]);
             double width = Double.parseDouble(fixedParts[3]);
             double height = Double.parseDouble(fixedParts[4]);
 
-            if (Double.isNaN(x) || Double.isNaN(y) || Double.isNaN(width) || Double.isNaN(height) ||
-                    width <= 0 || height <= 0) {
-                System.out.println("SKIP: Некорректные координаты для " + type + ": x=" + x + ", y=" + y + ", w=" + width + ", h=" + height);
-                return null;
-            }
-
-            System.out.println("Parsing OK: " + type + " at (" + x + ", " + y + ") size (" + width + ", " + height + ") — creating instance");
-
-            return switch (type.toUpperCase()) {
-                case "RECTANGLE" ->
-                        new RectangleShape(x, y, width, height, pane, statusSetter, onSelectCallback, shapeManager);
-                case "LINE" ->
-                        new LineShape(x, y, x + width, y + height, pane, statusSetter, onSelectCallback, shapeManager);
-                case "ELLIPSE" -> {
-                    double centerX = x + width / 2;
-                    double centerY = y + height / 2;
-                    double radiusX = Math.max(1.0, width / 2);
-                    double radiusY = Math.max(1.0, height / 2);
-                    yield new EllipseShape(centerX, centerY, radiusX, radiusY, pane, statusSetter, onSelectCallback, shapeManager);
+            ShapeBase shape = switch (type.toUpperCase()) {
+                case "RECTANGLE" -> new RectangleShape(x, y, width, height, pane, statusSetter, onSelectCallback, shapeManager);
+                case "LINE" -> {
+                    double startX = Double.parseDouble(fixedParts[1]);
+                    double startY = Double.parseDouble(fixedParts[2]);
+                    double endX = Double.parseDouble(fixedParts[3]);
+                    double endY = Double.parseDouble(fixedParts[4]);
+                    LineShape lineShape = new LineShape(startX, startY, endX, endY, pane, statusSetter, onSelectCallback, shapeManager);
+                    // Для линии цвета в индексах 5 и 6
+                    if (fixedParts.length > 5) lineShape.deserializeColors(fixedParts, 5, 6);
+                    yield lineShape;
                 }
-                case "RHOMBUS" ->
-                        new RhombusShape(x, y, width, height, pane, statusSetter, onSelectCallback, shapeManager);
+                case "ELLIPSE" -> {
+                    EllipseShape ellipseShape = new EllipseShape(x + width/2, y + height/2, width/2, height/2,
+                            pane, statusSetter, onSelectCallback, shapeManager);
+                    // Для эллипса цвета в индексах 5 и 6
+                    if (fixedParts.length > 5) ellipseShape.deserializeColors(fixedParts, 5, 6);
+                    yield ellipseShape;
+                }
+                case "RHOMBUS" -> {
+                    RhombusShape rhombusShape = new RhombusShape(x, y, width, height, pane, statusSetter, onSelectCallback, shapeManager);
+                    // Для ромба цвета в индексах 5 и 6
+                    if (fixedParts.length > 5) rhombusShape.deserializeColors(fixedParts, 5, 6);
+                    yield rhombusShape;
+                }
                 case "TEXT" -> {
-                    String actualText = (fixedParts.length > 5) ? fixedParts[5] : "Новый текст";
-                    actualText = actualText.replace("\\|", "|");
-
-                    // СОЗДАЕМ TextShape
-                    TextShape textShape = new TextShape(x, y, actualText, pane, statusSetter, onSelectCallback, shapeManager);
-
-                    // ВОССТАНАВЛИВАЕМ размер шрифта если он сохранен
-                    if (fixedParts.length > 6) {
-                        try {
-                            double fontSize = Double.parseDouble(fixedParts[6]);
-                            // Ограничиваем размер шрифта
-                            fontSize = Math.max(8, Math.min(72, fontSize));
-
-                            // Восстанавливаем шрифт
-                            String fontFamily = fixedParts.length > 7 ? fixedParts[7] : "Arial";
-                            String fontStyle = fixedParts.length > 8 ? fixedParts[8] : "Regular";
-
-                            // СОЗДАЕМ шрифт с восстановленными параметрами
-                            FontWeight fontWeight = FontWeight.NORMAL;
-                            FontPosture fontPosture = FontPosture.REGULAR;
-
-                            if (fontStyle.contains("Bold")) {
-                                fontWeight = FontWeight.BOLD;
-                            }
-                            if (fontStyle.contains("Italic")) {
-                                fontPosture = FontPosture.ITALIC;
-                            }
-
-                            Font restoredFont = Font.font(fontFamily, fontWeight, fontPosture, fontSize);
-                            textShape.setFont(restoredFont);
-
-                            System.out.println("Восстановлен шрифт: " + fontSize + "px, " + fontFamily + ", " + fontStyle);
-
-                        } catch (NumberFormatException e) {
-                            System.out.println("Ошибка восстановления размера шрифта, используется значение по умолчанию");
-                        }
+                    TextShape textShape = createTextShape(fixedParts, pane, statusSetter, onSelectCallback, shapeManager);
+                    // Для текста цвета в последних двух индексах (после шрифта)
+                    if (textShape != null && fixedParts.length > 9) {
+                        textShape.deserializeColors(fixedParts, fixedParts.length - 2, fixedParts.length - 1);
                     }
-
-                    // ПЕРЕСЧИТЫВАЕМ размеры с восстановленным шрифтом
-                    javafx.application.Platform.runLater(textShape::calculateTextSize);
-
                     yield textShape;
                 }
-                default -> {
-                    System.out.println("SKIP: Неизвестный тип фигуры: " + type);
-                    yield null;
-                }
+                default -> null;
             };
+
+            return shape;
+
         } catch (NumberFormatException e) {
-            System.out.println("SKIP: Ошибка парсинга чисел в " + type + ": " + e.getMessage() + " (parts: " + Arrays.toString(parts) + ")");
-            return null;
-        } catch (Exception e) {
-            System.out.println("SKIP: Общая ошибка в создании " + type + ": " + e.getMessage());
-            e.printStackTrace();
             return null;
         }
     }
 
     /**
+     * Creates a TextShape from serialized parts during deserialization
+     */
+    private static TextShape createTextShape(String[] fixedParts, AnchorPane pane,
+                                             Consumer<String> statusSetter,
+                                             Consumer<ShapeHandler> onSelectCallback,
+                                             ShapeManager shapeManager) {
+        try {
+            // Parse basic position and size (indices 1-4)
+            double x = Double.parseDouble(fixedParts[1]);
+            double y = Double.parseDouble(fixedParts[2]);
+            double width = Double.parseDouble(fixedParts[3]);
+            double height = Double.parseDouble(fixedParts[4]);
+
+            // Get text content (index 5)
+            String text = (fixedParts.length > 5) ? fixedParts[5] : "Новый текст";
+            text = text.replace("\\|", "|"); // Unescape pipe characters
+
+            // Create the TextShape
+            TextShape textShape = new TextShape(x, y, text, pane, statusSetter, onSelectCallback, shapeManager);
+
+            // Restore font properties if they exist (indices 6-8)
+            if (fixedParts.length > 6) {
+                try {
+                    double fontSize = Double.parseDouble(fixedParts[6]);
+                    fontSize = Math.max(8, Math.min(72, fontSize)); // Clamp font size
+
+                    String fontFamily = fixedParts.length > 7 ? fixedParts[7] : "Arial";
+                    String fontStyle = fixedParts.length > 8 ? fixedParts[8] : "Regular";
+
+                    // Reconstruct font
+                    FontWeight fontWeight = fontStyle.contains("Bold") ? FontWeight.BOLD : FontWeight.NORMAL;
+                    FontPosture fontPosture = fontStyle.contains("Italic") ? FontPosture.ITALIC : FontPosture.REGULAR;
+
+                    Font restoredFont = Font.font(fontFamily, fontWeight, fontPosture, fontSize);
+                    textShape.setFont(restoredFont);
+
+                } catch (NumberFormatException e) {
+                    System.out.println("Ошибка восстановления шрифта, используется значение по умолчанию");
+                }
+            }
+
+            // Recalculate text size with restored font
+            javafx.application.Platform.runLater(textShape::calculateTextSize);
+
+            return textShape;
+
+        } catch (Exception e) {
+            System.out.println("Ошибка создания TextShape: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Сериализует цвета в строку
+     */
+    protected String serializeColors() {
+        return String.format(java.util.Locale.US, "|%.3f,%.3f,%.3f,%.3f|%.3f,%.3f,%.3f,%.3f",
+                strokeColor.getRed(), strokeColor.getGreen(), strokeColor.getBlue(), strokeColor.getOpacity(),
+                fillColor.getRed(), fillColor.getGreen(), fillColor.getBlue(), fillColor.getOpacity());
+    }
+
+    /**
+     * Десериализует цвета из строки
+     */
+    protected void deserializeColors(String[] parts, int strokeIndex, int fillIndex) {
+        if (parts.length > strokeIndex) {
+            String[] strokeParts = parts[strokeIndex].split(",");
+            if (strokeParts.length == 4) {
+                strokeColor = Color.color(
+                        Double.parseDouble(strokeParts[0]),
+                        Double.parseDouble(strokeParts[1]),
+                        Double.parseDouble(strokeParts[2]),
+                        Double.parseDouble(strokeParts[3])
+                );
+            }
+        }
+        if (parts.length > fillIndex) {
+            String[] fillParts = parts[fillIndex].split(",");
+            if (fillParts.length == 4) {
+                fillColor = Color.color(
+                        Double.parseDouble(fillParts[0]),
+                        Double.parseDouble(fillParts[1]),
+                        Double.parseDouble(fillParts[2]),
+                        Double.parseDouble(fillParts[3])
+                );
+            }
+        }
+        applyCurrentStyle();
+    }
+
+    /**
+     * Диалог изменения цвета контура
+     */
+    private void changeStrokeColor() {
+        javafx.scene.control.ColorPicker colorPicker = new javafx.scene.control.ColorPicker(strokeColor);
+
+        Dialog<Color> dialog = new Dialog<>();
+        dialog.setTitle("Изменение цвета контура");
+        dialog.setHeaderText("Выберите цвет контура");
+
+        ButtonType applyButton = new ButtonType("Применить", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(applyButton, ButtonType.CANCEL);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
+
+        grid.add(new Label("Цвет контура:"), 0, 0);
+        grid.add(colorPicker, 1, 0);
+
+        dialog.getDialogPane().setContent(grid);
+
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == applyButton) {
+                return colorPicker.getValue();
+            }
+            return null;
+        });
+
+        Optional<Color> result = dialog.showAndWait();
+        result.ifPresent(color -> {
+            setStrokeColor(color);
+            if (statusSetter != null) {
+                statusSetter.accept("Цвет контура изменен");
+            }
+        });
+    }
+
+    /**
+     * Диалог изменения цвета заливки
+     */
+    private void changeFillColor() {
+        javafx.scene.control.ColorPicker colorPicker = new javafx.scene.control.ColorPicker(fillColor);
+
+        Dialog<Color> dialog = new Dialog<>();
+        dialog.setTitle("Изменение цвета заливки");
+        dialog.setHeaderText("Выберите цвет заливки");
+
+        ButtonType applyButton = new ButtonType("Применить", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(applyButton, ButtonType.CANCEL);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
+
+        grid.add(new Label("Цвет заливки:"), 0, 0);
+        grid.add(colorPicker, 1, 0);
+
+        dialog.getDialogPane().setContent(grid);
+
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == applyButton) {
+                return colorPicker.getValue();
+            }
+            return null;
+        });
+
+        Optional<Color> result = dialog.showAndWait();
+        result.ifPresent(color -> {
+            setFillColor(color);
+            if (statusSetter != null) {
+                statusSetter.accept("Цвет заливки изменен");
+            }
+        });
+    }
+
+    /**
      * Получение stored width (exact, для serialize)
+     *
      * @return currentWidth, или bounds если not set
      */
     protected double getCurrentWidth() {
@@ -940,5 +1091,24 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         // Опционально: Принудительно обновить JavaFX bounds (для consistency)
         requestLayout();
         // Если need sync: Platform.runLater(() -> System.out.println("Bounds after set: " + getBoundsInLocal()));  // Debug
+    }
+
+    // Геттеры и сеттеры
+    public Color getStrokeColor() {
+        return strokeColor;
+    }
+
+    public void setStrokeColor(Color color) {
+        this.strokeColor = color;
+        applyCurrentStyle();
+    }
+
+    public Color getFillColor() {
+        return fillColor;
+    }
+
+    public void setFillColor(Color color) {
+        this.fillColor = color;
+        applyCurrentStyle();
     }
 }

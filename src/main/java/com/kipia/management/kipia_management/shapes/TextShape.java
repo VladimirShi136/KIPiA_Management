@@ -90,6 +90,22 @@ public class TextShape extends ShapeBase {
         // НЕ создаем handles - ресайз через меню
     }
 
+    /**
+     * Получение максимального X относительно позиции фигуры
+     */
+    @Override
+    protected double getMaxRelativeX() {
+        return getCurrentWidth();
+    }
+
+    /**
+     * Получение максимального Y относительно позиции фигуры
+     */
+    @Override
+    protected double getMaxRelativeY() {
+        return getCurrentHeight();
+    }
+
     @Override
     public void makeResizeHandlesVisible() {
         // НЕ показываем handles
@@ -106,6 +122,10 @@ public class TextShape extends ShapeBase {
     private void setupContextMenu() {
         ContextMenu contextMenu = new ContextMenu();
 
+        // Пункт "Изменить цвет текста"
+        MenuItem textColorItem = new MenuItem("Изменить цвет текста");
+        textColorItem.setOnAction(e -> changeTextColor());
+
         // Пункт "Изменить текст"
         MenuItem editTextItem = new MenuItem("Изменить текст");
         editTextItem.setOnAction(e -> openTextEditDialog());
@@ -113,6 +133,9 @@ public class TextShape extends ShapeBase {
         // Пункт "Изменить шрифт"
         MenuItem changeFontItem = new MenuItem("Изменить шрифт");
         changeFontItem.setOnAction(e -> openFontDialog());
+
+        // Разделитель
+        SeparatorMenuItem separator = new SeparatorMenuItem();
 
         // Пункт "Удалить"
         MenuItem deleteItem = new MenuItem("Удалить");
@@ -122,12 +145,50 @@ public class TextShape extends ShapeBase {
             }
         });
 
-        contextMenu.getItems().addAll(editTextItem, changeFontItem, new SeparatorMenuItem(), deleteItem);
+        contextMenu.getItems().addAll(textColorItem, editTextItem, changeFontItem, separator, deleteItem);
 
-        // ПРИВЯЗЫВАЕМ меню к фигуре
         setOnContextMenuRequested(event -> {
             contextMenu.show(this, event.getScreenX(), event.getScreenY());
             event.consume();
+        });
+    }
+
+    /**
+     * Диалог изменения цвета текста
+     */
+    private void changeTextColor() {
+        javafx.scene.control.ColorPicker colorPicker = new javafx.scene.control.ColorPicker(strokeColor);
+
+        Dialog<Color> dialog = new Dialog<>();
+        dialog.setTitle("Изменение цвета текста");
+        dialog.setHeaderText("Выберите цвет текста");
+
+        ButtonType applyButton = new ButtonType("Применить", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(applyButton, ButtonType.CANCEL);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
+
+        grid.add(new Label("Цвет текста:"), 0, 0);
+        grid.add(colorPicker, 1, 0);
+
+        dialog.getDialogPane().setContent(grid);
+
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == applyButton) {
+                return colorPicker.getValue();
+            }
+            return null;
+        });
+
+        Optional<Color> result = dialog.showAndWait();
+        result.ifPresent(color -> {
+            setStrokeColor(color); // Для текста используем strokeColor
+            if (statusSetter != null) {
+                statusSetter.accept("Цвет текста изменен");
+            }
         });
     }
 
@@ -197,16 +258,19 @@ public class TextShape extends ShapeBase {
     }
 
     @Override
+    protected void applyCurrentStyle() {
+        text.setFill(strokeColor); // Для текста используем strokeColor как цвет текста
+        // Текст обычно не имеет отдельной заливки фона
+    }
+
+    @Override
     protected void applySelectedStyle() {
-        text.setFill(selectedFill);
-        // Можете добавить подсветку фона при выделении
-        // setStyle("-fx-background-color: rgba(30,144,255,0.1);");
+        text.setFill(Color.BLUE); // Выделение синим
     }
 
     @Override
     protected void applyDefaultStyle() {
-        text.setFill(defaultFill);
-        // setStyle("-fx-background-color: transparent;");
+        applyCurrentStyle();
     }
 
     @Override
@@ -230,9 +294,10 @@ public class TextShape extends ShapeBase {
         // Экранируем разделители в тексте
         String escapedText = textContent.replace("|", "\\|");
 
-        return String.format(java.util.Locale.US, "TEXT|%.2f|%.2f|%.2f|%.2f|%s|%.1f|%s|%s",
+        return String.format(java.util.Locale.US, "TEXT|%.2f|%.2f|%.2f|%.2f|%s|%.1f|%s|%s%s",
                 pos[0], pos[1], width, height,
-                escapedText, fontSize, fontFamily, fontStyle);
+                escapedText, fontSize, fontFamily, fontStyle,
+                serializeColors()); // Добавляем цвета в конец
     }
 
     /**

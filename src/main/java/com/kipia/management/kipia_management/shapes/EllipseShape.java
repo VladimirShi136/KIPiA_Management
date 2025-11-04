@@ -76,18 +76,48 @@ public class EllipseShape extends ShapeBase {
     }
 
     @Override
+    protected void applyCurrentStyle() {
+        applyStyle(ellipse, fillColor, strokeColor, DEFAULT_STROKE_WIDTH);
+    }
+
+    @Override
     protected void applySelectedStyle() {
-        applyStyle(ellipse, SELECTED_FILL, SELECTED_STROKE, SELECTED_STROKE_WIDTH);
+        applyStyle(ellipse, fillColor, Color.BLUE, SELECTED_STROKE_WIDTH);
     }
 
     @Override
     protected void applyDefaultStyle() {
-        applyStyle(ellipse, DEFAULT_FILL, DEFAULT_STROKE, DEFAULT_STROKE_WIDTH);
+        applyCurrentStyle();
+    }
+
+    @Override
+    public String serialize() {
+        double[] pos = getPosition();
+        double w = getCurrentWidth();
+        double h = getCurrentHeight();
+        return String.format(java.util.Locale.US, "%s|%.2f|%.2f|%.2f|%.2f%s",
+                getShapeType(), pos[0], pos[1], w, h, serializeColors());
     }
 
     @Override
     protected String getShapeType() {
         return "ELLIPSE";
+    }
+
+    /**
+     * Получение максимального X относительно позиции фигуры
+     */
+    @Override
+    protected double getMaxRelativeX() {
+        return getCurrentWidth();
+    }
+
+    /**
+     * Получение максимального Y относительно позиции фигуры
+     */
+    @Override
+    protected double getMaxRelativeY() {
+        return getCurrentHeight();
     }
 
     private void applyStyle(Ellipse ellipse, Color fill, Color stroke, double strokeWidth) {

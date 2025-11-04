@@ -876,7 +876,7 @@ public class SchemeEditorController {
     private void onPaneMousePressed(MouseEvent event) {
         if (schemePane == null || shapeManager == null) return;
 
-        // ПРАВИЛЬНОЕ преобразование координат с учетом скролла
+        // ПРАВИЛЬНОЕ преобразование координат
         Point2D panePoint = getAbsolutePaneCoordinates(event.getSceneX(), event.getSceneY());
         double x = panePoint.getX();
         double y = panePoint.getY();

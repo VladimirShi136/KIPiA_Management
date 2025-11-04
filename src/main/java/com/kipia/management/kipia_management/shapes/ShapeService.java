@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.logging.Logger;
 
@@ -15,10 +16,12 @@ import java.util.logging.Logger;
 public class ShapeService {
     private static final Logger LOGGER = Logger.getLogger(ShapeService.class.getName());
 
+    private final Consumer<ShapeHandler> deleteAction;
     private final ShapeFactory factory;
     private final List<ShapeBase> shapes = new ArrayList<>();
 
     public ShapeService(ShapeFactory factory) {
+        this.deleteAction = this::removeShape;
         this.factory = factory;
     }
 
@@ -26,6 +29,10 @@ public class ShapeService {
         ShapeBase shape = factory.createShape(type, coordinates);
         shapes.add(shape);
         shape.addToPane();
+
+        System.out.println("DEBUG: Setting context menu for shape: " + type);
+        shape.addContextMenu(deleteAction);
+
         System.out.println("DEBUG: addShape type=" + type + ", coords=" + Arrays.toString(coordinates));
         return shape;
     }
@@ -33,6 +40,12 @@ public class ShapeService {
     public void removeShape(ShapeBase shape) {
         shapes.remove(shape);
         shape.removeFromPane();
+    }
+
+    public void removeShape(ShapeHandler shapeHandler) {
+        if (shapeHandler instanceof ShapeBase) {
+            removeShape((ShapeBase) shapeHandler);
+        }
     }
 
     public void removeAllShapes() {

@@ -1,7 +1,6 @@
 package com.kipia.management.kipia_management.managers;
 
 import com.kipia.management.kipia_management.shapes.*;
-import javafx.geometry.Bounds;
 import javafx.scene.Node;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.shape.*;
@@ -22,10 +21,6 @@ public class ShapeManager {
 
     /** Enum инструментов редактора */
     public enum Tool { SELECT, LINE, RECTANGLE, ELLIPSE, RHOMBUS, TEXT, ADD_DEVICE }
-
-    // Константы для snap-позиционирования
-    private static final double SNAP_THRESHOLD = 10;
-    private static final double SNAP_EDGE_THRESHOLD = 20.0;
 
     // Основные зависимости
     private final AnchorPane pane;
@@ -78,6 +73,7 @@ public class ShapeManager {
             if (!pane.getChildren().contains(shape)) {
                 pane.getChildren().add(shape);
             }
+            shapeService.addShapeToList((ShapeBase) shape);
             System.out.println("DEBUG: Add execute - shape in pane, shapes count=" + shapeService.getShapeCount());
         }
         @Override
@@ -209,6 +205,14 @@ public class ShapeManager {
         if (!undoStack.isEmpty()) {
             Command cmd = undoStack.pop();
             cmd.undo();  // Отменяем последнее действие
+
+            // ВЫЗОВ КОЛБЭКА ДЛЯ АВТОСОХРАНЕНИЯ
+            if (cmd instanceof AddShapeCommand && onShapeRemoved != null) {
+                onShapeRemoved.run();
+            } else if (cmd instanceof RemoveShapeCommand && onShapeAdded != null) {
+                onShapeAdded.run();
+            }
+
             redoStack.push(cmd);  // Сохраняем для redo
             updateSelectionAfterUndoRedo();
             System.out.println("DEBUG: Undo executed, undoStack size=" + undoStack.size() + ", redoStack size=" + redoStack.size() + ", shapes count=" + shapeService.getShapeCount());
@@ -224,6 +228,14 @@ public class ShapeManager {
         if (!redoStack.isEmpty()) {
             Command cmd = redoStack.pop();
             cmd.execute();  // Повторяем отменённое действие
+
+            // ВЫЗОВ КОЛБЭКА ДЛЯ АВТОСОХРАНЕНИЯ
+            if (cmd instanceof AddShapeCommand && onShapeAdded != null) {
+                onShapeAdded.run();
+            } else if (cmd instanceof RemoveShapeCommand && onShapeRemoved != null) {
+                onShapeRemoved.run();
+            }
+
             undoStack.push(cmd);  // Сохраняем для повторного undo
             updateSelectionAfterUndoRedo();
             System.out.println("DEBUG: Redo executed, undoStack size=" + undoStack.size() + ", redoStack size=" + redoStack.size() + ", shapes count=" + shapeService.getShapeCount());
@@ -408,10 +420,15 @@ public class ShapeManager {
 
     private Path createRhombusPreview(double x, double y) {
         Path path = new Path();
-        path.setFill(Color.TRANSPARENT);
+        path.setFill(Color.TRANSPARENT); // Делаем preview тоже прозрачным
         path.setStroke(Color.GRAY);
         path.setStrokeWidth(1);
-        rebuildButterflyPath(path, x, y);  // Используем общий код бабочки
+
+        // ВАЖНО: устанавливаем позицию preview относительно начальных координат
+        path.setLayoutX(Math.min(startX, x));
+        path.setLayoutY(Math.min(startY, y));
+
+        rebuildButterflyPath(path, x, y);
         return path;
     }
 
@@ -431,34 +448,32 @@ public class ShapeManager {
         double startX = this.startX;
         double startY = this.startY;
 
-        // Применяем snap логику к конечным точкам
-        double endX = applySnapLogic(x, startX, true);
-        double endY = applySnapLogic(y, startY, false);
+        // Убираем принудительную фиксацию - оставляем свободное рисование
+        double endX = x;
+        double endY = y;
 
-        // "Умная" фиксация: проверяем близость к вертикали/горизонтали
+        // "Умная" фиксация только при приближении
         double deltaX = Math.abs(endX - startX);
         double deltaY = Math.abs(endY - startY);
-
-        // Порог для фиксации (в пикселях)
         double snapThreshold = 15.0;
 
-        // Если линия близка к горизонтали (deltaY маленькая относительно deltaX)
-        if (deltaY < snapThreshold && deltaX > deltaY) {
-            endY = startY; // Фиксируем по горизонтали
+        // Проверяем близость к осям
+        boolean nearHorizontal = deltaY < snapThreshold && deltaX > snapThreshold;
+        boolean nearVertical = deltaX < snapThreshold && deltaY > snapThreshold;
+
+        if (nearHorizontal) {
+            endY = startY; // Фиксируем горизонталь
+        } else if (nearVertical) {
+            endX = startX; // Фиксируем вертикаль
         }
-        // Если линия близка к вертикали (deltaX маленькая относительно deltaY)
-        else if (deltaX < snapThreshold && deltaY > deltaX) {
-            endX = startX; // Фиксируем по вертикали
-        }
-        // В противном случае - оставляем как есть (любое направление)
 
         this.previewEndX = endX;
         this.previewEndY = endY;
         line.setEndX(endX);
         line.setEndY(endY);
 
-        // Показываем индикатор snap, если произошла фиксация
-        if (endX != x || endY != y) {
+        // Показываем индикатор только при фиксации
+        if (nearHorizontal || nearVertical) {
             showSnapHighlight(endX, endY);
         } else {
             hideSnapHighlight();
@@ -482,6 +497,9 @@ public class ShapeManager {
 
     // Замени updateRhombusPreview на:
     private void updateRhombusPreview(Path path, double x, double y) {
+        // Обновляем позицию preview
+        path.setLayoutX(Math.min(startX, x));
+        path.setLayoutY(Math.min(startY, y));
         rebuildButterflyPath(path, x, y);
     }
 
@@ -490,30 +508,29 @@ public class ShapeManager {
         double width = Math.abs(endX - startX);
         double height = Math.abs(endY - startY);
         rhombusPath.getElements().clear();
-        double side = width / 2;
-        double triangleHeight = (Math.sqrt(3) / 2) * side;
-        double finalHeight = Math.min(height, triangleHeight * 2);
-        double centerX = startX + width / 2;
-        double centerY = startY + height / 2;
-        double leftBaseX = startX;
-        double centerTopY = centerY - finalHeight / 2;
-        double centerBottomY = centerY + finalHeight / 2;
-        double calculate = (finalHeight / 2) * (1 - Math.sqrt(3) / 3);
-        double leftTopY = centerTopY + calculate;
-        double leftBottomY = centerBottomY - calculate;
-        double rightBaseX = startX + width;
+
+        double centerX = width / 2;
+        double centerY = height / 2;
+
+        // ТОЧНО ТАКАЯ ЖЕ ЛОГИКА КАК В RHOMBUSSHAPE
+        double leftTopY = 0;
+        double leftBottomY = height;
+        double rightTopY = 0;
+        double rightBottomY = height;
+
         // Левый треугольник
         rhombusPath.getElements().addAll(
-                new MoveTo(leftBaseX, leftTopY),
-                new LineTo(centerX, centerY),
-                new LineTo(leftBaseX, leftBottomY),
+                new MoveTo(0, leftTopY),           // Левый верх (0)
+                new LineTo(centerX, centerY),      // Центр
+                new LineTo(0, leftBottomY),        // Левый низ (height)
                 new ClosePath()
         );
+
         // Правый треугольник
         rhombusPath.getElements().addAll(
-                new MoveTo(rightBaseX, leftTopY),
-                new LineTo(centerX, centerY),
-                new LineTo(rightBaseX, leftBottomY),
+                new MoveTo(width, rightTopY),      // Правый верх (0)
+                new LineTo(centerX, centerY),      // Центр
+                new LineTo(width, rightBottomY),   // Правый низ (height)
                 new ClosePath()
         );
     }
@@ -535,6 +552,10 @@ public class ShapeManager {
             ShapeBase shape = shapeService.addShape(shapeType, coordinates);
             if (shape != null) {
                 addShape(shape);
+
+                // НЕ выделяем фигуру автоматически после создания!
+                // shape.highlightAsSelected(); // УБРАТЬ эту строку если есть
+
                 setStatus("Фигура добавлена");
             }
         } catch (Exception e) {
@@ -601,38 +622,6 @@ public class ShapeManager {
             case TEXT -> new double[]{startX, startY, 0};
             default -> new double[]{};
         };
-    }
-
-    private double applySnapLogic(double current, double start, boolean isXAxis) {
-        // Для линий snap к начальной точке (чтобы можно было сделать точку)
-        if (Math.abs(current - start) < SNAP_THRESHOLD) {
-            return start;
-        }
-
-        // Snap к другим объектам
-        double snapped = findNearestEdgeSnap(current, isXAxis);
-        return (Math.abs(snapped - current) < SNAP_EDGE_THRESHOLD) ? snapped : current;
-    }
-
-    private double findNearestEdgeSnap(double coord, boolean isXAxis) {
-        double minDist = Double.MAX_VALUE;
-        double bestCoord = coord;
-        for (Node node : pane.getChildren()) {
-            if (node instanceof Line line && node != previewShape) {
-                double dist1 = isXAxis ? Math.abs(coord - line.getStartX()) : Math.abs(coord - line.getStartY());
-                double dist2 = isXAxis ? Math.abs(coord - line.getEndX()) : Math.abs(coord - line.getEndY());
-                if (dist1 < minDist) { minDist = dist1; bestCoord = isXAxis ? line.getStartX() : line.getStartY(); }
-                if (dist2 < minDist) { minDist = dist2; bestCoord = isXAxis ? line.getEndX() : line.getEndY(); }
-            } else if (node instanceof ShapeBase shape && node != previewShape) {  // Новое: snap к bounds любой фигуры
-                Bounds bounds = shape.getBoundsInParent();
-                double[] coords = isXAxis ? new double[]{bounds.getMinX(), bounds.getMaxX()} : new double[]{bounds.getMinY(), bounds.getMaxY()};
-                for (double snapCoord : coords) {
-                    double dist = Math.abs(coord - snapCoord);
-                    if (dist < minDist) { minDist = dist; bestCoord = snapCoord; }
-                }
-            }
-        }
-        return minDist < SNAP_EDGE_THRESHOLD ? bestCoord : coord;
     }
 
     private ShapeType convertToolToShapeType(Tool tool) {

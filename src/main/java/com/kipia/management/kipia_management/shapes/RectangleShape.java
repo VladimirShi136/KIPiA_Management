@@ -23,9 +23,6 @@ public class RectangleShape extends ShapeBase {
     private static final Color DEFAULT_FILL = Color.TRANSPARENT;
     private static final Color DEFAULT_STROKE = Color.BLACK;
     private static final double DEFAULT_STROKE_WIDTH = 2.0;
-
-    private static final Color SELECTED_FILL = Color.TRANSPARENT;
-    private static final Color SELECTED_STROKE = Color.BLUE;
     private static final double SELECTED_STROKE_WIDTH = 3.0;
 
     // ============================================================
@@ -104,7 +101,7 @@ public class RectangleShape extends ShapeBase {
      */
     @Override
     protected void applySelectedStyle() {
-        applyStyle(rectangle, SELECTED_FILL, SELECTED_STROKE, SELECTED_STROKE_WIDTH);
+        applyStyle(rectangle, fillColor, Color.BLUE, SELECTED_STROKE_WIDTH);
     }
 
     /**
@@ -112,7 +109,15 @@ public class RectangleShape extends ShapeBase {
      */
     @Override
     protected void applyDefaultStyle() {
-        applyStyle(rectangle, DEFAULT_FILL, DEFAULT_STROKE, DEFAULT_STROKE_WIDTH);
+        applyCurrentStyle();
+    }
+
+    /**
+     * Применяет текущие цвета к фигуре
+     */
+    @Override
+    protected void applyCurrentStyle() {
+        applyStyle(rectangle, fillColor, strokeColor, DEFAULT_STROKE_WIDTH);
     }
 
     /**
@@ -121,6 +126,22 @@ public class RectangleShape extends ShapeBase {
     @Override
     protected String getShapeType() {
         return "RECTANGLE";
+    }
+
+    /**
+     * Получение максимального X относительно позиции фигуры
+     */
+    @Override
+    protected double getMaxRelativeX() {
+        return getCurrentWidth();
+    }
+
+    /**
+     * Получение максимального Y относительно позиции фигуры
+     */
+    @Override
+    protected double getMaxRelativeY() {
+        return getCurrentHeight();
     }
 
     // ============================================================
@@ -142,5 +163,14 @@ public class RectangleShape extends ShapeBase {
      */
     private void applyDefaultStyle(Rectangle rect) {
         applyStyle(rect, DEFAULT_FILL, DEFAULT_STROKE, DEFAULT_STROKE_WIDTH);
+    }
+
+    @Override
+    public String serialize() {
+        double[] pos = getPosition();
+        double w = getCurrentWidth();
+        double h = getCurrentHeight();
+        return String.format(java.util.Locale.US, "%s|%.2f|%.2f|%.2f|%.2f%s",
+                getShapeType(), pos[0], pos[1], w, h, serializeColors());
     }
 }
