@@ -26,15 +26,23 @@ public class ShapeService {
     }
 
     public ShapeBase addShape(ShapeType type, double... coordinates) {
-        ShapeBase shape = factory.createShape(type, coordinates);
-        shapes.add(shape);
-        shape.addToPane();
+        System.out.println("DEBUG: ShapeService.addShape - type: " + type + ", coords: " + Arrays.toString(coordinates));
 
-        System.out.println("DEBUG: Setting context menu for shape: " + type);
-        shape.addContextMenu(deleteAction);
+        try {
+            ShapeBase shape = factory.createShape(type, coordinates);
+            System.out.println("DEBUG: ShapeFactory created: " + (shape != null));
 
-        System.out.println("DEBUG: addShape type=" + type + ", coords=" + Arrays.toString(coordinates));
-        return shape;
+            if (shape != null) {
+                shape.addToPane();
+                shapes.add(shape);
+                System.out.println("DEBUG: Shape added to service, count: " + shapes.size());
+            }
+            return shape;
+        } catch (Exception e) {
+            System.err.println("ERROR in ShapeService.addShape: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
     }
 
     public void removeShape(ShapeBase shape) {

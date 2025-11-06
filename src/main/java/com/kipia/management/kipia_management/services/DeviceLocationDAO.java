@@ -16,15 +16,9 @@ import java.util.logging.Logger;
  */
 
 public class DeviceLocationDAO {
-    // Сервис для работы с БД
     private final DatabaseService databaseService;
     private static final Logger LOGGER = Logger.getLogger(DeviceLocationDAO.class.getName());
 
-    /**
-     * Конструктор класса DeviceLocationDAO
-     *
-     * @param databaseService экземпляр сервиса для работы с БД
-     */
     public DeviceLocationDAO(DatabaseService databaseService) {
         this.databaseService = databaseService;
     }
@@ -33,27 +27,31 @@ public class DeviceLocationDAO {
      * Добавление новой привязки прибора к схеме
      *
      * @param location объект привязки для добавления
+     * @return true если успешно, false если ошибка
      */
-    public void addDeviceLocation(DeviceLocation location) {
-        String sql = "INSERT INTO device_locations (device_id, scheme_id, x, y) VALUES (?, ?, ?, ?) ON CONFLICT(device_id, scheme_id) DO UPDATE SET x = excluded.x, y = excluded.y";
+    public boolean addDeviceLocation(DeviceLocation location) {
+        String sql = "INSERT INTO device_locations (device_id, scheme_id, x, y, rotation) VALUES (?, ?, ?, ?, ?) " +
+                "ON CONFLICT(device_id, scheme_id) DO UPDATE SET x = excluded.x, y = excluded.y, rotation = excluded.rotation";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
             stmt.setInt(1, location.getDeviceId());
             stmt.setInt(2, location.getSchemeId());
             stmt.setDouble(3, location.getX());
             stmt.setDouble(4, location.getY());
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            System.out.println("Ошибка добавления локации: " + e.getMessage());
-        }
-    }
+            stmt.setDouble(5, location.getRotation()); // Добавлено
 
-    /**
-     * Обновление привязки прибора к схеме (аналогично добавлению, так как ON CONFLICT обновляет)
-     *
-     * @param location объект привязки с обновленными данными
-     */
-    public void updateDeviceLocation(DeviceLocation location) {
-        addDeviceLocation(location);
+            int rowsAffected = stmt.executeUpdate();
+
+            boolean success = rowsAffected > 0;
+            if (success) {
+                LOGGER.info("Успешно добавлена/обновлена локация: device_id=" + location.getDeviceId() +
+                        ", scheme_id=" + location.getSchemeId() + ", x=" + location.getX() +
+                        ", y=" + location.getY() + ", rotation=" + location.getRotation());
+            }
+            return success;
+        } catch (SQLException e) {
+            LOGGER.severe("Ошибка добавления локации: " + e.getMessage());
+            return false;
+        }
     }
 
     /**
@@ -61,15 +59,25 @@ public class DeviceLocationDAO {
      *
      * @param deviceId ID прибора
      * @param schemeId ID схемы
+     * @return true если успешно, false если ошибка
      */
-    public void deleteDeviceLocation(int deviceId, int schemeId) {
+    public boolean deleteDeviceLocation(int deviceId, int schemeId) {
         String sql = "DELETE FROM device_locations WHERE device_id = ? AND scheme_id = ?";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
             stmt.setInt(1, deviceId);
             stmt.setInt(2, schemeId);
-            stmt.executeUpdate();
+            int rowsAffected = stmt.executeUpdate();
+
+            boolean success = rowsAffected > 0;
+            if (success) {
+                LOGGER.info("Успешно удалена локация: device_id=" + deviceId + ", scheme_id=" + schemeId);
+            } else {
+                LOGGER.warning("Локация не найдена для удаления: device_id=" + deviceId + ", scheme_id=" + schemeId);
+            }
+            return success;
         } catch (SQLException e) {
-            System.out.println("Ошибка удаления локации: " + e.getMessage());
+            LOGGER.severe("Ошибка удаления локации: " + e.getMessage());
+            return false;
         }
     }
 
@@ -117,10 +125,12 @@ public class DeviceLocationDAO {
                 loc.setSchemeId(rs.getInt("scheme_id"));
                 loc.setX(rs.getDouble("x"));
                 loc.setY(rs.getDouble("y"));
+                loc.setRotation(rs.getDouble("rotation"));
                 locations.add(loc);
             }
+            LOGGER.fine("Загружено локаций для схемы " + schemeId + ": " + locations.size());
         } catch (SQLException e) {
-            System.out.println("Ошибка получения локаций: " + e.getMessage());
+            LOGGER.severe("Ошибка получения локаций: " + e.getMessage());
         }
         return locations;
     }
@@ -141,10 +151,12 @@ public class DeviceLocationDAO {
                 loc.setSchemeId(rs.getInt("scheme_id"));
                 loc.setX(rs.getDouble("x"));
                 loc.setY(rs.getDouble("y"));
+                loc.setRotation(rs.getDouble("rotation"));
                 locations.add(loc);
             }
+            LOGGER.fine("Загружено всех локаций: " + locations.size());
         } catch (SQLException e) {
-            System.out.println("Ошибка получения всех локаций: " + e.getMessage());
+            LOGGER.severe("Ошибка получения всех локаций: " + e.getMessage());
         }
         return locations;
     }

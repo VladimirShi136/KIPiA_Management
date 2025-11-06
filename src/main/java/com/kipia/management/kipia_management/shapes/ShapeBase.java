@@ -1,8 +1,10 @@
 package com.kipia.management.kipia_management.shapes;
 
+import com.kipia.management.kipia_management.managers.ClipboardManager;
 import com.kipia.management.kipia_management.managers.ShapeManager;
 import javafx.geometry.Insets;
 import javafx.scene.Group;
+import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
@@ -42,6 +44,11 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     // Добавляем поля для цветов
     protected Color strokeColor = Color.BLACK;
     protected Color fillColor = Color.TRANSPARENT;
+    // Добавляем флаг для блокировки автосохранения во время undo/redo
+    private final boolean isUndoRedoInProgress = false;
+
+    // Добавляем поля для сохранения начальной позиции перед перемещением
+    private double dragStartX, dragStartY;
 
     // ============================================================
     // DEPENDENCIES
@@ -71,6 +78,16 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     private double currentWidth = -1.0;  // -1 = not set (initial)
     private double currentHeight = -1.0;
     private ContextMenu contextMenu; // Сохраняем ссылку на меню
+
+    // ============================================================
+    // ROTATION PROPERTIES
+    // ============================================================
+
+    protected double rotationAngle = 0.0; // Текущий угол поворота в градусах
+    private Circle rotationHandle; // Ручка для поворота
+    private static final double ROTATION_HANDLE_DISTANCE = 40.0; // Расстояние от центра
+    private boolean isRotating = false;
+    private double rotationStartAngle;
 
     // ============================================================
     // CONSTRUCTOR
@@ -150,6 +167,17 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
             pane.getChildren().add(resizeHandles[i]);
             resizeHandles[i].setVisible(false); // НЕ показываем сразу!
         }
+    }
+
+    /**
+     * Публичный метод для изменения размера фигуры (для использования в командах)
+     *
+     * @param newWidth  новая ширина
+     * @param newHeight новая высота
+     */
+    public void applyResize(double newWidth, double newHeight) {
+        resizeShape(newWidth, newHeight);
+        setCurrentDimensions(newWidth, newHeight);
     }
 
     /**
@@ -242,6 +270,8 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
                 pane.getChildren().remove(handle);
             }
         }
+        // Добавляем показ ручки поворота
+        removeRotationHandle();
         resizeHandles = null;
         wasResizedInSession = false;
     }
@@ -270,6 +300,9 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
                 }
             }
         }
+
+        // Добавляем показ ручки поворота
+        makeRotationHandleVisible();
         updateResizeHandles();
     }
 
@@ -393,6 +426,10 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     protected void initializeDrag(Point2D mousePos) {
         dragOffsetX = mousePos.getX() - getLayoutX();
         dragOffsetY = mousePos.getY() - getLayoutY();
+
+        // СОХРАНЯЕМ НАЧАЛЬНУЮ ПОЗИЦИЮ ДЛЯ UNDO
+        dragStartX = getLayoutX();
+        dragStartY = getLayoutY();
     }
 
     /**
@@ -467,9 +504,20 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         if (isDragging && statusSetter != null) {
             statusSetter.accept("Позиция фигуры изменена");
 
-            // ДЕБАГ: проверяем границы после перемещения
-            if (this instanceof RhombusShape) {
-                ((RhombusShape) this).debugBounds();
+            // РЕГИСТРИРУЕМ ПЕРЕМЕЩЕНИЕ В UNDO/REDO
+            double currentX = getLayoutX();
+            double currentY = getLayoutY();
+
+            // ИСПОЛЬЗУЕМ СОХРАНЕННЫЕ НАЧАЛЬНЫЕ КООРДИНАТЫ ИЗ handleDragPressed
+            double oldX = dragStartX;
+            double oldY = dragStartY;
+
+            if (shapeManager != null) {
+                shapeManager.registerMove(this, oldX, oldY, currentX, currentY);
+                // АВТОСОХРАНЕНИЕ ПРИ ПЕРЕМЕЩЕНИИ
+                if (shapeManager.getOnShapeAdded() != null) {
+                    shapeManager.getOnShapeAdded().run();
+                }
             }
         }
         isDragging = false;
@@ -521,6 +569,24 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     private void handleResizeRelease() {
         if (wasResizedInSession && statusSetter != null) {
             statusSetter.accept("Размер фигуры изменен");
+
+            // РЕГИСТРИРУЕМ РЕСАЙЗ В UNDO/REDO
+            double currentX = getLayoutX();
+            double currentY = getLayoutY();
+            double currentWidth = getCurrentWidth();
+            double currentHeight = getCurrentHeight();
+
+            if (shapeManager != null) {
+                shapeManager.registerResize(this,
+                        initialX, initialY, initialWidth, initialHeight,
+                        currentX, currentY, currentWidth, currentHeight
+                );
+
+                // АВТОСОХРАНЕНИЕ ПРИ РЕСАЙЗЕ
+                if (shapeManager.getOnShapeAdded() != null) {
+                    shapeManager.getOnShapeAdded().run();
+                }
+            }
         }
     }
 
@@ -648,6 +714,183 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     }
 
     // ============================================================
+// ROTATION METHODS
+// ============================================================
+
+    /**
+     * Создание ручки поворота
+     */
+    protected void createRotationHandle() {
+        if (rotationHandle != null) return;
+
+        rotationHandle = new Circle(4.0, Color.DARKORANGE);
+        rotationHandle.setCursor(Cursor.CROSSHAIR);
+        rotationHandle.setVisible(false);
+        pane.getChildren().add(rotationHandle);
+
+        setupRotationHandleEvents();
+    }
+
+    /**
+     * Настройка обработчиков для ручки поворота
+     */
+    private void setupRotationHandleEvents() {
+        rotationHandle.setOnMousePressed(event -> {
+            if (shapeManager == null || !shapeManager.isSelectToolActive()) {
+                event.consume();
+                return;
+            }
+
+            Point2D center = getCenterInPane();
+            Point2D mousePos = pane.sceneToLocal(event.getSceneX(), event.getSceneY());
+
+            // Вычисляем начальный угол
+            rotationStartAngle = Math.toDegrees(Math.atan2(
+                    mousePos.getY() - center.getY(),
+                    mousePos.getX() - center.getX()
+            ));
+
+            isRotating = true;
+            event.consume();
+        });
+
+        rotationHandle.setOnMouseDragged(event -> {
+            if (!isRotating) return;
+
+            Point2D center = getCenterInPane();
+            Point2D mousePos = pane.sceneToLocal(event.getSceneX(), event.getSceneY());
+
+            // Вычисляем текущий угол
+            double currentAngle = Math.toDegrees(Math.atan2(
+                    mousePos.getY() - center.getY(),
+                    mousePos.getX() - center.getX()
+            ));
+
+            // Вычисляем разницу углов
+            double angleDelta = currentAngle - rotationStartAngle;
+
+            // Применяем поворот
+            setRotation(rotationAngle + angleDelta);
+
+            // Обновляем начальный угол для следующего шага
+            rotationStartAngle = currentAngle;
+
+            event.consume();
+        });
+
+        rotationHandle.setOnMouseReleased(event -> {
+            if (isRotating) {
+                isRotating = false;
+
+                // Регистрируем поворот в undo/redo
+                if (shapeManager != null && Math.abs(rotationAngle) > 0.1) {
+                    shapeManager.registerRotation(this, rotationAngle - getRotationDelta(), rotationAngle);
+
+                    // Автосохранение
+                    if (shapeManager.getOnShapeAdded() != null) {
+                        shapeManager.getOnShapeAdded().run();
+                    }
+                }
+            }
+            event.consume();
+        });
+    }
+
+    /**
+     * Получение центра фигуры в координатах панели
+     */
+    protected Point2D getCenterInPane() {
+        Bounds bounds = getBoundsInParent();
+        return new Point2D(
+                bounds.getMinX() + bounds.getWidth() / 2,
+                bounds.getMinY() + bounds.getHeight() / 2
+        );
+    }
+
+    /**
+     * Установка угла поворота
+     */
+    public void setRotation(double angle) {
+        this.rotationAngle = normalizeAngle(angle);
+        setRotate(this.rotationAngle);
+        updateRotationHandle();
+    }
+
+    /**
+     * Нормализация угла в диапазон 0-360
+     */
+    private double normalizeAngle(double angle) {
+        angle = angle % 360;
+        if (angle < 0) angle += 360;
+        return angle;
+    }
+
+    /**
+     * Получение дельты поворота (для вычисления разницы)
+     */
+    private double getRotationDelta() {
+        // Это упрощенная реализация, можно улучшить
+        return rotationStartAngle;
+    }
+
+    /**
+     * Обновление позиции ручки поворота
+     */
+    protected void updateRotationHandle() {
+        if (rotationHandle == null) return;
+
+        Point2D center = getCenterInPane();
+        double angleRad = Math.toRadians(rotationAngle - 90); // Поворачиваем ручку вверх
+
+        double handleX = center.getX() + ROTATION_HANDLE_DISTANCE * Math.cos(angleRad);
+        double handleY = center.getY() + ROTATION_HANDLE_DISTANCE * Math.sin(angleRad);
+
+        rotationHandle.setCenterX(handleX);
+        rotationHandle.setCenterY(handleY);
+    }
+
+    /**
+     * Показ ручки поворота
+     */
+    public void makeRotationHandleVisible() {
+        if (shapeManager != null && !shapeManager.isSelectToolActive()) {
+            hideRotationHandle();
+            return;
+        }
+
+        if (rotationHandle == null) {
+            createRotationHandle();
+        }
+
+        if (rotationHandle != null) {
+            rotationHandle.setVisible(true);
+            updateRotationHandle();
+        }
+    }
+
+    /**
+     * Скрытие ручки поворота
+     */
+    public void hideRotationHandle() {
+        if (rotationHandle != null) {
+            rotationHandle.setVisible(false);
+        }
+    }
+
+    /**
+     * Удаление ручки поворота
+     */
+    public void removeRotationHandle() {
+        if (rotationHandle != null) {
+            pane.getChildren().remove(rotationHandle);
+            rotationHandle.setOnMousePressed(null);
+            rotationHandle.setOnMouseDragged(null);
+            rotationHandle.setOnMouseReleased(null);
+            rotationHandle = null;
+        }
+    }
+
+    // ============================================================
     // CONTEXT MENU
     // ============================================================
 
@@ -681,6 +924,30 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
 
         contextMenu.getItems().clear();
 
+        // Пункт "Повернуть"
+        MenuItem rotateItem = new MenuItem("Повернуть");
+        rotateItem.setOnAction(event -> {
+            // Можно добавить диалог для точного ввода угла
+            double newAngle = (rotationAngle + 45) % 360; // Поворот на 45°
+            setRotation(newAngle);
+
+            if (shapeManager != null) {
+                shapeManager.registerRotation(this, rotationAngle, newAngle);
+                if (shapeManager.getOnShapeAdded() != null) {
+                    shapeManager.getOnShapeAdded().run();
+                }
+            }
+        });
+
+        // Пункт "Копировать"
+        MenuItem copyItem = new MenuItem("Копировать");
+        copyItem.setOnAction(event -> copyToClipboard());
+
+        // Пункт "Вставить" (будет активен только если есть что вставлять)
+        MenuItem pasteItem = new MenuItem("Вставить");
+        pasteItem.setOnAction(event -> pasteFromClipboard());
+        pasteItem.disableProperty().bind(ClipboardManager.hasShapeDataProperty().not());
+
         // Пункт "Изменить цвет контура"
         MenuItem strokeColorItem = new MenuItem("Изменить цвет контура");
         strokeColorItem.setOnAction(event -> changeStrokeColor());
@@ -700,7 +967,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
             }
         });
 
-        contextMenu.getItems().addAll(strokeColorItem, fillColorItem, separator, deleteItem);
+        contextMenu.getItems().addAll(copyItem, pasteItem, strokeColorItem, fillColorItem, rotateItem, separator, deleteItem);
     }
 
     // ============================================================
@@ -723,6 +990,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     public void resetHighlight() {
         applyDefaultStyle();
         hideResizeHandles();
+        hideRotationHandle();
     }
 
     /**
@@ -747,8 +1015,18 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      */
     @Override
     public void setPosition(double x, double y) {
+        double oldX = getLayoutX();
+        double oldY = getLayoutY();
+
         setLayoutX(x);
         setLayoutY(y);
+
+        System.out.println("DEBUG: setPosition - from (" + oldX + "," + oldY + ") to (" + x + "," + y + ")");
+
+        // Принудительно обновляем handles если они есть
+        if (resizeHandles != null) {
+            updateResizeHandles();
+        }
     }
 
     /**
@@ -817,12 +1095,15 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         double w = getCurrentWidth();
         double h = getCurrentHeight();
         String type = getShapeType();
-        if ("TEXT".equals(type)) {
-            // Для TEXT: x|y|w|h|text (text вместо 5-го поля)
-            String textContent = ((TextShape) this).getText();
-            return String.format(java.util.Locale.US, "%s|%.2f|%.2f|%.2f|%.2f|%s", type, pos[0], pos[1], w, h, textContent.replace("|", ""));  // Escape | if needed
+
+        // Для всех фигур КРОМЕ TEXT используем этот формат
+        if (!"TEXT".equals(type)) {
+            return String.format(java.util.Locale.US, "%s|%.2f|%.2f|%.2f|%.2f|%.1f%s",
+                    type, pos[0], pos[1], w, h, rotationAngle, serializeColors());
         }
-        return String.format(java.util.Locale.US, "%s|%.2f|%.2f|%.2f|%.2f", type, pos[0], pos[1], w, h);
+
+        // Для Text будет вызван переопределенный метод
+        return "";
     }
 
     /**
@@ -831,9 +1112,14 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     public static ShapeBase deserialize(String data, AnchorPane pane,
                                         Consumer<String> statusSetter,
                                         Consumer<ShapeHandler> onSelectCallback, ShapeManager shapeManager) {
+        System.out.println("=== DEBUG DESERIALIZE START ===");
+        System.out.println("Raw data: " + data);
+
         if (data == null || data.trim().isEmpty()) return null;
         String[] parts = data.split("\\|");
-        if (parts.length < 5) return null;
+
+        System.out.println("Parts count: " + parts.length);
+        System.out.println("Parts: " + Arrays.toString(parts));
 
         try {
             String[] fixedParts = new String[parts.length];
@@ -847,45 +1133,60 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
             double width = Double.parseDouble(fixedParts[3]);
             double height = Double.parseDouble(fixedParts[4]);
 
-            ShapeBase shape = switch (type.toUpperCase()) {
-                case "RECTANGLE" -> new RectangleShape(x, y, width, height, pane, statusSetter, onSelectCallback, shapeManager);
-                case "LINE" -> {
-                    double startX = Double.parseDouble(fixedParts[1]);
-                    double startY = Double.parseDouble(fixedParts[2]);
-                    double endX = Double.parseDouble(fixedParts[3]);
-                    double endY = Double.parseDouble(fixedParts[4]);
-                    LineShape lineShape = new LineShape(startX, startY, endX, endY, pane, statusSetter, onSelectCallback, shapeManager);
-                    // Для линии цвета в индексах 5 и 6
-                    if (fixedParts.length > 5) lineShape.deserializeColors(fixedParts, 5, 6);
-                    yield lineShape;
+            // Чтение угла поворота
+            double rotation = 0.0;
+            if (fixedParts.length > 5) {
+                try {
+                    rotation = Double.parseDouble(fixedParts[5]);
+                    System.out.println("Rotation found: " + rotation);
+                } catch (NumberFormatException e) {
+                    System.out.println("No rotation found, using 0");
+                    rotation = 0.0;
                 }
-                case "ELLIPSE" -> {
-                    EllipseShape ellipseShape = new EllipseShape(x + width/2, y + height/2, width/2, height/2,
-                            pane, statusSetter, onSelectCallback, shapeManager);
-                    // Для эллипса цвета в индексах 5 и 6
-                    if (fixedParts.length > 5) ellipseShape.deserializeColors(fixedParts, 5, 6);
-                    yield ellipseShape;
-                }
-                case "RHOMBUS" -> {
-                    RhombusShape rhombusShape = new RhombusShape(x, y, width, height, pane, statusSetter, onSelectCallback, shapeManager);
-                    // Для ромба цвета в индексах 5 и 6
-                    if (fixedParts.length > 5) rhombusShape.deserializeColors(fixedParts, 5, 6);
-                    yield rhombusShape;
-                }
-                case "TEXT" -> {
-                    TextShape textShape = createTextShape(fixedParts, pane, statusSetter, onSelectCallback, shapeManager);
-                    // Для текста цвета в последних двух индексах (после шрифта)
-                    if (textShape != null && fixedParts.length > 9) {
-                        textShape.deserializeColors(fixedParts, fixedParts.length - 2, fixedParts.length - 1);
-                    }
-                    yield textShape;
-                }
-                default -> null;
-            };
+            }
 
+            ShapeBase shape = null;
+
+            switch (type.toUpperCase()) {
+                case "RECTANGLE":
+                    shape = new RectangleShape(x, y, width, height, pane, statusSetter, onSelectCallback, shapeManager);
+                    break;
+                case "LINE":
+                    shape = new LineShape(x, y, x + width, y + height, pane, statusSetter, onSelectCallback, shapeManager);
+                    break;
+                case "ELLIPSE":
+                    shape = new EllipseShape(x + width/2, y + height/2, width/2, height/2,
+                            pane, statusSetter, onSelectCallback, shapeManager);
+                    break;
+                case "RHOMBUS":
+                    shape = new RhombusShape(x, y, width, height, pane, statusSetter, onSelectCallback, shapeManager);
+                    break;
+                case "TEXT":
+                    shape = createTextShape(fixedParts, pane, statusSetter, onSelectCallback, shapeManager);
+                    break;
+            }
+
+            // ВАЖНО: Применяем поворот ко всем фигурам
+            if (shape != null) {
+                System.out.println("Applying rotation: " + rotation + " to " + type);
+                shape.setRotation(rotation);
+
+                // Восстанавливаем цвета
+                if (!"TEXT".equals(type) && fixedParts.length > 6) {
+                    shape.deserializeColors(parts, 6, 7);
+                }
+
+                // ОТЛАДКА: проверяем примененные цвета
+                System.out.println("DEBUG: After color restoration - Stroke: " + shape.strokeColor + ", Fill: " + shape.fillColor);
+                shape.addContextMenu(shape::handleDelete);
+            }
+
+            System.out.println("=== DEBUG DESERIALIZE END ===");
             return shape;
 
-        } catch (NumberFormatException e) {
+        } catch (Exception e) {
+            System.out.println("ERROR in deserialize: " + e.getMessage());
+            e.printStackTrace();
             return null;
         }
     }
@@ -898,47 +1199,60 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
                                              Consumer<ShapeHandler> onSelectCallback,
                                              ShapeManager shapeManager) {
         try {
-            // Parse basic position and size (indices 1-4)
+            // Основные параметры
             double x = Double.parseDouble(fixedParts[1]);
             double y = Double.parseDouble(fixedParts[2]);
-            double width = Double.parseDouble(fixedParts[3]);
-            double height = Double.parseDouble(fixedParts[4]);
 
-            // Get text content (index 5)
-            String text = (fixedParts.length > 5) ? fixedParts[5] : "Новый текст";
-            text = text.replace("\\|", "|"); // Unescape pipe characters
+            // Текст (индекс 6) - ВАЖНО: правильный индекс
+            String text = (fixedParts.length > 6) ? fixedParts[6] : "Текст";
+            text = text.replace("\\|", "|"); // Unescape
+            System.out.println("DEBUG: Text content restored: '" + text + "'");
 
-            // Create the TextShape
             TextShape textShape = new TextShape(x, y, text, pane, statusSetter, onSelectCallback, shapeManager);
 
-            // Restore font properties if they exist (indices 6-8)
-            if (fixedParts.length > 6) {
+            // Шрифт (индексы 7-9)
+            if (fixedParts.length > 7) {
                 try {
-                    double fontSize = Double.parseDouble(fixedParts[6]);
-                    fontSize = Math.max(8, Math.min(72, fontSize)); // Clamp font size
+                    double fontSize = Double.parseDouble(fixedParts[7]);
+                    fontSize = Math.max(8, Math.min(72, fontSize));
 
-                    String fontFamily = fixedParts.length > 7 ? fixedParts[7] : "Arial";
-                    String fontStyle = fixedParts.length > 8 ? fixedParts[8] : "Regular";
+                    String fontFamily = fixedParts.length > 8 ? fixedParts[8] : "Arial";
+                    String fontStyle = fixedParts.length > 9 ? fixedParts[9] : "Regular";
 
-                    // Reconstruct font
                     FontWeight fontWeight = fontStyle.contains("Bold") ? FontWeight.BOLD : FontWeight.NORMAL;
                     FontPosture fontPosture = fontStyle.contains("Italic") ? FontPosture.ITALIC : FontPosture.REGULAR;
 
                     Font restoredFont = Font.font(fontFamily, fontWeight, fontPosture, fontSize);
                     textShape.setFont(restoredFont);
+                    System.out.println("DEBUG: Font restored: " + restoredFont);
 
                 } catch (NumberFormatException e) {
-                    System.out.println("Ошибка восстановления шрифта, используется значение по умолчанию");
+                    System.out.println("Ошибка восстановления шрифта: " + e.getMessage());
                 }
             }
 
-            // Recalculate text size with restored font
-            javafx.application.Platform.runLater(textShape::calculateTextSize);
+            // Угол поворота (индекс 5) - ВАЖНО: применяем ДО цветов
+            if (fixedParts.length > 5) {
+                try {
+                    double rotation = Double.parseDouble(fixedParts[5]);
+                    textShape.setRotation(rotation);
+                    System.out.println("DEBUG: Text rotation restored: " + rotation);
+                } catch (NumberFormatException e) {
+                    System.out.println("Ошибка восстановления угла поворота текста: " + e.getMessage());
+                }
+            }
 
+            // Цвета (последние 2 элемента)
+            if (fixedParts.length > 11) {
+                textShape.deserializeColors(fixedParts, fixedParts.length - 2, fixedParts.length - 1);
+            }
+
+            javafx.application.Platform.runLater(textShape::calculateTextSize);
             return textShape;
 
         } catch (Exception e) {
             System.out.println("Ошибка создания TextShape: " + e.getMessage());
+            e.printStackTrace();
             return null;
         }
     }
@@ -947,38 +1261,89 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      * Сериализует цвета в строку
      */
     protected String serializeColors() {
-        return String.format(java.util.Locale.US, "|%.3f,%.3f,%.3f,%.3f|%.3f,%.3f,%.3f,%.3f",
+        String result = String.format(java.util.Locale.US, "|%.3f,%.3f,%.3f,%.3f|%.3f,%.3f,%.3f,%.3f",
                 strokeColor.getRed(), strokeColor.getGreen(), strokeColor.getBlue(), strokeColor.getOpacity(),
                 fillColor.getRed(), fillColor.getGreen(), fillColor.getBlue(), fillColor.getOpacity());
+
+        System.out.println("=== SERIALIZE COLORS ===");
+        System.out.println("Stroke: " + strokeColor);
+        System.out.println("Fill: " + fillColor);
+        System.out.println("Serialized: '" + result + "'");
+        System.out.println("=== END SERIALIZE COLORS ===");
+
+        return result;
     }
 
     /**
      * Десериализует цвета из строки
      */
-    protected void deserializeColors(String[] parts, int strokeIndex, int fillIndex) {
-        if (parts.length > strokeIndex) {
-            String[] strokeParts = parts[strokeIndex].split(",");
+    protected void deserializeColors(String[] originalParts, int strokeIndex, int fillIndex) {
+        System.out.println("=== DESERIALIZE COLORS ===");
+        System.out.println("Parts length: " + originalParts.length);
+        System.out.println("Stroke index: " + strokeIndex + ", Fill index: " + fillIndex);
+
+        if (originalParts.length > strokeIndex) {
+            String strokeData = originalParts[strokeIndex];
+            System.out.println("Stroke data: '" + strokeData + "'");
+
+            // Используем оригинальные данные с запятыми
+            String[] strokeParts = strokeData.split(",");
             if (strokeParts.length == 4) {
-                strokeColor = Color.color(
-                        Double.parseDouble(strokeParts[0]),
-                        Double.parseDouble(strokeParts[1]),
-                        Double.parseDouble(strokeParts[2]),
-                        Double.parseDouble(strokeParts[3])
-                );
+                try {
+                    strokeColor = Color.color(
+                            Double.parseDouble(strokeParts[0]),
+                            Double.parseDouble(strokeParts[1]),
+                            Double.parseDouble(strokeParts[2]),
+                            Double.parseDouble(strokeParts[3])
+                    );
+                    System.out.println("Stroke color restored: " + strokeColor);
+                } catch (NumberFormatException e) {
+                    System.out.println("ERROR parsing stroke color: " + e.getMessage());
+                    strokeColor = Color.BLACK;
+                }
+            } else {
+                System.out.println("Invalid stroke color format, using default");
+                strokeColor = Color.BLACK;
             }
         }
-        if (parts.length > fillIndex) {
-            String[] fillParts = parts[fillIndex].split(",");
+
+        if (originalParts.length > fillIndex) {
+            String fillData = originalParts[fillIndex];
+            System.out.println("Fill data: '" + fillData + "'");
+
+            // Используем оригинальные данные с запятыми
+            String[] fillParts = fillData.split(",");
             if (fillParts.length == 4) {
-                fillColor = Color.color(
-                        Double.parseDouble(fillParts[0]),
-                        Double.parseDouble(fillParts[1]),
-                        Double.parseDouble(fillParts[2]),
-                        Double.parseDouble(fillParts[3])
-                );
+                try {
+                    fillColor = Color.color(
+                            Double.parseDouble(fillParts[0]),
+                            Double.parseDouble(fillParts[1]),
+                            Double.parseDouble(fillParts[2]),
+                            Double.parseDouble(fillParts[3])
+                    );
+                    System.out.println("Fill color restored: " + fillColor);
+                } catch (NumberFormatException e) {
+                    System.out.println("ERROR parsing fill color: " + e.getMessage());
+                    fillColor = Color.TRANSPARENT;
+                }
+            } else {
+                System.out.println("Invalid fill color format, using default");
+                fillColor = Color.TRANSPARENT;
             }
         }
+
         applyCurrentStyle();
+        System.out.println("Colors applied to shape");
+        System.out.println("=== END DESERIALIZE COLORS ===");
+    }
+
+    /**
+     * Обработчик удаления фигуры для контекстного меню
+     */
+    protected void handleDelete(ShapeHandler shapeHandler) {
+        if (shapeManager != null) {
+            shapeManager.removeShape((Node) shapeHandler);
+        }
     }
 
     /**
@@ -1056,6 +1421,10 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
             if (statusSetter != null) {
                 statusSetter.accept("Цвет заливки изменен");
             }
+
+            if (shapeManager != null && shapeManager.getOnShapeAdded() != null) {
+                shapeManager.getOnShapeAdded().run();
+            }
         });
     }
 
@@ -1093,22 +1462,119 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         // Если need sync: Platform.runLater(() -> System.out.println("Bounds after set: " + getBoundsInLocal()));  // Debug
     }
 
-    // Геттеры и сеттеры
-    public Color getStrokeColor() {
-        return strokeColor;
+    public void setStrokeColor(Color newColor) {
+        // Сохраняем старый цвет перед изменением
+        Color oldColor = this.strokeColor;
+
+        this.strokeColor = newColor;
+        applyCurrentStyle();
+
+        // РЕГИСТРИРУЕМ ИЗМЕНЕНИЕ ЦВЕТА В UNDO/REDO (только если не undo/redo)
+        if (shapeManager != null && !newColor.equals(oldColor) && !isUndoRedoInProgress) {
+            shapeManager.registerColorChange(this, oldColor, this.fillColor, newColor, this.fillColor);
+        }
+
+        // Автосохранение (только если не undo/redo)
+        if (shapeManager != null && shapeManager.getOnShapeAdded() != null && !isUndoRedoInProgress) {
+            shapeManager.getOnShapeAdded().run();
+        }
     }
 
-    public void setStrokeColor(Color color) {
-        this.strokeColor = color;
+    public void setFillColor(Color newColor) {
+        // Сохраняем старый цвет перед изменением
+        Color oldColor = this.fillColor;
+
+        this.fillColor = newColor;
+        applyCurrentStyle();
+
+        // РЕГИСТРИРУЕМ ИЗМЕНЕНИЕ ЦВЕТА В UNDO/REDO (только если не undo/redo)
+        if (shapeManager != null && !newColor.equals(oldColor) && !isUndoRedoInProgress) {
+            shapeManager.registerColorChange(this, this.strokeColor, oldColor, this.strokeColor, newColor);
+        }
+
+        // Автосохранение (только если не undo/redo)
+        if (shapeManager != null && shapeManager.getOnShapeAdded() != null && !isUndoRedoInProgress) {
+            shapeManager.getOnShapeAdded().run();
+        }
+    }
+
+    /**
+     * Метод для установки цвета без регистрации в undo/redo (для использования в командах)
+     */
+    public void setColorsSilent(Color newStroke, Color newFill) {
+        this.strokeColor = newStroke;
+        this.fillColor = newFill;
         applyCurrentStyle();
     }
 
-    public Color getFillColor() {
-        return fillColor;
+    public double getDragStartX() {
+        return dragStartX;
     }
 
-    public void setFillColor(Color color) {
-        this.fillColor = color;
-        applyCurrentStyle();
+    public double getDragStartY() {
+        return dragStartY;
+    }
+
+    /**
+     * Создает копию фигуры
+     */
+    public ShapeBase createCopy() {
+        String serializedData = serialize();
+        return deserialize(serializedData, pane, statusSetter, onSelectCallback, shapeManager);
+    }
+
+    /**
+     * Создает копию со смещением (для paste)
+     */
+    public ShapeBase createCopyWithOffset(double offsetX, double offsetY) {
+        ShapeBase copy = createCopy();
+        double[] pos = copy.getPosition();
+        copy.setPosition(pos[0] + offsetX, pos[1] + offsetY);
+        return copy;
+    }
+
+    /**
+     * Копирует фигуру в буфер обмена
+     */
+    public void copyToClipboard() {
+        ClipboardManager.copyShape(this);
+        if (statusSetter != null) {
+            statusSetter.accept("Фигура скопирована");
+        }
+    }
+
+    /**
+     * Вставляет фигуру из буфера обмена
+     */
+    public void pasteFromClipboard() {
+        if (!ClipboardManager.hasShapeData()) {
+            return;
+        }
+
+        try {
+            String shapeData = ClipboardManager.getCopiedShapeData();
+            ShapeBase copiedShape = deserialize(shapeData, pane, statusSetter, onSelectCallback, shapeManager);
+
+            if (copiedShape != null) {
+                // Смещаем копию на 20 пикселей от оригинала
+                double[] originalPos = getPosition();
+                copiedShape.setPosition(originalPos[0] + 20, originalPos[1] + 20);
+
+                // Добавляем копию на панель
+                copiedShape.addToPane();
+                if (shapeManager != null) {
+                    shapeManager.addShape(copiedShape);
+                }
+
+                if (statusSetter != null) {
+                    statusSetter.accept("Фигура вставлена");
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Ошибка при вставке фигуры: " + e.getMessage());
+            if (statusSetter != null) {
+                statusSetter.accept("Ошибка вставки фигуры");
+            }
+        }
     }
 }

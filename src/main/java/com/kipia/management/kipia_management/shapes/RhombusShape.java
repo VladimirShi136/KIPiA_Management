@@ -281,12 +281,12 @@ public class RhombusShape extends ShapeBase {
                 "ParentBounds: " + getBoundsInParent());
     }
 
-    @Override
-    public String serialize() {
-        double[] pos = getPosition();
-        double w = getCurrentWidth();
-        double h = getCurrentHeight();
-        return String.format(java.util.Locale.US, "%s|%.2f|%.2f|%.2f|%.2f%s",
-                getShapeType(), pos[0], pos[1], w, h, serializeColors());
-    }
+//    @Override
+//    public String serialize() {
+//        double[] pos = getPosition();
+//        double w = getCurrentWidth();
+//        double h = getCurrentHeight();
+//        return String.format(java.util.Locale.US, "%s|%.2f|%.2f|%.2f|%.2f%s",
+//                getShapeType(), pos[0], pos[1], w, h, serializeColors());
+//    }
 }

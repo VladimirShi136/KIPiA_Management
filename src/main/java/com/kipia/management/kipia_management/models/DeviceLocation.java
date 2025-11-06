@@ -17,6 +17,7 @@ public class DeviceLocation {
     private double x;
     // Координата Y на схеме
     private double y;
+    private double rotation; // Новое поле для угла поворота
 
     /**
      * Конструктор по умолчанию.
@@ -40,6 +41,15 @@ public class DeviceLocation {
         this.schemeId = schemeId;
         this.x = x;
         this.y = y;
+        this.rotation = 0.0; // По умолчанию 0 градусов
+    }
+
+    public DeviceLocation(int deviceId, int schemeId, double x, double y, double rotation) {
+        this.deviceId = deviceId;
+        this.schemeId = schemeId;
+        this.x = x;
+        this.y = y;
+        this.rotation = rotation;
     }
 
     // Геттеры и сеттеры
@@ -116,6 +126,15 @@ public class DeviceLocation {
         this.y = y;
     }
 
+    // Геттеры и сеттеры
+    public double getRotation() {
+        return rotation;
+    }
+
+    public void setRotation(double rotation) {
+        this.rotation = rotation;
+    }
+
     /**
      * Переопределенный метод toString() для удобного представления объекта в виде строки.
      * Используется для отладки и вывода информации о привязке.
@@ -129,6 +148,8 @@ public class DeviceLocation {
                 ", schemeId=" + schemeId +
                 ", x=" + x +
                 ", y=" + y +
+                ", rotation=" + rotation +
                 '}';
     }
 }
+

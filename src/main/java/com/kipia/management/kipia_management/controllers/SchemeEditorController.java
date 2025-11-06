@@ -1,5 +1,6 @@
 package com.kipia.management.kipia_management.controllers;
 
+import com.kipia.management.kipia_management.managers.ClipboardManager;
 import com.kipia.management.kipia_management.managers.ShapeManager;
 import com.kipia.management.kipia_management.managers.ZoomManager;
 import com.kipia.management.kipia_management.models.Device;
@@ -168,7 +169,10 @@ public class SchemeEditorController {
      */
     private void initializeServices() {
         // Создаём менеджер фигур СНАЧАЛА без сервиса (циклическая зависимость)
-        this.shapeManager = new ShapeManager(schemePane, null);  // shapeService = null
+        this.shapeManager = new ShapeManager(schemePane, null,
+                canUndo -> undoBtn.setDisable(!canUndo),
+                canRedo -> redoBtn.setDisable(!canRedo)
+        );
         this.shapeManager.setStatusSetter(statusLabel::setText);
         this.shapeManager.setOnSelectCallback(shapeManager::selectShape);
 
@@ -203,8 +207,11 @@ public class SchemeEditorController {
                 schemePane,
                 this::saveDeviceLocation,
                 deviceLocationDAO,
-                this::refreshAvailableDevices  // Новое: колбэк для обновления списка приборов
+                this::refreshAvailableDevices,
+                this::autoSaveScheme,
+                currentScheme  // Передаем текущую схему
         );
+        System.out.println("DEBUG: DeviceIconService initialized with autoSave callback: " + true);
 
         // Инициализация ZoomManager с pane, статусом и callback для обновления handles
         this.zoomManager = new ZoomManager(
@@ -304,6 +311,23 @@ public class SchemeEditorController {
         if (schemePane != null) {
             schemePane.setOnMouseClicked(e -> schemePane.requestFocus());
             schemePane.setFocusTraversable(true);
+
+            // ВРЕМЕННО: Добавьте фильтр событий для отладки
+            schemePane.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
+                System.out.println("DEBUG: Pane Mouse Pressed - Scene: (" +
+                        event.getSceneX() + ", " + event.getSceneY() + ")");
+            });
+
+            // ВАЖНО: Добавьте обработчик для MOUSE_RELEASED на всю панель
+            schemePane.addEventFilter(MouseEvent.MOUSE_RELEASED, event -> {
+                System.out.println("DEBUG: Pane Mouse RELEASED - Scene: (" +
+                        event.getSceneX() + ", " + event.getSceneY() + ")");
+
+                // Если есть активное перемещение прибора, принудительно завершаем его
+                if (isDeviceBeingDragged()) {
+                    completeDeviceDrag();
+                }
+            });
         }
         // Wheel зум на ScrollPane (работает по всему viewport)
         if (schemeScrollPane != null) {
@@ -321,23 +345,95 @@ public class SchemeEditorController {
     }
 
     /**
+     * Обработка нажатия клавиш
+     */
+    private void handleKeyPress(javafx.scene.input.KeyEvent event) {
+        if (isShapeSelected() && currentTool == ShapeManager.Tool.SELECT) {
+            if (event.isControlDown()) {
+                switch (event.getCode()) {
+                    case C -> copySelectedShape();
+                    case V -> pasteShape();
+                }
+            } else {
+                switch (event.getCode()) {
+                    case DELETE, BACK_SPACE -> deleteSelectedShape();
+                }
+            }
+        }
+    }
+
+    /**
      * Настройка обработчиков клавиш для панели
      */
     private void setupPaneKeyHandlers() {
         schemePane.setOnKeyPressed(event -> {
             if (isShapeSelected() && currentTool == ShapeManager.Tool.SELECT) {
-                handleKeyPress(event.getCode());
+                if (event.isControlDown()) {
+                    switch (event.getCode()) {
+                        case C -> copySelectedShape();
+                        case V -> pasteShape();
+                    }
+                } else {
+                    switch (event.getCode()) {
+                        case DELETE, BACK_SPACE -> deleteSelectedShape();
+                    }
+                }
             }
         });
     }
 
     /**
-     * Обработка нажатия клавиш
+     * Копирование выделенной фигуры
      */
-    private void handleKeyPress(javafx.scene.input.KeyCode code) {
-        switch (code) {
-            case DELETE, BACK_SPACE -> deleteSelectedShape();
+    private void copySelectedShape() {
+        ShapeHandler selected = shapeManager.getSelectedShape();
+        if (selected instanceof ShapeBase shapeBase) {
+            shapeBase.copyToClipboard();
+            statusLabel.setText("Фигура скопирована");
         }
+    }
+
+    /**
+     * Вставка фигуры из буфера обмена
+     */
+    private void pasteShape() {
+        if (!ClipboardManager.hasShapeData()) {
+            return;
+        }
+
+        try {
+            String shapeData = ClipboardManager.getCopiedShapeData();
+            ShapeBase pastedShape = ShapeBase.deserialize(shapeData, schemePane,
+                    statusLabel::setText, shapeManager::selectShape, shapeManager);
+
+            if (pastedShape != null) {
+                // Смещаем новую фигуру от последней позиции
+                double[] lastPos = getPastePosition();
+                pastedShape.setPosition(lastPos[0] + 20, lastPos[1] + 20);
+
+                pastedShape.addToPane();
+                shapeManager.addShape(pastedShape);
+
+                statusLabel.setText("Фигура вставлена");
+            }
+        } catch (Exception e) {
+            LOGGER.severe("Ошибка при вставке фигуры: " + e.getMessage());
+            statusLabel.setText("Ошибка вставки фигуры");
+        }
+    }
+
+    /**
+     * Получает позицию для вставки (смещение от последней фигуры или центр)
+     */
+    private double[] getPastePosition() {
+        // Если есть выделенная фигура - используем ее позицию
+        ShapeHandler selected = shapeManager.getSelectedShape();
+        if (selected != null) {
+            return selected.getPosition();
+        }
+
+        // Иначе возвращаем центр видимой области
+        return new double[]{400, 300};
     }
 
     /**
@@ -415,6 +511,38 @@ public class SchemeEditorController {
         StyleUtils.applyHoverAndAnimation(saveSchemeBtn, "tool-button", "tool-button-hover");
         StyleUtils.applyHoverAndAnimation(zoomInBtn, "tool-button", "tool-button-hover");
         StyleUtils.applyHoverAndAnimation(zoomOutBtn, "tool-button", "tool-button-hover");
+    }
+
+    // ============================================================
+// DEVICE DRAG STATE TRACKING
+// ============================================================
+
+    private boolean isDeviceDragInProgress = false;
+    private Node draggedDeviceNode = null;
+    private Device draggedDevice = null;
+
+    /**
+     * Проверка, выполняется ли перемещение прибора
+     */
+    private boolean isDeviceBeingDragged() {
+        return isDeviceDragInProgress && draggedDeviceNode != null;
+    }
+
+    /**
+     * Завершение перемещения прибора
+     */
+    private void completeDeviceDrag() {
+        if (isDeviceBeingDragged()) {
+            System.out.println("DEBUG: Completing device drag via pane handler");
+
+            // Сохраняем позицию прибора
+            saveDeviceLocation(draggedDeviceNode, draggedDevice);
+
+            // Сбрасываем состояние
+            isDeviceDragInProgress = false;
+            draggedDeviceNode = null;
+            draggedDevice = null;
+        }
     }
 
     // ============================================================
@@ -554,6 +682,12 @@ public class SchemeEditorController {
     private void loadScheme(Scheme scheme) {
         try {
             currentScheme = scheme;
+
+            // Обновляем текущую схему в сервисе
+            if (deviceIconService != null) {
+                deviceIconService.setCurrentScheme(scheme);
+            }
+
             clearSchemePane();
             loadSchemeContent(scheme);
             addVisibleBorder();  // Пересоздаем квадрат
@@ -771,15 +905,35 @@ public class SchemeEditorController {
     private void loadDevicesFromScheme(Scheme scheme) {
         List<DeviceLocation> locations = deviceLocationDAO.getLocationsBySchemeId(scheme.getId());
 
-        for (DeviceLocation location : locations) {
+        System.out.println("=== DEBUG: LOADING DEVICES FROM SCHEME ===");
+        System.out.println("DEBUG: Scheme ID: " + scheme.getId() + ", Name: " + scheme.getName());
+        System.out.println("DEBUG: Found " + locations.size() + " device locations in database");
+
+        for (int i = 0; i < locations.size(); i++) {
+            DeviceLocation location = locations.get(i);
+            System.out.println("DEBUG: Location " + i + " - device_id: " + location.getDeviceId() +
+                    ", x: " + location.getX() + ", y: " + location.getY() +
+                    ", rotation: " + location.getRotation());
+
             Device device = deviceDAO.getDeviceById(location.getDeviceId());
             if (device != null) {
+                System.out.println("DEBUG: Creating device - " + device.getName() +
+                        " at (" + location.getX() + ", " + location.getY() +
+                        ") with rotation " + location.getRotation() + "°");
+
                 Node deviceNode = deviceIconService.createDeviceIcon(
                         location.getX(), location.getY(), device, currentScheme
                 );
+
+                // Применяем сохраненный угол поворота
+                deviceNode.setRotate(location.getRotation());
+
                 schemePane.getChildren().add(deviceNode);
+            } else {
+                System.out.println("DEBUG: ERROR - Device not found for ID: " + location.getDeviceId());
             }
         }
+        System.out.println("=== END DEBUG: LOADING DEVICES ===");
 
         LOGGER.info("Загружено " + locations.size() + " устройств на схему");
     }
@@ -997,7 +1151,6 @@ public class SchemeEditorController {
      * Добавление устройства на схему в заданную позицию
      */
     private void addDeviceAt(double x, double y) {
-        // Уже используем правильные координаты из getAbsolutePaneCoordinates
         Device selectedDevice = deviceComboBox.getValue();
         if (selectedDevice == null) {
             CustomAlert.showWarning("Добавление прибора", "Выберите прибор из списка!");
@@ -1012,12 +1165,17 @@ public class SchemeEditorController {
                     DeviceLocation location = new DeviceLocation(
                             selectedDevice.getId(), currentScheme.getId(), x, y
                     );
-                    deviceLocationDAO.addDeviceLocation(location);
-                    autoSaveScheme();
+                    boolean added = deviceLocationDAO.addDeviceLocation(location);
+                    System.out.println("DEBUG: Initial device location added to DB: " + added);
+
+                    if (!added) {
+                        System.out.println("ERROR: Failed to add device location to database!");
+                        CustomAlert.showError("Ошибка", "Не удалось сохранить прибор в базу данных");
+                    }
                 }
                 refreshAvailableDevices();
-                if (statusLabel != null) statusLabel.setText("Прибор добавлен: " + selectedDevice.getName());
-                CustomAlert.showInfo("Добавление", "Прибор '" + selectedDevice.getName() + "' добавлен на схему");
+                autoSaveScheme();
+                statusLabel.setText("Прибор добавлен: " + selectedDevice.getName());
             }
         } catch (Exception e) {
             LOGGER.severe("Ошибка добавления устройства: " + e.getMessage());
@@ -1029,7 +1187,23 @@ public class SchemeEditorController {
      * Сохранение позиции устройства
      */
     private void saveDeviceLocation(Node node, Device device) {
-        if (device != null && currentScheme != null) {
+        System.out.println("DEBUG: saveDeviceLocation CALLED");
+
+        // Получаем устройство и угол поворота из UserData
+        Object userData = node.getUserData();
+        Device deviceToSave;
+        double rotation = 0.0;
+
+        if (userData instanceof DeviceIconService.DeviceWithRotation) {
+            DeviceIconService.DeviceWithRotation deviceWithRotation =
+                    (DeviceIconService.DeviceWithRotation) userData;
+            deviceToSave = deviceWithRotation.device();
+            rotation = deviceWithRotation.rotation();
+        } else {
+            deviceToSave = (Device) userData;
+        }
+
+        if (deviceToSave != null && currentScheme != null) {
             double x = node.getLayoutX();
             double y = node.getLayoutY();
 
@@ -1039,11 +1213,29 @@ public class SchemeEditorController {
                 y -= 10;
             }
 
-            DeviceLocation location = new DeviceLocation(device.getId(), currentScheme.getId(), x, y);
-            deviceLocationDAO.updateDeviceLocation(location);
-        }
+            System.out.println("DEBUG: Saving device position - X: " + x + ", Y: " + y +
+                    ", Rotation: " + rotation + "°, Scheme ID: " + currentScheme.getId() +
+                    ", Device ID: " + deviceToSave.getId());
 
+            // Создаем локацию с углом поворота
+            DeviceLocation location = new DeviceLocation(deviceToSave.getId(), currentScheme.getId(), x, y, rotation);
+
+            boolean saved = deviceLocationDAO.addDeviceLocation(location);
+
+            if (saved) {
+                System.out.println("DEBUG: Device location and rotation successfully saved to database");
+            } else {
+                System.out.println("DEBUG: FAILED to save device location to database!");
+            }
+
+            autoSaveScheme();
+
+        } else {
+            System.out.println("DEBUG: Cannot save device location - " +
+                    "device: " + (deviceToSave != null) + ", scheme: " + (currentScheme != null));
+        }
     }
+
     // ============================================================
     // SCHEME SAVING
     // ============================================================
@@ -1100,10 +1292,15 @@ public class SchemeEditorController {
 
     // Новое: Метод auto-save (вызывается после addShape/remove/resize)
     private void autoSaveScheme() {
+        System.out.println("DEBUG: autoSaveScheme called");
         if (currentScheme != null) {
-            saveSchemeData();  // Сохраняет shapeService.serializeAll() в scheme.data
+            saveSchemeData();
             LOGGER.info("Auto-save: Схема '" + currentScheme.getName() + "', фигур: " + shapeService.getShapeCount());
-            statusLabel.setText("Автосохранение: " + currentScheme.getName());  // Опционально: миг на статус
+            if (statusLabel != null) {
+                statusLabel.setText("Автосохранение: " + currentScheme.getName());
+            }
+        } else {
+            System.out.println("DEBUG: Cannot auto-save - currentScheme is null");
         }
     }
 

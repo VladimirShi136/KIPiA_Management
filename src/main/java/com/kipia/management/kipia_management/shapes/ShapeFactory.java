@@ -16,13 +16,18 @@ public record ShapeFactory(AnchorPane pane, Consumer<String> statusSetter, Consu
     public ShapeBase createShape(ShapeType type, double... coordinates) {
         type.validateCoordinates(coordinates);
 
-        return switch (type) {
+        ShapeBase shape = switch (type) {
             case RECTANGLE -> createRectangle(coordinates);
             case ELLIPSE -> createEllipse(coordinates);
             case LINE -> createLine(coordinates);
             case RHOMBUS -> createRhombus(coordinates);
             case TEXT -> createText(coordinates);
         };
+
+        // ВАЖНО: Добавляем контекстное меню для новой фигуры
+        shape.addContextMenu(shape::handleDelete);
+
+        return shape;
     }
 
     private RectangleShape createRectangle(double[] coords) {

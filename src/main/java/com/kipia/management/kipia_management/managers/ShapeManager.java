@@ -5,9 +5,9 @@ import javafx.scene.Node;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.shape.*;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
 
 import java.util.Arrays;
-import java.util.Stack;
 import java.util.function.Consumer;
 
 /**
@@ -19,17 +19,15 @@ import java.util.function.Consumer;
  */
 public class ShapeManager {
 
-    /** Enum инструментов редактора */
-    public enum Tool { SELECT, LINE, RECTANGLE, ELLIPSE, RHOMBUS, TEXT, ADD_DEVICE }
+    /**
+     * Enum инструментов редактора
+     */
+    public enum Tool {SELECT, LINE, RECTANGLE, ELLIPSE, RHOMBUS, TEXT, ADD_DEVICE}
 
     // Основные зависимости
     private final AnchorPane pane;
     private ShapeService shapeService;
-
-    // Стеки для undo/redo
-    private final Stack<Command> undoStack = new Stack<>();
-    private final Stack<Command> redoStack = new Stack<>();
-
+    private final CommandManager commandManager;
     // Состояние выделения и перемещения
     private ShapeHandler selectedShape;
     private boolean wasDraggedInSelect;
@@ -51,22 +49,16 @@ public class ShapeManager {
     private Runnable onShapeAdded;  // Callback для auto-save после добавления
     private Runnable onShapeRemoved;  // Callback для auto-save после удаления (опционально)
 
-    /**
-     * Интерфейс команды для паттерна Command
-     */
-    public interface Command {
-        void execute();
-        void undo();
-    }
-
-    // Команда добавления (execute: ничего, уже добавлено; undo: remove из pane + shapes)
-    public class AddShapeCommand implements Command {
+    // Команда добавления
+    public class AddShapeCommand implements CommandManager.Command {
         private final Node shape;
         private final AnchorPane pane;
+
         public AddShapeCommand(AnchorPane pane, Node shape) {
             this.pane = pane;
             this.shape = shape;
         }
+
         @Override
         public void execute() {
             // Уже добавлено в shapeService.addShape, так что ничего (или add в pane если нужно)
@@ -76,6 +68,7 @@ public class ShapeManager {
             shapeService.addShapeToList((ShapeBase) shape);
             System.out.println("DEBUG: Add execute - shape in pane, shapes count=" + shapeService.getShapeCount());
         }
+
         @Override
         public void undo() {
             pane.getChildren().remove(shape);
@@ -87,14 +80,16 @@ public class ShapeManager {
         }
     }
 
-    // Команда удаления (execute: remove из pane + shapes; undo: add в pane + shapes)
-    public class RemoveShapeCommand implements Command {
+    // Команда удаления
+    public class RemoveShapeCommand implements CommandManager.Command {
         private final Node shape;
         private final AnchorPane pane;
+
         public RemoveShapeCommand(AnchorPane pane, Node shape) {
             this.pane = pane;
             this.shape = shape;
         }
+
         @Override
         public void execute() {
             pane.getChildren().remove(shape);
@@ -104,6 +99,7 @@ public class ShapeManager {
             }
             System.out.println("DEBUG: Remove execute - shape removed from pane/shapes, count=" + shapeService.getShapeCount());
         }
+
         @Override
         public void undo() {
             if (!pane.getChildren().contains(shape)) {
@@ -115,15 +111,173 @@ public class ShapeManager {
         }
     }
 
+    // Команда для перемещения фигур
+    public class MoveShapeCommand implements CommandManager.Command {
+        private final ShapeBase shape;
+        private final double oldX, oldY, newX, newY;
+
+        public MoveShapeCommand(ShapeBase shape, double oldX, double oldY, double newX, double newY) {
+            this.shape = shape;
+            this.oldX = oldX;
+            this.oldY = oldY;
+            this.newX = newX;
+            this.newY = newY;
+        }
+
+        @Override
+        public void execute() {
+            shape.setPosition(newX, newY);
+        }
+
+        @Override
+        public void undo() {
+            shape.setPosition(oldX, oldY);
+        }
+    }
+
+    // Команда для изменения цвета
+    public class ChangeColorCommand implements CommandManager.Command {
+        private final ShapeBase shape;
+        private final Color oldStroke, oldFill, newStroke, newFill;
+
+        public ChangeColorCommand(ShapeBase shape, Color oldStroke, Color oldFill, Color newStroke, Color newFill) {
+            this.shape = shape;
+            this.oldStroke = oldStroke; this.oldFill = oldFill;
+            this.newStroke = newStroke; this.newFill = newFill;
+        }
+
+        @Override
+        public void execute() {
+            // Временно блокируем автосохранение и регистрацию команд
+            shape.setColorsSilent(newStroke, newFill);
+        }
+
+        @Override
+        public void undo() {
+            // Временно блокируем автосохранение и регистрацию команд
+            shape.setColorsSilent(oldStroke, oldFill);
+        }
+    }
+
+    // Команда для изменения размера
+    public class ResizeShapeCommand implements CommandManager.Command {
+        private final ShapeBase shape;
+        private final double oldX, oldY, oldWidth, oldHeight, newX, newY, newWidth, newHeight;
+
+        public ResizeShapeCommand(ShapeBase shape, double oldX, double oldY, double oldWidth, double oldHeight,
+                                  double newX, double newY, double newWidth, double newHeight) {
+            this.shape = shape;
+            this.oldX = oldX;
+            this.oldY = oldY;
+            this.oldWidth = oldWidth;
+            this.oldHeight = oldHeight;
+            this.newX = newX;
+            this.newY = newY;
+            this.newWidth = newWidth;
+            this.newHeight = newHeight;
+        }
+
+        @Override
+        public void execute() {
+            shape.setPosition(newX, newY);
+            shape.applyResize(newWidth, newHeight);  // Используем публичный метод
+        }
+
+        @Override
+        public void undo() {
+            shape.setPosition(oldX, oldY);
+            shape.applyResize(oldWidth, oldHeight);  // Используем публичный метод
+        }
+    }
+
+    // Команда для изменения шрифта текста
+    public class ChangeFontCommand implements CommandManager.Command {
+        private final TextShape textShape;
+        private final Font oldFont, newFont;
+
+        public ChangeFontCommand(TextShape textShape, Font oldFont, Font newFont) {
+            this.textShape = textShape;
+            this.oldFont = oldFont;
+            this.newFont = newFont;
+        }
+
+        @Override
+        public void execute() {
+            textShape.setFont(newFont);
+            textShape.calculateTextSize();
+        }
+
+        @Override
+        public void undo() {
+            textShape.setFont(oldFont);
+            textShape.calculateTextSize();
+        }
+    }
+
+    // Команда для изменения конечных точек линии
+    public class ChangeLinePointsCommand implements CommandManager.Command {
+        private final LineShape lineShape;
+        private final double oldStartX, oldStartY, oldEndX, oldEndY;
+        private final double newStartX, newStartY, newEndX, newEndY;
+
+        public ChangeLinePointsCommand(LineShape lineShape,
+                                       double oldStartX, double oldStartY, double oldEndX, double oldEndY,
+                                       double newStartX, double newStartY, double newEndX, double newEndY) {
+            this.lineShape = lineShape;
+            this.oldStartX = oldStartX;
+            this.oldStartY = oldStartY;
+            this.oldEndX = oldEndX;
+            this.oldEndY = oldEndY;
+            this.newStartX = newStartX;
+            this.newStartY = newStartY;
+            this.newEndX = newEndX;
+            this.newEndY = newEndY;
+        }
+
+        @Override
+        public void execute() {
+            lineShape.setLinePoints(newStartX, newStartY, newEndX, newEndY);
+        }
+
+        @Override
+        public void undo() {
+            lineShape.setLinePoints(oldStartX, oldStartY, oldEndX, oldEndY);
+        }
+    }
+
+    // Команда для поворота фигур
+    public class RotateShapeCommand implements CommandManager.Command {
+        private final ShapeBase shape;
+        private final double oldAngle, newAngle;
+
+        public RotateShapeCommand(ShapeBase shape, double oldAngle, double newAngle) {
+            this.shape = shape;
+            this.oldAngle = oldAngle;
+            this.newAngle = newAngle;
+        }
+
+        @Override
+        public void execute() {
+            shape.setRotation(newAngle);
+        }
+
+        @Override
+        public void undo() {
+            shape.setRotation(oldAngle);
+        }
+    }
+
     /**
      * Конструктор менеджера фигур
      *
-     * @param pane панель для отображения фигур
+     * @param pane         панель для отображения фигур
      * @param shapeService сервис для создания фигур
      */
-    public ShapeManager(AnchorPane pane, ShapeService shapeService) {
+    public ShapeManager(AnchorPane pane, ShapeService shapeService,
+                        Consumer<Boolean> onUndoStateChange, Consumer<Boolean> onRedoStateChange) {
         this.pane = pane;
         this.shapeService = shapeService;
+        this.commandManager = new CommandManager(onUndoStateChange, onRedoStateChange);
     }
 
     // -----------------------------------------------------------------
@@ -138,7 +292,7 @@ public class ShapeManager {
         setStartCoordinates(x, y);
 
         switch (tool) {
-            case SELECT -> handleSelectOnPress(x, y);
+            case SELECT -> handleSelectOnPress();
             case LINE, RECTANGLE, ELLIPSE, RHOMBUS -> createPreviewShape(tool, x, y);
             // ADD_DEVICE и TEXT обрабатываются в контроллере
         }
@@ -168,30 +322,33 @@ public class ShapeManager {
      * Добавление фигуры с записью в undo-стек
      */
     public void addShape(Node shape) {
-        // shape уже добавлена в shapes/pane через shapeService.addShape (в createFinalShape или контроллере)
         AddShapeCommand cmd = new AddShapeCommand(pane, shape);
-        cmd.execute();  // На всякий: убедиться в pane
-        undoStack.push(cmd);
-        redoStack.clear();  // Стандартно: стираем redo при новом действии
+        commandManager.execute(cmd);  // Используем CommandManager вместо прямого управления
         if (onShapeAdded != null) {
             onShapeAdded.run();
         }
-        System.out.println("DEBUG: AddShape pushed to undoStack, count=" + shapeService.getShapeCount());
+        System.out.println("DEBUG: AddShape executed via CommandManager");
     }
 
     /**
      * Удаление фигуры с записью в undo-стек
      */
     public void removeShape(Node shape) {
-        System.out.println("DEBUG: removeShape called, before count=" + shapeService.getShapeCount());
         RemoveShapeCommand cmd = new RemoveShapeCommand(pane, shape);
-        cmd.execute();  // Удаляем сразу
-        undoStack.push(cmd);
-        redoStack.clear();
+        commandManager.execute(cmd);  // Используем CommandManager вместо прямого управления
         if (onShapeRemoved != null) {
             onShapeRemoved.run();
         }
-        System.out.println("DEBUG: removeShape pushed to undoStack, after count=" + shapeService.getShapeCount());
+        System.out.println("DEBUG: RemoveShape executed via CommandManager");
+    }
+
+    /**
+     * Регистрация поворота фигуры в undo-стек
+     */
+    public void registerRotation(ShapeBase shape, double oldAngle, double newAngle) {
+        RotateShapeCommand cmd = new RotateShapeCommand(shape, oldAngle, newAngle);
+        commandManager.execute(cmd);
+        System.out.println("DEBUG: Rotation registered via CommandManager");
     }
 
     // -----------------------------------------------------------------
@@ -202,54 +359,86 @@ public class ShapeManager {
      * Отмена последнего действия
      */
     public void undo() {
-        if (!undoStack.isEmpty()) {
-            Command cmd = undoStack.pop();
-            cmd.undo();  // Отменяем последнее действие
+        commandManager.undo();
 
-            // ВЫЗОВ КОЛБЭКА ДЛЯ АВТОСОХРАНЕНИЯ
-            if (cmd instanceof AddShapeCommand && onShapeRemoved != null) {
-                onShapeRemoved.run();
-            } else if (cmd instanceof RemoveShapeCommand && onShapeAdded != null) {
-                onShapeAdded.run();
-            }
-
-            redoStack.push(cmd);  // Сохраняем для redo
-            updateSelectionAfterUndoRedo();
-            System.out.println("DEBUG: Undo executed, undoStack size=" + undoStack.size() + ", redoStack size=" + redoStack.size() + ", shapes count=" + shapeService.getShapeCount());
-        } else {
-            System.out.println("DEBUG: Undo - stack empty");
+        // Автосохранение после undo
+        if (onShapeAdded != null || onShapeRemoved != null) {
+            // Можно добавить логику для определения типа изменения если нужно
+            if (onShapeAdded != null) onShapeAdded.run();
         }
+
+        updateSelectionAfterUndoRedo();
     }
 
     /**
      * Повтор последнего отмененного действия
      */
     public void redo() {
-        if (!redoStack.isEmpty()) {
-            Command cmd = redoStack.pop();
-            cmd.execute();  // Повторяем отменённое действие
+        commandManager.redo();
 
-            // ВЫЗОВ КОЛБЭКА ДЛЯ АВТОСОХРАНЕНИЯ
-            if (cmd instanceof AddShapeCommand && onShapeAdded != null) {
-                onShapeAdded.run();
-            } else if (cmd instanceof RemoveShapeCommand && onShapeRemoved != null) {
-                onShapeRemoved.run();
-            }
-
-            undoStack.push(cmd);  // Сохраняем для повторного undo
-            updateSelectionAfterUndoRedo();
-            System.out.println("DEBUG: Redo executed, undoStack size=" + undoStack.size() + ", redoStack size=" + redoStack.size() + ", shapes count=" + shapeService.getShapeCount());
-        } else {
-            System.out.println("DEBUG: Redo - stack empty");
+        // Автосохранение после redo
+        if (onShapeAdded != null || onShapeRemoved != null) {
+            if (onShapeAdded != null) onShapeAdded.run();
         }
+
+        updateSelectionAfterUndoRedo();
+    }
+
+    /**
+     * Регистрация перемещения фигуры в undo-стек
+     */
+    public void registerMove(ShapeBase shape, double oldX, double oldY, double newX, double newY) {
+        MoveShapeCommand cmd = new MoveShapeCommand(shape, oldX, oldY, newX, newY);
+        commandManager.execute(cmd);
+        System.out.println("DEBUG: Move registered via CommandManager");
+    }
+
+    /**
+     * Регистрация изменения цвета в undo-стек
+     */
+    public void registerColorChange(ShapeBase shape, Color oldStroke, Color oldFill, Color newStroke, Color newFill) {
+        ChangeColorCommand cmd = new ChangeColorCommand(shape, oldStroke, oldFill, newStroke, newFill);
+        commandManager.execute(cmd);
+        System.out.println("DEBUG: Color change registered via CommandManager");
+    }
+
+    /**
+     * Регистрация изменения размеров фигуры в undo-стек
+     */
+    public void registerResize(ShapeBase shape, double oldX, double oldY, double oldWidth, double oldHeight,
+                               double newX, double newY, double newWidth, double newHeight) {
+        ResizeShapeCommand cmd = new ResizeShapeCommand(shape, oldX, oldY, oldWidth, oldHeight, newX, newY, newWidth, newHeight);
+        commandManager.execute(cmd);
+        System.out.println("DEBUG: Resize registered via CommandManager");
+    }
+
+    /**
+     * Регистрация изменения шрифта в undo-стек
+     */
+    public void registerFontChange(TextShape textShape, Font oldFont, Font newFont) {
+        ChangeFontCommand cmd = new ChangeFontCommand(textShape, oldFont, newFont);
+        commandManager.execute(cmd);
+        System.out.println("DEBUG: Font change registered via CommandManager");
+    }
+
+    /**
+     * Регистрация изменения конечных точек линии в undo-стек
+     */
+    public void registerLinePointsChange(LineShape lineShape,
+                                         double oldStartX, double oldStartY, double oldEndX, double oldEndY,
+                                         double newStartX, double newStartY, double newEndX, double newEndY) {
+        ChangeLinePointsCommand cmd = new ChangeLinePointsCommand(lineShape,
+                oldStartX, oldStartY, oldEndX, oldEndY,
+                newStartX, newStartY, newEndX, newEndY);
+        commandManager.execute(cmd);
+        System.out.println("DEBUG: Line points change registered via CommandManager");
     }
 
     /**
      * Очистка стеков undo/redo
      */
     public void clearUndoRedo() {
-        undoStack.clear();
-        redoStack.clear();
+        commandManager.clear();
     }
 
     // -----------------------------------------------------------------
@@ -349,6 +538,13 @@ public class ShapeManager {
 
     public AnchorPane getPane() {
         return pane;
+    }
+
+    /**
+     * Геттер для колбэка автосохранения
+     */
+    public Runnable getOnShapeAdded() {
+        return onShapeAdded;
     }
     // -----------------------------------------------------------------
     // PRIVATE METHODS - PREVIEW SHAPES
@@ -514,15 +710,13 @@ public class ShapeManager {
 
         // ТОЧНО ТАКАЯ ЖЕ ЛОГИКА КАК В RHOMBUSSHAPE
         double leftTopY = 0;
-        double leftBottomY = height;
         double rightTopY = 0;
-        double rightBottomY = height;
 
         // Левый треугольник
         rhombusPath.getElements().addAll(
                 new MoveTo(0, leftTopY),           // Левый верх (0)
                 new LineTo(centerX, centerY),      // Центр
-                new LineTo(0, leftBottomY),        // Левый низ (height)
+                new LineTo(0, height),        // Левый низ (height)
                 new ClosePath()
         );
 
@@ -530,7 +724,7 @@ public class ShapeManager {
         rhombusPath.getElements().addAll(
                 new MoveTo(width, rightTopY),      // Правый верх (0)
                 new LineTo(centerX, centerY),      // Центр
-                new LineTo(width, rightBottomY),   // Правый низ (height)
+                new LineTo(width, height),   // Правый низ (height)
                 new ClosePath()
         );
     }
@@ -571,7 +765,7 @@ public class ShapeManager {
     /**
      * Обработка выбора фигуры при нажатии (fallback для не-ShapeHandler фигур)
      */
-    private void handleSelectOnPress(double x, double y) {
+    private void handleSelectOnPress() {
         deselectShape();
     }
 
@@ -617,10 +811,10 @@ public class ShapeManager {
                 double height = Math.abs(endY - startY);
                 yield new double[]{x, y, width, height};
             }
-            case RHOMBUS -> new double[]{startX, startY, endX, endY};  // Новое: Точные start/end для бабочки (не min/width)
+            case RHOMBUS ->
+                    new double[]{startX, startY, endX, endY};  // Новое: Точные start/end для бабочки (не min/width)
             case LINE -> new double[]{startX, startY, endX, endY};
             case TEXT -> new double[]{startX, startY, 0};
-            default -> new double[]{};
         };
     }
 

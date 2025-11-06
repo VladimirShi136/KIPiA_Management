@@ -1,5 +1,6 @@
 package com.kipia.management.kipia_management.shapes;
 
+import com.kipia.management.kipia_management.managers.ClipboardManager;
 import com.kipia.management.kipia_management.managers.ShapeManager;
 import com.kipia.management.kipia_management.utils.CustomAlert;
 import javafx.geometry.Bounds;
@@ -26,7 +27,6 @@ import java.util.function.Consumer;
 public class TextShape extends ShapeBase {
     private final Text text;
     private final Color defaultFill = Color.BLACK;
-    private final Color selectedFill = Color.DODGERBLUE;
     private final ShapeManager shapeManager;
     private final Consumer<String> statusSetter;
 
@@ -122,22 +122,41 @@ public class TextShape extends ShapeBase {
     private void setupContextMenu() {
         ContextMenu contextMenu = new ContextMenu();
 
-        // Пункт "Изменить цвет текста"
+        // ДОБАВИТЬ пункт поворота
+        MenuItem rotateItem = new MenuItem("Повернуть");
+        rotateItem.setOnAction(event -> {
+            double newAngle = (rotationAngle + 45) % 360;
+            setRotation(newAngle);
+
+            if (shapeManager != null) {
+                shapeManager.registerRotation(this, rotationAngle, newAngle);
+                if (shapeManager.getOnShapeAdded() != null) {
+                    shapeManager.getOnShapeAdded().run();
+                }
+            }
+        });
+
+        // Пункт "Копировать"
+        MenuItem copyItem = new MenuItem("Копировать");
+        copyItem.setOnAction(event -> copyToClipboard());
+
+        // Пункт "Вставить"
+        MenuItem pasteItem = new MenuItem("Вставить");
+        pasteItem.setOnAction(event -> pasteFromClipboard());
+        pasteItem.disableProperty().bind(ClipboardManager.hasShapeDataProperty().not());
+
+        // Специфичные для текста пункты
         MenuItem textColorItem = new MenuItem("Изменить цвет текста");
         textColorItem.setOnAction(e -> changeTextColor());
 
-        // Пункт "Изменить текст"
         MenuItem editTextItem = new MenuItem("Изменить текст");
         editTextItem.setOnAction(e -> openTextEditDialog());
 
-        // Пункт "Изменить шрифт"
         MenuItem changeFontItem = new MenuItem("Изменить шрифт");
         changeFontItem.setOnAction(e -> openFontDialog());
 
-        // Разделитель
         SeparatorMenuItem separator = new SeparatorMenuItem();
 
-        // Пункт "Удалить"
         MenuItem deleteItem = new MenuItem("Удалить");
         deleteItem.setOnAction(e -> {
             if (shapeManager != null) {
@@ -145,7 +164,7 @@ public class TextShape extends ShapeBase {
             }
         });
 
-        contextMenu.getItems().addAll(textColorItem, editTextItem, changeFontItem, separator, deleteItem);
+        contextMenu.getItems().addAll(rotateItem, copyItem, pasteItem, textColorItem, editTextItem, changeFontItem, separator, deleteItem);
 
         setOnContextMenuRequested(event -> {
             contextMenu.show(this, event.getScreenX(), event.getScreenY());
@@ -196,6 +215,9 @@ public class TextShape extends ShapeBase {
      * ДИАЛОГ изменения шрифта
      */
     private void openFontDialog() {
+        // СОХРАНЯЕМ СТАРЫЙ ШРИФТ ДЛЯ UNDO
+        Font oldFont = text.getFont();
+
         // СОЗДАЕМ диалог для выбора шрифта и размера
         Dialog<Font> dialog = new Dialog<>();
         dialog.setTitle("Изменение шрифта");
@@ -252,9 +274,25 @@ public class TextShape extends ShapeBase {
         Optional<Font> result = dialog.showAndWait();
         result.ifPresent(newFont -> {
             text.setFont(newFont);
-            calculateTextSize(); // ПЕРЕСЧИТЫВАЕМ размеры
+            calculateTextSize();
+
+            // РЕГИСТРИРУЕМ ИЗМЕНЕНИЕ ШРИФТА В UNDO/REDO
+            if (shapeManager != null && !newFont.equals(oldFont)) {
+                shapeManager.registerFontChange(this, oldFont, newFont);
+                // ДОБАВИТЬ АВТОСОХРАНЕНИЕ ПРИ ИЗМЕНЕНИИ ШРИФТА
+                if (shapeManager.getOnShapeAdded() != null) {
+                    shapeManager.getOnShapeAdded().run();
+                }
+            }
+
             statusSetter.accept("Шрифт изменен");
         });
+    }
+
+    @Override
+    public void makeRotationHandleVisible() {
+        // Для текста тоже можно вращать, но нужно аккуратно с размерами
+        super.makeRotationHandleVisible();
     }
 
     @Override
@@ -278,6 +316,15 @@ public class TextShape extends ShapeBase {
         return "TEXT";
     }
 
+    /**
+     * Переопределяем метод для текста - поворачиваем весь Group
+     */
+    @Override
+    public void setRotation(double angle) {
+        // Используем публичный метод setRotation из ShapeBase
+        super.setRotation(angle);
+    }
+
     @Override
     public String serialize() {
         double[] pos = getPosition();
@@ -286,18 +333,23 @@ public class TextShape extends ShapeBase {
         String textContent = getText();
         Font font = text.getFont();
 
-        // Сохраняем размер шрифта и стиль
+        // Экранируем разделители в тексте
+        String escapedText = textContent.replace("|", "\\|");
+
+        // Сохраняем шрифт
         double fontSize = font.getSize();
         String fontFamily = font.getFamily();
         String fontStyle = font.getStyle();
 
-        // Экранируем разделители в тексте
-        String escapedText = textContent.replace("|", "\\|");
-
-        return String.format(java.util.Locale.US, "TEXT|%.2f|%.2f|%.2f|%.2f|%s|%.1f|%s|%s%s",
+        // Формат: TEXT|X|Y|W|H|ROTATION|TEXT|FONT_SIZE|FONT_FAMILY|FONT_STYLE|COLORS
+        String result = String.format(java.util.Locale.US, "TEXT|%.2f|%.2f|%.2f|%.2f|%.1f|%s|%.1f|%s|%s%s",
                 pos[0], pos[1], width, height,
+                rotationAngle,
                 escapedText, fontSize, fontFamily, fontStyle,
-                serializeColors()); // Добавляем цвета в конец
+                serializeColors());
+
+        System.out.println("DEBUG: Text serialized: " + result);
+        return result;
     }
 
     /**
@@ -333,6 +385,11 @@ public class TextShape extends ShapeBase {
             String newText = result.get().trim();
             setText(newText);
             statusSetter.accept("Текст изменен");
+
+            // ДОБАВИТЬ АВТОСОХРАНЕНИЕ ПРИ ИЗМЕНЕНИИ ТЕКСТА
+            if (shapeManager != null && shapeManager.getOnShapeAdded() != null) {
+                shapeManager.getOnShapeAdded().run();
+            }
         }
     }
 }
