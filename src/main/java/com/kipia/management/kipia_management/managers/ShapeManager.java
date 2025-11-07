@@ -1,5 +1,6 @@
 package com.kipia.management.kipia_management.managers;
 
+import com.kipia.management.kipia_management.services.ShapeService;
 import com.kipia.management.kipia_management.shapes.*;
 import javafx.scene.Node;
 import javafx.scene.layout.AnchorPane;
@@ -112,7 +113,7 @@ public class ShapeManager {
     }
 
     // Команда для перемещения фигур
-    public class MoveShapeCommand implements CommandManager.Command {
+    public static class MoveShapeCommand implements CommandManager.Command {
         private final ShapeBase shape;
         private final double oldX, oldY, newX, newY;
 
@@ -136,7 +137,7 @@ public class ShapeManager {
     }
 
     // Команда для изменения цвета
-    public class ChangeColorCommand implements CommandManager.Command {
+    public static class ChangeColorCommand implements CommandManager.Command {
         private final ShapeBase shape;
         private final Color oldStroke, oldFill, newStroke, newFill;
 
@@ -160,7 +161,7 @@ public class ShapeManager {
     }
 
     // Команда для изменения размера
-    public class ResizeShapeCommand implements CommandManager.Command {
+    public static class ResizeShapeCommand implements CommandManager.Command {
         private final ShapeBase shape;
         private final double oldX, oldY, oldWidth, oldHeight, newX, newY, newWidth, newHeight;
 
@@ -191,7 +192,7 @@ public class ShapeManager {
     }
 
     // Команда для изменения шрифта текста
-    public class ChangeFontCommand implements CommandManager.Command {
+    public static class ChangeFontCommand implements CommandManager.Command {
         private final TextShape textShape;
         private final Font oldFont, newFont;
 
@@ -215,7 +216,7 @@ public class ShapeManager {
     }
 
     // Команда для изменения конечных точек линии
-    public class ChangeLinePointsCommand implements CommandManager.Command {
+    public static class ChangeLinePointsCommand implements CommandManager.Command {
         private final LineShape lineShape;
         private final double oldStartX, oldStartY, oldEndX, oldEndY;
         private final double newStartX, newStartY, newEndX, newEndY;
@@ -246,7 +247,7 @@ public class ShapeManager {
     }
 
     // Команда для поворота фигур
-    public class RotateShapeCommand implements CommandManager.Command {
+    public static class RotateShapeCommand implements CommandManager.Command {
         private final ShapeBase shape;
         private final double oldAngle, newAngle;
 
@@ -288,11 +289,13 @@ public class ShapeManager {
      * Обработка нажатия мыши для указанного инструмента
      */
     public void onMousePressedForTool(Tool tool, double x, double y) {
+        // Если инструмент null - этот метод не должен вызываться
+        if (tool == null) return;
+
         clearPreview();
         setStartCoordinates(x, y);
 
         switch (tool) {
-            case SELECT -> handleSelectOnPress();
             case LINE, RECTANGLE, ELLIPSE, RHOMBUS -> createPreviewShape(tool, x, y);
             // ADD_DEVICE и TEXT обрабатываются в контроллере
         }
@@ -314,7 +317,23 @@ public class ShapeManager {
         if (tool == Tool.SELECT) return;
         if (previewShape == null) return;
 
-        createFinalShape(tool, x, y);
+        // ПРОВЕРЯЕМ РАЗМЕР - создаем фигуру только если она достаточно большая
+        double width = Math.abs(x - startX);
+        double height = Math.abs(y - startY);
+
+        double minSize = 10.0; // Минимальный размер фигуры
+
+        if (width >= minSize && height >= minSize) {
+            createFinalShape(tool, x, y);
+            statusSetter.accept("Фигура добавлена");
+        } else {
+            // Фигура слишком маленькая - не создаем
+            System.out.println("DEBUG: Shape too small - not creating (" + width + "x" + height + ")");
+            if (statusSetter != null) {
+                statusSetter.accept("Фигура слишком маленькая");
+            }
+        }
+
         clearPreview();
     }
 
@@ -515,11 +534,7 @@ public class ShapeManager {
     }
 
     public boolean isSelectToolActive() {
-        return isSelectToolActive;
-    }
-
-    public void setSelectToolActive(boolean active) {
-        this.isSelectToolActive = active;
+        return false;
     }
 
     public void setShapeService(ShapeService shapeService) {

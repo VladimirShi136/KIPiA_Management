@@ -128,7 +128,7 @@ public class DevicesGroupedController {
 
         //Колонка "Фото"
         TreeTableColumn<TreeRowItem, Void> photoCol = new TreeTableColumn<>("Фото");
-        photoCol.setPrefWidth(145);
+        photoCol.setPrefWidth(90);
         photoCol.setCellFactory(createPhotoCellFactory());
 
         // Колонка "Доп. Информация."
@@ -315,18 +315,35 @@ public class DevicesGroupedController {
 
     private Callback<TreeTableColumn<TreeRowItem, Void>, TreeTableCell<TreeRowItem, Void>> createPhotoCellFactory() {
         return col -> new TreeTableCell<>() {
-            private final Button addBtn = new Button("Добавить");
-            private final Button viewBtn = new Button("Просмотр");
+            private final Button addBtn = new Button();
+            private final Button viewBtn = new Button();
 
             {
+                // Создаем иконки
+                ImageView addIcon = createIcon("/images/add_photo.png", 12, 12);
+                ImageView viewIcon = createIcon("/images/view.png", 12, 12);
+
+                addBtn.setGraphic(addIcon);
+                viewBtn.setGraphic(viewIcon);
+
+                // Tooltips для пояснения
+                Tooltip addTooltip = new Tooltip("Добавить фото");
+                Tooltip viewTooltip = new Tooltip("Просмотреть фото");
+                addBtn.setTooltip(addTooltip);
+                viewBtn.setTooltip(viewTooltip);
+
                 addBtn.getStyleClass().addAll("table-button-add");
                 viewBtn.getStyleClass().addAll("table-button-view");
                 StyleUtils.applyHoverAndAnimation(addBtn,
                         "table-button-add", "table-button-add-hover");
                 StyleUtils.applyHoverAndAnimation(viewBtn,
                         "table-button-view", "table-button-view-hover");
-                addBtn.setPrefSize(65, 22);
-                viewBtn.setPrefSize(65, 22);
+
+                // Уменьшаем размер кнопок для иконок
+                addBtn.setPrefSize(32, 22);
+                viewBtn.setPrefSize(32, 22);
+                addBtn.setMinSize(32, 22);
+                viewBtn.setMinSize(32, 22);
 
                 addBtn.setOnAction(e -> {
                     Device device = getCurrentDevice();
@@ -341,6 +358,29 @@ public class DevicesGroupedController {
                         viewPhotos(device);
                     }
                 });
+            }
+
+            private ImageView createIcon(String path, double width, double height) {
+                try {
+                    Image image = new Image(Objects.requireNonNull(getClass().getResourceAsStream(path)));
+                    ImageView imageView = new ImageView(image);
+                    imageView.setFitWidth(width);
+                    imageView.setFitHeight(height);
+                    imageView.setPreserveRatio(true);
+                    return imageView;
+                } catch (Exception e) {
+                    // Fallback - создаем текстовую метку если иконка не найдена
+                    logger.warning("Не удалось загрузить иконку: " + path);
+                    return createTextIcon("+", width, height);
+                }
+            }
+
+            private ImageView createTextIcon(String text, double width, double height) {
+                // Создаем временное решение для отображения текста вместо иконки
+                ImageView fallback = new ImageView();
+                fallback.setFitWidth(width);
+                fallback.setFitHeight(height);
+                return fallback;
             }
 
             private Device getCurrentDevice() {
@@ -401,7 +441,7 @@ public class DevicesGroupedController {
                 } else {
                     // Показываем кнопки только для DeviceItem, для GroupItem пусто
                     if (getCurrentDevice() != null) {
-                        setGraphic(new HBox(8, addBtn, viewBtn));
+                        setGraphic(new HBox(4, addBtn, viewBtn)); // Уменьшил расстояние между кнопками
                     } else {
                         setGraphic(null);
                     }

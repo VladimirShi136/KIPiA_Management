@@ -6,6 +6,7 @@ import javafx.geometry.Insets;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.control.*;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
@@ -149,7 +150,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      *
      * @return строковый идентификатор типа фигуры
      */
-    protected abstract String getShapeType();
+    public abstract String getShapeType();
 
     // ============================================================
     // RESIZE HANDLES MANAGEMENT
@@ -281,12 +282,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      */
     @Override
     public void makeResizeHandlesVisible() {
-        // Проверяем, что инструмент SELECT активен И фигура выделена
-        if (shapeManager != null && !shapeManager.isSelectToolActive()) {
-            hideResizeHandles();
-            return;
-        }
-
         if (resizeHandles == null) {
             createResizeHandles();
         }
@@ -315,15 +310,63 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      */
     private void setupEventHandlers() {
         setupDragHandlers();
+        setupDoubleClickForSelection();
     }
 
     /**
      * Настройка обработчиков перетаскивания
      */
     private void setupDragHandlers() {
-        setOnMousePressed(this::handleDragPressed);
-        setOnMouseDragged(this::handleDragDragged);
-        setOnMouseReleased(this::handleDragReleased);
+        setOnMousePressed(event -> {
+            if (event.isPrimaryButtonDown()) { // ТОЛЬКО левая кнопка
+                handleDragPressed(event);
+            }
+        });
+
+        // Обработчик перетаскивания - проверяем ЛЕВУЮ кнопку
+        setOnMouseDragged(event -> {
+            if (event.isPrimaryButtonDown()) { // ТОЛЬКО левая кнопка
+                handleDragDragged(event);
+            }
+        });
+
+        // Обработчик отпускания - проверяем ЛЕВУЮ кнопку
+        setOnMouseReleased(event -> {
+            if (event.getButton() == MouseButton.PRIMARY) { // ТОЛЬКО левая кнопка
+                handleDragReleased(event);
+            }
+        });
+    }
+
+    /**
+     * Настройка обработки двойного клика для выделения
+     */
+    private void setupDoubleClickForSelection() {
+        setOnMouseClicked(event -> {
+            if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2) {
+                // Двойной клик левой кнопкой - выделяем фигуру
+                handleDoubleClickSelection();
+                event.consume();
+            }
+        });
+    }
+
+    /**
+     * Обработка выделения по двойному клику
+     */
+    private void handleDoubleClickSelection() {
+        // Выделяем эту фигуру
+        if (onSelectCallback != null) {
+            onSelectCallback.accept(this);
+        }
+
+        // Показываем handles для ресайза и поворота
+        makeResizeHandlesVisible();
+        makeRotationHandleVisible();
+
+        if (statusSetter != null) {
+            statusSetter.accept("Фигура выделена: " + getShapeType());
+        }
     }
 
     /**
@@ -354,11 +397,10 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         handle.setOnMouseDragged(null);
         handle.setOnMouseReleased(null);
 
-        // Новые события с проверкой SELECT внутри (дополнительная защита)
         handle.setOnMousePressed(event -> {
-            // Если не SELECT — игнорируем (handles должны быть скрыты, но на всякий)
-            if (shapeManager != null && !shapeManager.isSelectToolActive()) {
-                event.consume();  // Consume, чтобы не протекало
+            // УБИРАЕМ проверку на SELECT - только проверка левой кнопки
+            if (!event.isPrimaryButtonDown()) {
+                event.consume();
                 return;
             }
             Point2D pressPoint = pane.sceneToLocal(event.getSceneX(), event.getSceneY());
@@ -367,9 +409,9 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         });
 
         handle.setOnMouseDragged(event -> {
-            // Проверка SELECT при драге
-            if (shapeManager != null && !shapeManager.isSelectToolActive()) {
-                event.consume();  // Consume для безопасности
+            // УБИРАЕМ проверку на SELECT - только проверка левой кнопки
+            if (!event.isPrimaryButtonDown()) {
+                event.consume();
                 return;
             }
             Point2D currentPoint = pane.sceneToLocal(event.getSceneX(), event.getSceneY());
@@ -378,7 +420,9 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         });
 
         handle.setOnMouseReleased(event -> {
-            handleResizeRelease();
+            if (event.getButton() == MouseButton.PRIMARY) {
+                handleResizeRelease();
+            }
             event.consume();
         });
     }
@@ -736,7 +780,8 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      */
     private void setupRotationHandleEvents() {
         rotationHandle.setOnMousePressed(event -> {
-            if (shapeManager == null || !shapeManager.isSelectToolActive()) {
+            if (shapeManager == null || !shapeManager.isSelectToolActive() ||
+                    !event.isPrimaryButtonDown()) {
                 event.consume();
                 return;
             }
@@ -755,7 +800,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         });
 
         rotationHandle.setOnMouseDragged(event -> {
-            if (!isRotating) return;
+            if (!isRotating || !event.isPrimaryButtonDown()) return;
 
             Point2D center = getCenterInPane();
             Point2D mousePos = pane.sceneToLocal(event.getSceneX(), event.getSceneY());
@@ -779,7 +824,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         });
 
         rotationHandle.setOnMouseReleased(event -> {
-            if (isRotating) {
+            if (isRotating && event.getButton() == MouseButton.PRIMARY) {
                 isRotating = false;
 
                 // Регистрируем поворот в undo/redo

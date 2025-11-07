@@ -6,21 +6,17 @@ import com.kipia.management.kipia_management.managers.ZoomManager;
 import com.kipia.management.kipia_management.models.Device;
 import com.kipia.management.kipia_management.models.Scheme;
 import com.kipia.management.kipia_management.models.DeviceLocation;
-import com.kipia.management.kipia_management.services.DeviceDAO;
-import com.kipia.management.kipia_management.services.DeviceIconService;
-import com.kipia.management.kipia_management.services.SchemeDAO;
-import com.kipia.management.kipia_management.services.DeviceLocationDAO;
+import com.kipia.management.kipia_management.services.*;
 import com.kipia.management.kipia_management.shapes.*;
 import com.kipia.management.kipia_management.utils.CustomAlert;
 import com.kipia.management.kipia_management.utils.StyleUtils;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
-import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.control.*;
 import javafx.scene.effect.DropShadow;
-import javafx.scene.image.ImageView;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.Node;
@@ -84,7 +80,7 @@ public class SchemeEditorController {
 
     private Scheme currentScheme;
     private ObservableList<Device> deviceList;
-    private ShapeManager.Tool currentTool = ShapeManager.Tool.SELECT;
+    private ShapeManager.Tool currentTool = null;
 
     // ============================================================
     // DEPENDENCY INJECTION API
@@ -157,6 +153,9 @@ public class SchemeEditorController {
             initializeServices();
             loadInitialData();  // DAO-dependent
             setupInitialScheme();  // DAO
+
+            // Устанавливаем статус "без инструмента"
+            statusLabel.setText("Готов - выберите инструмент или работайте с фигурами");
         } catch (Exception e) {
             LOGGER.severe("Ошибка в init(): " + e.getMessage());
             e.printStackTrace();
@@ -313,10 +312,8 @@ public class SchemeEditorController {
             schemePane.setFocusTraversable(true);
 
             // ВРЕМЕННО: Добавьте фильтр событий для отладки
-            schemePane.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> {
-                System.out.println("DEBUG: Pane Mouse Pressed - Scene: (" +
-                        event.getSceneX() + ", " + event.getSceneY() + ")");
-            });
+            schemePane.addEventFilter(MouseEvent.MOUSE_PRESSED, event -> System.out.println("DEBUG: Pane Mouse Pressed - Scene: (" +
+                    event.getSceneX() + ", " + event.getSceneY() + ")"));
 
             // ВАЖНО: Добавьте обработчик для MOUSE_RELEASED на всю панель
             schemePane.addEventFilter(MouseEvent.MOUSE_RELEASED, event -> {
@@ -342,24 +339,6 @@ public class SchemeEditorController {
             });
         }
         setupPaneKeyHandlers();
-    }
-
-    /**
-     * Обработка нажатия клавиш
-     */
-    private void handleKeyPress(javafx.scene.input.KeyEvent event) {
-        if (isShapeSelected() && currentTool == ShapeManager.Tool.SELECT) {
-            if (event.isControlDown()) {
-                switch (event.getCode()) {
-                    case C -> copySelectedShape();
-                    case V -> pasteShape();
-                }
-            } else {
-                switch (event.getCode()) {
-                    case DELETE, BACK_SPACE -> deleteSelectedShape();
-                }
-            }
-        }
     }
 
     /**
@@ -456,7 +435,6 @@ public class SchemeEditorController {
      * Настройка кнопок для инструментов рисования
      */
     private void setupShapeToolButtons() {
-        selectToolBtn.setOnAction(e -> setCurrentTool(ShapeManager.Tool.SELECT, "Инструмент: Выбор"));
         lineToolBtn.setOnAction(e -> setCurrentTool(ShapeManager.Tool.LINE, "Инструмент: Линия"));
         rectToolBtn.setOnAction(e -> setCurrentTool(ShapeManager.Tool.RECTANGLE, "Инструмент: Прямоугольник"));
         ellipseToolBtn.setOnAction(e -> setCurrentTool(ShapeManager.Tool.ELLIPSE, "Инструмент: Эллипс"));
@@ -557,9 +535,8 @@ public class SchemeEditorController {
      */
     private void setCurrentTool(ShapeManager.Tool tool, String statusMessage) {
         currentTool = tool;
-        shapeManager.setSelectToolActive(tool == ShapeManager.Tool.SELECT);
         statusLabel.setText(statusMessage);
-        shapeManager.deselectShape();
+        shapeManager.deselectShape(); // Снимаем выделение при смене инструмента
     }
 
     // ============================================================
@@ -683,19 +660,20 @@ public class SchemeEditorController {
         try {
             currentScheme = scheme;
 
-            // Обновляем текущую схему в сервисе
             if (deviceIconService != null) {
                 deviceIconService.setCurrentScheme(scheme);
             }
 
             clearSchemePane();
             loadSchemeContent(scheme);
-            addVisibleBorder();  // Пересоздаем квадрат
+            addVisibleBorder();
 
-            // Автоматически центрируем на квадрате
             if (zoomManager != null) {
                 zoomManager.setZoom(0.33);
-                zoomManager.centerOnBorder();
+                // ТОЛЬКО ОДИН вызов с задержкой
+                javafx.application.Platform.runLater(() -> {
+                    zoomManager.centerOnBorder();
+                });
             }
 
             refreshAvailableDevices();
@@ -751,16 +729,19 @@ public class SchemeEditorController {
             // 3. Очищаем UI (панель, фигуры, etc.)
             clearSchemePane();
 
-            // 4. ВОССТАНАВЛИВАЕМ КВАДРАТ - это ключевое исправление!
+            // 4. ВОССТАНАВЛИВАЕМ КВАДРАТ
             addVisibleBorder();
 
             // 5. Обновляем доступные приборы
             refreshAvailableDevices();
 
-            // 6. Центрируем на квадрате
+            // 6. Центрируем на квадрате (БЕЗ лишних вызовов)
             if (zoomManager != null) {
                 zoomManager.setZoom(0.33);
-                zoomManager.centerOnBorder();
+                // ТОЛЬКО ОДИН вызов
+                javafx.application.Platform.runLater(() -> {
+                    zoomManager.centerOnBorder();
+                });
             }
 
             statusLabel.setText("Схема полностью очищена (зум 33%)");
@@ -824,9 +805,9 @@ public class SchemeEditorController {
         double borderHeight = 1200; // Высота
         borderRect = new Rectangle(borderWidth, borderHeight);
         borderRect.setId("visibleBorder");
-        borderRect.setStroke(Color.DARKRED); // Темно-красный вместо марун
-        borderRect.setStrokeWidth(10.0);     // Еще жирнее
-        borderRect.setStrokeType(StrokeType.OUTSIDE); // Обводка снаружи
+        borderRect.setStroke(Color.DARKRED);
+        borderRect.setStrokeWidth(10.0);
+        borderRect.setStrokeType(StrokeType.OUTSIDE);
         borderRect.setFill(Color.TRANSPARENT);
         borderRect.setMouseTransparent(true);
 
@@ -842,8 +823,12 @@ public class SchemeEditorController {
         borderRect.setLayoutY(0);
 
         schemePane.getChildren().addFirst(borderRect);
+
+        // ВАЖНО: Устанавливаем реальные размеры панели
         schemePane.setPrefWidth(borderWidth);
         schemePane.setPrefHeight(borderHeight);
+        schemePane.setMinWidth(borderWidth);
+        schemePane.setMinHeight(borderHeight);
 
         System.out.println("DEBUG: Rectangular border created at (0,0) with size " +
                 borderWidth + "x" + borderHeight);
@@ -854,29 +839,6 @@ public class SchemeEditorController {
      */
     private boolean isValidSchemeData(String schemeData) {
         return schemeData != null && !schemeData.trim().isEmpty();
-    }
-
-    /**
-     * Проверяет, выходят ли figure'ы за видимую область ScrollPane (viewport).
-     * Возвращает true, если хотя бы одна figure не видна полностью без scroll'a — тогда нужен fitZoom.
-     */
-    private boolean hasInvisibleFigures() {
-        if (schemeScrollPane == null || schemePane == null) return false;
-        Bounds viewportBounds = schemeScrollPane.getViewportBounds();
-        if (viewportBounds == null || viewportBounds.getWidth() == 0 || viewportBounds.getHeight() == 0) {
-            return false;
-        }
-        for (Node node : schemePane.getChildren()) {
-            if (node instanceof ShapeBase shape) {
-                Bounds shapeBounds = shape.getBoundsInParent();
-                if (shapeBounds != null &&
-                        (!viewportBounds.contains(shapeBounds.getMinX(), shapeBounds.getMinY()) ||
-                                !viewportBounds.contains(shapeBounds.getMaxX(), shapeBounds.getMaxY()))) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 
     /**
@@ -1030,24 +992,49 @@ public class SchemeEditorController {
     private void onPaneMousePressed(MouseEvent event) {
         if (schemePane == null || shapeManager == null) return;
 
-        // ПРАВИЛЬНОЕ преобразование координат
+        // ЕСЛИ ПРАВАЯ КНОПКА - НЕ ОБРАБАТЫВАЕМ создание фигур
+        if (event.isSecondaryButtonDown()) {
+            System.out.println("DEBUG: Right button pressed - ignoring shape creation");
+            return;
+        }
+
         Point2D panePoint = getAbsolutePaneCoordinates(event.getSceneX(), event.getSceneY());
         double x = panePoint.getX();
         double y = panePoint.getY();
 
-        System.out.println("DEBUG: Mouse pressed at scene(" + event.getSceneX() + "," + event.getSceneY() +
+        System.out.println("DEBUG: LEFT Mouse pressed at scene(" + event.getSceneX() + "," + event.getSceneY() +
                 ") -> pane(" + x + "," + y + ")");
 
+        // ЕСЛИ ИНСТРУМЕНТ НЕ ВЫБРАН - ничего не делаем (позволяем фигурам обрабатывать клик)
+        if (currentTool == null) {
+            System.out.println("DEBUG: No tool selected - allowing shape interaction");
+            return;
+        }
+
+        // ЕСЛИ ИНСТРУМЕНТ ВЫБРАН - начинаем создание фигуры (но не создаем сразу!)
         shapeManager.resetWasResized();
         if (currentTool == ShapeManager.Tool.ADD_DEVICE) {
-            addDeviceAt(x, y);
+            addDeviceAt(x, y); // Приборы создаются сразу по клику
         } else {
+            // Для фигур - только начинаем процесс создания (preview)
             shapeManager.onMousePressedForTool(currentTool, x, y);
         }
     }
 
     @FXML
     private void onPaneMouseDragged(MouseEvent event) {
+        // ЕСЛИ ПРАВАЯ КНОПКА - НЕ ОБРАБАТЫВАЕМ перетаскивание
+        if (event.isSecondaryButtonDown()) {
+            System.out.println("DEBUG: Right button dragged - ignoring");
+            return;
+        }
+
+        // ЕСЛИ ИНСТРУМЕНТ НЕ ВЫБРАН - ничего не делаем (позволяем фигурам обрабатывать drag)
+        if (currentTool == null) {
+            return;
+        }
+
+        // ЕСЛИ ИНСТРУМЕНТ ВЫБРАН - обрабатываем перетаскивание для создания фигур
         if (currentTool != ShapeManager.Tool.ADD_DEVICE) {
             Point2D panePoint = getAbsolutePaneCoordinates(event.getSceneX(), event.getSceneY());
             shapeManager.onMouseDraggedForTool(currentTool, panePoint.getX(), panePoint.getY());
@@ -1056,11 +1043,111 @@ public class SchemeEditorController {
 
     @FXML
     private void onPaneMouseReleased(MouseEvent event) {
-        if (currentTool == ShapeManager.Tool.TEXT) {
-            Point2D panePoint = getAbsolutePaneCoordinates(event.getSceneX(), event.getSceneY());
-            double x = panePoint.getX();
-            double y = panePoint.getY();
+        Point2D panePoint = getAbsolutePaneCoordinates(event.getSceneX(), event.getSceneY());
+        double x = panePoint.getX();
+        double y = panePoint.getY();
 
+        if (event.getButton() == MouseButton.PRIMARY) { // Левая кнопка
+            handleLeftMouseRelease(x, y);
+        } else if (event.getButton() == MouseButton.SECONDARY) { // Правая кнопка
+            handleRightMouseClick(x, y);
+        }
+
+        updateStatusAfterMouseRelease();
+    }
+
+    /**
+     * Обработка отпускания ПРАВОЙ кнопки мыши (контекстное меню)
+     */
+    private void handleRightMouseClick(double x, double y) {
+        // Находим элемент под курсором
+        Node clickedNode = findNodeAtPosition(x, y);
+
+        if (clickedNode != null) {
+            System.out.println("DEBUG: Right click on node: " + clickedNode.getClass().getSimpleName());
+
+            // Если кликнули по фигуре или прибору - их контекстные меню уже встроены
+            // и должны показаться автоматически благодаря встроенным обработчикам
+            // НИКАКИХ ДЕЙСТВИЙ НЕ ВЫПОЛНЯЕМ - только логируем
+        } else {
+            // Клик по пустой области - показываем общее контекстное меню
+            System.out.println("DEBUG: Right click on empty area - showing general context menu");
+            showGeneralContextMenu(x, y);
+        }
+    }
+
+    /**
+     * Поиск узла (фигуры или прибора) в указанной позиции
+     */
+    private Node findNodeAtPosition(double x, double y) {
+        // Ищем в обратном порядке (сверху вниз)
+        for (int i = schemePane.getChildren().size() - 1; i >= 0; i--) {
+            Node node = schemePane.getChildren().get(i);
+
+            // Пропускаем неинтерактивные элементы
+            if (node instanceof javafx.scene.shape.Rectangle && "visibleBorder".equals(node.getId())) {
+                continue;
+            }
+
+            // Пропускаем resize handles и rotation handles
+            if (node instanceof Circle) {
+                continue;
+            }
+
+            // Проверяем попадание в bounding box
+            if (node.getBoundsInParent().contains(x, y)) {
+                return node;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Общее контекстное меню для пустой области
+     */
+    private void showGeneralContextMenu(double x, double y) {
+        ContextMenu contextMenu = new ContextMenu();
+
+        MenuItem pasteItem = new MenuItem("Вставить");
+        MenuItem zoomToFitItem = new MenuItem("Подогнать по размеру");
+        MenuItem centerViewItem = new MenuItem("Центрировать вид");
+
+        // Исправляем: добавляем обработчики, а не вызываем методы сразу
+        pasteItem.setOnAction(e -> pasteShape());
+        zoomToFitItem.setOnAction(e -> {
+            if (zoomManager != null) {
+                zoomManager.zoomToFit();
+            }
+        });
+        centerViewItem.setOnAction(e -> {
+            if (zoomManager != null) {
+                zoomManager.centerOnBorder();
+            }
+        });
+
+        contextMenu.getItems().addAll(pasteItem, new SeparatorMenuItem(), zoomToFitItem, centerViewItem);
+
+        // Показываем меню в позиции клика
+        Point2D scenePoint = schemePane.localToScreen(x, y);
+        contextMenu.show(schemePane.getScene().getWindow(), scenePoint.getX(), scenePoint.getY());
+
+        // Устанавливаем обработчик закрытия меню
+        contextMenu.setOnHidden(e -> {
+            System.out.println("DEBUG: General context menu closed");
+        });
+    }
+
+    /**
+     * Обработка отпускания ЛЕВОЙ кнопки мыши
+     */
+    private void handleLeftMouseRelease(double x, double y) {
+        // ЕСЛИ ИНСТРУМЕНТ НЕ ВЫБРАН - ничего не делаем
+        if (currentTool == null) {
+            return;
+        }
+
+        if (currentTool == ShapeManager.Tool.TEXT) {
+            // Текст создается по клику (отдельный диалог)
             Optional<String> result = CustomAlert.showTextInputDialog("Добавление текста", "Введите текст для добавления на схему:", "Новый текст");
             if (result.isPresent()) {
                 String newText = result.get().trim();
@@ -1082,12 +1169,11 @@ public class SchemeEditorController {
                     statusLabel.setText("Текст не добавлен (пустой ввод)");
                 }
             }
-        } else if (currentTool != ShapeManager.Tool.SELECT) {
-            Point2D panePoint = getAbsolutePaneCoordinates(event.getSceneX(), event.getSceneY());
-            shapeManager.onMouseReleasedForTool(currentTool, panePoint.getX(), panePoint.getY());
+        } else {
+            // Для остальных фигур - создаем только если был drag (перетаскивание)
+            shapeManager.onMouseReleasedForTool(currentTool, x, y);
             autoSaveScheme();
         }
-        updateStatusAfterMouseRelease();
     }
 
     /**
@@ -1194,11 +1280,9 @@ public class SchemeEditorController {
         Device deviceToSave;
         double rotation = 0.0;
 
-        if (userData instanceof DeviceIconService.DeviceWithRotation) {
-            DeviceIconService.DeviceWithRotation deviceWithRotation =
-                    (DeviceIconService.DeviceWithRotation) userData;
-            deviceToSave = deviceWithRotation.device();
-            rotation = deviceWithRotation.rotation();
+        if (userData instanceof DeviceIconService.DeviceWithRotation(Device device1, double rotation1)) {
+            deviceToSave = device1;
+            rotation = rotation1;
         } else {
             deviceToSave = (Device) userData;
         }
@@ -1311,7 +1395,19 @@ public class SchemeEditorController {
         int savedCount = 0;
         for (Node node : schemePane.getChildren()) {
             if (isDeviceNode(node)) {
-                Device device = (Device) node.getUserData();
+                // Получаем устройство из UserData (может быть Device или DeviceWithRotation)
+                Object userData = node.getUserData();
+                Device device;
+
+                if (userData instanceof DeviceIconService.DeviceWithRotation) {
+                    device = ((DeviceIconService.DeviceWithRotation) userData).device();
+                } else if (userData instanceof Device) {
+                    device = (Device) userData;
+                } else {
+                    System.out.println("DEBUG: Unknown user data type: " + (userData != null ? userData.getClass().getName() : "null"));
+                    continue;
+                }
+
                 saveDeviceLocation(node, device);
                 savedCount++;
             }
@@ -1323,8 +1419,14 @@ public class SchemeEditorController {
      * Проверка, является ли узел устройством
      */
     private boolean isDeviceNode(Node node) {
-        return (node instanceof Circle circle && circle.getFill() == Color.BLUE) ||
-                (node instanceof ImageView);
+        if (node.getUserData() == null) {
+            return false;
+        }
+
+        // Узел является устройством, если в UserData есть Device или DeviceWithRotation
+        Object userData = node.getUserData();
+        return (userData instanceof DeviceIconService.DeviceWithRotation) ||
+                (userData instanceof Device);
     }
 
     /**

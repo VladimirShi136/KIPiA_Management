@@ -124,7 +124,7 @@ public class RectangleShape extends ShapeBase {
      * Получение типа фигуры
      */
     @Override
-    protected String getShapeType() {
+    public String getShapeType() {
         return "RECTANGLE";
     }
 
@@ -164,13 +164,4 @@ public class RectangleShape extends ShapeBase {
     private void applyDefaultStyle(Rectangle rect) {
         applyStyle(rect, DEFAULT_FILL, DEFAULT_STROKE, DEFAULT_STROKE_WIDTH);
     }
-
-//    @Override
-//    public String serialize() {
-//        double[] pos = getPosition();
-//        double w = getCurrentWidth();
-//        double h = getCurrentHeight();
-//        return String.format(java.util.Locale.US, "%s|%.2f|%.2f|%.2f|%.2f%s",
-//                getShapeType(), pos[0], pos[1], w, h, serializeColors());
-//    }
 }

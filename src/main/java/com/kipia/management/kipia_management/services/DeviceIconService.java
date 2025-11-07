@@ -36,7 +36,7 @@ public class DeviceIconService {
     private Scheme currentScheme; // Добавьте поле для текущей схемы
 
     // Константы для стилей
-    private static final double DEFAULT_ICON_SIZE = 24.0;
+    private static final double DEFAULT_ICON_SIZE = 56.0;
     private static final double FALLBACK_CIRCLE_RADIUS = 10.0;
     private static final String DEFAULT_ICON_PATH = "/images/manometer.png";
 
@@ -224,8 +224,8 @@ public class DeviceIconService {
     private ContextMenu createContextMenu(Node node, Device device, Scheme currentScheme) {
         ContextMenu contextMenu = new ContextMenu();
 
-        MenuItem deleteItem = createDeleteMenuItem(node, device, currentScheme);
-        MenuItem infoItem = createInfoMenuItem(device, node);  // Передайте node
+        MenuItem deleteItem = createDeleteMenuItem(node, currentScheme);
+        MenuItem infoItem = createInfoMenuItem(node);  // Передайте node
 
         // Добавляем пункты поворота
         Menu rotateMenu = createRotateMenu(node, device);
@@ -281,21 +281,19 @@ public class DeviceIconService {
     /**
      * Создание пункта меню "Удалить"
      */
-    private MenuItem createDeleteMenuItem(Node node, Device device, Scheme currentScheme) {
+    private MenuItem createDeleteMenuItem(Node node, Scheme currentScheme) {
         MenuItem deleteItem = new MenuItem("Удалить прибор");
-        deleteItem.setOnAction(event -> handleDeviceDeletion(node, device, currentScheme));
+        deleteItem.setOnAction(event -> handleDeviceDeletion(node, currentScheme));
         return deleteItem;
     }
 
     /**
      * Обработка удаления устройства
      */
-    private void handleDeviceDeletion(Node node, Device device, Scheme currentScheme) {
+    private void handleDeviceDeletion(Node node, Scheme currentScheme) {
         // Получаем устройство из UserData (может быть Device или DeviceWithRotation)
         Device deviceToDelete = extractDeviceFromUserData(node);
-
-        LOGGER.fine("Удалить прибор: устройство '" + deviceToDelete.getName() + "'");
-
+        assert deviceToDelete != null;
         boolean confirmed = CustomAlert.showConfirmation(
                 "Подтверждение удаления",
                 "Вы уверены, что хотите удалить прибор '" + deviceToDelete.getName() + "'?"
@@ -345,21 +343,19 @@ public class DeviceIconService {
     /**
      * Создание пункта меню "Информация"
      */
-    private MenuItem createInfoMenuItem(Device device, Node node) {  // Добавьте параметр Node
+    private MenuItem createInfoMenuItem(Node node) {  // Добавьте параметр Node
         MenuItem infoItem = new MenuItem("Показать информацию");
-        infoItem.setOnAction(event -> showDeviceInfo(device, node));  // Передайте node
+        infoItem.setOnAction(event -> showDeviceInfo(node));  // Передайте node
         return infoItem;
     }
 
     /**
      * Показ информации об устройстве
      */
-    private void showDeviceInfo(Device device, Node node) {  // Добавьте параметр Node
+    private void showDeviceInfo(Node node) {  // Добавьте параметр Node
         // Получаем устройство из UserData (может быть Device или DeviceWithRotation)
         Device deviceToShow = extractDeviceFromUserData(node);
-
-        LOGGER.fine("Показать информацию: устройство '" + deviceToShow.getName() + "'");
-
+        assert deviceToShow != null;
         String infoText = buildDeviceInfoText(deviceToShow);
         CustomAlert.showInfo(
                 "Информация о приборе",

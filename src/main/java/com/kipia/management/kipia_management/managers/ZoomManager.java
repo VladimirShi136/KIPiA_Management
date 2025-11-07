@@ -35,7 +35,6 @@ public class ZoomManager {
         this.scrollPane = scrollPane;
         this.statusUpdater = statusUpdater;
         this.onZoomChanged = onZoomChanged;
-
         centerOnBorder();
     }
 
@@ -97,47 +96,106 @@ public class ZoomManager {
     }
 
     /**
-     * Центрирует вид на красный квадрат
+     * Подгоняет масштаб чтобы вся схема была видна в viewport
      */
-    public void centerOnBorder() {
-        if (scrollPane == null) return;
+    public void zoomToFit() {
+        if (pane == null || scrollPane == null) return;
 
-        // Центрируем на прямоугольнике 1600x1200
-        double centerH = 0.5;
-        double centerV = 0.5;
+        try {
+            // Получаем размеры панели схемы и viewport
+            double paneWidth = pane.getWidth();
+            double paneHeight = pane.getHeight();
+            double viewportWidth = scrollPane.getViewportBounds().getWidth();
+            double viewportHeight = scrollPane.getViewportBounds().getHeight();
 
-        javafx.application.Platform.runLater(() -> {
-            scrollPane.setHvalue(centerH);
-            scrollPane.setVvalue(centerV);
-        });
+            // Вычисляем коэффициенты масштабирования для ширины и высоты
+            double scaleX = viewportWidth / paneWidth;
+            double scaleY = viewportHeight / paneHeight;
+
+            // Выбираем минимальный коэффициент чтобы вся схема поместилась
+            double newScale = Math.min(scaleX, scaleY) * 0.9; // 90% чтобы были небольшие отступы
+
+            // Ограничиваем масштаб разумными пределами
+            newScale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newScale));
+
+            // Применяем масштаб
+            setZoom(newScale);
+
+            // Центрируем схему
+            centerOnBorder();
+
+            if (statusUpdater != null) {
+                statusUpdater.accept("Масштаб подогнан: " + String.format("%.0f%%", newScale * 100));
+            }
+
+            System.out.println("DEBUG: Zoom to fit - scale: " + newScale +
+                    ", pane: " + paneWidth + "x" + paneHeight +
+                    ", viewport: " + viewportWidth + "x" + viewportHeight);
+
+        } catch (Exception e) {
+            System.err.println("ERROR in zoomToFit: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
-    public void fitZoom() {
-        // Fit на прямоугольник 1600x1200
-        if (scrollPane == null) return;
+    /**
+     * Центрирует viewport на красной рамке схемы
+     */
+    public void centerOnBorder() {
+        if (scrollPane == null || pane == null) return;
 
-        Bounds viewport = scrollPane.getViewportBounds();
-        if (viewport == null) return;
+        try {
+            // Даем JavaFX время на обновление layout
+            javafx.application.Platform.runLater(() -> {
+                try {
+                    // Получаем реальные размеры
+                    double paneWidth = pane.getWidth();
+                    double paneHeight = pane.getHeight();
+                    double viewportWidth = scrollPane.getViewportBounds().getWidth();
+                    double viewportHeight = scrollPane.getViewportBounds().getHeight();
 
-        double zoomX = viewport.getWidth() / 1600;
-        double zoomY = viewport.getHeight() / 1200;
-        double fitZoom = Math.min(zoomX, zoomY) * 0.85; // 15% отступ
+                    System.out.println("DEBUG centerOnBorder:");
+                    System.out.println("  - Pane size: " + paneWidth + "x" + paneHeight);
+                    System.out.println("  - Viewport: " + viewportWidth + "x" + viewportHeight);
+                    System.out.println("  - Pane pref size: " + pane.getPrefWidth() + "x" + pane.getPrefHeight());
+                    System.out.println("  - ScrollPane size: " + scrollPane.getWidth() + "x" + scrollPane.getHeight());
 
-        fitZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, fitZoom));
+                    // Если размеры невалидные, используем предустановленные
+                    if (paneWidth <= 0 || paneHeight <= 0) {
+                        paneWidth = 1600; // Ширина красного квадрата
+                        paneHeight = 1200; // Высота красного квадрата
+                        System.out.println("DEBUG: Using fixed sizes: " + paneWidth + "x" + paneHeight);
+                    }
 
-        currentZoom = fitZoom;
-        pane.setScaleX(currentZoom);
-        pane.setScaleY(currentZoom);
-        pane.setTranslateX(0);
-        pane.setTranslateY(0);
+                    // Красный квадрат находится в (0,0) с размерами 1600x1200
+                    // Мы хотим центрировать viewport на центре квадрата
+                    double centerX = 1600.0 / 2;
+                    double centerY = 1200.0 / 2;
 
-        centerOnBorder();
+                    // Вычисляем значения прокрутки для центрирования
+                    // hvalue = (targetX - viewportWidth/2) / (paneWidth - viewportWidth)
+                    double hvalue = (centerX - viewportWidth / 2) / Math.max(1, paneWidth - viewportWidth);
+                    double vvalue = (centerY - viewportHeight / 2) / Math.max(1, paneHeight - viewportHeight);
 
-        if (statusUpdater != null) {
-            statusUpdater.accept(String.format("Автоподгонка: %.0f%%", currentZoom * 100));
-        }
-        if (onZoomChanged != null) {
-            onZoomChanged.run();
+                    // Ограничиваем значения между 0 и 1
+                    hvalue = Math.max(0, Math.min(1, hvalue));
+                    vvalue = Math.max(0, Math.min(1, vvalue));
+
+                    scrollPane.setHvalue(hvalue);
+                    scrollPane.setVvalue(vvalue);
+
+                    System.out.println("DEBUG: Scroll values - hvalue: " + hvalue + ", vvalue: " + vvalue);
+                    System.out.println("DEBUG: Target center - X: " + centerX + ", Y: " + centerY);
+
+                } catch (Exception e) {
+                    System.err.println("ERROR in centerOnBorder: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            });
+
+        } catch (Exception e) {
+            System.err.println("ERROR in centerOnBorder outer: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -166,13 +224,6 @@ public class ZoomManager {
             // После зума автоматически центрируем на квадрате
             centerOnBorder();
         }
-    }
-
-    /**
-     * Получение текущего значения зума
-     */
-    public double getCurrentZoom() {
-        return currentZoom;
     }
 }
 

@@ -100,7 +100,7 @@ public class EllipseShape extends ShapeBase {
 //    }
 
     @Override
-    protected String getShapeType() {
+    public String getShapeType() {
         return "ELLIPSE";
     }
 

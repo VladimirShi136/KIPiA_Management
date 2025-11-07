@@ -2,6 +2,7 @@ package com.kipia.management.kipia_management.shapes;
 
 import com.kipia.management.kipia_management.managers.ShapeManager;
 import javafx.scene.Cursor;
+import javafx.scene.input.MouseButton;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
@@ -383,6 +384,10 @@ public class LineShape extends ShapeBase {
 
     private void setupHitLineEvents() {
         hitLine.setOnMousePressed(event -> {
+            if (!event.isPrimaryButtonDown()) { // ТОЛЬКО левая кнопка
+                event.consume();
+                return;
+            }
             Point2D mousePos = pane.sceneToLocal(event.getSceneX(), event.getSceneY());
             initializeDrag(mousePos);
 
@@ -399,6 +404,10 @@ public class LineShape extends ShapeBase {
         });
 
         hitLine.setOnMouseDragged(event -> {
+            if (!event.isPrimaryButtonDown()) { // ТОЛЬКО левая кнопка
+                event.consume();
+                return;
+            }
             isDragging = true;
             Point2D scenePos = new Point2D(event.getSceneX(), event.getSceneY());
             Point2D panePos = pane.sceneToLocal(scenePos);
@@ -429,7 +438,7 @@ public class LineShape extends ShapeBase {
         });
 
         hitLine.setOnMouseReleased(event -> {
-            if (isDragging && statusSetter != null) {
+            if (event.getButton() == MouseButton.PRIMARY) { // ТОЛЬКО левая кнопка {
                 statusSetter.accept("Позиция линии изменена");
 
                 // РЕГИСТРИРУЕМ ПЕРЕМЕЩЕНИЕ ЛИНИИ В UNDO/REDO
@@ -483,7 +492,7 @@ public class LineShape extends ShapeBase {
     }
 
     @Override
-    protected String getShapeType() {
+    public String getShapeType() {
         return "LINE";
     }
 
@@ -525,14 +534,6 @@ public class LineShape extends ShapeBase {
         if (endHandle != null) endHandle.setVisible(true);
         updateResizeHandles();
     }
-
-//    @Override
-//    public String serialize() {
-//        double[] absCoords = getAbsoluteCoordinates();
-//        return String.format(java.util.Locale.US, "%s|%.2f|%.2f|%.2f|%.2f|%.1f%s", // ДОБАВЛЕН |%.1f для угла
-//                getShapeType(), absCoords[0], absCoords[1], absCoords[2], absCoords[3],
-//                rotationAngle, serializeColors());
-//    }
 
     @Override
     protected Point2D getCenterInPane() {

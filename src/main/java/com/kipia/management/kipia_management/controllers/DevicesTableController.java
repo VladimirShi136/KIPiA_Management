@@ -23,6 +23,7 @@ import javafx.util.Callback;
 
 import java.io.File;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.BiConsumer;
 import java.util.logging.Logger;
 
@@ -164,7 +165,7 @@ public class DevicesTableController {
 
         // Фото – две кнопки «Добавить» / «Просмотр»
         TableColumn<Device, Void> photoCol = new TableColumn<>("Фото");
-        photoCol.setPrefWidth(145);
+        photoCol.setPrefWidth(90);
         photoCol.setCellFactory(createPhotoCellFactory());
 
         // -----------------------------------------------------------------
@@ -263,10 +264,23 @@ public class DevicesTableController {
     private Callback<TableColumn<Device, Void>, TableCell<Device, Void>> createPhotoCellFactory() {
         return param -> new TableCell<>() {
 
-            private final Button addBtn = new Button("Добавить");
-            private final Button viewBtn = new Button("Просмотр");
+            private final Button addBtn = new Button();
+            private final Button viewBtn = new Button();
 
             {
+                // Создаем иконки
+                ImageView addIcon = createIcon("/images/add_photo.png", 12, 12);
+                ImageView viewIcon = createIcon("/images/view.png", 12, 12);
+
+                addBtn.setGraphic(addIcon);
+                viewBtn.setGraphic(viewIcon);
+
+                // Tooltips для пояснения
+                Tooltip addTooltip = new Tooltip("Добавить фото");
+                Tooltip viewTooltip = new Tooltip("Просмотреть фото");
+                addBtn.setTooltip(addTooltip);
+                viewBtn.setTooltip(viewTooltip);
+
                 // стили и размеры
                 addBtn.getStyleClass().add("table-button-add");
                 viewBtn.getStyleClass().add("table-button-view");
@@ -274,12 +288,40 @@ public class DevicesTableController {
                         "table-button-add", "table-button-add-hover");
                 StyleUtils.applyHoverAndAnimation(viewBtn,
                         "table-button-view", "table-button-view-hover");
-                addBtn.setPrefSize(65, 22);
-                viewBtn.setPrefSize(65, 22);
+
+                // Уменьшаем размер кнопок для иконок
+                addBtn.setPrefSize(32, 22);
+                viewBtn.setPrefSize(32, 22);
+                addBtn.setMinSize(32, 22);
+                viewBtn.setMinSize(32, 22);
 
                 // обработчики
                 addBtn.setOnAction(e -> addPhoto(getCurrentDevice()));
                 viewBtn.setOnAction(e -> viewPhotos(getCurrentDevice()));
+            }
+
+            private ImageView createIcon(String path, double width, double height) {
+                try {
+                    Image image = new Image(Objects.requireNonNull(getClass().getResourceAsStream(path)));
+                    ImageView imageView = new ImageView(image);
+                    imageView.setFitWidth(width);
+                    imageView.setFitHeight(height);
+                    imageView.setPreserveRatio(true);
+                    return imageView;
+                } catch (Exception e) {
+                    // Fallback - создаем текстовую метку если иконка не найдена
+                    logger.warning("Не удалось загрузить иконку: " + path);
+                    return createTextIcon("+", width, height);
+                }
+            }
+
+            private ImageView createTextIcon(String text, double width, double height) {
+                // Создаем временное решение для отображения текста вместо иконки
+                ImageView fallback = new ImageView();
+                fallback.setFitWidth(width);
+                fallback.setFitHeight(height);
+                // В реальном приложении лучше создать кастомный график
+                return fallback;
             }
 
             private Device getCurrentDevice() {
@@ -330,7 +372,7 @@ public class DevicesTableController {
                 if (empty) {
                     setGraphic(null);
                 } else {
-                    setGraphic(new HBox(8, addBtn, viewBtn));
+                    setGraphic(new HBox(4, addBtn, viewBtn)); // Уменьшил расстояние между кнопками
                 }
             }
         };

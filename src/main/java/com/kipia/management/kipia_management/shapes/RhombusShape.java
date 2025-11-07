@@ -241,7 +241,7 @@ public class RhombusShape extends ShapeBase {
     }
 
     @Override
-    protected String getShapeType() {
+    public String getShapeType() {
         return "RHOMBUS";
     }
 

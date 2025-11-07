@@ -7,6 +7,7 @@ import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.VPos;
 import javafx.scene.control.*;
+import javafx.scene.input.MouseButton;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.paint.Color;
@@ -18,12 +19,10 @@ import javafx.scene.text.Text;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-
 /**
  * @author vladimir_shi
  * @since 24.10.2025
  */
-
 public class TextShape extends ShapeBase {
     private final Text text;
     private final Color defaultFill = Color.BLACK;
@@ -45,6 +44,10 @@ public class TextShape extends ShapeBase {
         text.setFont(Font.font("Arial", 16));
         text.setTextOrigin(VPos.TOP); // ВАЖНО: верхняя граница = верх букв
 
+        // ВАЖНО: разрешаем события мыши для текста
+        text.setMouseTransparent(false);
+        text.setPickOnBounds(true);
+
         getChildren().add(text);
 
         // УСТАНАВЛИВАЕМ позицию
@@ -55,6 +58,38 @@ public class TextShape extends ShapeBase {
 
         setupTextEditHandler();
         setupContextMenu();
+
+        // ВАЖНО: убедимся, что базовые обработчики drag работают
+        setupTextDragHandlers();
+    }
+
+    /**
+     * НАСТРОЙКА обработчиков перетаскивания для текста
+     */
+    private void setupTextDragHandlers() {
+        // Убедимся, что текстовый элемент не блокирует события
+        text.setMouseTransparent(false);
+        text.setPickOnBounds(true);
+
+        // Дублируем обработчики на текстовый элемент (на всякий случай)
+        text.setOnMousePressed(event -> {
+            if (event.isPrimaryButtonDown()) {
+                // Передаем событие родительской группе
+                getOnMousePressed().handle(event);
+            }
+        });
+
+        text.setOnMouseDragged(event -> {
+            if (event.isPrimaryButtonDown()) {
+                getOnMouseDragged().handle(event);
+            }
+        });
+
+        text.setOnMouseReleased(event -> {
+            if (event.getButton() == MouseButton.PRIMARY) {
+                getOnMouseReleased().handle(event);
+            }
+        });
     }
 
     /**
@@ -167,6 +202,7 @@ public class TextShape extends ShapeBase {
         contextMenu.getItems().addAll(rotateItem, copyItem, pasteItem, textColorItem, editTextItem, changeFontItem, separator, deleteItem);
 
         setOnContextMenuRequested(event -> {
+            // ИСПРАВЛЕНИЕ: убираем проверку на SELECT - меню показывается всегда
             contextMenu.show(this, event.getScreenX(), event.getScreenY());
             event.consume();
         });
@@ -312,7 +348,7 @@ public class TextShape extends ShapeBase {
     }
 
     @Override
-    protected String getShapeType() {
+    public String getShapeType() {
         return "TEXT";
     }
 
@@ -372,7 +408,8 @@ public class TextShape extends ShapeBase {
 
     private void setupTextEditHandler() {
         setOnMouseClicked(event -> {
-            if (shapeManager != null && shapeManager.isSelectToolActive() && event.getClickCount() == 2) {
+            // Двойной клик для редактирования текста - работает всегда
+            if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2) {
                 event.consume();
                 openTextEditDialog();
             }
@@ -391,5 +428,24 @@ public class TextShape extends ShapeBase {
                 shapeManager.getOnShapeAdded().run();
             }
         }
+    }
+
+    /**
+     * ПЕРЕОПРЕДЕЛЯЕМ метод выделения - без handles
+     */
+    @Override
+    public void highlightAsSelected() {
+        applySelectedStyle();
+        // НЕ вызываем makeResizeHandlesVisible() - handles отключены
+        makeRotationHandleVisible(); // Но ручку поворота показываем
+    }
+
+    /**
+     * ПЕРЕОПРЕДЕЛЯЕМ метод сброса выделения
+     */
+    @Override
+    public void resetHighlight() {
+        applyDefaultStyle();
+        hideRotationHandle();
     }
 }
