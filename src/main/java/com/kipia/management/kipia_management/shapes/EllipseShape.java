@@ -9,11 +9,8 @@ import javafx.scene.shape.StrokeType;
 import java.util.function.Consumer;
 
 public class EllipseShape extends ShapeBase {
-    private static final Color DEFAULT_FILL = Color.TRANSPARENT;
-    private static final Color DEFAULT_STROKE = Color.BLACK;
+
     private static final double DEFAULT_STROKE_WIDTH = 2.0;
-    private static final Color SELECTED_FILL = Color.TRANSPARENT;
-    private static final Color SELECTED_STROKE = Color.BLUE;
     private static final double SELECTED_STROKE_WIDTH = 3.0;
 
     private final Ellipse ellipse;
@@ -65,14 +62,15 @@ public class EllipseShape extends ShapeBase {
             double newRadiusX = newWidth / 2;
             double newRadiusY = newHeight / 2;
 
+            System.out.println("DEBUG: EllipseShape.resizeShape - new radii: " + newRadiusX + ", " + newRadiusY);
+
             ellipse.setCenterX(newWidth / 2);  // Relative в группе (fixed offset)
             ellipse.setCenterY(newHeight / 2);
             ellipse.setRadiusX(newRadiusX);
             ellipse.setRadiusY(newRadiusY);
-
-            // Если нужно shift группы для center-fixed resize — но базовая логика corner-based, OK
         }
-        setCurrentDimensions(newWidth, newHeight);  // Exact stored
+        setCurrentDimensions(newWidth, newHeight);
+        System.out.println("DEBUG: Ellipse resized to " + newWidth + "x" + newHeight);
     }
 
     @Override
@@ -89,15 +87,6 @@ public class EllipseShape extends ShapeBase {
     protected void applyDefaultStyle() {
         applyCurrentStyle();
     }
-
-//    @Override
-//    public String serialize() {
-//        double[] pos = getPosition();
-//        double w = getCurrentWidth();
-//        double h = getCurrentHeight();
-//        return String.format(java.util.Locale.US, "%s|%.2f|%.2f|%.2f|%.2f%s",
-//                getShapeType(), pos[0], pos[1], w, h, serializeColors());
-//    }
 
     @Override
     public String getShapeType() {

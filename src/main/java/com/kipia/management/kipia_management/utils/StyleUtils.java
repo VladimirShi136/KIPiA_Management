@@ -5,11 +5,13 @@ import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.ScaleTransition;
 import javafx.animation.Timeline;
+import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.RadioButton;
 import javafx.scene.effect.Glow;
-import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.util.Duration;
 
@@ -22,6 +24,9 @@ import java.util.Objects;
  * @since 08.09.2025
  */
 public class StyleUtils {
+    // Путь к файлу со стилями css
+    private static final String CSS_PATH = "/styles/light-theme.css";
+
     // CSS классы для разных типов алертов
     private static final String INFO_ALERT = "info-alert";
     private static final String WARNING_ALERT = "warning-alert";
@@ -144,7 +149,7 @@ public class StyleUtils {
         // Подключаем CSS файл
         try {
             alert.getDialogPane().getStylesheets().add(
-                    Objects.requireNonNull(StyleUtils.class.getResource("/styles/light-theme.css")).toExternalForm()
+                    Objects.requireNonNull(StyleUtils.class.getResource(CSS_PATH)).toExternalForm()
             );
         } catch (Exception e) {
             System.err.println("Не удалось загрузить CSS файл для алертов: " + e.getMessage());
@@ -166,6 +171,32 @@ public class StyleUtils {
             case "success" -> SUCCESS_ALERT;
             default -> INFO_ALERT;
         };
+    }
+
+    /**
+     * Полностью настраивает стили для окна автосохранения:
+     * - подключает CSS к сцене
+     * - применяет заданные CSS-классы к корневому узлу
+     * - возвращает готовую Scene
+     *
+     * @param rootParent
+     * @param cssClasses список CSS-классов для стилизации (например, ["temp-notification", "fade-in"])
+     * @return готовая Scene с подключёнными стилями
+     */
+    public static Scene createStyledSceneForAutoSave(Parent rootParent, String... cssClasses) {
+        Scene scene = new Scene(rootParent);
+
+        try {
+            String cssUrl = Objects.requireNonNull(
+                    StyleUtils.class.getResource(CSS_PATH)
+            ).toExternalForm();
+            scene.getStylesheets().add(cssUrl);
+        } catch (Exception e) {
+            System.err.println("Ошибка загрузки CSS: " + e.getMessage());
+        }
+
+        rootParent.getStyleClass().setAll(cssClasses);
+        return scene;
     }
 }
 

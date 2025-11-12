@@ -86,14 +86,15 @@ public class RectangleShape extends ShapeBase {
      * Изменение размера прямоугольника
      */
     @Override
-    protected void resizeShape(double width, double height) {
+    protected void resizeShape(double newWidth, double newHeight) {
         if (rectangle != null) {
-            rectangle.setWidth(width);
-            rectangle.setHeight(height);
-            // Твоя логика, если есть (e.g., arc для rounded rect)
+            System.out.println("DEBUG: RectangleShape.resizeShape - new width: " + newWidth + ", new height: " + newHeight);
+            rectangle.setWidth(newWidth);
+            rectangle.setHeight(newHeight);
         }
         // Новое: Set stored exact
-        setCurrentDimensions(width, height);
+        setCurrentDimensions(newWidth, newHeight);
+        System.out.println("DEBUG: Rectangle resized to " + newWidth + "x" + newHeight);
     }
 
     /**

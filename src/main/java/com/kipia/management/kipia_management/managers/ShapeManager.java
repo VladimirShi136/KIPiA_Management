@@ -2,6 +2,7 @@ package com.kipia.management.kipia_management.managers;
 
 import com.kipia.management.kipia_management.services.ShapeService;
 import com.kipia.management.kipia_management.shapes.*;
+import javafx.geometry.Point2D;
 import javafx.scene.Node;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.shape.*;
@@ -9,6 +10,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.function.Consumer;
 
 /**
@@ -23,7 +25,7 @@ public class ShapeManager {
     /**
      * Enum инструментов редактора
      */
-    public enum Tool {SELECT, LINE, RECTANGLE, ELLIPSE, RHOMBUS, TEXT, ADD_DEVICE}
+    public enum Tool {LINE, RECTANGLE, ELLIPSE, RHOMBUS, TEXT, ADD_DEVICE}
 
     // Основные зависимости
     private final AnchorPane pane;
@@ -33,6 +35,7 @@ public class ShapeManager {
     private ShapeHandler selectedShape;
     private boolean wasDraggedInSelect;
     private boolean wasResized;
+    private Circle snapHighlight;
 
     // Колбэки для взаимодействия с UI
     private Consumer<ShapeHandler> onSelectCallback;
@@ -41,14 +44,11 @@ public class ShapeManager {
     // Поля для временных preview-фигур
     private Shape previewShape;
     private double startX, startY;
-    private Circle snapHighlight;
 
     private double previewEndX, previewEndY;
 
-    private boolean isSelectToolActive = false;
-
-    private Runnable onShapeAdded;  // Callback для auto-save после добавления
-    private Runnable onShapeRemoved;  // Callback для auto-save после удаления (опционально)
+    private Runnable onShapeSelected;    // Колбэк при выделении фигуры
+    private Runnable onShapeDeselected;  // Колбэк при снятии выделения
 
     // Команда добавления
     public class AddShapeCommand implements CommandManager.Command {
@@ -314,23 +314,43 @@ public class ShapeManager {
      * Обработка отпускания мыши для указанного инструмента
      */
     public void onMouseReleasedForTool(Tool tool, double x, double y) {
-        if (tool == Tool.SELECT) return;
         if (previewShape == null) return;
 
-        // ПРОВЕРЯЕМ РАЗМЕР - создаем фигуру только если она достаточно большая
-        double width = Math.abs(x - startX);
-        double height = Math.abs(y - startY);
+        // СОХРАНЯЕМ ПРОВЕРКИ МИНИМАЛЬНОГО РАЗМЕРА
+        double minSize = 10.0;
 
-        double minSize = 10.0; // Минимальный размер фигуры
+        if (tool == Tool.LINE) {
+            // Для линии проверяем общую длину
+            double dx = Math.abs(x - startX);
+            double dy = Math.abs(y - startY);
+            double length = Math.sqrt(dx * dx + dy * dy);
 
-        if (width >= minSize && height >= minSize) {
-            createFinalShape(tool, x, y);
-            statusSetter.accept("Фигура добавлена");
+            if (length >= minSize) {
+                createFinalShape(tool, x, y);
+                if (statusSetter != null) {
+                    statusSetter.accept("Линия добавлена");
+                }
+            } else {
+                System.out.println("DEBUG: Line too short - not creating (length: " + length + ")");
+                if (statusSetter != null) {
+                    statusSetter.accept("Линия слишком короткая");
+                }
+            }
         } else {
-            // Фигура слишком маленькая - не создаем
-            System.out.println("DEBUG: Shape too small - not creating (" + width + "x" + height + ")");
-            if (statusSetter != null) {
-                statusSetter.accept("Фигура слишком маленькая");
+            // Для остальных фигур - стандартная проверка
+            double width = Math.abs(x - startX);
+            double height = Math.abs(y - startY);
+
+            if (width >= minSize && height >= minSize) {
+                createFinalShape(tool, x, y);
+                if (statusSetter != null) {
+                    statusSetter.accept("Фигура добавлена");
+                }
+            } else {
+                System.out.println("DEBUG: Shape too small - not creating (" + width + "x" + height + ")");
+                if (statusSetter != null) {
+                    statusSetter.accept("Фигура слишком маленькая");
+                }
             }
         }
 
@@ -343,9 +363,6 @@ public class ShapeManager {
     public void addShape(Node shape) {
         AddShapeCommand cmd = new AddShapeCommand(pane, shape);
         commandManager.execute(cmd);  // Используем CommandManager вместо прямого управления
-        if (onShapeAdded != null) {
-            onShapeAdded.run();
-        }
         System.out.println("DEBUG: AddShape executed via CommandManager");
     }
 
@@ -355,9 +372,6 @@ public class ShapeManager {
     public void removeShape(Node shape) {
         RemoveShapeCommand cmd = new RemoveShapeCommand(pane, shape);
         commandManager.execute(cmd);  // Используем CommandManager вместо прямого управления
-        if (onShapeRemoved != null) {
-            onShapeRemoved.run();
-        }
         System.out.println("DEBUG: RemoveShape executed via CommandManager");
     }
 
@@ -379,13 +393,6 @@ public class ShapeManager {
      */
     public void undo() {
         commandManager.undo();
-
-        // Автосохранение после undo
-        if (onShapeAdded != null || onShapeRemoved != null) {
-            // Можно добавить логику для определения типа изменения если нужно
-            if (onShapeAdded != null) onShapeAdded.run();
-        }
-
         updateSelectionAfterUndoRedo();
     }
 
@@ -394,12 +401,6 @@ public class ShapeManager {
      */
     public void redo() {
         commandManager.redo();
-
-        // Автосохранение после redo
-        if (onShapeAdded != null || onShapeRemoved != null) {
-            if (onShapeAdded != null) onShapeAdded.run();
-        }
-
         updateSelectionAfterUndoRedo();
     }
 
@@ -478,12 +479,19 @@ public class ShapeManager {
         selectedShape = shapeHandler;
 
         if (selectedShape != null) {
+            System.out.println("DEBUG: Selecting new shape");
             selectedShape.highlightAsSelected();
             selectedShape.makeResizeHandlesVisible();
             selectedShape.updateResizeHandles();
 
+            // ВЫЗЫВАЕМ колбэк выделения
             if (onSelectCallback != null) {
                 onSelectCallback.accept(selectedShape);
+            }
+
+            // ВЫЗЫВАЕМ колбэк выделения фигуры
+            if (onShapeSelected != null) {
+                onShapeSelected.run();
             }
         }
     }
@@ -492,22 +500,38 @@ public class ShapeManager {
      * Снятие выделения с текущей фигуры
      */
     public void deselectShape() {
-        if (selectedShape != null) {
-            selectedShape.resetHighlight();  // Уже есть: стиль + hide handles
+        System.out.println("DEBUG: Deselecting shape");
 
-            // Новое: Полный сброс handles для selectedShape (удаление из pane)
-            if (selectedShape instanceof ShapeBase base) {  // Cast к ShapeBase для доступа
-                base.removeResizeHandles();  // Вызов public метода — удалит handles полностью
+        if (selectedShape != null) {
+            selectedShape.resetHighlight();
+
+            if (selectedShape instanceof ShapeBase base) {
+                base.removeResizeHandles();
+            }
+
+            // ВЫЗЫВАЕМ колбэк снятия выделения
+            if (onShapeDeselected != null) {
+                onShapeDeselected.run();
             }
         }
         selectedShape = null;
         wasResized = false;
         hideSnapHighlight();
+
+        System.out.println("DEBUG: Shape deselected successfully");
     }
 
     // -----------------------------------------------------------------
     // GETTERS & SETTERS
     // -----------------------------------------------------------------
+
+    public void setOnShapeSelected(Runnable onShapeSelected) {
+        this.onShapeSelected = onShapeSelected;
+    }
+
+    public void setOnShapeDeselected(Runnable onShapeDeselected) {
+        this.onShapeDeselected = onShapeDeselected;
+    }
 
     public ShapeHandler getSelectedShape() {
         return selectedShape;
@@ -533,34 +557,14 @@ public class ShapeManager {
         this.onSelectCallback = onSelectCallback;
     }
 
-    public boolean isSelectToolActive() {
-        return false;
-    }
-
     public void setShapeService(ShapeService shapeService) {
         this.shapeService = shapeService;
-    }
-
-    // Setter для добавления фигур
-    public void setOnShapeAdded(Runnable callback) {
-        this.onShapeAdded = callback;
-    }
-
-    // Setter для удаления фигур (если нужно)
-    public void setOnShapeRemoved(Runnable callback) {
-        this.onShapeRemoved = callback;
     }
 
     public AnchorPane getPane() {
         return pane;
     }
 
-    /**
-     * Геттер для колбэка автосохранения
-     */
-    public Runnable getOnShapeAdded() {
-        return onShapeAdded;
-    }
     // -----------------------------------------------------------------
     // PRIVATE METHODS - PREVIEW SHAPES
     // -----------------------------------------------------------------
@@ -600,8 +604,47 @@ public class ShapeManager {
         Line line = new Line(startX, startY, x, y);
         line.setStroke(Color.GRAY);
         line.setStrokeWidth(1);
+
+        // Проверяем привязку при создании
+        Point2D snapPoint = findNearestSnapPointForPreview(x, y);
+        if (snapPoint != null) {
+            line.setEndX(snapPoint.getX());
+            line.setEndY(snapPoint.getY());
+            showSnapHighlight(snapPoint.getX(), snapPoint.getY());
+        }
+
         return line;
     }
+
+    private Point2D findNearestSnapPointForPreview(double x, double y) {
+        if (shapeService == null) return null;
+
+        Point2D bestSnap = null;
+        double minDistance = 10.0; // SNAP_THRESHOLD
+
+        try {
+            // Получаем список фигур из ShapeService
+            java.lang.reflect.Field shapesField = shapeService.getClass().getDeclaredField("shapes");
+            shapesField.setAccessible(true);
+            List<ShapeBase> allShapes = (List<ShapeBase>) shapesField.get(shapeService);
+
+            for (ShapeBase shape : allShapes) {
+                List<Point2D> snapPoints = shape.getSnapPoints();
+                for (Point2D point : snapPoints) {
+                    double distance = point.distance(x, y);
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        bestSnap = point;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Ошибка поиска точек привязки: " + e.getMessage());
+        }
+
+        return bestSnap;
+    }
+
 
     private Rectangle createRectanglePreview(double x, double y) {
         Rectangle rect = new Rectangle(
@@ -760,11 +803,8 @@ public class ShapeManager {
             System.out.println("DEBUG: Creating shape: " + tool + " at (" + x + ", " + y + "), coords: " + Arrays.toString(coordinates));
             ShapeBase shape = shapeService.addShape(shapeType, coordinates);
             if (shape != null) {
+                shape.addContextMenu(shapeHandler -> removeShape((Node) shapeHandler));
                 addShape(shape);
-
-                // НЕ выделяем фигуру автоматически после создания!
-                // shape.highlightAsSelected(); // УБРАТЬ эту строку если есть
-
                 setStatus("Фигура добавлена");
             }
         } catch (Exception e) {
@@ -776,13 +816,6 @@ public class ShapeManager {
     // -----------------------------------------------------------------
     // PRIVATE UTILITY METHODS
     // -----------------------------------------------------------------
-
-    /**
-     * Обработка выбора фигуры при нажатии (fallback для не-ShapeHandler фигур)
-     */
-    private void handleSelectOnPress() {
-        deselectShape();
-    }
 
     /**
      * Обновление состояния выделения после undo/redo
@@ -827,8 +860,8 @@ public class ShapeManager {
                 yield new double[]{x, y, width, height};
             }
             case RHOMBUS ->
-                    new double[]{startX, startY, endX, endY};  // Новое: Точные start/end для бабочки (не min/width)
-            case LINE -> new double[]{startX, startY, endX, endY};
+                    new double[]{startX, startY, endX, endY};
+            case LINE -> new double[]{startX, startY, endX, endY}; // Для линии - start и end точки
             case TEXT -> new double[]{startX, startY, 0};
         };
     }

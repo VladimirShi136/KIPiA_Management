@@ -17,6 +17,11 @@
     -fx-transition: background-color 0.3s ease, effect 0.3s ease;
     -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
 }
+/* Сохраняем цвет и непрозрачность для отключённых кнопок */
+.button:disabled {
+    -fx-opacity: 1.0;              /* Полная непрозрачность */
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1); /* Сохраняем тень */
+}
 
 /* Верхняя панель */
 .top {
@@ -824,4 +829,23 @@
     -fx-background-color: #f9f9f9;
 }
 
+.tool-button-active {
+    -fx-background-color: #4CAF50;
+    -fx-text-fill: white;
+}
 
+/* Стили для уведомлений автосохранения */
+.auto-save-notification {
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-background-color: #28a745;
+    -fx-background-radius: 12px;
+    -fx-padding: 10px 30px;
+    -fx-border-width: 0px;
+    -fx-border-color: transparent;
+}
+
+.auto-save-notification-container {
+    -fx-background-color: transparent;
+}

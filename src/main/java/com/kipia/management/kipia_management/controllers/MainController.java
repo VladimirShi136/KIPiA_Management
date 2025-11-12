@@ -1,10 +1,15 @@
 package com.kipia.management.kipia_management.controllers;
 
+import com.kipia.management.kipia_management.models.Scheme;
 import com.kipia.management.kipia_management.services.DeviceDAO;
 import com.kipia.management.kipia_management.services.DeviceLocationDAO;
 import com.kipia.management.kipia_management.services.SchemeDAO;
+import com.kipia.management.kipia_management.services.SchemeSaver;
 import com.kipia.management.kipia_management.utils.CustomAlert;
 import com.kipia.management.kipia_management.utils.StyleUtils;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -13,6 +18,7 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -71,10 +77,68 @@ public class MainController {
     }
 
     /**
+     * Получение сцены
+     * @return - сцена
+     */
+    public Scene getScene () {
+        return scene;
+    }
+
+    /**
      * Передаём сцену, чтобы можно было менять стили.
      */
     public void setScene(Scene scene) {
         this.scene = scene;
+    }
+
+    /**
+     * Сохранение схемы при переходе из редактора схем в другой контроллер.
+     * Показывает уведомление «Автосохранение» на <b>durationSec</b> секунд.
+     */
+    public void saveSchemeBeforeNavigation() {
+        if (schemeEditorController == null) {
+            return;
+        }
+
+        try {
+            System.out.println("DEBUG: Saving scheme before navigation from editor");
+            schemeEditorController.getSchemeSaver().saveBeforeNavigation(schemeEditorController.getCurrentScheme());
+
+            // Показываем уведомление на n секунд
+            CustomAlert.showAutoSaveNotification("Автосохранение", 1.3);
+
+        } catch (Exception e) {
+            System.err.println("Ошибка при сохранении схемы: " + e.getMessage());
+            CustomAlert.showError("Ошибка сохранения", "Не удалось сохранить схему: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Сохранение схемы при выходе из приложения.
+     */
+    private void saveSchemeOnExit() {
+        if (schemeEditorController != null) {
+            try {
+                System.out.println("DEBUG: Auto-saving scheme on application exit");
+
+                // Используем SchemeSaver из SchemeEditorController
+                SchemeSaver saver = schemeEditorController.getSchemeSaver();
+                Scheme currentScheme = schemeEditorController.getCurrentScheme();
+
+                if (saver != null && currentScheme != null) {
+                    saver.saveOnExit(currentScheme);
+                    CustomAlert.showAutoSaveNotification("Сохранение при выходе", 1.3);
+                } else {
+                    System.out.println("DEBUG: No active scheme to save on exit");
+                }
+            } catch (Exception e) {
+                System.err.println("Ошибка при автосохранении схемы при выходе: " + e.getMessage());
+                CustomAlert.showWarning("Предупреждение",
+                        "Не удалось сохранить схему при выходе. Последние изменения могут быть потеряны.");
+            }
+        } else {
+            System.out.println("DEBUG: No active scheme editor - nothing to save on exit");
+        }
     }
 
     /**
@@ -134,7 +198,29 @@ public class MainController {
      */
     @FXML
     private void exitApp() {
-        System.exit(0);
+        // Определяем сообщение в зависимости от наличия активного редактора
+        String message;
+        if (schemeEditorController == null) {
+            message = "Вы уверены, что хотите выйти?";
+        } else {
+            message = "Вы уверены, что хотите выйти? Текущая схема будет автоматически сохранена.";
+        }
+
+        // Всегда показываем подтверждение, но с разным текстом
+        boolean confirmExit = CustomAlert.showConfirmation("Подтверждение выхода", message);
+
+        if (confirmExit) {
+            // Сохраняем только если есть активный редактор
+            if (schemeEditorController != null) {
+                saveSchemeOnExit();
+            }
+            // Используем Timeline для задержки перед выходом
+            Timeline timeline = new Timeline(new KeyFrame(
+                    Duration.millis(1500), // задержка закрытия
+                    e -> Platform.exit()
+            ));
+            timeline.play();
+        }
     }
 
     // ---------------------------------------------------------
@@ -146,6 +232,17 @@ public class MainController {
      */
     @FXML
     private void showDevices() {
+        // Сохраняем, если редактор был открыт
+        if (schemeEditorController != null) {
+            saveSchemeBeforeNavigation();
+            // Очищаем ссылки (важно!)
+            schemeEditorView = null;
+            schemeEditorController = null;
+        }
+
+        // Разблокируем кнопку
+        schemesBtn.setDisable(false);
+
         statusLabel.setText("Просмотр списка приборов");
         contentArea.getChildren().clear();
 
@@ -174,6 +271,17 @@ public class MainController {
      */
     @FXML
     private void showGroupedDevices() {
+        // Сохраняем, если редактор был открыт
+        if (schemeEditorController != null) {
+            saveSchemeBeforeNavigation();
+            // Очищаем ссылки (важно!)
+            schemeEditorView = null;
+            schemeEditorController = null;
+        }
+
+        // Разблокируем кнопку
+        schemesBtn.setDisable(false);
+
         statusLabel.setText("Просмотр списка приборов по месту установки");
         contentArea.getChildren().clear();
 
@@ -202,37 +310,39 @@ public class MainController {
      */
     @FXML
     private void showSchemesEditor() {
-        statusLabel.setText("Редактор схем");  // Обновляем статус
+        statusLabel.setText("Редактор схем");
 
-        // Если экземпляр уже создан — просто показываем сохранённый view (состояние не теряется)
+        // Если редактор уже загружен → это попытка уйти → сохраняем и очищаем ссылки
         if (schemeEditorView != null && schemeEditorController != null) {
-            contentArea.getChildren().clear();
-            contentArea.getChildren().add(schemeEditorView);
-            LOGGER.info("Показан существующий редактор схем (состояние сохранено)");
-            return;  // Не перезагружаем, иконки/приборы остаются
+            saveSchemeBeforeNavigation(); // Автосохранение
+
+            // Очищаем ссылки → редактор считается закрытым
+            schemeEditorView = null;
+            schemeEditorController = null;
+
+            // Блокируем кнопку (если нужно)
+            schemesBtn.setDisable(true);
+            return;
         }
 
-        // Первый запуск: Загружаем FXML и инициализируем
+        // Загружаем редактор (первый раз или после ухода)
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/scheme-editor.fxml"));
-            schemeEditorView = loader.load();  // Сохраняем Root Node (Parent)
-
+            schemeEditorView = loader.load();
             schemeEditorController = loader.getController();
-            LOGGER.info("Создан новый контроллер редактора схем");
 
-            // Внедряем DAO (только один раз)
             schemeEditorController.setDeviceDAO(deviceDAO);
             schemeEditorController.setSchemeDAO(schemeDAO);
             schemeEditorController.setDeviceLocationDAO(deviceLocationDAO);
-
-            // Вызываем init() только один раз
             schemeEditorController.init();
 
-            // Добавляем view в contentArea
             contentArea.getChildren().clear();
             contentArea.getChildren().add(schemeEditorView);
+            LOGGER.info("Редактор схем загружен успешно");
 
-            LOGGER.info("Редактор схем загружен впервые успешно");
+            // Блокируем кнопку, пока редактор открыт
+            schemesBtn.setDisable(true);
+
         } catch (IOException e) {
             statusLabel.setText("Ошибка загрузки редактора схем: " + e.getMessage());
             CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить редактор схем");
@@ -245,6 +355,17 @@ public class MainController {
      */
     @FXML
     private void showAddDeviceForm() {
+        // Сохраняем, если редактор был открыт
+        if (schemeEditorController != null) {
+            saveSchemeBeforeNavigation();
+            // Очищаем ссылки (важно!)
+            schemeEditorView = null;
+            schemeEditorController = null;
+        }
+
+        // Разблокируем кнопку
+        schemesBtn.setDisable(false);
+
         statusLabel.setText("Добавление нового прибора");
         contentArea.getChildren().clear();
 
@@ -272,6 +393,17 @@ public class MainController {
      */
     @FXML
     private void showReports() {
+        // Сохраняем, если редактор был открыт
+        if (schemeEditorController != null) {
+            saveSchemeBeforeNavigation();
+            // Очищаем ссылки (важно!)
+            schemeEditorView = null;
+            schemeEditorController = null;
+        }
+
+        // Разблокируем кнопку
+        schemesBtn.setDisable(false);
+
         statusLabel.setText("Просмотр отчётов");
         contentArea.getChildren().clear();
 

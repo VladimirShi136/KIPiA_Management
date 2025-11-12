@@ -15,12 +15,13 @@ import javafx.scene.paint.Color;
 import javafx.scene.Cursor;
 import javafx.geometry.Point2D;
 import javafx.geometry.Bounds;
-import javafx.scene.shape.Line;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 
@@ -85,10 +86,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     // ============================================================
 
     protected double rotationAngle = 0.0; // Текущий угол поворота в градусах
-    private Circle rotationHandle; // Ручка для поворота
-    private static final double ROTATION_HANDLE_DISTANCE = 40.0; // Расстояние от центра
-    private boolean isRotating = false;
-    private double rotationStartAngle;
 
     // ============================================================
     // CONSTRUCTOR
@@ -101,17 +98,14 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      * @param statusSetter     колбэк для установки статуса
      * @param onSelectCallback колбэк при выборе фигуры
      */
-    public ShapeBase(AnchorPane pane,
-                     Consumer<String> statusSetter,
-                     Consumer<ShapeHandler> onSelectCallback,
-                     ShapeManager shapeManager) {
+    public ShapeBase(AnchorPane pane, Consumer<String> statusSetter, Consumer<ShapeHandler> onSelectCallback, ShapeManager shapeManager) {
         this.pane = pane;
         this.statusSetter = statusSetter;
         this.onSelectCallback = onSelectCallback;
         this.shapeManager = shapeManager;
         initializeState();
         setupEventHandlers();
-        setupContextMenu(); // Создаем контекстное меню по умолчанию
+        //setupContextMenu(); // Создаем контекстное меню по умолчанию
     }
 
     /**
@@ -162,12 +156,45 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     @Override
     public void createResizeHandles() {
         if (resizeHandles != null) return;
+
+        System.out.println("DEBUG: Creating resize handles for " + getShapeType());
         resizeHandles = new Circle[RESIZE_HANDLE_COUNT];
+
         for (int i = 0; i < RESIZE_HANDLE_COUNT; i++) {
             resizeHandles[i] = createResizeHandle();
             pane.getChildren().add(resizeHandles[i]);
-            resizeHandles[i].setVisible(false); // НЕ показываем сразу!
+            resizeHandles[i].setVisible(false);
         }
+
+        // ВАЖНО: Настраиваем обработчики после создания handles
+        setupResizeHandleHandlers();
+        System.out.println("DEBUG: Resize handles created and handlers setup for " + getShapeType());
+    }
+
+    /**
+     * Получение точек привязки фигуры (углы, центр, середины сторон)
+     */
+    public List<Point2D> getSnapPoints() {
+        Bounds bounds = getBoundsInParent();
+        List<Point2D> points = new ArrayList<>();
+
+        // Углы
+        points.add(new Point2D(bounds.getMinX(), bounds.getMinY())); // левый верхний
+        points.add(new Point2D(bounds.getMaxX(), bounds.getMinY())); // правый верхний
+        points.add(new Point2D(bounds.getMinX(), bounds.getMaxY())); // левый нижний
+        points.add(new Point2D(bounds.getMaxX(), bounds.getMaxY())); // правый нижний
+
+        // Центр
+        points.add(new Point2D(bounds.getMinX() + bounds.getWidth() / 2,
+                bounds.getMinY() + bounds.getHeight() / 2));
+
+        // Середины сторон
+        points.add(new Point2D(bounds.getMinX() + bounds.getWidth() / 2, bounds.getMinY())); // верх
+        points.add(new Point2D(bounds.getMaxX(), bounds.getMinY() + bounds.getHeight() / 2)); // право
+        points.add(new Point2D(bounds.getMinX() + bounds.getWidth() / 2, bounds.getMaxY())); // низ
+        points.add(new Point2D(bounds.getMinX(), bounds.getMinY() + bounds.getHeight() / 2)); // лево
+
+        return points;
     }
 
     /**
@@ -271,8 +298,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
                 pane.getChildren().remove(handle);
             }
         }
-        // Добавляем показ ручки поворота
-        removeRotationHandle();
         resizeHandles = null;
         wasResizedInSession = false;
     }
@@ -282,23 +307,20 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      */
     @Override
     public void makeResizeHandlesVisible() {
-        if (resizeHandles == null) {
-            createResizeHandles();
+        if (resizeHandles != null) return;
+
+        System.out.println("DEBUG: Creating resize handles for " + getShapeType());
+        resizeHandles = new Circle[RESIZE_HANDLE_COUNT];
+
+        for (int i = 0; i < RESIZE_HANDLE_COUNT; i++) {
+            resizeHandles[i] = createResizeHandle();
+            pane.getChildren().add(resizeHandles[i]);
+            resizeHandles[i].setVisible(false);
         }
 
+        // ВАЖНО: Настраиваем обработчики после создания handles
         setupResizeHandleHandlers();
-
-        if (resizeHandles != null) {
-            for (Circle handle : resizeHandles) {
-                if (handle != null) {
-                    handle.setVisible(true);
-                }
-            }
-        }
-
-        // Добавляем показ ручки поворота
-        makeRotationHandleVisible();
-        updateResizeHandles();
+        System.out.println("DEBUG: Resize handles created and handlers setup for " + getShapeType());
     }
 
     // ============================================================
@@ -343,10 +365,14 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      */
     private void setupDoubleClickForSelection() {
         setOnMouseClicked(event -> {
-            if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2) {
-                // Двойной клик левой кнопкой - выделяем фигуру
-                handleDoubleClickSelection();
-                event.consume();
+            if (event.getButton() == MouseButton.PRIMARY) {
+                if (event.getClickCount() == 2) {
+                    // Двойной клик - выделяем фигуру и показываем handles
+                    System.out.println("DEBUG: Double click - selecting shape with handles");
+                    handleDoubleClickSelection();
+                    event.consume();
+                }
+                // Одинарный клик НЕ выделяет - позволяет перетаскивать без выделения
             }
         });
     }
@@ -355,76 +381,87 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      * Обработка выделения по двойному клику
      */
     private void handleDoubleClickSelection() {
-        // Выделяем эту фигуру
+        System.out.println("DEBUG: Double click selection - selecting shape WITH handles");
+
+        // Выделяем эту фигуру через менеджер
         if (onSelectCallback != null) {
             onSelectCallback.accept(this);
         }
 
-        // Показываем handles для ресайза и поворота
+        // Показываем handles для ресайза ТОЛЬКО при двойном клике
         makeResizeHandlesVisible();
-        makeRotationHandleVisible();
 
         if (statusSetter != null) {
-            statusSetter.accept("Фигура выделена: " + getShapeType());
+            statusSetter.accept("Фигура выделена: " + getShapeType() + " - используйте ручки для изменения");
         }
+
+        System.out.println("DEBUG: Double click - resize handles shown");
     }
 
     /**
      * Настройка обработчиков для ручек изменения размера
      */
     private void setupResizeHandleHandlers() {
+        System.out.println("DEBUG: Setting up resize handle handlers for " + getShapeType());
+
         if (resizeHandles == null || resizeHandles.length == 0) {
-            // Защита: если handles не созданы, ничего не делаем
+            System.out.println("DEBUG: No resize handles to setup handlers for");
             return;
         }
 
+        int handlersSetup = 0;
         for (int i = 0; i < resizeHandles.length; i++) {
             Circle handle = resizeHandles[i];
             if (handle != null) {
-                setupResizeHandleHandler(handle, i);  // Привязка для каждой ручки
-            } else {
-                System.err.println("Warning: Handle at index " + i + " is null!");  // Debug, удали позже
+                // ОЧИСТИТЬ старые обработчики
+                handle.setOnMousePressed(null);
+                handle.setOnMouseDragged(null);
+                handle.setOnMouseReleased(null);
+
+                // ДОБАВИТЬ новые обработчики
+                final int handleIndex = i;
+
+                handle.setOnMousePressed(event -> {
+                    System.out.println("DEBUG: Resize handle " + handleIndex + " PRESSED");
+                    if (!event.isPrimaryButtonDown()) {
+                        System.out.println("DEBUG: Not primary button - ignoring");
+                        event.consume();
+                        return;
+                    }
+                    Point2D pressPoint = pane.sceneToLocal(event.getSceneX(), event.getSceneY());
+                    System.out.println("DEBUG: Init resize at (" + pressPoint.getX() + ", " + pressPoint.getY() + ")");
+                    initResize(pressPoint.getX(), pressPoint.getY());
+                    event.consume();
+                });
+
+                handle.setOnMouseDragged(event -> {
+                    System.out.println("DEBUG: Resize handle " + handleIndex + " DRAGGED");
+                    if (!event.isPrimaryButtonDown()) {
+                        System.out.println("DEBUG: Not primary button - ignoring");
+                        event.consume();
+                        return;
+                    }
+                    Point2D currentPoint = pane.sceneToLocal(event.getSceneX(), event.getSceneY());
+                    System.out.println("DEBUG: Handle drag to (" + currentPoint.getX() + ", " + currentPoint.getY() + ")");
+                    handleResizeDrag(handleIndex, currentPoint.getX(), currentPoint.getY());
+                    event.consume();
+                });
+
+                handle.setOnMouseReleased(event -> {
+                    System.out.println("DEBUG: Resize handle " + handleIndex + " RELEASED");
+                    if (event.getButton() == MouseButton.PRIMARY) {
+                        System.out.println("DEBUG: Handling resize release");
+                        handleResizeRelease();
+                    }
+                    event.consume();
+                });
+
+                handlersSetup++;
+                System.out.println("DEBUG: Handlers setup for handle " + handleIndex);
             }
         }
-    }
 
-    /**
-     * Настройка обработчика для конкретной ручки
-     */
-    private void setupResizeHandleHandler(Circle handle, int handleIndex) {
-        // Очищаем возможные старые события (на всякий случай)
-        handle.setOnMousePressed(null);
-        handle.setOnMouseDragged(null);
-        handle.setOnMouseReleased(null);
-
-        handle.setOnMousePressed(event -> {
-            // УБИРАЕМ проверку на SELECT - только проверка левой кнопки
-            if (!event.isPrimaryButtonDown()) {
-                event.consume();
-                return;
-            }
-            Point2D pressPoint = pane.sceneToLocal(event.getSceneX(), event.getSceneY());
-            initResize(pressPoint.getX(), pressPoint.getY());
-            event.consume();
-        });
-
-        handle.setOnMouseDragged(event -> {
-            // УБИРАЕМ проверку на SELECT - только проверка левой кнопки
-            if (!event.isPrimaryButtonDown()) {
-                event.consume();
-                return;
-            }
-            Point2D currentPoint = pane.sceneToLocal(event.getSceneX(), event.getSceneY());
-            handleResizeDrag(handleIndex, currentPoint.getX(), currentPoint.getY());
-            event.consume();
-        });
-
-        handle.setOnMouseReleased(event -> {
-            if (event.getButton() == MouseButton.PRIMARY) {
-                handleResizeRelease();
-            }
-            event.consume();
-        });
+        System.out.println("DEBUG: Total " + handlersSetup + " resize handle handlers setup for " + getShapeType());
     }
 
     // ============================================================
@@ -438,27 +475,16 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         Point2D mousePos = pane.sceneToLocal(event.getSceneX(), event.getSceneY());
         initializeDrag(mousePos);
 
-        // Если инструмент НЕ SELECT: сбрасываем выделение и handles для этой фигуры
-        if (shapeManager == null || !shapeManager.isSelectToolActive()) {
-            // Явно сбрасываем стиль и handles (чтобы не "застревали")
-            applyDefaultStyle();  // Снимаем синий (если был)
-            hideResizeHandles();  // Скрываем handles
-            // Опционально: удаляем handles из pane, если они созданы (полный сброс)
-            if (resizeHandles != null) {
-                for (Circle handle : resizeHandles) {
-                    if (handle != null) {
-                        pane.getChildren().remove(handle);  // Удаляем из pane (не только hide)
-                    }
-                }
-                resizeHandles = null;  // Очищаем массив
-            }
-            // НЕ вызываем onSelectCallback — фигура не выделяется
-        } else {
-            // Только при SELECT: выделяем фигуру (показываем handles)
+        // ВАЖНО: Для линии выделение происходит при ЛЮБОМ клике
+        // Для остальных фигур - только по двойному клику
+        if (this instanceof LineShape) {
+            System.out.println("DEBUG: Line drag started - selecting line");
             if (onSelectCallback != null) {
                 onSelectCallback.accept(this);
             }
+            makeResizeHandlesVisible();
         }
+        // Для других фигур НЕ выделяем при одинарном клике
 
         isDragging = false;
         event.consume();
@@ -474,6 +500,9 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         // СОХРАНЯЕМ НАЧАЛЬНУЮ ПОЗИЦИЮ ДЛЯ UNDO
         dragStartX = getLayoutX();
         dragStartY = getLayoutY();
+
+        System.out.println("DEBUG: initializeDrag - offset: (" + dragOffsetX + "," + dragOffsetY + ")");
+        System.out.println("DEBUG: start position: (" + dragStartX + "," + dragStartY + ")");
     }
 
     /**
@@ -483,62 +512,11 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         isDragging = true;
         Point2D scenePos = new Point2D(event.getSceneX(), event.getSceneY());
         Point2D panePos = pane.sceneToLocal(scenePos);
-
-        double currentZoom = 1.0;
-        double adjustedX = panePos.getX() / currentZoom;
-        double adjustedY = panePos.getY() / currentZoom;
-
-        // УНИВЕРСАЛЬНАЯ ЛОГИКА ДЛЯ ВСЕХ ФИГУР
-        double newX = adjustedX - dragOffsetX;
-        double newY = adjustedY - dragOffsetY;
-
-        // Для линии проверяем обе точки
-        if (this instanceof LineShape lineShape) {
-            Line line = lineShape.getLine();
-
-            // Вычисляем абсолютные координаты обеих точек после перемещения
-            double newStartX = newX + line.getStartX();
-            double newStartY = newY + line.getStartY();
-            double newEndX = newX + line.getEndX();
-            double newEndY = newY + line.getEndY();
-
-            // Проверяем границы для обеих точек
-            boolean startInBounds = newStartX >= 0 && newStartX <= 1600 && newStartY >= 0 && newStartY <= 1200;
-            boolean endInBounds = newEndX >= 0 && newEndX <= 1600 && newEndY >= 0 && newEndY <= 1200;
-
-            // Если обе точки остаются в пределах - перемещаем
-            if (startInBounds && endInBounds) {
-                setPosition(newX, newY);
-            }
-        } else {
-            // Для остальных фигур - обычная логика
-            newX = calculateNewPositionX(adjustedX);
-            newY = calculateNewPositionY(adjustedY);
-            setPosition(newX, newY);
-        }
-
+        double newX = panePos.getX() - dragOffsetX;
+        double newY = panePos.getY() - dragOffsetY;
+        setPosition(newX, newY);
         updateResizeHandles();
         event.consume();
-    }
-
-    /**
-     * Расчет новой позиции по X с учетом границ
-     */
-    protected double calculateNewPositionX(double mouseX) {
-        double newX = mouseX - dragOffsetX;
-        double paneW = 1600;
-        double maxRelativeX = getMaxRelativeX();
-        return Math.max(0, Math.min(newX, paneW - maxRelativeX));
-    }
-
-    /**
-     * Расчет новой позиции по Y с учетом границ
-     */
-    protected double calculateNewPositionY(double mouseY) {
-        double newY = mouseY - dragOffsetY;
-        double paneH = 1200;
-        double maxRelativeY = getMaxRelativeY();
-        return Math.max(0, Math.min(newY, paneH - maxRelativeY));
     }
 
     /**
@@ -558,10 +536,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
 
             if (shapeManager != null) {
                 shapeManager.registerMove(this, oldX, oldY, currentX, currentY);
-                // АВТОСОХРАНЕНИЕ ПРИ ПЕРЕМЕЩЕНИИ
-                if (shapeManager.getOnShapeAdded() != null) {
-                    shapeManager.getOnShapeAdded().run();
-                }
             }
         }
         isDragging = false;
@@ -595,12 +569,10 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      * Обработка перетаскивания при изменении размера
      */
     private void handleResizeDrag(int handleIndex, double currentX, double currentY) {
-        if (shapeManager == null || !shapeManager.isSelectToolActive()) {
-            return;  // Аналогично
-        }
-
         double deltaX = currentX - pressPaneX;
         double deltaY = currentY - pressPaneY;
+
+        System.out.println("DEBUG: handleResizeDrag - handle: " + handleIndex + ", deltaX: " + deltaX + ", deltaY: " + deltaY);
 
         if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) return;
 
@@ -621,15 +593,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
             double currentHeight = getCurrentHeight();
 
             if (shapeManager != null) {
-                shapeManager.registerResize(this,
-                        initialX, initialY, initialWidth, initialHeight,
-                        currentX, currentY, currentWidth, currentHeight
-                );
-
-                // АВТОСОХРАНЕНИЕ ПРИ РЕСАЙЗЕ
-                if (shapeManager.getOnShapeAdded() != null) {
-                    shapeManager.getOnShapeAdded().run();
-                }
+                shapeManager.registerResize(this, initialX, initialY, initialWidth, initialHeight, currentX, currentY, currentWidth, currentHeight);
             }
         }
     }
@@ -639,7 +603,11 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      */
     @Override
     public void resizeByHandle(int handleIndex, double deltaX, double deltaY) {
+        System.out.println("DEBUG: resizeByHandle - handle: " + handleIndex + ", deltaX: " + deltaX + ", deltaY: " + deltaY);
+
         ResizeParams params = calculateResizeParams(handleIndex, deltaX, deltaY);
+        System.out.println("DEBUG: Calculated params - x: " + params.x + ", y: " + params.y + ", width: " + params.width + ", height: " + params.height);
+
         applyResize(params);
         updateResizeHandles();
     }
@@ -700,17 +668,25 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     private void applyResize(ResizeParams params) {
         // Корректируем отрицательные размеры
         ResizeParams corrected = correctNegativeDimensions(params);
+        System.out.println("DEBUG: After correction - x: " + corrected.x + ", y: " + corrected.y + ", width: " + corrected.width + ", height: " + corrected.height);
 
         // Проверяем минимальный размер
         corrected = enforceMinimumSize(corrected);
+        System.out.println("DEBUG: After min size - x: " + corrected.x + ", y: " + corrected.y + ", width: " + corrected.width + ", height: " + corrected.height);
 
         // Проверяем, было ли реальное изменение
         wasResizedInSession = hasRealSizeChange(corrected);
+        System.out.println("DEBUG: Was resized: " + wasResizedInSession);
 
         // Применяем изменения
+        System.out.println("DEBUG: Applying resize - layoutX: " + corrected.x + ", layoutY: " + corrected.y);
         setLayoutX(corrected.x);
         setLayoutY(corrected.y);
+
+        System.out.println("DEBUG: Calling resizeShape with: " + corrected.width + "x" + corrected.height);
         resizeShape(corrected.width, corrected.height);
+
+        System.out.println("DEBUG: Resize applied successfully");
     }
 
     /**
@@ -747,8 +723,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      * Проверка реального изменения размера
      */
     private boolean hasRealSizeChange(ResizeParams params) {
-        return params.width != initialWidth || params.height != initialHeight ||
-                params.x != initialX || params.y != initialY;
+        return params.width != initialWidth || params.height != initialHeight || params.x != initialX || params.y != initialY;
     }
 
     /**
@@ -762,94 +737,11 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
 // ============================================================
 
     /**
-     * Создание ручки поворота
-     */
-    protected void createRotationHandle() {
-        if (rotationHandle != null) return;
-
-        rotationHandle = new Circle(4.0, Color.DARKORANGE);
-        rotationHandle.setCursor(Cursor.CROSSHAIR);
-        rotationHandle.setVisible(false);
-        pane.getChildren().add(rotationHandle);
-
-        setupRotationHandleEvents();
-    }
-
-    /**
-     * Настройка обработчиков для ручки поворота
-     */
-    private void setupRotationHandleEvents() {
-        rotationHandle.setOnMousePressed(event -> {
-            if (shapeManager == null || !shapeManager.isSelectToolActive() ||
-                    !event.isPrimaryButtonDown()) {
-                event.consume();
-                return;
-            }
-
-            Point2D center = getCenterInPane();
-            Point2D mousePos = pane.sceneToLocal(event.getSceneX(), event.getSceneY());
-
-            // Вычисляем начальный угол
-            rotationStartAngle = Math.toDegrees(Math.atan2(
-                    mousePos.getY() - center.getY(),
-                    mousePos.getX() - center.getX()
-            ));
-
-            isRotating = true;
-            event.consume();
-        });
-
-        rotationHandle.setOnMouseDragged(event -> {
-            if (!isRotating || !event.isPrimaryButtonDown()) return;
-
-            Point2D center = getCenterInPane();
-            Point2D mousePos = pane.sceneToLocal(event.getSceneX(), event.getSceneY());
-
-            // Вычисляем текущий угол
-            double currentAngle = Math.toDegrees(Math.atan2(
-                    mousePos.getY() - center.getY(),
-                    mousePos.getX() - center.getX()
-            ));
-
-            // Вычисляем разницу углов
-            double angleDelta = currentAngle - rotationStartAngle;
-
-            // Применяем поворот
-            setRotation(rotationAngle + angleDelta);
-
-            // Обновляем начальный угол для следующего шага
-            rotationStartAngle = currentAngle;
-
-            event.consume();
-        });
-
-        rotationHandle.setOnMouseReleased(event -> {
-            if (isRotating && event.getButton() == MouseButton.PRIMARY) {
-                isRotating = false;
-
-                // Регистрируем поворот в undo/redo
-                if (shapeManager != null && Math.abs(rotationAngle) > 0.1) {
-                    shapeManager.registerRotation(this, rotationAngle - getRotationDelta(), rotationAngle);
-
-                    // Автосохранение
-                    if (shapeManager.getOnShapeAdded() != null) {
-                        shapeManager.getOnShapeAdded().run();
-                    }
-                }
-            }
-            event.consume();
-        });
-    }
-
-    /**
      * Получение центра фигуры в координатах панели
      */
     protected Point2D getCenterInPane() {
         Bounds bounds = getBoundsInParent();
-        return new Point2D(
-                bounds.getMinX() + bounds.getWidth() / 2,
-                bounds.getMinY() + bounds.getHeight() / 2
-        );
+        return new Point2D(bounds.getMinX() + bounds.getWidth() / 2, bounds.getMinY() + bounds.getHeight() / 2);
     }
 
     /**
@@ -858,7 +750,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     public void setRotation(double angle) {
         this.rotationAngle = normalizeAngle(angle);
         setRotate(this.rotationAngle);
-        updateRotationHandle();
     }
 
     /**
@@ -870,70 +761,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         return angle;
     }
 
-    /**
-     * Получение дельты поворота (для вычисления разницы)
-     */
-    private double getRotationDelta() {
-        // Это упрощенная реализация, можно улучшить
-        return rotationStartAngle;
-    }
-
-    /**
-     * Обновление позиции ручки поворота
-     */
-    protected void updateRotationHandle() {
-        if (rotationHandle == null) return;
-
-        Point2D center = getCenterInPane();
-        double angleRad = Math.toRadians(rotationAngle - 90); // Поворачиваем ручку вверх
-
-        double handleX = center.getX() + ROTATION_HANDLE_DISTANCE * Math.cos(angleRad);
-        double handleY = center.getY() + ROTATION_HANDLE_DISTANCE * Math.sin(angleRad);
-
-        rotationHandle.setCenterX(handleX);
-        rotationHandle.setCenterY(handleY);
-    }
-
-    /**
-     * Показ ручки поворота
-     */
-    public void makeRotationHandleVisible() {
-        if (shapeManager != null && !shapeManager.isSelectToolActive()) {
-            hideRotationHandle();
-            return;
-        }
-
-        if (rotationHandle == null) {
-            createRotationHandle();
-        }
-
-        if (rotationHandle != null) {
-            rotationHandle.setVisible(true);
-            updateRotationHandle();
-        }
-    }
-
-    /**
-     * Скрытие ручки поворота
-     */
-    public void hideRotationHandle() {
-        if (rotationHandle != null) {
-            rotationHandle.setVisible(false);
-        }
-    }
-
-    /**
-     * Удаление ручки поворота
-     */
-    public void removeRotationHandle() {
-        if (rotationHandle != null) {
-            pane.getChildren().remove(rotationHandle);
-            rotationHandle.setOnMousePressed(null);
-            rotationHandle.setOnMouseDragged(null);
-            rotationHandle.setOnMouseReleased(null);
-            rotationHandle = null;
-        }
-    }
 
     // ============================================================
     // CONTEXT MENU
@@ -951,7 +778,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         contextMenu = new ContextMenu();
         setOnContextMenuRequested(event -> {
             contextMenu.show(this, event.getScreenX(), event.getScreenY());
-            event.consume();
+            event.consume(); // ВАЖНО: предотвращаем всплытие события
         });
     }
 
@@ -971,18 +798,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
 
         // Пункт "Повернуть"
         MenuItem rotateItem = new MenuItem("Повернуть");
-        rotateItem.setOnAction(event -> {
-            // Можно добавить диалог для точного ввода угла
-            double newAngle = (rotationAngle + 45) % 360; // Поворот на 45°
-            setRotation(newAngle);
-
-            if (shapeManager != null) {
-                shapeManager.registerRotation(this, rotationAngle, newAngle);
-                if (shapeManager.getOnShapeAdded() != null) {
-                    shapeManager.getOnShapeAdded().run();
-                }
-            }
-        });
+        rotateItem.setOnAction(event -> handleRotationInMenu());
 
         // Пункт "Копировать"
         MenuItem copyItem = new MenuItem("Копировать");
@@ -1013,6 +829,13 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         });
 
         contextMenu.getItems().addAll(copyItem, pasteItem, strokeColorItem, fillColorItem, rotateItem, separator, deleteItem);
+        // УБЕДИТЕСЬ, что событие потребляется
+        setOnContextMenuRequested(event -> {
+            System.out.println("DEBUG: ShapeBase context menu requested");
+            contextMenu.show(this, event.getScreenX(), event.getScreenY());
+            event.consume(); // ВАЖНО: предотвращаем всплытие
+            System.out.println("DEBUG: ShapeBase context menu event consumed");
+        });
     }
 
     // ============================================================
@@ -1025,7 +848,8 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     @Override
     public void highlightAsSelected() {
         applySelectedStyle();
-        makeResizeHandlesVisible(); // Только здесь показываем handles!
+        // УБИРАЕМ вызов makeRotationHandleVisible()
+        System.out.println("DEBUG: Shape selected - only resize handles shown");
     }
 
     /**
@@ -1035,7 +859,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     public void resetHighlight() {
         applyDefaultStyle();
         hideResizeHandles();
-        hideRotationHandle();
     }
 
     /**
@@ -1116,6 +939,8 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     public void addToPane() {
         if (!pane.getChildren().contains(this)) {
             pane.getChildren().add(this);
+            System.out.println("DEBUG: Shape added to pane at position (" + getLayoutX() + ", " + getLayoutY() + ")");
+            System.out.println("DEBUG: Shape bounds in parent: " + getBoundsInParent());
         }
     }
 
@@ -1143,8 +968,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
 
         // Для всех фигур КРОМЕ TEXT используем этот формат
         if (!"TEXT".equals(type)) {
-            return String.format(java.util.Locale.US, "%s|%.2f|%.2f|%.2f|%.2f|%.1f%s",
-                    type, pos[0], pos[1], w, h, rotationAngle, serializeColors());
+            return String.format(java.util.Locale.US, "%s|%.2f|%.2f|%.2f|%.2f|%.1f%s", type, pos[0], pos[1], w, h, rotationAngle, serializeColors());
         }
 
         // Для Text будет вызван переопределенный метод
@@ -1154,9 +978,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     /**
      * Десериализация фигуры из строки
      */
-    public static ShapeBase deserialize(String data, AnchorPane pane,
-                                        Consumer<String> statusSetter,
-                                        Consumer<ShapeHandler> onSelectCallback, ShapeManager shapeManager) {
+    public static ShapeBase deserialize(String data, AnchorPane pane, Consumer<String> statusSetter, Consumer<ShapeHandler> onSelectCallback, ShapeManager shapeManager) {
         System.out.println("=== DEBUG DESERIALIZE START ===");
         System.out.println("Raw data: " + data);
 
@@ -1190,26 +1012,29 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
                 }
             }
 
-            ShapeBase shape = null;
+            ShapeBase shape = switch (type.toUpperCase()) {
+                case "RECTANGLE" ->
+                        new RectangleShape(x, y, width, height, pane, statusSetter, onSelectCallback, shapeManager);
+                case "LINE" -> {
+                    double startX = Double.parseDouble(fixedParts[1]);
+                    double startY = Double.parseDouble(fixedParts[2]);
+                    double endX = Double.parseDouble(fixedParts[3]);
+                    double endY = Double.parseDouble(fixedParts[4]);
 
-            switch (type.toUpperCase()) {
-                case "RECTANGLE":
-                    shape = new RectangleShape(x, y, width, height, pane, statusSetter, onSelectCallback, shapeManager);
-                    break;
-                case "LINE":
-                    shape = new LineShape(x, y, x + width, y + height, pane, statusSetter, onSelectCallback, shapeManager);
-                    break;
-                case "ELLIPSE":
-                    shape = new EllipseShape(x + width/2, y + height/2, width/2, height/2,
-                            pane, statusSetter, onSelectCallback, shapeManager);
-                    break;
-                case "RHOMBUS":
-                    shape = new RhombusShape(x, y, width, height, pane, statusSetter, onSelectCallback, shapeManager);
-                    break;
-                case "TEXT":
-                    shape = createTextShape(fixedParts, pane, statusSetter, onSelectCallback, shapeManager);
-                    break;
-            }
+                    System.out.println("DEBUG: Deserializing LINE");
+                    System.out.println("  Start: (" + startX + ", " + startY + ")");
+                    System.out.println("  End: (" + endX + ", " + endY + ")");
+                    System.out.println("  Parts: " + Arrays.toString(fixedParts));
+
+                    yield new LineShape(startX, startY, endX, endY, pane, statusSetter, onSelectCallback, shapeManager);
+                }
+                case "ELLIPSE" ->
+                        new EllipseShape(x + width / 2, y + height / 2, width / 2, height / 2, pane, statusSetter, onSelectCallback, shapeManager);
+                case "RHOMBUS" ->
+                        new RhombusShape(x, y, width, height, pane, statusSetter, onSelectCallback, shapeManager);
+                case "TEXT" -> createTextShape(fixedParts, pane, statusSetter, onSelectCallback, shapeManager);
+                default -> null;
+            };
 
             // ВАЖНО: Применяем поворот ко всем фигурам
             if (shape != null) {
@@ -1239,10 +1064,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     /**
      * Creates a TextShape from serialized parts during deserialization
      */
-    private static TextShape createTextShape(String[] fixedParts, AnchorPane pane,
-                                             Consumer<String> statusSetter,
-                                             Consumer<ShapeHandler> onSelectCallback,
-                                             ShapeManager shapeManager) {
+    private static TextShape createTextShape(String[] fixedParts, AnchorPane pane, Consumer<String> statusSetter, Consumer<ShapeHandler> onSelectCallback, ShapeManager shapeManager) {
         try {
             // Основные параметры
             double x = Double.parseDouble(fixedParts[1]);
@@ -1306,9 +1128,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      * Сериализует цвета в строку
      */
     protected String serializeColors() {
-        String result = String.format(java.util.Locale.US, "|%.3f,%.3f,%.3f,%.3f|%.3f,%.3f,%.3f,%.3f",
-                strokeColor.getRed(), strokeColor.getGreen(), strokeColor.getBlue(), strokeColor.getOpacity(),
-                fillColor.getRed(), fillColor.getGreen(), fillColor.getBlue(), fillColor.getOpacity());
+        String result = String.format(java.util.Locale.US, "|%.3f,%.3f,%.3f,%.3f|%.3f,%.3f,%.3f,%.3f", strokeColor.getRed(), strokeColor.getGreen(), strokeColor.getBlue(), strokeColor.getOpacity(), fillColor.getRed(), fillColor.getGreen(), fillColor.getBlue(), fillColor.getOpacity());
 
         System.out.println("=== SERIALIZE COLORS ===");
         System.out.println("Stroke: " + strokeColor);
@@ -1335,12 +1155,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
             String[] strokeParts = strokeData.split(",");
             if (strokeParts.length == 4) {
                 try {
-                    strokeColor = Color.color(
-                            Double.parseDouble(strokeParts[0]),
-                            Double.parseDouble(strokeParts[1]),
-                            Double.parseDouble(strokeParts[2]),
-                            Double.parseDouble(strokeParts[3])
-                    );
+                    strokeColor = Color.color(Double.parseDouble(strokeParts[0]), Double.parseDouble(strokeParts[1]), Double.parseDouble(strokeParts[2]), Double.parseDouble(strokeParts[3]));
                     System.out.println("Stroke color restored: " + strokeColor);
                 } catch (NumberFormatException e) {
                     System.out.println("ERROR parsing stroke color: " + e.getMessage());
@@ -1360,12 +1175,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
             String[] fillParts = fillData.split(",");
             if (fillParts.length == 4) {
                 try {
-                    fillColor = Color.color(
-                            Double.parseDouble(fillParts[0]),
-                            Double.parseDouble(fillParts[1]),
-                            Double.parseDouble(fillParts[2]),
-                            Double.parseDouble(fillParts[3])
-                    );
+                    fillColor = Color.color(Double.parseDouble(fillParts[0]), Double.parseDouble(fillParts[1]), Double.parseDouble(fillParts[2]), Double.parseDouble(fillParts[3]));
                     System.out.println("Fill color restored: " + fillColor);
                 } catch (NumberFormatException e) {
                     System.out.println("ERROR parsing fill color: " + e.getMessage());
@@ -1466,10 +1276,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
             if (statusSetter != null) {
                 statusSetter.accept("Цвет заливки изменен");
             }
-
-            if (shapeManager != null && shapeManager.getOnShapeAdded() != null) {
-                shapeManager.getOnShapeAdded().run();
-            }
         });
     }
 
@@ -1518,11 +1324,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         if (shapeManager != null && !newColor.equals(oldColor) && !isUndoRedoInProgress) {
             shapeManager.registerColorChange(this, oldColor, this.fillColor, newColor, this.fillColor);
         }
-
-        // Автосохранение (только если не undo/redo)
-        if (shapeManager != null && shapeManager.getOnShapeAdded() != null && !isUndoRedoInProgress) {
-            shapeManager.getOnShapeAdded().run();
-        }
     }
 
     public void setFillColor(Color newColor) {
@@ -1535,11 +1336,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         // РЕГИСТРИРУЕМ ИЗМЕНЕНИЕ ЦВЕТА В UNDO/REDO (только если не undo/redo)
         if (shapeManager != null && !newColor.equals(oldColor) && !isUndoRedoInProgress) {
             shapeManager.registerColorChange(this, this.strokeColor, oldColor, this.strokeColor, newColor);
-        }
-
-        // Автосохранение (только если не undo/redo)
-        if (shapeManager != null && shapeManager.getOnShapeAdded() != null && !isUndoRedoInProgress) {
-            shapeManager.getOnShapeAdded().run();
         }
     }
 
@@ -1561,21 +1357,25 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     }
 
     /**
-     * Создает копию фигуры
+     * Обработчик поворота в контекстном меню (будет переопределен в LineShape)
      */
-    public ShapeBase createCopy() {
-        String serializedData = serialize();
-        return deserialize(serializedData, pane, statusSetter, onSelectCallback, shapeManager);
-    }
+    protected void handleRotationInMenu() {
+        // Для линии этот метод не должен вызываться
+        if (this instanceof LineShape) {
+            System.out.println("DEBUG: Rotation disabled for LineShape");
+            return;
+        }
 
-    /**
-     * Создает копию со смещением (для paste)
-     */
-    public ShapeBase createCopyWithOffset(double offsetX, double offsetY) {
-        ShapeBase copy = createCopy();
-        double[] pos = copy.getPosition();
-        copy.setPosition(pos[0] + offsetX, pos[1] + offsetY);
-        return copy;
+        double newAngle = (rotationAngle + 45) % 360;
+        setRotation(newAngle);
+
+        if (shapeManager != null) {
+            shapeManager.registerRotation(this, rotationAngle, newAngle);
+        }
+
+        if (statusSetter != null) {
+            statusSetter.accept("Фигура повернута на " + newAngle + "°");
+        }
     }
 
     /**

@@ -39,40 +39,10 @@
                         <Tooltip text="Очистить схему"/>
                     </tooltip>
                 </Button>
-                <Button fx:id="zoomInBtn" styleClass="tool-button">
-                    <graphic>
-                        <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
-                            <Image url="@../images/zoom_plus.png"/>
-                        </ImageView>
-                    </graphic>
-                    <tooltip>
-                        <Tooltip text="Увеличить схему"/>
-                    </tooltip>
-                </Button>
-                <Button fx:id="zoomOutBtn" styleClass="tool-button">
-                    <graphic>
-                        <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
-                            <Image url="@../images/zoom_minus.png"/>
-                        </ImageView>
-                    </graphic>
-                    <tooltip>
-                        <Tooltip text="Уменьшить схему"/>
-                    </tooltip>
-                </Button>
             </HBox>
             <!-- Панель инструментов -->
             <HBox spacing="10" alignment="CENTER_LEFT">
             <ToolBar>
-                <Button fx:id="selectToolBtn" styleClass="tool-button">
-                    <graphic>
-                        <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
-                            <Image url="@../images/hand.png"/>
-                        </ImageView>
-                    </graphic>
-                    <tooltip>
-                        <Tooltip text="Выбрать фигуру"/>
-                    </tooltip>
-                </Button>
                 <Button fx:id="undoBtn" styleClass="tool-button">
                     <graphic>
                         <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
@@ -162,12 +132,12 @@
     </top>
     <!-- Центральная область: холст схемы -->
     <center>
-        <ScrollPane fx:id="schemeScrollPane" prefWidth="800" prefHeight="600">
+        <ScrollPane fx:id="schemeScrollPane">
             <AnchorPane fx:id="schemePane"
-                        prefWidth="1000"
-                        prefHeight="1000"
-                        minWidth="0.0"
-                        minHeight="0.0"
+                        prefWidth="2200"
+                        prefHeight="1800"
+                        minWidth="1200"
+                        minHeight="800"
                         onMousePressed="#onPaneMousePressed"
                         onMouseDragged="#onPaneMouseDragged"
                         onMouseReleased="#onPaneMouseReleased">

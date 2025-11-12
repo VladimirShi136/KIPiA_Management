@@ -11,11 +11,8 @@ import java.util.function.Consumer;
  * Класс ромбовидной фигуры (бабочка) с поддержкой выделения, изменения размера и перемещения
  */
 public class RhombusShape extends ShapeBase {
-    private static final Color DEFAULT_FILL = Color.TRANSPARENT;
-    private static final Color DEFAULT_STROKE = Color.BLACK;
+
     private static final double DEFAULT_STROKE_WIDTH = 2.0;
-    private static final Color SELECTED_FILL = Color.TRANSPARENT;
-    private static final Color SELECTED_STROKE = Color.BLUE;
     private static final double SELECTED_STROKE_WIDTH = 3.0;
 
     private final Path rhombusPath;
@@ -89,27 +86,23 @@ public class RhombusShape extends ShapeBase {
         double height = getCurrentHeight();
 
         // ВЫЧИСЛЯЕМ реальные координаты углов бабочки
-        double centerX = width / 2;
-        double centerY = height / 2;
 
         // Углы бабочки - точно по границам
         double leftTopY = 0;
-        double leftBottomY = height;
         double rightTopY = 0;
-        double rightBottomY = height;
 
         // HANDLES на видимых углах бабочки
         resizeHandles[0].setCenterX(getLayoutX() + 0);          // Левый верхний
         resizeHandles[0].setCenterY(getLayoutY() + leftTopY);
 
         resizeHandles[1].setCenterX(getLayoutX() + 0);          // Левый нижний
-        resizeHandles[1].setCenterY(getLayoutY() + leftBottomY);
+        resizeHandles[1].setCenterY(getLayoutY() + height);
 
         resizeHandles[2].setCenterX(getLayoutX() + width);      // Правый верхний
         resizeHandles[2].setCenterY(getLayoutY() + rightTopY);
 
         resizeHandles[3].setCenterX(getLayoutX() + width);      // Правый нижний
-        resizeHandles[3].setCenterY(getLayoutY() + rightBottomY);
+        resizeHandles[3].setCenterY(getLayoutY() + height);
 
         for (Circle handle : resizeHandles) {
             if (handle != null) {
@@ -152,7 +145,7 @@ public class RhombusShape extends ShapeBase {
                 break;
         }
 
-        // КОРРЕКЦИЯ отрицательных размеров
+        // Корректируем отрицательные размеры
         if (newWidth < 0) {
             newWidth = Math.abs(newWidth);
             newX -= newWidth;
@@ -162,29 +155,22 @@ public class RhombusShape extends ShapeBase {
             newY -= newHeight;
         }
 
-        // ПРИМЕНЕНИЕ с ограничениями для КРАСНОГО КВАДРАТА
+        // СОХРАНЯЕМ минимальный размер
         newWidth = Math.max(40, newWidth);
         newHeight = Math.max(40, newHeight);
 
-        // ВАЖНО: ограничиваем чтобы фигура точно доходила до границ
-        double maxX = 1600 - newWidth;
-        double maxY = 1200 - newHeight;
-        newX = Math.max(0, Math.min(newX, maxX));
-        newY = Math.max(0, Math.min(newY, maxY));
-
-        // ПРИМЕНЯЕМ изменения
+        // Применяем изменения
         setLayoutX(newX);
         setLayoutY(newY);
         resizeShape(newWidth, newHeight);
 
-        // ВАЖНО: обновляем handles СРАЗУ после ресайза
         updateResizeHandles();
-
         wasResizedInSession = true;
     }
 
     @Override
     protected void resizeShape(double width, double height) {
+        // СОХРАНЯЕМ минимальный размер
         double actualWidth = Math.max(40, width);
         double actualHeight = Math.max(40, height);
 
@@ -203,15 +189,13 @@ public class RhombusShape extends ShapeBase {
 
         // ТОЧНО ТАК ЖЕ КАК В SHAPEMANAGER
         double leftTopY = 0;
-        double leftBottomY = height;
         double rightTopY = 0;
-        double rightBottomY = height;
 
         // Левый треугольник - от верха до низа
         rhombusPath.getElements().addAll(
                 new MoveTo(0, leftTopY),           // Левый верх (0)
                 new LineTo(centerX, centerY),      // Центр
-                new LineTo(0, leftBottomY),        // Левый низ (height)
+                new LineTo(0, height),        // Левый низ (height)
                 new ClosePath()
         );
 
@@ -219,7 +203,7 @@ public class RhombusShape extends ShapeBase {
         rhombusPath.getElements().addAll(
                 new MoveTo(width, rightTopY),      // Правый верх (0)
                 new LineTo(centerX, centerY),      // Центр
-                new LineTo(width, rightBottomY),   // Правый низ (height)
+                new LineTo(width, height),   // Правый низ (height)
                 new ClosePath()
         );
     }
@@ -269,24 +253,4 @@ public class RhombusShape extends ShapeBase {
         resizeHandles = null;
         wasResizedInSession = false;
     }
-
-    /**
-     * ДЕБАГ метод для проверки границ
-     */
-    public void debugBounds() {
-        System.out.println("Rhombus debug - " +
-                "Layout: (" + getLayoutX() + "," + getLayoutY() + ") " +
-                "Size: " + getCurrentWidth() + "x" + getCurrentHeight() + " " +
-                "LocalBounds: " + getBoundsInLocal() + " " +
-                "ParentBounds: " + getBoundsInParent());
-    }
-
-//    @Override
-//    public String serialize() {
-//        double[] pos = getPosition();
-//        double w = getCurrentWidth();
-//        double h = getCurrentHeight();
-//        return String.format(java.util.Locale.US, "%s|%.2f|%.2f|%.2f|%.2f%s",
-//                getShapeType(), pos[0], pos[1], w, h, serializeColors());
-//    }
 }

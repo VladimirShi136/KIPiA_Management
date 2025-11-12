@@ -147,17 +147,6 @@ public class DatabaseService {
         }
     }
 
-    /**
-     * Проверяет, активно ли соединение с БД
-     */
-    public boolean isConnectionValid() {
-        try {
-            return connection != null && !connection.isClosed() && connection.isValid(2);
-        } catch (SQLException e) {
-            return false;
-        }
-    }
-
     public boolean tablesExist() {
         try (Statement stmt = connection.createStatement()) {
             ResultSet rs = stmt.executeQuery(

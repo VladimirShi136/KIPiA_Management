@@ -4,7 +4,6 @@ import com.kipia.management.kipia_management.shapes.ShapeBase;
 import com.kipia.management.kipia_management.shapes.ShapeFactory;
 import com.kipia.management.kipia_management.shapes.ShapeHandler;
 import com.kipia.management.kipia_management.shapes.ShapeType;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;

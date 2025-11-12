@@ -1,11 +1,16 @@
 package com.kipia.management.kipia_management.utils;
 
-import javafx.scene.control.Alert;
-import javafx.scene.control.ButtonType;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
+import javafx.animation.FadeTransition;
+import javafx.animation.PauseTransition;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.StackPane;
+import javafx.scene.paint.Color;
+import javafx.stage.*;
+import javafx.util.Duration;
 
+import java.util.Objects;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -89,6 +94,71 @@ public class CustomAlert {
         alert.showAndWait();
         return alert.getResult();
     }
+
+    /**
+     * Показывает окно автосохранения с предустановленными стилями.
+     * @param message текст сообщения (например, "Автосохранение...")
+     * @param durationSec время отображения в секундах
+     */
+    public static void showAutoSaveNotification(String message, double durationSec) {
+        try {
+            Stage notificationStage = new Stage();
+            notificationStage.initStyle(StageStyle.TRANSPARENT);
+            notificationStage.initModality(Modality.NONE);
+            notificationStage.setAlwaysOnTop(true);
+            notificationStage.setResizable(false);
+
+            // Используем CSS класс вместо inline стилей
+            Label label = new Label(message);
+            label.getStyleClass().add("auto-save-notification");
+
+            StackPane root = new StackPane(label);
+            root.getStyleClass().add("auto-save-notification-container");
+
+            Scene scene = new Scene(root);
+            scene.setFill(Color.TRANSPARENT);
+
+            // Подключаем CSS файл
+            scene.getStylesheets().add(Objects.requireNonNull(CustomAlert.class.getResource("/styles/light-theme.css")).toExternalForm());
+
+            notificationStage.setScene(scene);
+
+            // Позиционируем в правом верхнем углу
+            Window mainWindow = Stage.getWindows().stream()
+                    .filter(Window::isShowing)
+                    .findFirst()
+                    .orElse(null);
+
+            if (mainWindow != null) {
+                double offsetX = 10;
+                double offsetY = 36;
+                notificationStage.setX(mainWindow.getX() + mainWindow.getWidth() - 250 - offsetX);
+                notificationStage.setY(mainWindow.getY() + offsetY);
+            }
+
+            // Анимация появления/исчезновения
+            root.setOpacity(0);
+            FadeTransition fadeIn = new FadeTransition(Duration.millis(300), root);
+            fadeIn.setFromValue(0);
+            fadeIn.setToValue(1);
+
+            FadeTransition fadeOut = new FadeTransition(Duration.millis(300), root);
+            fadeOut.setFromValue(1);
+            fadeOut.setToValue(0);
+            fadeOut.setOnFinished(e -> notificationStage.close());
+
+            notificationStage.show();
+            fadeIn.play();
+
+            PauseTransition pause = new PauseTransition(Duration.seconds(durationSec));
+            pause.setOnFinished(e -> fadeOut.play());
+            pause.play();
+
+        } catch (Exception e) {
+            System.err.println("Ошибка показа уведомления: " + e.getMessage());
+        }
+    }
+
 
     private static void showSimpleAlert(Alert.AlertType type, String title, String message, String styleType) {
         Alert alert = new Alert(type, message, ButtonType.OK);

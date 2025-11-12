@@ -1,26 +1,38 @@
 package com.kipia.management.kipia_management.shapes;
 
+import com.kipia.management.kipia_management.managers.ClipboardManager;
 import com.kipia.management.kipia_management.managers.ShapeManager;
+import com.kipia.management.kipia_management.services.ShapeService;
+import javafx.geometry.Insets;
 import javafx.scene.Cursor;
+import javafx.scene.Node;
+import javafx.scene.control.*;
 import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.GridPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Line;
 import javafx.geometry.Point2D;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 
 public class LineShape extends ShapeBase {
-    private Line line;
-    private Line hitLine;
-    private Color defaultStroke = Color.BLACK;
-    private double defaultStrokeWidth = 1.0;
-    private double hitStrokeWidth = 8.0;
-    private Color selectedStroke = Color.DODGERBLUE;
+    private final Line line;
+    private final double defaultStrokeWidth = 2.0;
     private Circle startHandle, endHandle;
     private static final double HANDLE_RADIUS = 6.0;
     private Circle snapHighlight;
-    private static final double SNAP_HIGHLIGHT_RADIUS = 5.0;
+
+    private Circle snapIndicator;
+    private static final double SNAP_THRESHOLD = 10.0;
+
+    // Константы для точного определения попадания
+    private static final double HIT_THRESHOLD = 20.0; // Порог захвата в пикселях
 
     // Границы красного квадрата
     private static final double MIN_X = 0;
@@ -33,36 +45,38 @@ public class LineShape extends ShapeBase {
                      Consumer<ShapeHandler> onSelectCallback, ShapeManager shapeManager) {
         super(pane, statusSetter, onSelectCallback, shapeManager);
 
-        // Приводим координаты к допустимым границам при создании
-        startX = clampX(startX);
-        startY = clampY(startY);
-        endX = clampX(endX);
-        endY = clampY(endY);
-
+        // УБИРАЕМ ВСЕ ПРОВЕРКИ И ОГРАНИЧЕНИЯ
         line = new Line(0, 0, endX - startX, endY - startY);
+        Color defaultStroke = Color.BLACK;
         line.setStroke(defaultStroke);
         line.setStrokeWidth(defaultStrokeWidth);
 
-        // Линия для захвата
-        hitLine = new Line(0, 0, endX - startX, endY - startY);
-        hitLine.setStroke(Color.TRANSPARENT);
-        hitLine.setStrokeWidth(hitStrokeWidth);
-        hitLine.setPickOnBounds(true);
+        getChildren().clear();
+        getChildren().add(line);
 
-        hitLine.startXProperty().bind(line.startXProperty());
-        hitLine.startYProperty().bind(line.startYProperty());
-        hitLine.endXProperty().bind(line.endXProperty());
-        hitLine.endYProperty().bind(line.endYProperty());
-
-        getChildren().addAll(hitLine, line);
-
+        // Устанавливаем позицию без ограничений
         setLayoutX(startX);
         setLayoutY(startY);
 
         createLineHandles();
-        setupHitLineEvents();
-
         setCurrentDimensions(Math.abs(endX - startX), Math.abs(endY - startY));
+        setupLineEventHandlers();
+
+        System.out.println("DEBUG: Line created from (" + startX + "," + startY + ") to (" + endX + "," + endY + ")");
+    }
+
+    /**
+     * Переопределяем contains для точного определения попадания на линию
+     * Это ЕДИНСТВЕННЫЙ метод, который нужно переопределить для hit detection
+     */
+    @Override
+    public boolean contains(double localX, double localY) {
+        return containsPoint(localX, localY);
+    }
+
+    @Override
+    public boolean contains(Point2D localPoint) {
+        return containsPoint(localPoint.getX(), localPoint.getY());
     }
 
     // Методы для ограничения координат
@@ -75,22 +89,13 @@ public class LineShape extends ShapeBase {
     }
 
     /**
-     * Проверяет, находятся ли обе точки линии в пределах границ
-     */
-    private boolean areBothPointsInBounds(double startXAbs, double startYAbs, double endXAbs, double endYAbs) {
-        boolean startInBounds = (startXAbs >= MIN_X && startXAbs <= MAX_X && startYAbs >= MIN_Y && startYAbs <= MAX_Y);
-        boolean endInBounds = (endXAbs >= MIN_X && endXAbs <= MAX_X && endYAbs >= MIN_Y && endYAbs <= MAX_Y);
-        return startInBounds && endInBounds;
-    }
-
-    /**
      * Получает абсолютные координаты обеих точек линии
      */
     private double[] getAbsoluteCoordinates() {
         double startXAbs = getLayoutX() + line.getStartX();
         double startYAbs = getLayoutY() + line.getStartY();
         double endXAbs = getLayoutX() + line.getEndX();
-        double endYAbs = getLayoutY() + line.getEndY();
+        double endYAbs = getLayoutY() + line.getEndY();  // ← ИСПРАВИТЬ НА getEndY()
         return new double[]{startXAbs, startYAbs, endXAbs, endYAbs};
     }
 
@@ -114,20 +119,32 @@ public class LineShape extends ShapeBase {
     }
 
     private void createLineHandles() {
-        if (startHandle == null) {
-            startHandle = new Circle(HANDLE_RADIUS, Color.CORAL);
-            startHandle.setCursor(Cursor.CROSSHAIR);
-            startHandle.setVisible(false);
-            pane.getChildren().add(startHandle);
+        // УДАЛЯЕМ СТАРЫЕ HANDLES ЕСЛИ ЕСТЬ
+        if (startHandle != null) {
+            pane.getChildren().remove(startHandle);
+            startHandle = null;
         }
-        if (endHandle == null) {
-            endHandle = new Circle(HANDLE_RADIUS, Color.CORAL);
-            endHandle.setCursor(Cursor.CROSSHAIR);
-            endHandle.setVisible(false);
-            pane.getChildren().add(endHandle);
+        if (endHandle != null) {
+            pane.getChildren().remove(endHandle);
+            endHandle = null;
         }
-        updateResizeHandles();
+
+        // СОЗДАЕМ НОВЫЕ HANDLES
+        startHandle = new Circle(HANDLE_RADIUS, Color.CORAL);
+        startHandle.setCursor(Cursor.CROSSHAIR);
+        startHandle.setVisible(false);
+        pane.getChildren().add(startHandle);
+
+        endHandle = new Circle(HANDLE_RADIUS, Color.CORAL);
+        endHandle.setCursor(Cursor.CROSSHAIR);
+        endHandle.setVisible(false);
+        pane.getChildren().add(endHandle);
+
+        // ВАЖНО: НАСТРАИВАЕМ ОБРАБОТЧИКИ СРАЗУ
         setupLineHandleEvents();
+        updateResizeHandles();
+
+        System.out.println("DEBUG: Line handles created and events setup");
     }
 
     @Override
@@ -138,13 +155,160 @@ public class LineShape extends ShapeBase {
     @Override
     public void updateResizeHandles() {
         if (startHandle != null) {
-            startHandle.setCenterX(getLayoutX() + line.getStartX());
-            startHandle.setCenterY(getLayoutY() + line.getStartY());
+            double startXAbs = getLayoutX() + line.getStartX();
+            double startYAbs = getLayoutY() + line.getStartY();
+            double endXAbs = getLayoutX() + line.getEndX();
+            double endYAbs = getLayoutY() + line.getEndY();
+
+            startHandle.setCenterX(startXAbs);
+            startHandle.setCenterY(startYAbs);
+            endHandle.setCenterX(endXAbs);
+            endHandle.setCenterY(endYAbs);
+
+            System.out.println("DEBUG: Handles updated - start: (" + startXAbs + "," + startYAbs +
+                    "), end: (" + endXAbs + "," + endYAbs + ")");
         }
-        if (endHandle != null) {
-            endHandle.setCenterX(getLayoutX() + line.getEndX());
-            endHandle.setCenterY(getLayoutY() + line.getEndY());
+    }
+
+    /**
+     * Настройка обработчиков событий для основной линии
+     */
+    private void setupLineEventHandlers() {
+        line.setOnMousePressed(event -> {
+            if (event.isPrimaryButtonDown()) {
+                System.out.println("DEBUG: Line PRESSED with precise hit detection");
+
+                Point2D mousePos = pane.sceneToLocal(event.getSceneX(), event.getSceneY());
+                initializeDrag(mousePos);
+
+                // Выделяем линию при клике
+                if (onSelectCallback != null) {
+                    onSelectCallback.accept(this);
+                }
+
+                // Показываем handles при одинарном клике
+                makeResizeHandlesVisible();
+
+                event.consume();
+            }
+        });
+
+        line.setOnMouseDragged(event -> {
+            if (event.isPrimaryButtonDown()) {
+                Point2D scenePos = new Point2D(event.getSceneX(), event.getSceneY());
+                Point2D panePos = pane.sceneToLocal(scenePos);
+
+                double newX = panePos.getX() - dragOffsetX;
+                double newY = panePos.getY() - dragOffsetY;
+
+                setPosition(newX, newY);
+                updateResizeHandles();
+
+                event.consume();
+            }
+        });
+
+        line.setOnMouseReleased(event -> {
+            if (event.getButton() == MouseButton.PRIMARY) {
+                System.out.println("DEBUG: Line RELEASED");
+
+                // Регистрируем изменение для undo/redo
+                if (isDragging && shapeManager != null) {
+                    double[] currentCoords = getAbsoluteCoordinates();
+                    getLayoutX();
+                    getLayoutY();
+
+                    double oldX = getDragStartX();
+                    double oldY = getDragStartY();
+
+                    double[] oldCoords = new double[]{
+                            oldX + line.getStartX(), oldY + line.getStartY(),
+                            oldX + line.getEndX(), oldY + line.getEndY()
+                    };
+
+                    shapeManager.registerLinePointsChange(
+                            this,
+                            oldCoords[0], oldCoords[1], oldCoords[2], oldCoords[3],
+                            currentCoords[0], currentCoords[1], currentCoords[2], currentCoords[3]
+                    );
+                }
+
+                isDragging = false;
+                event.consume();
+            }
+        });
+
+        // Двойной клик на линии
+        line.setOnMouseClicked(clickEvent -> {
+            if (clickEvent.getButton() == MouseButton.PRIMARY && clickEvent.getClickCount() == 2) {
+                System.out.println("DEBUG: Line DOUBLE CLICK");
+
+                if (onSelectCallback != null) {
+                    onSelectCallback.accept(this);
+                }
+                makeResizeHandlesVisible();
+                clickEvent.consume();
+            }
+        });
+    }
+
+    /**
+     * Проверяет, находится ли точка рядом с линией
+     * Теперь координаты точки уже преобразованы в рабочую область
+     */
+    public boolean containsPoint(double workspaceX, double workspaceY) {
+        try {
+            // ПРОСТАЯ проверка без коррекции зума
+            double[] absCoords = getAbsoluteCoordinates();
+            double x1 = absCoords[0], y1 = absCoords[1];
+            double x2 = absCoords[2], y2 = absCoords[3];
+
+            double distance = distanceToLine(workspaceX, workspaceY, x1, y1, x2, y2);
+            double effectiveThreshold = HIT_THRESHOLD + (line.getStrokeWidth() / 2);
+
+            return distance <= effectiveThreshold;
+        } catch (Exception e) {
+            return false;
         }
+    }
+
+    // УБИРАЕМ все проверки границ из методов drag
+
+    /**
+     * Вычисляет расстояние от точки до отрезка
+     */
+    private double distanceToLine(double px, double py, double x1, double y1, double x2, double y2) {
+        double A = px - x1;
+        double B = py - y1;
+        double C = x2 - x1;
+        double D = y2 - y1;
+
+        double dot = A * C + B * D;
+        double lenSq = C * C + D * D;
+
+        // Обрабатываем случай нулевой длины линии
+        if (lenSq == 0) {
+            return Math.sqrt(A * A + B * B);
+        }
+
+        double param = dot / lenSq;
+
+        double xx, yy;
+
+        if (param < 0) {
+            xx = x1;
+            yy = y1;
+        } else if (param > 1) {
+            xx = x2;
+            yy = y2;
+        } else {
+            xx = x1 + param * C;
+            yy = y1 + param * D;
+        }
+
+        double dx = px - xx;
+        double dy = py - yy;
+        return Math.sqrt(dx * dx + dy * dy);
     }
 
     @Override
@@ -165,16 +329,18 @@ public class LineShape extends ShapeBase {
         }
         // Удаляем индикатор фиксации
         removeSnapHighlight();
+        removeSnapIndicator();
     }
 
     private void setupLineHandleEvents() {
         if (shapeManager != null) {
             for (Circle handle : new Circle[]{startHandle, endHandle}) {
                 if (handle != null) {
-                    // Используем массив для обхода ограничения final
                     final double[][] initialCoordsHolder = new double[1][];
 
                     handle.setOnMousePressed(event -> {
+                        System.out.println("DEBUG: Line handle PRESSED");
+
                         double handleX = getLayoutX() + (handle == startHandle ? line.getStartX() : line.getEndX());
                         double handleY = getLayoutY() + (handle == startHandle ? line.getStartY() : line.getEndY());
                         initialX = handleX;
@@ -182,6 +348,7 @@ public class LineShape extends ShapeBase {
 
                         // Сохраняем начальные координаты линии для undo
                         initialCoordsHolder[0] = getAbsoluteCoordinates();
+
                         event.consume();
                     });
 
@@ -192,85 +359,45 @@ public class LineShape extends ShapeBase {
                         double paneX = clampX(panePoint.getX());
                         double paneY = clampY(panePoint.getY());
 
-                        // Получаем текущие абсолютные координаты
                         double[] currentCoords = getAbsoluteCoordinates();
                         double otherX, otherY;
 
                         if (handle == startHandle) {
-                            otherX = currentCoords[2]; // endX
-                            otherY = currentCoords[3]; // endY
+                            otherX = currentCoords[2];
+                            otherY = currentCoords[3];
                         } else {
-                            otherX = currentCoords[0]; // startX
-                            otherY = currentCoords[1]; // startY
+                            otherX = currentCoords[0];
+                            otherY = currentCoords[1];
                         }
 
-                        // ПРИМЕНЯЕМ ФИКСАЦИЮ К НОВЫМ КООРДИНАТАМ
-                        double[] snappedCoords = applyLineSnap(paneX, paneY, otherX, otherY, handle == startHandle);
+                        // ИСПОЛЬЗУЕМ НОВЫЙ МЕТОД С ПРИВЯЗКОЙ К ФИГУРАМ
+                        double[] snappedCoords = applyLineSnapWithShapes(paneX, paneY, otherX, otherY);
                         double snappedX = snappedCoords[0];
                         double snappedY = snappedCoords[1];
 
-                        // Проверяем, будут ли обе точки в границах после перемещения
                         if (handle == startHandle) {
-                            if (areBothPointsInBounds(snappedX, snappedY, otherX, otherY)) {
-                                double newRelX = snappedX - getLayoutX();
-                                double newRelY = snappedY - getLayoutY();
-                                line.setStartX(newRelX);
-                                line.setStartY(newRelY);
-                                updateResizeHandles();
-
-                                // Показываем индикатор фиксации если применили
-                                if (snappedCoords[2] == 1) { // horizontal snap
-                                    showSnapHighlight(snappedX, snappedY);
-                                } else if (snappedCoords[2] == 2) { // vertical snap
-                                    showSnapHighlight(snappedX, snappedY);
-                                } else {
-                                    hideSnapHighlight();
-                                }
-                            }
+                            setLinePoints(snappedX, snappedY, otherX, otherY);
                         } else {
-                            if (areBothPointsInBounds(otherX, otherY, snappedX, snappedY)) {
-                                double newRelX = snappedX - getLayoutX();
-                                double newRelY = snappedY - getLayoutY();
-                                line.setEndX(newRelX);
-                                line.setEndY(newRelY);
-                                updateResizeHandles();
-
-                                // Показываем индикатор фиксации если применили
-                                if (snappedCoords[2] == 1) { // horizontal snap
-                                    showSnapHighlight(snappedX, snappedY);
-                                } else if (snappedCoords[2] == 2) { // vertical snap
-                                    showSnapHighlight(snappedX, snappedY);
-                                } else {
-                                    hideSnapHighlight();
-                                }
-                            }
+                            setLinePoints(otherX, otherY, snappedX, snappedY);
                         }
 
                         event.consume();
                     });
 
                     handle.setOnMouseReleased(event -> {
-                        // Скрываем индикатор фиксации при отпускании
-                        hideSnapHighlight();
+                        hideSnapIndicator();
 
-                        // РЕГИСТРИРУЕМ ИЗМЕНЕНИЕ КОНЕЧНЫХ ТОЧЕК ЛИНИИ В UNDO/REDO
                         if (initialCoordsHolder[0] != null) {
                             double[] finalCoords = getAbsoluteCoordinates();
 
-                            // Проверяем, было ли реальное изменение
                             if (hasLineChanged(initialCoordsHolder[0], finalCoords)) {
                                 shapeManager.registerLinePointsChange(
                                         this,
-                                        initialCoordsHolder[0][0], initialCoordsHolder[0][1], // old start X, Y
-                                        initialCoordsHolder[0][2], initialCoordsHolder[0][3], // old end X, Y
-                                        finalCoords[0], finalCoords[1],     // new start X, Y
-                                        finalCoords[2], finalCoords[3]      // new end X, Y
+                                        initialCoordsHolder[0][0], initialCoordsHolder[0][1],
+                                        initialCoordsHolder[0][2], initialCoordsHolder[0][3],
+                                        finalCoords[0], finalCoords[1],
+                                        finalCoords[2], finalCoords[3]
                                 );
-
-                                // АВТОСОХРАНЕНИЕ
-                                if (shapeManager.getOnShapeAdded() != null) {
-                                    shapeManager.getOnShapeAdded().run();
-                                }
                             }
                         }
                         event.consume();
@@ -278,19 +405,6 @@ public class LineShape extends ShapeBase {
                 }
             }
         }
-    }
-
-    /**
-     * Показывает индикатор фиксации
-     */
-    private void showSnapHighlight(double x, double y) {
-        if (snapHighlight == null) {
-            snapHighlight = new Circle(SNAP_HIGHLIGHT_RADIUS, Color.RED);
-            pane.getChildren().add(snapHighlight);
-        }
-        snapHighlight.setCenterX(x);
-        snapHighlight.setCenterY(y);
-        snapHighlight.setVisible(true);
     }
 
     /**
@@ -314,9 +428,8 @@ public class LineShape extends ShapeBase {
 
     /**
      * Применяет фиксацию линии к осям при приближении
-     * Возвращает [x, y, snapType] где snapType: 0=нет, 1=горизонталь, 2=вертикаль
      */
-    private double[] applyLineSnap(double movingX, double movingY, double fixedX, double fixedY, boolean isStartHandle) {
+    private double[] applyLineSnap(double movingX, double movingY, double fixedX, double fixedY) {
         double snapThreshold = 15.0;
         double angleSnapThreshold = 10.0; // градусы
 
@@ -350,7 +463,7 @@ public class LineShape extends ShapeBase {
             return new double[]{resultX, resultY, snapType};
         }
 
-        // Старая логика фиксации к осям (оставляем для обратной совместимости)
+        // Старая логика фиксации к осям
         double deltaX = Math.abs(movingX - fixedX);
         double deltaY = Math.abs(movingY - fixedY);
 
@@ -382,98 +495,6 @@ public class LineShape extends ShapeBase {
                 Math.abs(initial[3] - current[3]) > 0.1;
     }
 
-    private void setupHitLineEvents() {
-        hitLine.setOnMousePressed(event -> {
-            if (!event.isPrimaryButtonDown()) { // ТОЛЬКО левая кнопка
-                event.consume();
-                return;
-            }
-            Point2D mousePos = pane.sceneToLocal(event.getSceneX(), event.getSceneY());
-            initializeDrag(mousePos);
-
-            if (shapeManager == null || !shapeManager.isSelectToolActive()) {
-                applyDefaultStyle();
-                hideResizeHandles();
-            } else {
-                if (onSelectCallback != null) {
-                    onSelectCallback.accept(this);
-                }
-            }
-            isDragging = false;
-            event.consume();
-        });
-
-        hitLine.setOnMouseDragged(event -> {
-            if (!event.isPrimaryButtonDown()) { // ТОЛЬКО левая кнопка
-                event.consume();
-                return;
-            }
-            isDragging = true;
-            Point2D scenePos = new Point2D(event.getSceneX(), event.getSceneY());
-            Point2D panePos = pane.sceneToLocal(scenePos);
-
-            // Используем базовую логику перемещения
-            double currentZoom = 1.0;
-            double adjustedX = panePos.getX() / currentZoom;
-            double adjustedY = panePos.getY() / currentZoom;
-
-            double newX = adjustedX - dragOffsetX;
-            double newY = adjustedY - dragOffsetY;
-
-            // Получаем абсолютные координаты после перемещения
-            double newStartXAbs = newX + line.getStartX();
-            double newStartYAbs = newY + line.getStartY();
-            double newEndXAbs = newX + line.getEndX();
-            double newEndYAbs = newY + line.getEndY();
-
-            // Применяем перемещение только если обе точки остаются в границах
-            if (areBothPointsInBounds(newStartXAbs, newStartYAbs, newEndXAbs, newEndYAbs)) {
-                newX = calculateNewPositionX(adjustedX);
-                newY = calculateNewPositionY(adjustedY);
-                setPosition(newX, newY);
-                updateResizeHandles();
-            }
-
-            event.consume();
-        });
-
-        hitLine.setOnMouseReleased(event -> {
-            if (event.getButton() == MouseButton.PRIMARY) { // ТОЛЬКО левая кнопка {
-                statusSetter.accept("Позиция линии изменена");
-
-                // РЕГИСТРИРУЕМ ПЕРЕМЕЩЕНИЕ ЛИНИИ В UNDO/REDO
-                double[] currentCoords = getAbsoluteCoordinates();
-                double currentX = getLayoutX();
-                double currentY = getLayoutY();
-
-                // Используем сохраненные начальные координаты из initializeDrag
-                double oldX = getDragStartX();
-                double oldY = getDragStartY();
-
-                if (shapeManager != null) {
-                    // Для линии перемещение - это изменение всех координат
-                    double[] oldCoords = new double[]{
-                            oldX + line.getStartX(), oldY + line.getStartY(),
-                            oldX + line.getEndX(), oldY + line.getEndY()
-                    };
-
-                    shapeManager.registerLinePointsChange(
-                            this,
-                            oldCoords[0], oldCoords[1], oldCoords[2], oldCoords[3],
-                            currentCoords[0], currentCoords[1], currentCoords[2], currentCoords[3]
-                    );
-                    // ДОБАВИТЬ АВТОСОХРАНЕНИЕ ПРИ ПЕРЕМЕЩЕНИИ ЛИНИИ
-                    if (shapeManager.getOnShapeAdded() != null) {
-                        shapeManager.getOnShapeAdded().run();
-                    }
-                }
-            }
-            isDragging = false;
-            updateResizeHandles();
-            event.consume();
-        });
-    }
-
     @Override
     protected void applyCurrentStyle() {
         line.setStroke(strokeColor);
@@ -483,7 +504,7 @@ public class LineShape extends ShapeBase {
     @Override
     protected void applySelectedStyle() {
         line.setStroke(Color.BLUE);
-        line.setStrokeWidth(defaultStrokeWidth);
+        line.setStrokeWidth(defaultStrokeWidth + 1);
     }
 
     @Override
@@ -499,7 +520,6 @@ public class LineShape extends ShapeBase {
     @Override
     public void highlightAsSelected() {
         applySelectedStyle();
-        makeResizeHandlesVisible();
     }
 
     @Override
@@ -519,20 +539,300 @@ public class LineShape extends ShapeBase {
         hideSnapHighlight();
     }
 
+    // Привязка к фигурам
+
+    /**
+     * Поиск ближайшей точки привязки среди всех фигур
+     */
+    private Point2D findNearestSnapPoint(double x, double y) {
+        if (shapeManager == null) return null;
+
+        Point2D bestSnap = null;
+        double minDistance = Double.MAX_VALUE;
+
+        // Получаем все фигуры из ShapeService
+        List<ShapeBase> allShapes = getAllOtherShapes();
+
+        for (ShapeBase shape : allShapes) {
+            if (shape == this) continue; // Пропускаем саму себя
+
+            List<Point2D> snapPoints = shape.getSnapPoints();
+            for (Point2D point : snapPoints) {
+                double distance = point.distance(x, y);
+                if (distance < SNAP_THRESHOLD && distance < minDistance) {
+                    minDistance = distance;
+                    bestSnap = point;
+                }
+            }
+        }
+
+        // Также проверяем привязку к другим линиям
+        Point2D lineSnap = findNearestLineSnapPoint(x, y);
+        if (lineSnap != null && lineSnap.distance(x, y) < minDistance) {
+            bestSnap = lineSnap;
+        }
+
+        return bestSnap;
+    }
+
+    /**
+     * Поиск точек привязки на других линиях
+     */
+    private Point2D findNearestLineSnapPoint(double x, double y) {
+        List<ShapeBase> allShapes = getAllOtherShapes();
+        Point2D bestSnap = null;
+        double minDistance = Double.MAX_VALUE;
+
+        for (ShapeBase shape : allShapes) {
+            if (shape instanceof LineShape otherLine && otherLine != this) {
+                List<Point2D> linePoints = otherLine.getSnapPoints();
+                for (Point2D point : linePoints) {
+                    double distance = point.distance(x, y);
+                    if (distance < SNAP_THRESHOLD && distance < minDistance) {
+                        minDistance = distance;
+                        bestSnap = point;
+                    }
+                }
+            }
+        }
+
+        return bestSnap;
+    }
+
+    /**
+     * Получение всех других фигур на панели через ShapeService
+     */
+    private List<ShapeBase> getAllOtherShapes() {
+        List<ShapeBase> shapes = new ArrayList<>();
+
+        // Получаем доступ к ShapeService через ShapeManager
+        if (shapeManager != null) {
+            // Используем рефлексию для доступа к ShapeService
+            try {
+                java.lang.reflect.Field shapeServiceField = shapeManager.getClass().getDeclaredField("shapeService");
+                shapeServiceField.setAccessible(true);
+                ShapeService shapeService = (ShapeService) shapeServiceField.get(shapeManager);
+
+                if (shapeService != null) {
+                    // Получаем список фигур из ShapeService
+                    java.lang.reflect.Field shapesField = shapeService.getClass().getDeclaredField("shapes");
+                    shapesField.setAccessible(true);
+                    List<ShapeBase> allShapes = (List<ShapeBase>) shapesField.get(shapeService);
+
+                    for (ShapeBase shape : allShapes) {
+                        if (shape != this) {
+                            shapes.add(shape);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("Ошибка доступа к ShapeService: " + e.getMessage());
+                // Fallback: собираем фигуры из панели
+                return getShapesFromPane();
+            }
+        }
+
+        return shapes;
+    }
+
+    /**
+     * Fallback метод: сбор фигур из панели
+     */
+    private List<ShapeBase> getShapesFromPane() {
+        List<ShapeBase> shapes = new ArrayList<>();
+        for (Node node : pane.getChildren()) {
+            if (node instanceof ShapeBase shape && shape != this) {
+                shapes.add(shape);
+            }
+        }
+        return shapes;
+    }
+
+    /**
+     * Показывает индикатор привязки
+     */
+    private void showSnapIndicator(double x, double y, int snapType) {
+        if (snapIndicator == null) {
+            snapIndicator = new Circle(4, getSnapColor(snapType));
+            snapIndicator.setStroke(Color.WHITE);
+            snapIndicator.setStrokeWidth(1);
+            pane.getChildren().add(snapIndicator);
+        } else {
+            snapIndicator.setFill(getSnapColor(snapType));
+        }
+        snapIndicator.setCenterX(x);
+        snapIndicator.setCenterY(y);
+        snapIndicator.setVisible(true);
+    }
+
+    /**
+     * Возвращает цвет индикатора в зависимости от типа привязки
+     */
+    private Color getSnapColor(int snapType) {
+        return switch (snapType) {
+            case 1 -> Color.RED;    // Горизонталь
+            case 2 -> Color.BLUE;   // Вертикаль
+            case 3 -> Color.GREEN;  // Диагональ
+            case 4 -> Color.PURPLE; // Привязка к фигуре
+            default -> Color.RED;
+        };
+    }
+
+    /**
+     * Скрывает индикатор привязки
+     */
+    private void hideSnapIndicator() {
+        if (snapIndicator != null) {
+            snapIndicator.setVisible(false);
+        }
+    }
+
+    /**
+     * Улучшенный метод для применения привязки при перемещении ручек
+     */
+    private double[] applyLineSnapWithShapes(double movingX, double movingY, double fixedX, double fixedY) {
+        // Сначала проверяем привязку к другим фигурам
+        Point2D snapPoint = findNearestSnapPoint(movingX, movingY);
+
+        if (snapPoint != null) {
+            showSnapIndicator(snapPoint.getX(), snapPoint.getY(), 4);
+            return new double[]{snapPoint.getX(), snapPoint.getY(), 4}; // тип 4 = привязка к фигуре
+        } else {
+            hideSnapIndicator();
+        }
+
+        // Если привязки к фигурам нет, применяем старую логику привязки к осям
+        return applyLineSnap(movingX, movingY, fixedX, fixedY);
+    }
+
+    /**
+     * Удаляет индикатор привязки
+     */
+    private void removeSnapIndicator() {
+        if (snapIndicator != null) {
+            pane.getChildren().remove(snapIndicator);
+            snapIndicator = null;
+        }
+    }
+
+    @Override
+    public void addContextMenu(Consumer<ShapeHandler> deleteAction) {
+        ContextMenu lineContextMenu = new ContextMenu();
+
+        // Пункт "Копировать"
+        MenuItem copyItem = new MenuItem("Копировать");
+        copyItem.setOnAction(event -> {
+            copyToClipboard();
+            lineContextMenu.hide();
+        });
+
+        // Пункт "Вставить"
+        MenuItem pasteItem = new MenuItem("Вставить");
+        pasteItem.setOnAction(event -> {
+            pasteFromClipboard();
+            lineContextMenu.hide();
+        });
+        pasteItem.disableProperty().bind(ClipboardManager.hasShapeDataProperty().not());
+
+        // Пункт "Изменить цвет линии"
+        MenuItem strokeColorItem = new MenuItem("Изменить цвет линии");
+        strokeColorItem.setOnAction(event -> {
+            changeLineColor();
+            lineContextMenu.hide();
+        });
+
+        SeparatorMenuItem separator = new SeparatorMenuItem();
+
+        // Пункт "Удалить"
+        MenuItem deleteItem = new MenuItem("Удалить");
+        deleteItem.setOnAction(event -> {
+            if (deleteAction != null) {
+                deleteAction.accept(this);
+            }
+            lineContextMenu.hide();
+        });
+
+        lineContextMenu.getItems().addAll(copyItem, pasteItem, strokeColorItem, separator, deleteItem);
+
+        // Настраиваем обработчик контекстного меню на линию
+        line.setOnContextMenuRequested(event -> {
+            System.out.println("DEBUG: LineShape context menu requested");
+            lineContextMenu.show(line, event.getScreenX(), event.getScreenY());
+            event.consume();
+        });
+
+        // Также настраиваем на группу
+        setOnContextMenuRequested(event -> {
+            System.out.println("DEBUG: LineShape GROUP context menu requested");
+            lineContextMenu.show(this, event.getScreenX(), event.getScreenY());
+            event.consume();
+        });
+    }
+
+    /**
+     * Собственный метод для изменения цвета линии
+     */
+    private void changeLineColor() {
+        javafx.scene.control.ColorPicker colorPicker = new javafx.scene.control.ColorPicker(strokeColor);
+
+        Dialog<Color> dialog = new Dialog<>();
+        dialog.setTitle("Изменение цвета линии");
+        dialog.setHeaderText("Выберите цвет линии");
+
+        ButtonType applyButton = new ButtonType("Применить", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(applyButton, ButtonType.CANCEL);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
+
+        grid.add(new Label("Цвет линии:"), 0, 0);
+        grid.add(colorPicker, 1, 0);
+
+        dialog.getDialogPane().setContent(grid);
+
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == applyButton) {
+                return colorPicker.getValue();
+            }
+            return null;
+        });
+
+        Optional<Color> result = dialog.showAndWait();
+        result.ifPresent(color -> {
+            setStrokeColor(color);
+            if (statusSetter != null) {
+                statusSetter.accept("Цвет линии изменен");
+            }
+        });
+    }
+
     @Override
     public void makeResizeHandlesVisible() {
-        if (shapeManager != null && !shapeManager.isSelectToolActive()) {
-            hideResizeHandles();
-            return;
-        }
+        System.out.println("=== DEBUG LineShape makeResizeHandlesVisible ===");
 
+        // ВАЖНО: Всегда пересоздаем handles если их нет
         if (startHandle == null || endHandle == null) {
-            createResizeHandles();
+            System.out.println("Creating line handles...");
+            removeResizeHandles(); // Очищаем старые если есть
+            createLineHandles();
         }
 
-        if (startHandle != null) startHandle.setVisible(true);
-        if (endHandle != null) endHandle.setVisible(true);
+        // ВАЖНО: Всегда перенастраиваем обработчики
+        setupLineHandleEvents();
+
+        if (startHandle != null) {
+            startHandle.setVisible(true);
+            System.out.println("Start handle made visible");
+        }
+        if (endHandle != null) {
+            endHandle.setVisible(true);
+            System.out.println("End handle made visible");
+        }
+
         updateResizeHandles();
+        System.out.println("=== END DEBUG LineShape ===");
     }
 
     @Override
@@ -567,23 +867,94 @@ public class LineShape extends ShapeBase {
      * Устанавливает абсолютные координаты линии (для использования в командах undo/redo)
      */
     public void setLinePoints(double startX, double startY, double endX, double endY) {
+        System.out.println("=== DEBUG setLinePoints ===");
+        System.out.println("Input: start(" + startX + "," + startY + ") end(" + endX + "," + endY + ")");
         // Приводим координаты к допустимым границам
         startX = clampX(startX);
         startY = clampY(startY);
         endX = clampX(endX);
         endY = clampY(endY);
 
-        // Устанавливаем относительные координаты
-        line.setStartX(0);
-        line.setStartY(0);
-        line.setEndX(endX - startX);
-        line.setEndY(endY - startY);
+        // ВАЖНО: Правильно вычисляем относительные координаты
+        double relStartX = 0;
+        double relStartY = 0;
+        double relEndX = endX - startX;
+        double relEndY = endY - startY;
+
+        line.setStartX(relStartX);
+        line.setStartY(relStartY);
+        line.setEndX(relEndX);
+        line.setEndY(relEndY);
 
         // Устанавливаем позицию группы
         setLayoutX(startX);
         setLayoutY(startY);
 
+        debugLineCoordinates();
+
         // Обновляем handles
         updateResizeHandles();
+        System.out.println("=== END DEBUG ===");
+    }
+
+    /**
+     * Отладочный метод для проверки координат линии
+     */
+    public void debugLineCoordinates() {
+        Line line = getLine();
+        double startXAbs = getLayoutX() + line.getStartX();
+        double startYAbs = getLayoutY() + line.getStartY();
+        double endXAbs = getLayoutX() + line.getEndX();
+        double endYAbs = getLayoutY() + line.getEndY();
+
+        System.out.println("=== DEBUG LINE COORDINATES ===");
+        System.out.println("Layout: (" + getLayoutX() + ", " + getLayoutY() + ")");
+        System.out.println("Relative line: (" + line.getStartX() + ", " + line.getStartY() + ") to (" +
+                line.getEndX() + ", " + line.getEndY() + ")");
+        System.out.println("Absolute line: (" + startXAbs + ", " + startYAbs + ") to (" +
+                endXAbs + ", " + endYAbs + ")");
+        System.out.println("Line length: " + Math.sqrt(Math.pow(endXAbs - startXAbs, 2) + Math.pow(endYAbs - startYAbs, 2)));
+        System.out.println("=== END DEBUG ===");
+    }
+
+    @Override
+    public void setPosition(double x, double y) {
+        super.setPosition(x, y);
+        // Обновляем handles при перемещении
+        updateResizeHandles();
+    }
+
+    /**
+     * Переопределяем метод поворота - отключаем для линии
+     */
+    @Override
+    public void setRotation(double angle) {
+        // Линия не поддерживает поворот
+        System.out.println("DEBUG: Rotation disabled for LineShape");
+    }
+
+    /**
+     * Переопределяем handleRotationInMenu для линии - отключаем поворот
+     */
+    @Override
+    protected void handleRotationInMenu() {
+        System.out.println("DEBUG: Rotation disabled for LineShape");
+        // Линия не поддерживает поворот через контекстное меню
+        if (statusSetter != null) {
+            statusSetter.accept("Поворот линии не поддерживается");
+        }
+    }
+
+    /**
+     * Переопределяем сериализацию для линии
+     */
+    @Override
+    public String serialize() {
+        double[] absCoords = getAbsoluteCoordinates();
+        String result = String.format("LINE|%.2f|%.2f|%.2f|%.2f|%.1f%s",
+                absCoords[0], absCoords[1], absCoords[2], absCoords[3], 0.0, serializeColors());
+
+        System.out.println("DEBUG: Serializing LINE: " + result);
+        return result;
     }
 }

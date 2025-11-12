@@ -41,20 +41,17 @@ public class DeviceIconService {
     private static final String DEFAULT_ICON_PATH = "/images/manometer.png";
 
     private final Runnable onDeviceDeletedCallback;
-    private final Runnable onAutoSaveCallback;
 
     // Обновите конструктор
     public DeviceIconService(AnchorPane schemePane,
                              BiConsumer<Node, Device> onDeviceMovedCallback,
                              DeviceLocationDAO deviceLocationDAO,
                              Runnable onDeviceDeletedCallback,
-                             Runnable onAutoSaveCallback,
                              Scheme currentScheme) {  // Добавьте параметр
         this.schemePane = schemePane;
         this.onDeviceMovedCallback = onDeviceMovedCallback;
         this.deviceLocationDAO = deviceLocationDAO;
         this.onDeviceDeletedCallback = onDeviceDeletedCallback;
-        this.onAutoSaveCallback = onAutoSaveCallback;
         this.currentScheme = currentScheme; // Сохраняем текущую схему
     }
 
@@ -203,7 +200,7 @@ public class DeviceIconService {
         };
 
         DragHandler dragHandler = new DragHandler(node, schemePane,
-                onDeviceMovedCallback, onAutoSaveCallback, onDragStart, onDragEnd);
+                onDeviceMovedCallback, onDragStart, onDragEnd);
         dragHandler.attach();
     }
 
@@ -214,7 +211,7 @@ public class DeviceIconService {
         ContextMenu contextMenu = createContextMenu(node, device, currentScheme);
         node.setOnContextMenuRequested(event -> {
             contextMenu.show(node, event.getScreenX(), event.getScreenY());
-            event.consume();
+            event.consume(); // ВАЖНО: предотвращаем всплытие события
         });
     }
 
@@ -268,12 +265,6 @@ public class DeviceIconService {
 
         // ВАЖНО: Сохраняем позицию и угол поворота в БД
         saveDevicePositionAndRotation(node, device);
-
-        // Автосохранение после поворота
-        if (onAutoSaveCallback != null) {
-            System.out.println("DEBUG: Auto-save triggered after rotation");
-            onAutoSaveCallback.run();
-        }
 
         System.out.println("DEBUG: Device rotated to " + angle + " degrees, position and rotation saved");
     }
@@ -353,7 +344,6 @@ public class DeviceIconService {
      * Показ информации об устройстве
      */
     private void showDeviceInfo(Node node) {  // Добавьте параметр Node
-        // Получаем устройство из UserData (может быть Device или DeviceWithRotation)
         Device deviceToShow = extractDeviceFromUserData(node);
         assert deviceToShow != null;
         String infoText = buildDeviceInfoText(deviceToShow);
@@ -369,6 +359,7 @@ public class DeviceIconService {
     private String buildDeviceInfoText(Device device) {
         StringBuilder info = new StringBuilder();
         info.append("Место: ").append(device.getLocation()).append("\n");
+        info.append("Кран: ").append(device.getValveNumber()).append("\n");
         info.append("Статус: ").append(device.getStatus()).append("\n");
         info.append("Дополнительно: ");
 
@@ -411,19 +402,16 @@ public class DeviceIconService {
         private double dragOffsetX, dragOffsetY;
         private double initialMouseX, initialMouseY;
         private double initialLayoutX, initialLayoutY;
-        private final Runnable onAutoSaveCallback;
         private final Runnable onDragStartCallback; // Новый callback
         private final Runnable onDragEndCallback;   // Новый callback
 
         public DragHandler(Node node, AnchorPane pane,
                            BiConsumer<Node, Device> onMoveCallback,
-                           Runnable onAutoSaveCallback,
                            Runnable onDragStartCallback,  // Новый параметр
                            Runnable onDragEndCallback) {  // Новый параметр
             this.node = node;
             this.pane = pane;
             this.onMoveCallback = onMoveCallback;
-            this.onAutoSaveCallback = onAutoSaveCallback;
             this.onDragStartCallback = onDragStartCallback;
             this.onDragEndCallback = onDragEndCallback;
         }
@@ -543,11 +531,6 @@ public class DeviceIconService {
                 System.out.println("DEBUG: Calling onMoveCallback for device: " + device.getName());
 
                 onMoveCallback.accept(node, device);
-
-                if (onAutoSaveCallback != null) {
-                    System.out.println("DEBUG: Calling onAutoSaveCallback from DragHandler");
-                    onAutoSaveCallback.run();
-                }
             }
 
             isDragging = false;

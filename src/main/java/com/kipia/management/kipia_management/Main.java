@@ -33,6 +33,7 @@ public class Main extends Application {
     private DeviceLocationDAO deviceLocationDAO;
     // Логгер для сообщений
     private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
+    private MainController mainController;
 
     /**
      * Главный метод приложения
@@ -62,12 +63,12 @@ public class Main extends Application {
             // Применяем стиль светлой темы
             scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource("/styles/light-theme.css")).toExternalForm());
             // Получаем контроллер и передаем ему сервисы
-            MainController controller = loader.getController();
-            if (controller != null) {
-                controller.setDeviceDAO(deviceDAO);
-                controller.setSchemeDAO(schemeDAO);
-                controller.setDeviceLocationDAO(deviceLocationDAO);
-                controller.setScene(scene);  // Передаём Scene для темы
+            mainController = loader.getController();
+            if (mainController != null) {
+                mainController.setDeviceDAO(deviceDAO);
+                mainController.setSchemeDAO(schemeDAO);
+                mainController.setDeviceLocationDAO(deviceLocationDAO);
+                mainController.setScene(scene);  // Передаём Scene для темы
             }
             // Настраиваем главное окно
             primaryStage.setTitle("Система учёта приборов КИПиА");
@@ -81,8 +82,14 @@ public class Main extends Application {
             } catch (Exception e) {
                 LOGGER.warning("Иконка не найдена, используется стандартная");
             }
-            // Обработка закрытия окна - закрываем соединение с БД
+            // Обработка закрытия окна - закрываем соединение с БД и сохраняем схему
             primaryStage.setOnCloseRequest(event -> {
+                System.out.println("DEBUG: Application shutdown - saving scheme");
+                // Сохраняем схему через MainController
+                if (mainController != null) {
+                    mainController.saveSchemeBeforeNavigation();
+                }
+                // Закрываем соединение с БД
                 if (databaseService != null) {
                     databaseService.closeConnection();
                 }

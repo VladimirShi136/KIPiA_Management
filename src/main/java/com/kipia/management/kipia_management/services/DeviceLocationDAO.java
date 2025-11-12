@@ -59,25 +59,21 @@ public class DeviceLocationDAO {
      *
      * @param deviceId ID прибора
      * @param schemeId ID схемы
-     * @return true если успешно, false если ошибка
      */
-    public boolean deleteDeviceLocation(int deviceId, int schemeId) {
+    public void deleteDeviceLocation(int deviceId, int schemeId) {
         String sql = "DELETE FROM device_locations WHERE device_id = ? AND scheme_id = ?";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
             stmt.setInt(1, deviceId);
             stmt.setInt(2, schemeId);
             int rowsAffected = stmt.executeUpdate();
-
             boolean success = rowsAffected > 0;
             if (success) {
                 LOGGER.info("Успешно удалена локация: device_id=" + deviceId + ", scheme_id=" + schemeId);
             } else {
                 LOGGER.warning("Локация не найдена для удаления: device_id=" + deviceId + ", scheme_id=" + schemeId);
             }
-            return success;
         } catch (SQLException e) {
             LOGGER.severe("Ошибка удаления локации: " + e.getMessage());
-            return false;
         }
     }
 

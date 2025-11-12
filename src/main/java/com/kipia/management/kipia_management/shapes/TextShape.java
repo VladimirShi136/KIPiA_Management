@@ -57,7 +57,7 @@ public class TextShape extends ShapeBase {
         calculateTextSize();
 
         setupTextEditHandler();
-        setupContextMenu();
+       // setupContextMenu();
 
         // ВАЖНО: убедимся, что базовые обработчики drag работают
         setupTextDragHandlers();
@@ -143,7 +143,7 @@ public class TextShape extends ShapeBase {
 
     @Override
     public void makeResizeHandlesVisible() {
-        // НЕ показываем handles
+        System.out.println("DEBUG: TextShape - no resize handles, only rotation");
     }
 
     @Override
@@ -154,7 +154,8 @@ public class TextShape extends ShapeBase {
     /**
      * НАСТРОЙКА контекстного меню для текста
      */
-    private void setupContextMenu() {
+    @Override
+    public void addContextMenu(Consumer<ShapeHandler> deleteAction) {
         ContextMenu contextMenu = new ContextMenu();
 
         // ДОБАВИТЬ пункт поворота
@@ -165,9 +166,6 @@ public class TextShape extends ShapeBase {
 
             if (shapeManager != null) {
                 shapeManager.registerRotation(this, rotationAngle, newAngle);
-                if (shapeManager.getOnShapeAdded() != null) {
-                    shapeManager.getOnShapeAdded().run();
-                }
             }
         });
 
@@ -194,15 +192,14 @@ public class TextShape extends ShapeBase {
 
         MenuItem deleteItem = new MenuItem("Удалить");
         deleteItem.setOnAction(e -> {
-            if (shapeManager != null) {
-                shapeManager.removeShape(this);
+            if (deleteAction != null) {
+                deleteAction.accept(this);
             }
         });
 
-        contextMenu.getItems().addAll(rotateItem, copyItem, pasteItem, textColorItem, editTextItem, changeFontItem, separator, deleteItem);
+        contextMenu.getItems().addAll(copyItem, pasteItem, textColorItem, editTextItem, changeFontItem, rotateItem, separator, deleteItem);
 
         setOnContextMenuRequested(event -> {
-            // ИСПРАВЛЕНИЕ: убираем проверку на SELECT - меню показывается всегда
             contextMenu.show(this, event.getScreenX(), event.getScreenY());
             event.consume();
         });
@@ -315,20 +312,10 @@ public class TextShape extends ShapeBase {
             // РЕГИСТРИРУЕМ ИЗМЕНЕНИЕ ШРИФТА В UNDO/REDO
             if (shapeManager != null && !newFont.equals(oldFont)) {
                 shapeManager.registerFontChange(this, oldFont, newFont);
-                // ДОБАВИТЬ АВТОСОХРАНЕНИЕ ПРИ ИЗМЕНЕНИИ ШРИФТА
-                if (shapeManager.getOnShapeAdded() != null) {
-                    shapeManager.getOnShapeAdded().run();
-                }
             }
 
             statusSetter.accept("Шрифт изменен");
         });
-    }
-
-    @Override
-    public void makeRotationHandleVisible() {
-        // Для текста тоже можно вращать, но нужно аккуратно с размерами
-        super.makeRotationHandleVisible();
     }
 
     @Override
@@ -422,11 +409,6 @@ public class TextShape extends ShapeBase {
             String newText = result.get().trim();
             setText(newText);
             statusSetter.accept("Текст изменен");
-
-            // ДОБАВИТЬ АВТОСОХРАНЕНИЕ ПРИ ИЗМЕНЕНИИ ТЕКСТА
-            if (shapeManager != null && shapeManager.getOnShapeAdded() != null) {
-                shapeManager.getOnShapeAdded().run();
-            }
         }
     }
 
@@ -436,8 +418,6 @@ public class TextShape extends ShapeBase {
     @Override
     public void highlightAsSelected() {
         applySelectedStyle();
-        // НЕ вызываем makeResizeHandlesVisible() - handles отключены
-        makeRotationHandleVisible(); // Но ручку поворота показываем
     }
 
     /**
@@ -446,6 +426,5 @@ public class TextShape extends ShapeBase {
     @Override
     public void resetHighlight() {
         applyDefaultStyle();
-        hideRotationHandle();
     }
 }
