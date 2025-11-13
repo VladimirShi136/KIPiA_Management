@@ -132,7 +132,7 @@ public class DevicesGroupedController {
         photoCol.setCellFactory(createPhotoCellFactory());
 
         // Колонка "Доп. Информация."
-        TreeTableColumn<TreeRowItem, String> additionalInfoCol = createEditableStringColumn("Доп. информация", 205,
+        TreeTableColumn<TreeRowItem, String> additionalInfoCol = createEditableStringColumn("Доп. информация", 240,
                 Device::getAdditionalInfo,
                 Device::setAdditionalInfo);
 
@@ -452,7 +452,7 @@ public class DevicesGroupedController {
 
     private TreeTableColumn<TreeRowItem, String> getTreeRowTableForLocation() {
         TreeTableColumn<TreeRowItem, String> locationCol = new TreeTableColumn<>("Тип прибора");
-        locationCol.setPrefWidth(100);
+        locationCol.setPrefWidth(120);
         locationCol.setCellValueFactory(param -> {
             TreeRowItem val = param.getValue().getValue();
             if (val instanceof GroupItem(String location)) return new ReadOnlyObjectWrapper<>(location);

@@ -229,7 +229,23 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     protected abstract double getMaxRelativeY();
 
     /**
-     * Обновление позиций ручек изменения размера
+     * Возвращает сообщение о перемещении для данного типа фигуры
+     * Может быть переопределен в подклассах для кастомных сообщений
+     */
+    protected String getMoveStatusMessage() {
+        return "Позиция фигуры изменена";
+    }
+
+    /**
+     * Возвращает сообщение об изменении размера для данного типа фигуры
+     * Может быть переопределен в подклассах для кастомных сообщений
+     */
+    protected String getResizeStatusMessage() {
+        return "Размер фигуры изменен";
+    }
+
+    /**
+     * Обновление позиций ручек
      */
     @Override
     public void updateResizeHandles() {
@@ -476,7 +492,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         initializeDrag(mousePos);
 
         // ВАЖНО: Для линии выделение происходит при ЛЮБОМ клике
-        // Для остальных фигур - только по двойному клику
         if (this instanceof LineShape) {
             System.out.println("DEBUG: Line drag started - selecting line");
             if (onSelectCallback != null) {
@@ -484,9 +499,9 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
             }
             makeResizeHandlesVisible();
         }
-        // Для других фигур НЕ выделяем при одинарном клике
 
-        isDragging = false;
+        isDragging = false; // Сбрасываем флаг в начале
+        System.out.println("DEBUG: Drag pressed at (" + mousePos.getX() + "," + mousePos.getY() + ")");
         event.consume();
     }
 
@@ -501,19 +516,28 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         dragStartX = getLayoutX();
         dragStartY = getLayoutY();
 
-        System.out.println("DEBUG: initializeDrag - offset: (" + dragOffsetX + "," + dragOffsetY + ")");
-        System.out.println("DEBUG: start position: (" + dragStartX + "," + dragStartY + ")");
+        System.out.println("DEBUG: initializeDrag - current pos: (" + getLayoutX() + "," + getLayoutY() +
+                "), mouse: (" + mousePos.getX() + "," + mousePos.getY() +
+                "), offset: (" + dragOffsetX + "," + dragOffsetY + ")");
+        System.out.println("DEBUG: start position saved: (" + dragStartX + "," + dragStartY + ")");
     }
 
     /**
      * Обработка перетаскивания фигуры
      */
     private void handleDragDragged(MouseEvent event) {
-        isDragging = true;
+        if (!isDragging) {
+            isDragging = true;
+            System.out.println("DEBUG: Drag started - isDragging set to true");
+        }
+
         Point2D scenePos = new Point2D(event.getSceneX(), event.getSceneY());
         Point2D panePos = pane.sceneToLocal(scenePos);
         double newX = panePos.getX() - dragOffsetX;
         double newY = panePos.getY() - dragOffsetY;
+
+        System.out.println("DEBUG: Drag dragged to (" + newX + "," + newY + ")");
+
         setPosition(newX, newY);
         updateResizeHandles();
         event.consume();
@@ -523,8 +547,16 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      * Обработка окончания перетаскивания
      */
     private void handleDragReleased(MouseEvent event) {
-        if (isDragging && statusSetter != null) {
-            statusSetter.accept("Позиция фигуры изменена");
+        System.out.println("DEBUG: === handleDragReleased START ===");
+        System.out.println("DEBUG: isDragging: " + isDragging);
+        System.out.println("DEBUG: event.getButton(): " + event.getButton());
+        System.out.println("DEBUG: MouseButton.PRIMARY: " + MouseButton.PRIMARY);
+
+        if (isDragging && statusSetter != null && event.getButton() == MouseButton.PRIMARY) {
+            System.out.println("DEBUG: Conditions met for registering move");
+
+            // ИСПОЛЬЗУЕМ КАСТОМНОЕ СООБЩЕНИЕ ДЛЯ ТИПА ФИГУРЫ
+            statusSetter.accept(getMoveStatusMessage());
 
             // РЕГИСТРИРУЕМ ПЕРЕМЕЩЕНИЕ В UNDO/REDO
             double currentX = getLayoutX();
@@ -534,13 +566,19 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
             double oldX = dragStartX;
             double oldY = dragStartY;
 
+            System.out.println("DEBUG: Drag released - from (" + oldX + "," + oldY + ") to (" + currentX + "," + currentY + ")");
+
             if (shapeManager != null) {
                 shapeManager.registerMove(this, oldX, oldY, currentX, currentY);
+                System.out.println("DEBUG: Movement registered for " + getShapeType());
             }
+        } else {
+            System.out.println("DEBUG: Conditions NOT met for registering move");
         }
         isDragging = false;
         updateResizeHandles();
         event.consume();
+        System.out.println("DEBUG: === handleDragReleased END ===");
     }
 
     // ============================================================
@@ -584,7 +622,8 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      */
     private void handleResizeRelease() {
         if (wasResizedInSession && statusSetter != null) {
-            statusSetter.accept("Размер фигуры изменен");
+            // ИСПОЛЬЗУЕМ КАСТОМНОЕ СООБЩЕНИЕ ДЛЯ ТИПА ФИГУРЫ
+            statusSetter.accept(getResizeStatusMessage());
 
             // РЕГИСТРИРУЕМ РЕСАЙЗ В UNDO/REDO
             double currentX = getLayoutX();
@@ -733,8 +772,8 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     }
 
     // ============================================================
-// ROTATION METHODS
-// ============================================================
+    // ROTATION METHODS
+    // ============================================================
 
     /**
      * Получение центра фигуры в координатах панели
@@ -1109,9 +1148,17 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
                 }
             }
 
-            // Цвета (последние 2 элемента)
+            // ВАЖНО: ВОССТАНАВЛИВАЕМ ЦВЕТА ДЛЯ ТЕКСТА
             if (fixedParts.length > 11) {
-                textShape.deserializeColors(fixedParts, fixedParts.length - 2, fixedParts.length - 1);
+                // Для текста цвета находятся на позициях 10 и 11
+                System.out.println("DEBUG: Calling deserializeColors with indices 10 and 11");
+                textShape.deserializeColors(fixedParts, 10, 11);
+            } else if (fixedParts.length > 9) {
+                // Старый формат - цвета на позициях 8 и 9
+                textShape.deserializeColors(fixedParts, 8, 9);
+                System.out.println("DEBUG: Text colors restored from indices 8-9 (old format)");
+            } else {
+                System.out.println("DEBUG: No color data found for text");
             }
 
             javafx.application.Platform.runLater(textShape::calculateTextSize);
@@ -1143,7 +1190,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      * Десериализует цвета из строки
      */
     protected void deserializeColors(String[] originalParts, int strokeIndex, int fillIndex) {
-        System.out.println("=== DESERIALIZE COLORS ===");
+        System.out.println("=== DESERIALIZE COLORS FOR " + getShapeType() + " ===");
         System.out.println("Parts length: " + originalParts.length);
         System.out.println("Stroke index: " + strokeIndex + ", Fill index: " + fillIndex);
 
@@ -1151,16 +1198,11 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
             String strokeData = originalParts[strokeIndex];
             System.out.println("Stroke data: '" + strokeData + "'");
 
-            // Используем оригинальные данные с запятыми
-            String[] strokeParts = strokeData.split(",");
-            if (strokeParts.length == 4) {
-                try {
-                    strokeColor = Color.color(Double.parseDouble(strokeParts[0]), Double.parseDouble(strokeParts[1]), Double.parseDouble(strokeParts[2]), Double.parseDouble(strokeParts[3]));
-                    System.out.println("Stroke color restored: " + strokeColor);
-                } catch (NumberFormatException e) {
-                    System.out.println("ERROR parsing stroke color: " + e.getMessage());
-                    strokeColor = Color.BLACK;
-                }
+            // ОБРАБАТЫВАЕМ ОБА ВАРИАНТА РАЗДЕЛИТЕЛЕЙ
+            double[] strokeValues = parseColorValues(strokeData);
+            if (strokeValues.length == 4) {
+                strokeColor = Color.color(strokeValues[0], strokeValues[1], strokeValues[2], strokeValues[3]);
+                System.out.println("Stroke color restored: " + strokeColor);
             } else {
                 System.out.println("Invalid stroke color format, using default");
                 strokeColor = Color.BLACK;
@@ -1171,16 +1213,10 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
             String fillData = originalParts[fillIndex];
             System.out.println("Fill data: '" + fillData + "'");
 
-            // Используем оригинальные данные с запятыми
-            String[] fillParts = fillData.split(",");
-            if (fillParts.length == 4) {
-                try {
-                    fillColor = Color.color(Double.parseDouble(fillParts[0]), Double.parseDouble(fillParts[1]), Double.parseDouble(fillParts[2]), Double.parseDouble(fillParts[3]));
-                    System.out.println("Fill color restored: " + fillColor);
-                } catch (NumberFormatException e) {
-                    System.out.println("ERROR parsing fill color: " + e.getMessage());
-                    fillColor = Color.TRANSPARENT;
-                }
+            double[] fillValues = parseColorValues(fillData);
+            if (fillValues.length == 4) {
+                fillColor = Color.color(fillValues[0], fillValues[1], fillValues[2], fillValues[3]);
+                System.out.println("Fill color restored: " + fillColor);
             } else {
                 System.out.println("Invalid fill color format, using default");
                 fillColor = Color.TRANSPARENT;
@@ -1188,8 +1224,42 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         }
 
         applyCurrentStyle();
-        System.out.println("Colors applied to shape");
+        System.out.println("Colors applied to " + getShapeType() + " - Stroke: " + strokeColor + ", Fill: " + fillColor);
         System.out.println("=== END DESERIALIZE COLORS ===");
+    }
+
+    /**
+     * Парсит значения цвета из строки, обрабатывая оба формата разделителей
+     */
+    private double[] parseColorValues(String colorData) {
+        // Для формата "1.000.1.000.0.000.1.000" извлекаем числа вручную
+        // Ищем шаблон: число.число.число.число
+        String[] patterns = {
+                "(\\d+\\.\\d+)\\.(\\d+\\.\\d+)\\.(\\d+\\.\\d+)\\.(\\d+\\.\\d+)", // 1.000.1.000.0.000.1.000
+                "(\\d+\\.\\d+),(\\d+\\.\\d+),(\\d+\\.\\d+),(\\d+\\.\\d+)"        // 0.200,0.102,0.502,1.000
+        };
+
+        for (String patternStr : patterns) {
+            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(patternStr);
+            java.util.regex.Matcher matcher = pattern.matcher(colorData);
+
+            if (matcher.find()) {
+                try {
+                    return new double[]{
+                            Double.parseDouble(matcher.group(1)),
+                            Double.parseDouble(matcher.group(2)),
+                            Double.parseDouble(matcher.group(3)),
+                            Double.parseDouble(matcher.group(4))
+                    };
+                } catch (NumberFormatException e) {
+                    System.out.println("ERROR parsing with pattern: " + patternStr);
+                }
+            }
+        }
+
+        // Если не нашли совпадений, возвращаем значения по умолчанию
+        System.out.println("No valid color pattern found, using defaults");
+        return new double[]{0.0, 0.0, 0.0, 1.0};
     }
 
     /**
@@ -1346,14 +1416,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         this.strokeColor = newStroke;
         this.fillColor = newFill;
         applyCurrentStyle();
-    }
-
-    public double getDragStartX() {
-        return dragStartX;
-    }
-
-    public double getDragStartY() {
-        return dragStartY;
     }
 
     /**

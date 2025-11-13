@@ -25,7 +25,6 @@ import java.util.function.Consumer;
  */
 public class TextShape extends ShapeBase {
     private final Text text;
-    private final Color defaultFill = Color.BLACK;
     private final ShapeManager shapeManager;
     private final Consumer<String> statusSetter;
 
@@ -40,6 +39,7 @@ public class TextShape extends ShapeBase {
 
         // СОЗДАЕМ текст
         text = new Text(initialContent);
+        Color defaultFill = Color.BLACK;
         text.setFill(defaultFill);
         text.setFont(Font.font("Arial", 16));
         text.setTextOrigin(VPos.TOP); // ВАЖНО: верхняя граница = верх букв
@@ -142,6 +142,11 @@ public class TextShape extends ShapeBase {
     }
 
     @Override
+    protected String getMoveStatusMessage() {
+        return "Позиция текста изменена";
+    }
+
+    @Override
     public void makeResizeHandlesVisible() {
         System.out.println("DEBUG: TextShape - no resize handles, only rotation");
     }
@@ -166,6 +171,7 @@ public class TextShape extends ShapeBase {
 
             if (shapeManager != null) {
                 shapeManager.registerRotation(this, rotationAngle, newAngle);
+                statusSetter.accept("Текст повернут на " + newAngle + " градусов");
             }
         });
 
@@ -364,7 +370,7 @@ public class TextShape extends ShapeBase {
         String fontFamily = font.getFamily();
         String fontStyle = font.getStyle();
 
-        // Формат: TEXT|X|Y|W|H|ROTATION|TEXT|FONT_SIZE|FONT_FAMILY|FONT_STYLE|COLORS
+        // Формат: TEXT|X|Y|W|H|ROTATION|TEXT|FONT_SIZE|FONT_FAMILY|FONT_STYLE|STROKE_COLOR|FILL_COLOR
         String result = String.format(java.util.Locale.US, "TEXT|%.2f|%.2f|%.2f|%.2f|%.1f|%s|%.1f|%s|%s%s",
                 pos[0], pos[1], width, height,
                 rotationAngle,
@@ -372,6 +378,7 @@ public class TextShape extends ShapeBase {
                 serializeColors());
 
         System.out.println("DEBUG: Text serialized: " + result);
+        System.out.println("DEBUG: Colors in serialization - Stroke: " + strokeColor + ", Fill: " + fillColor);
         return result;
     }
 

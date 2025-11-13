@@ -523,24 +523,30 @@
 }
 
 .tool-button {
-    -fx-background-color: #d1d0cd;
-    -fx-text-fill: #d1d0cd;
-    -fx-padding: 5 10;
-    -fx-background-radius: 5px;
-    -fx-border-radius: 5px;
-    -fx-font-weight: bold;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-text-fill: #2c3e50;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-padding: 8px 12px;
     -fx-cursor: hand;
-    -fx-min-width: 40px;
-    -fx-pref-width: 40px;
-    -fx-transition: background-color 0.3s ease, effect 0.3s ease;
-    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
 }
 
-.tool-button-hover {
-    -fx-background-color: #dfdedc;
-    -fx-padding: 5 10;
-    -fx-min-width: 40px;
-    -fx-pref-width: 40px;
+.tool-button:hover {
+    -fx-background-color: #ecf0f1;
+    -fx-border-color: #bdc3c7;
+    -fx-border-width: 1px;
+}
+
+.tool-button-active {
+    -fx-background-color: #E3F2FD;
+    -fx-border-color: #2196F3;
+    -fx-border-width: 2px;
+    -fx-text-fill: #1976D2;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-font-weight: bold;
+    -fx-effect: dropshadow(three-pass-box, rgba(33, 150, 243, 0.3), 6, 0, 0, 1);
 }
 
 .scheme-label, .select-label {
@@ -829,11 +835,6 @@
     -fx-background-color: #f9f9f9;
 }
 
-.tool-button-active {
-    -fx-background-color: #4CAF50;
-    -fx-text-fill: white;
-}
-
 /* Стили для уведомлений автосохранения */
 .auto-save-notification {
     -fx-text-fill: white;
@@ -848,4 +849,118 @@
 
 .auto-save-notification-container {
     -fx-background-color: transparent;
+}
+
+/*Стилизация всплывающей таблиц, окон и диалогов*/
+/* Стили для TableView */
+.styled-table-view {
+    -fx-font-size: 13px;
+    -fx-font-family: 'Segoe UI';
+    -fx-border-color: #e0e0e0;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-padding: 2px;
+    -fx-background-color: white;
+}
+
+.styled-table-view .column-header {
+    -fx-background-color: #2196F3;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-border-color: #1976D2;
+    -fx-alignment: CENTER;
+}
+
+.styled-table-view .column-header .label {
+    -fx-text-fill: white;
+}
+
+.styled-table-view .table-row-cell:even {
+    -fx-background-color: #f8f9fa;
+    -fx-border-color: #e9ecef;
+}
+
+.styled-table-view .table-row-cell:odd {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #e9ecef;
+}
+
+.styled-table-view .table-row-cell:selected {
+    -fx-background-color: #bbdefb;
+    -fx-text-fill: #0d47a1;
+    -fx-font-weight: bold;
+}
+
+.styled-table-view .table-row-cell:filled:hover {
+    -fx-background-color: #e3f2fd;
+    -fx-cursor: hand;
+    -fx-border-color: #bbdefb;
+    -fx-border-width: 1px;
+}
+
+.styled-table-view .table-cell {
+    -fx-border-color: #f0f0f0;
+    -fx-padding: 8px;
+    -fx-alignment: CENTER_LEFT;
+}
+
+/* Стили для диалогов */
+.styled-dialog {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #2196F3;
+    -fx-border-width: 2px;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 0);
+}
+
+.styled-dialog .header-panel {
+    -fx-background-color: #2196F3;
+    -fx-text-fill: white;
+}
+
+.styled-dialog .header-panel .label {
+    -fx-text-fill: white;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
+
+.styled-dialog .button {
+    -fx-background-color: #2196F3;
+    -fx-text-fill: white;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-padding: 8px 16px;
+    -fx-cursor: hand;
+    -fx-font-weight: bold;
+}
+
+.styled-dialog .button:hover {
+    -fx-background-color: #1976D2;
+}
+
+.styled-dialog .button:cancel {
+    -fx-background-color: #f44336;
+}
+
+.styled-dialog .button:cancel:hover {
+    -fx-background-color: #d32f2f;
+}
+
+/* Стили для контента диалога */
+.dialog-content {
+    -fx-background-color: #ffffff;
+    -fx-padding: 20px;
+}
+
+.dialog-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2c3e50;
+}
+
+.dialog-info {
+    -fx-text-fill: #666;
+    -fx-font-size: 12px;
+    -fx-padding: 5px 0px 10px 0px;
 }

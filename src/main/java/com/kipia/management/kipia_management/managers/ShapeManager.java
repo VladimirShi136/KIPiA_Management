@@ -25,7 +25,7 @@ public class ShapeManager {
     /**
      * Enum инструментов редактора
      */
-    public enum Tool {LINE, RECTANGLE, ELLIPSE, RHOMBUS, TEXT, ADD_DEVICE}
+    public enum Tool {LINE, RECTANGLE, ELLIPSE, RHOMBUS, TEXT}
 
     // Основные зависимости
     private final AnchorPane pane;
@@ -123,15 +123,20 @@ public class ShapeManager {
             this.oldY = oldY;
             this.newX = newX;
             this.newY = newY;
+
+            System.out.println("DEBUG: MoveShapeCommand created - " + shape.getShapeType() +
+                    " from (" + oldX + "," + oldY + ") to (" + newX + "," + newY + ")");
         }
 
         @Override
         public void execute() {
+            System.out.println("DEBUG: MoveShapeCommand.execute - moving to (" + newX + "," + newY + ")");
             shape.setPosition(newX, newY);
         }
 
         @Override
         public void undo() {
+            System.out.println("DEBUG: MoveShapeCommand.undo - moving back to (" + oldX + "," + oldY + ")");
             shape.setPosition(oldX, oldY);
         }
     }
@@ -289,15 +294,24 @@ public class ShapeManager {
      * Обработка нажатия мыши для указанного инструмента
      */
     public void onMousePressedForTool(Tool tool, double x, double y) {
+        System.out.println("DEBUG: ShapeManager.onMousePressedForTool - tool: " + tool + ", x: " + x + ", y: " + y);
+
         // Если инструмент null - этот метод не должен вызываться
-        if (tool == null) return;
+        if (tool == null) {
+            System.out.println("DEBUG: Tool is null - returning");
+            return;
+        }
 
         clearPreview();
         setStartCoordinates(x, y);
 
         switch (tool) {
-            case LINE, RECTANGLE, ELLIPSE, RHOMBUS -> createPreviewShape(tool, x, y);
+            case LINE, RECTANGLE, ELLIPSE, RHOMBUS -> {
+                System.out.println("DEBUG: Creating preview shape for: " + tool);
+                createPreviewShape(tool, x, y);
+            }
             // ADD_DEVICE и TEXT обрабатываются в контроллере
+            default -> System.out.println("DEBUG: Tool " + tool + " doesn't create preview");
         }
     }
 
@@ -394,6 +408,10 @@ public class ShapeManager {
     public void undo() {
         commandManager.undo();
         updateSelectionAfterUndoRedo();
+        // ДОБАВЬТЕ ЭТО:
+        if (statusSetter != null) {
+            statusSetter.accept("Отмена изменений");
+        }
     }
 
     /**
@@ -402,12 +420,19 @@ public class ShapeManager {
     public void redo() {
         commandManager.redo();
         updateSelectionAfterUndoRedo();
+        // ДОБАВЬТЕ ЭТО:
+        if (statusSetter != null) {
+            statusSetter.accept("Повтор изменений");
+        }
     }
 
     /**
      * Регистрация перемещения фигуры в undo-стек
      */
     public void registerMove(ShapeBase shape, double oldX, double oldY, double newX, double newY) {
+        System.out.println("DEBUG: registerMove called for " + shape.getShapeType() +
+                " - from (" + oldX + "," + oldY + ") to (" + newX + "," + newY + ")");
+
         MoveShapeCommand cmd = new MoveShapeCommand(shape, oldX, oldY, newX, newY);
         commandManager.execute(cmd);
         System.out.println("DEBUG: Move registered via CommandManager");
@@ -581,9 +606,13 @@ public class ShapeManager {
      * Создание preview-фигуры для указанного инструмента
      */
     private void createPreviewShape(Tool tool, double x, double y) {
+        System.out.println("DEBUG: createPreviewShape - tool: " + tool);
         previewShape = createPreviewShapeByTool(tool, x, y);
         if (previewShape != null) {
+            System.out.println("DEBUG: Preview shape created, adding to pane");
             pane.getChildren().add(previewShape);
+        } else {
+            System.out.println("DEBUG: Preview shape is null!");
         }
     }
 
@@ -873,7 +902,6 @@ public class ShapeManager {
             case ELLIPSE -> ShapeType.ELLIPSE;
             case RHOMBUS -> ShapeType.RHOMBUS;
             case TEXT -> ShapeType.TEXT;
-            default -> null;
         };
     }
 

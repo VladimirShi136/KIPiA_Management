@@ -5,13 +5,14 @@ import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.ScaleTransition;
 import javafx.animation.Timeline;
-import javafx.scene.Node;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Button;
-import javafx.scene.control.RadioButton;
+import javafx.collections.ObservableList;
+import javafx.geometry.Insets;
+import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.effect.Glow;
+import javafx.scene.image.Image;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.util.Duration;
 
@@ -33,6 +34,13 @@ public class StyleUtils {
     private static final String ERROR_ALERT = "error-alert";
     private static final String CONFIRM_ALERT = "confirm-alert";
     private static final String SUCCESS_ALERT = "success-alert";
+
+    // CSS классы для компонентов
+    private static final String STYLED_TABLE_VIEW = "styled-table-view";
+    private static final String STYLED_DIALOG = "styled-dialog";
+    private static final String DIALOG_CONTENT = "dialog-content";
+    private static final String DIALOG_TITLE = "dialog-title";
+    private static final String DIALOG_INFO = "dialog-info";
 
     /**
      * Метод для применения CSS классов с плавной сменой классов при наведении мыши.
@@ -174,29 +182,212 @@ public class StyleUtils {
     }
 
     /**
-     * Полностью настраивает стили для окна автосохранения:
-     * - подключает CSS к сцене
-     * - применяет заданные CSS-классы к корневому узлу
-     * - возвращает готовую Scene
+     * Специальный метод для кнопок инструментов фигур с активным состоянием
      *
-     * @param rootParent
-     * @param cssClasses список CSS-классов для стилизации (например, ["temp-notification", "fade-in"])
-     * @return готовая Scene с подключёнными стилями
+     * @param button кнопка инструмента
+     * @param defaultCssClass класс по умолчанию
+     * @param hoverCssClass класс при наведении
+     * @param activeCssClass класс активного состояния
      */
-    public static Scene createStyledSceneForAutoSave(Parent rootParent, String... cssClasses) {
-        Scene scene = new Scene(rootParent);
+    public static void applyToolButtonStyles(Button button, String defaultCssClass, String hoverCssClass, String activeCssClass) {
+        // Инициализация - устанавливаем обычный стиль
+        button.getStyleClass().removeIf(c -> c.equals(defaultCssClass) || c.equals(hoverCssClass) || c.equals(activeCssClass));
+        button.getStyleClass().add(defaultCssClass);
 
+        // Обработчик наведения мыши
+        button.setOnMouseEntered(e -> {
+            // Не применяем hover, если кнопка уже активна
+            if (!button.getStyleClass().contains(activeCssClass)) {
+                button.getStyleClass().remove(defaultCssClass);
+                if (!button.getStyleClass().contains(hoverCssClass)) {
+                    button.getStyleClass().add(hoverCssClass);
+                }
+            }
+        });
+
+        // Обработчик ухода мыши
+        button.setOnMouseExited(e -> {
+            // Не меняем обратно, если кнопка активна
+            if (!button.getStyleClass().contains(activeCssClass)) {
+                button.getStyleClass().remove(hoverCssClass);
+                if (!button.getStyleClass().contains(defaultCssClass)) {
+                    button.getStyleClass().add(defaultCssClass);
+                }
+            }
+        });
+    }
+
+    /**
+     * Устанавливает активное состояние для кнопки инструмента
+     *
+     * @param button кнопка инструмента
+     * @param isActive флаг активности
+     * @param activeCssClass CSS класс активного состояния
+     */
+    public static void setToolButtonActive(Button button, boolean isActive, String activeCssClass) {
+        if (isActive) {
+            // Активируем кнопку
+            button.getStyleClass().removeIf(cls -> cls.equals("tool-button") || cls.equals("tool-button-hover"));
+            if (!button.getStyleClass().contains(activeCssClass)) {
+                button.getStyleClass().add(activeCssClass);
+            }
+
+            // Легкая анимация активации
+            ScaleTransition scaleIn = new ScaleTransition(Duration.millis(150), button);
+            scaleIn.setFromX(1.0);
+            scaleIn.setFromY(1.0);
+            scaleIn.setToX(1.03);
+            scaleIn.setToY(1.03);
+            scaleIn.setInterpolator(Interpolator.EASE_OUT);
+            scaleIn.play();
+
+        } else {
+            // Деактивируем кнопку
+            button.getStyleClass().remove(activeCssClass);
+            if (!button.getStyleClass().contains("tool-button")) {
+                button.getStyleClass().add("tool-button");
+            }
+
+            // Анимация деактивации
+            ScaleTransition scaleOut = new ScaleTransition(Duration.millis(150), button);
+            scaleOut.setFromX(1.03);
+            scaleOut.setFromY(1.03);
+            scaleOut.setToX(1.0);
+            scaleOut.setToY(1.0);
+            scaleOut.setInterpolator(Interpolator.EASE_OUT);
+            scaleOut.play();
+        }
+    }
+
+    /**
+     * Упрощенный метод для кнопок инструментов (использует стандартные классы)
+     */
+    public static void setupShapeToolButton(Button button) {
+        applyToolButtonStyles(button, "tool-button", "tool-button-hover", "tool-button-active");
+    }
+
+    // ============================================================
+    // НОВЫЕ МЕТОДЫ ДЛЯ ТАБЛИЦ И ДИАЛОГОВ
+    // ============================================================
+
+    /**
+     * Создание стилизованного TableView
+     */
+    public static <T> TableView<T> createStyledTableView() {
+        TableView<T> tableView = new TableView<>();
+        applyTableViewStyles(tableView);
+        return tableView;
+    }
+
+    /**
+     * Применение стилей к TableView
+     */
+    public static void applyTableViewStyles(TableView<?> tableView) {
+        tableView.getStyleClass().add(STYLED_TABLE_VIEW);
+        tableView.setPrefHeight(400);
+        tableView.setPrefWidth(800);
+
+        // Подключаем CSS
         try {
-            String cssUrl = Objects.requireNonNull(
-                    StyleUtils.class.getResource(CSS_PATH)
-            ).toExternalForm();
-            scene.getStylesheets().add(cssUrl);
+            tableView.getStylesheets().add(
+                    Objects.requireNonNull(StyleUtils.class.getResource(CSS_PATH)).toExternalForm()
+            );
         } catch (Exception e) {
-            System.err.println("Ошибка загрузки CSS: " + e.getMessage());
+            System.err.println("Не удалось загрузить CSS для TableView: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Создание стилизованной колонки для TableView
+     */
+    public static <T, S> TableColumn<T, S> createStyledColumn(String title, String property, double width) {
+        TableColumn<T, S> column = new TableColumn<>(title);
+        column.setCellValueFactory(new PropertyValueFactory<>(property));
+        column.setPrefWidth(width);
+        return column;
+    }
+
+    /**
+     * Настройка стилей диалога
+     */
+    public static void setupDialogStyles(Dialog<?> dialog) {
+        // Устанавливаем иконку окна
+        Stage dialogStage = (Stage) dialog.getDialogPane().getScene().getWindow();
+        try {
+            Image appIcon = new Image(Objects.requireNonNull(StyleUtils.class.getResourceAsStream("/images/app-icon.png")));
+            dialogStage.getIcons().add(appIcon);
+        } catch (Exception e) {
+            System.err.println("Не удалось загрузить иконку для диалога: " + e.getMessage());
         }
 
-        rootParent.getStyleClass().setAll(cssClasses);
-        return scene;
+        // Применяем CSS стили
+        dialog.getDialogPane().getStyleClass().add(STYLED_DIALOG);
+        try {
+            dialog.getDialogPane().getStylesheets().addAll(
+                    Objects.requireNonNull(StyleUtils.class.getResource(CSS_PATH)).toExternalForm(),
+                    Objects.requireNonNull(StyleUtils.class.getResource(CSS_PATH)).toExternalForm()
+            );
+        } catch (Exception e) {
+            System.err.println("Не удалось загрузить CSS для диалога: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Создание контента для диалога
+     */
+    public static VBox createDialogContent(String title, String infoText, TableView<?> tableView) {
+        VBox content = new VBox(10);
+        content.getStyleClass().add(DIALOG_CONTENT);
+        content.setPadding(new Insets(20));
+
+        // Заголовок
+        Label titleLabel = new Label(title);
+        titleLabel.getStyleClass().add(DIALOG_TITLE);
+
+        // Информационная строка
+        Label infoLabel = new Label(infoText);
+        infoLabel.getStyleClass().add(DIALOG_INFO);
+
+        content.getChildren().addAll(titleLabel, infoLabel, tableView);
+        return content;
+    }
+
+    /**
+     * Настройка поведения TableView (двойной клик и hover)
+     */
+    public static <T> void setupTableViewBehavior(TableView<T> tableView, Dialog<T> dialog) {
+        tableView.setRowFactory(tv -> {
+            TableRow<T> row = new TableRow<>();
+
+            // Двойной клик для выбора
+            row.setOnMouseClicked(event -> {
+                if (event.getClickCount() == 2 && (!row.isEmpty())) {
+                    dialog.setResult(row.getItem());
+                    dialog.close();
+                }
+            });
+
+            return row;
+        });
+    }
+
+    /**
+     * Создание готового диалога выбора прибора
+     */
+    public static <T> Dialog<T> createDeviceSelectionDialog(String title, String header, ObservableList<T> items) {
+        Dialog<T> dialog = new Dialog<>();
+        dialog.setTitle(title);
+        dialog.setHeaderText(header);
+
+        // Кнопки
+        ButtonType selectButton = new ButtonType("Выбрать", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(selectButton, ButtonType.CANCEL);
+
+        // Настройка стилей
+        setupDialogStyles(dialog);
+
+        return dialog;
     }
 }
+
 
