@@ -217,7 +217,7 @@ public class MainController {
             // Используем Timeline для задержки перед выходом
             Timeline timeline = new Timeline(new KeyFrame(
                     Duration.millis(1500), // задержка закрытия
-                    e -> Platform.exit()
+                    _ -> Platform.exit()
             ));
             timeline.play();
         }
@@ -252,11 +252,21 @@ public class MainController {
 
             // Получаем контроллер и передаём ему DAO
             DevicesTableController ctrl = loader.getController();
-            ctrl.setDeviceDAO(deviceDAO);
-            if (schemeEditorController != null) {
-                ctrl.setSchemeEditorController(schemeEditorController);
+            if (ctrl != null) {
+                // ВАЖНО: Сначала передаем deviceDAO, потом вызываем init()
+                ctrl.setDeviceDAO(deviceDAO);
+                LOGGER.info("DeviceDAO передан в DevicesTableController");
+
+                if (schemeEditorController != null) {
+                    ctrl.setSchemeEditorController(schemeEditorController);
+                }
+
+                // ТЕПЕРЬ вызываем init() после установки deviceDAO
+                ctrl.init();  // инициализируем таблицу
+            } else {
+                LOGGER.warning("DevicesTableController не найден");
             }
-            ctrl.init();  // инициализируем таблицу
+
             contentArea.getChildren().add(view);
             LOGGER.info("Список приборов загружен успешно");
         } catch (IOException e) {
@@ -291,19 +301,30 @@ public class MainController {
 
             // Получаем контроллер и передаём ему DAO
             DevicesGroupedController ctrl = loader.getController();
-            ctrl.setDeviceDAO(deviceDAO);
-            if (schemeEditorController != null) {
-                ctrl.setSchemeEditorController(schemeEditorController);
+            if (ctrl != null) {
+                // ВАЖНО: Сначала передаем deviceDAO, потом вызываем init()
+                ctrl.setDeviceDAO(deviceDAO);
+                LOGGER.info("DeviceDAO передан в DevicesGroupedController");
+
+                if (schemeEditorController != null) {
+                    ctrl.setSchemeEditorController(schemeEditorController);
+                }
+
+                // ТЕПЕРЬ вызываем init() после установки deviceDAO
+                ctrl.init();
+            } else {
+                LOGGER.warning("DevicesGroupedController не найден");
             }
-            ctrl.init();
+
             contentArea.getChildren().add(view);
             LOGGER.info("Группированный список приборов загружен успешно");
         } catch (Exception ex) {
-            System.err.println("Ошибка загрузки списка приборов по месту установки: " + ex.getMessage());
+            statusLabel.setText("Ошибка загрузки списка приборов по месту установки: " + ex.getMessage());
             CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить группированный список приборов");
             LOGGER.severe("Ошибка загрузки группированного списка приборов: " + ex.getMessage());
         }
     }
+
 
     /**
      * Показать редактор схем.
@@ -331,10 +352,18 @@ public class MainController {
             schemeEditorView = loader.load();
             schemeEditorController = loader.getController();
 
-            schemeEditorController.setDeviceDAO(deviceDAO);
-            schemeEditorController.setSchemeDAO(schemeDAO);
-            schemeEditorController.setDeviceLocationDAO(deviceLocationDAO);
-            schemeEditorController.init();
+            // ВАЖНО: Сначала передаем все DAO, потом вызываем init()
+            if (schemeEditorController != null) {
+                schemeEditorController.setDeviceDAO(deviceDAO);
+                schemeEditorController.setSchemeDAO(schemeDAO);
+                schemeEditorController.setDeviceLocationDAO(deviceLocationDAO);
+                LOGGER.info("Все DAO переданы в SchemeEditorController");
+
+                // ТЕПЕРЬ вызываем init() после установки всех DAO
+                schemeEditorController.init();
+            } else {
+                LOGGER.warning("SchemeEditorController не найден");
+            }
 
             contentArea.getChildren().clear();
             contentArea.getChildren().add(schemeEditorView);
@@ -349,6 +378,7 @@ public class MainController {
             LOGGER.severe("Ошибка загрузки редактора схем: " + e.getMessage());
         }
     }
+
 
     /**
      * Показать форму добавления прибора.
@@ -375,10 +405,19 @@ public class MainController {
             Parent view = loader.load();
 
             AddDeviceController ctrl = loader.getController();
-            ctrl.setDeviceDAO(deviceDAO);
-            if (schemeEditorController != null) {
-                ctrl.setSchemeEditorController(schemeEditorController);
+            if (ctrl != null) {
+                // ВАЖНО: Сначала передаем deviceDAO
+                ctrl.setDeviceDAO(deviceDAO);
+                LOGGER.info("DeviceDAO передан в AddDeviceController");
+
+                if (schemeEditorController != null) {
+                    ctrl.setSchemeEditorController(schemeEditorController);
+                }
+                // AddDeviceController может не иметь метода init()
+            } else {
+                LOGGER.warning("AddDeviceController не найден");
             }
+
             contentArea.getChildren().add(view);
             LOGGER.info("Форма добавления прибора загружена успешно");
         } catch (IOException e) {
@@ -413,7 +452,13 @@ public class MainController {
             Parent view = loader.load();
 
             ReportsController ctrl = loader.getController();
-            ctrl.init(deviceDAO, (Stage) contentArea.getScene().getWindow());
+            if (ctrl != null) {
+                // ВАЖНО: Сначала передаем deviceDAO, потом вызываем init()
+                ctrl.init(deviceDAO, (Stage) contentArea.getScene().getWindow());
+                LOGGER.info("ReportsController инициализирован");
+            } else {
+                LOGGER.warning("ReportsController не найден");
+            }
 
             contentArea.getChildren().add(view);
             LOGGER.info("Отчёты загружены успешно");

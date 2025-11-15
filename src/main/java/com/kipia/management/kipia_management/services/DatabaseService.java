@@ -12,12 +12,22 @@ import java.util.logging.Logger;
  * @since 29.08.2025
  */
 public class DatabaseService {
-    // URL подключения к базе данных SQLite (файл kipia_management.db)
-    private static final String DB_URL = "jdbc:sqlite:kipia_management.db";
-    // Объект подключения к базе данных
-    private Connection connection;
     // логгер для сообщений
     private static final Logger LOGGER = Logger.getLogger(DatabaseService.class.getName());
+
+    // Объект подключения к базе данных
+    private Connection connection;
+
+    // Статический блок для регистрации драйвера SQLite
+    static {
+        try {
+            Class.forName("org.sqlite.JDBC");
+            LOGGER.info("SQLite драйвер успешно зарегистрирован");
+        } catch (ClassNotFoundException e) {
+            LOGGER.severe("SQLite драйвер не найден: " + e.getMessage());
+            throw new RuntimeException("SQLite драйвер не найден", e);
+        }
+    }
 
     // Конструктор класса: устанавливает соединение
     public DatabaseService() {
@@ -31,13 +41,32 @@ public class DatabaseService {
      */
     private void connect() {
         try {
-            connection = DriverManager.getConnection(DB_URL);
-            // Включаем автоматическое пересоздание соединения
-            connection.setAutoCommit(true);
-            LOGGER.info("Подключение к SQLite установлено!");
+            // Используем абсолютный путь к базе данных в папке пользователя
+            String userHome = System.getProperty("user.home");
+            String dbPath = userHome + "/kipia_management.db";
+            String dbUrl = "jdbc:sqlite:" + dbPath;
+
+            LOGGER.info("Подключение к базе данных: " + dbUrl);
+
+            connection = DriverManager.getConnection(dbUrl);
+
+            // Проверяем что соединение установлено и драйвер работает
+            if (connection != null && !connection.isClosed()) {
+                DatabaseMetaData meta = connection.getMetaData();
+                LOGGER.info("Подключение к SQLite установлено! Драйвер: " + meta.getDriverName() + " версия: " + meta.getDriverVersion());
+
+                // Создаем таблицы после успешного подключения
+                createTables();
+
+                // Добавляем тестовые данные если таблицы пустые
+                if (!hasData()) {
+                    addTestData();
+                }
+            }
+
         } catch (SQLException e) {
-            LOGGER.severe("Ошибка подключения: " + e.getMessage());
-            throw new RuntimeException(e);
+            LOGGER.severe("Ошибка подключения к базе данных: " + e.getMessage());
+            throw new RuntimeException("Не удалось подключиться к базе данных", e);
         }
     }
 
@@ -46,69 +75,52 @@ public class DatabaseService {
      * Используется SQL-запрос с конструкцией CREATE TABLE IF NOT EXISTS.
      */
     public void createTables() {
-        StringBuilder sql1 = new StringBuilder();
-        StringBuilder sql2 = new StringBuilder();
-        StringBuilder sql3 = new StringBuilder();
+        String sqlDevices = """
+            CREATE TABLE IF NOT EXISTS devices (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                type TEXT NOT NULL,
+                name TEXT,
+                manufacturer TEXT,
+                inventory_number TEXT UNIQUE NOT NULL,
+                year INTEGER,
+                measurement_limit TEXT,
+                accuracy_class REAL,
+                location TEXT NOT NULL,
+                valve_number TEXT,
+                status TEXT DEFAULT 'В работе',
+                additional_info TEXT,
+                photo_path TEXT,
+                photos TEXT
+            );""";
 
-        // 1. Создание таблицы devices с полями:
-        // id - уникальный идентификатор (автоинкремент)
-        // name - название устройства (обязательное)
-        // type - тип устройства (обязательное)
-        // manufacturer - изготовитель
-        // inventory_number - уникальный инвентарный номер (обязательное)
-        // year - год выпуска
-        // measurement_limit - предел измерений
-        // accuracy_class - класс точности
-        // location - местоположение (обязательное)
-        // valve_number - номер крана или узла
-        // status - статус устройства, по умолчанию 'В работе'
-        // additional_info - доп информация
-        // photo_path - путь к фото
-        // photos - список фото
-        sql1.append("CREATE TABLE IF NOT EXISTS devices (")
-                .append("id INTEGER PRIMARY KEY AUTOINCREMENT,")
-                .append("type TEXT NOT NULL,")
-                .append("name TEXT,")
-                .append("manufacturer TEXT,")
-                .append("inventory_number TEXT UNIQUE NOT NULL,")
-                .append("year INTEGER,")
-                .append("measurement_limit TEXT,")  // Новое поле: предел измерений (String)
-                .append("accuracy_class REAL,")  // Новое поле: класс точности (Double)
-                .append("location TEXT NOT NULL,")
-                .append("valve_number TEXT,")  // Новое поле для "Кран №"
-                .append("status TEXT DEFAULT 'В работе',")
-                .append("additional_info TEXT,")
-                .append("photo_path TEXT,")
-                .append("photos TEXT")  // Новое поле: сериализированный список фото
-                .append(");");
+        String sqlSchemes = """
+            CREATE TABLE IF NOT EXISTS schemes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                description TEXT,
+                data TEXT
+            );""";
 
-        // 2. НОВАЯ ТАБЛИЦА: schemes (схемы)
-        sql2.append("CREATE TABLE IF NOT EXISTS schemes (")
-                .append("id INTEGER PRIMARY KEY AUTOINCREMENT,")
-                .append("name TEXT NOT NULL,")
-                .append("description TEXT,")
-                .append("data TEXT")  // строка для объектов схемы (линии, фигуры)
-                .append("); ");
+        String sqlDeviceLocations = """
+            CREATE TABLE IF NOT EXISTS device_locations (
+                device_id INTEGER NOT NULL,
+                scheme_id INTEGER NOT NULL,
+                x REAL NOT NULL,
+                y REAL NOT NULL,
+                PRIMARY KEY (device_id, scheme_id),
+                FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE,
+                FOREIGN KEY (scheme_id) REFERENCES schemes(id) ON DELETE CASCADE
+            );""";
 
-        // 3. НОВАЯ ТАБЛИЦА: device_locations (привязка приборов к схемам)
-        sql3.append("CREATE TABLE IF NOT EXISTS device_locations (")
-                .append("device_id INTEGER NOT NULL,")
-                .append("scheme_id INTEGER NOT NULL,")
-                .append("x REAL NOT NULL,")
-                .append("y REAL NOT NULL,")
-                .append("PRIMARY KEY (device_id, scheme_id),")  // Композитный ключ
-                .append("FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE,")
-                .append("FOREIGN KEY (scheme_id) REFERENCES schemes(id) ON DELETE CASCADE")
-                .append(");");
-
-
-        // Выполнение SQL-запроса для создания таблиц
-        try (Statement stmt = connection.createStatement()) {
-            stmt.executeUpdate(sql1 + sql2.toString() + sql3);
-            LOGGER.info("Таблицы созданы успешно!");  // Замена println на logger
+        // Выполнение SQL-запросов для создания таблиц
+        try (Statement stmt = getConnection().createStatement()) {
+            stmt.executeUpdate(sqlDevices);
+            stmt.executeUpdate(sqlSchemes);
+            stmt.executeUpdate(sqlDeviceLocations);
+            LOGGER.info("Таблицы созданы успешно!");
         } catch (SQLException e) {
-            LOGGER.severe("Ошибка создания таблиц: " + e.getMessage());  // Замена println на logger
-            throw new RuntimeException(e);  // Выбрасываем исключение
+            LOGGER.severe("Ошибка создания таблиц: " + e.getMessage());
+            throw new RuntimeException("Ошибка создания таблиц базы данных", e);
         }
     }
 
@@ -148,15 +160,15 @@ public class DatabaseService {
     }
 
     public boolean tablesExist() {
-        try (Statement stmt = connection.createStatement()) {
+        try (Statement stmt = getConnection().createStatement()) {
             ResultSet rs = stmt.executeQuery(
                     "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('devices', 'schemes', 'device_locations')"
             );
-            // Проверяем, что все три есть (простой счёт)
             int count = 0;
             while (rs.next()) count++;
             return count == 3;
         } catch (SQLException e) {
+            LOGGER.severe("Ошибка проверки существования таблиц: " + e.getMessage());
             return false;
         }
     }
@@ -166,6 +178,7 @@ public class DatabaseService {
             LOGGER.info("Тестовые данные уже существуют");
             return;
         }
+
         DeviceDAO deviceDAO = new DeviceDAO(this);
 
         // Существующие тестовые приборы (без изменений)
@@ -208,28 +221,32 @@ public class DatabaseService {
         device3.setStatus("Испорчен");
         device3.setAdditionalInfo("Уровнемер жидкости");
 
-        deviceDAO.addDevice(device1);
-        deviceDAO.addDevice(device2);
-        deviceDAO.addDevice(device3);
+        try {
+            deviceDAO.addDevice(device1);
+            deviceDAO.addDevice(device2);
+            deviceDAO.addDevice(device3);
+            LOGGER.info("Тестовые устройства добавлены");
+        } catch (Exception e) {
+            LOGGER.severe("Ошибка добавления тестовых устройств: " + e.getMessage());
+        }
 
         // НОВЫЕ: Добавить тестовую схему
         String serializedScheme = "RECTANGLE,50,50,200,100;LINE,10,10,50,50";
-        try (PreparedStatement stmtScheme = connection.prepareStatement(
+        try (PreparedStatement stmtScheme = getConnection().prepareStatement(
                 "INSERT INTO schemes (name, description, data) VALUES (?, ?, ?)")) {
             stmtScheme.setString(1, "Схема предприятия");
             stmtScheme.setString(2, "Тестовая схема с линиями");
             stmtScheme.setString(3, serializedScheme);
             stmtScheme.executeUpdate();
-            LOGGER.info("Тестовая схема добавлена");  // Замена println
+            LOGGER.info("Тестовая схема добавлена");
         } catch (SQLException e) {
-            LOGGER.severe("Ошибка добавления тестовой схемы: " + e.getMessage());  // Замена println
-            // Не выбрасываем здесь, так как это не критично; но можно, если нужно
+            LOGGER.severe("Ошибка добавления тестовой схемы: " + e.getMessage());
         }
 
         // НОВЫЕ: Добавить тестовые привязки приборов (device_locations)
-        // Пример: привяжем приборы к схеме ID=1 (первая добавленная схем)
-        try (PreparedStatement stmtLoc = connection.prepareStatement("INSERT INTO device_locations (device_id, scheme_id, x, y) VALUES (?, 1, ?, ?)")) {  // scheme_id=1 предполагаем
-            // Получить ID добавленных приборов (предполагаем через запрос, но для простоты, используй insert-returns или жёстко)
+        try (PreparedStatement stmtLoc = getConnection().prepareStatement(
+                "INSERT INTO device_locations (device_id, scheme_id, x, y) VALUES (?, 1, ?, ?)")) {
+
             stmtLoc.setInt(1, 1);  // Устройство ID=1 (device1)
             stmtLoc.setDouble(2, 100);
             stmtLoc.setDouble(3, 150);
@@ -245,18 +262,20 @@ public class DatabaseService {
             stmtLoc.setDouble(3, 350);
             stmtLoc.executeUpdate();
 
-            LOGGER.info("Тестовые привязки приборов добавлены");  // Замена println
+            LOGGER.info("Тестовые привязки приборов добавлены");
         } catch (SQLException e) {
-            LOGGER.severe("Ошибка добавления тестовых локаций: " + e.getMessage());  // Замена println
+            LOGGER.severe("Ошибка добавления тестовых локаций: " + e.getMessage());
         }
-        LOGGER.info("Тестовые данные добавлены");  // Замена println
+
+        LOGGER.info("Тестовые данные добавлены успешно");
     }
 
     private boolean hasData() {
-        try (Statement stmt = connection.createStatement()) {
+        try (Statement stmt = getConnection().createStatement()) {
             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM devices");
             return rs.getInt(1) > 0;
         } catch (SQLException e) {
+            LOGGER.severe("Ошибка проверки наличия данных: " + e.getMessage());
             return false;
         }
     }

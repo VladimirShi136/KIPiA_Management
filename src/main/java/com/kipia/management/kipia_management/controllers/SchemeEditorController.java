@@ -12,6 +12,7 @@ import com.kipia.management.kipia_management.utils.StyleUtils;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseButton;
@@ -901,10 +902,6 @@ public class SchemeEditorController {
                 .count();
 
         System.out.println("DEBUG: Available devices for scheme '" + selectedSchemeName + "': " + availableCount);
-
-        if (statusLabel != null) {
-            statusLabel.setText("Доступно приборов: " + availableCount);
-        }
     }
 
     /**
@@ -1324,13 +1321,17 @@ public class SchemeEditorController {
         // Показываем красивый диалог выбора прибора
         Device selectedDevice = showDeviceSelectionDialog();
         if (selectedDevice == null) {
+            System.out.println("DEBUG: No device selected - cancelling add operation");
             return; // Пользователь отменил выбор
         }
 
         try {
+            System.out.println("DEBUG: Adding device to scheme: " + selectedDevice.getName() + " at (" + x + ", " + y + ")");
+
             if (deviceIconService != null) {
                 Node deviceNode = deviceIconService.createDeviceIcon(x, y, selectedDevice, currentScheme);
                 if (schemePane != null) schemePane.getChildren().add(deviceNode);
+
                 if (currentScheme != null && deviceLocationDAO != null) {
                     DeviceLocation location = new DeviceLocation(
                             selectedDevice.getId(), currentScheme.getId(), x, y
@@ -1343,6 +1344,7 @@ public class SchemeEditorController {
                         CustomAlert.showError("Ошибка", "Не удалось сохранить прибор в базу данных");
                     }
                 }
+
                 refreshAvailableDevices();
                 statusLabel.setText("Прибор добавлен: " + selectedDevice.getName());
 
@@ -1371,8 +1373,7 @@ public class SchemeEditorController {
         // Создаем диалог с помощью StyleUtils
         Dialog<Device> dialog = StyleUtils.createDeviceSelectionDialog(
                 "Выбор прибора",
-                "Выберите прибор для добавления на схему",
-                FXCollections.observableArrayList(availableDevices)
+                "Выберите прибор для добавления на схему"
         );
 
         // Создаем TableView для отображения приборов
@@ -1380,9 +1381,9 @@ public class SchemeEditorController {
 
         // Создаем колонки
         TableColumn<Device, String> modelColumn = StyleUtils.createStyledColumn("Модель", "name", 250);
-        TableColumn<Device, String> inventoryColumn = StyleUtils.createStyledColumn("Инвентарный номер", "inventoryNumber", 180);
-        TableColumn<Device, String> valveColumn = StyleUtils.createStyledColumn("Кран", "valveNumber", 120);
-        TableColumn<Device, String> locationColumn = StyleUtils.createStyledColumn("Местоположение", "location", 200);
+        TableColumn<Device, String> inventoryColumn = StyleUtils.createStyledColumn("Инвентарный номер", "inventoryNumber", 200);
+        TableColumn<Device, String> valveColumn = StyleUtils.createStyledColumn("Кран", "valveNumber", 132);
+        TableColumn<Device, String> locationColumn = StyleUtils.createStyledColumn("Местоположение", "location", 210);
 
         tableView.getColumns().addAll(modelColumn, inventoryColumn, valveColumn, locationColumn);
 
@@ -1390,7 +1391,7 @@ public class SchemeEditorController {
         ObservableList<Device> availableDevicesList = FXCollections.observableArrayList(availableDevices);
         tableView.setItems(availableDevicesList);
 
-        // Настраиваем поведение
+        // Настраиваем поведение - ВАЖНО: двойной клик и активация кнопки
         StyleUtils.setupTableViewBehavior(tableView, dialog);
 
         // Создаем контент
@@ -1402,13 +1403,29 @@ public class SchemeEditorController {
 
         dialog.getDialogPane().setContent(content);
 
-        // Преобразуем результат
+        // Преобразуем результат - ВАЖНО: проверяем что прибор выбран
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == ButtonType.OK) {
-                return tableView.getSelectionModel().getSelectedItem();
+                Device selectedDevice = tableView.getSelectionModel().getSelectedItem();
+                if (selectedDevice != null) {
+                    System.out.println("DEBUG: Device selected via OK button: " + selectedDevice.getName());
+                    return selectedDevice;
+                } else {
+                    CustomAlert.showWarning("Выбор прибора", "Пожалуйста, выберите прибор из таблицы!");
+                }
             }
             return null;
         });
+
+        // Делаем кнопку "Выбрать" активной только при выборе элемента - ВАЖНО
+        Button okButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
+        if (okButton != null) {
+            okButton.setDisable(true);
+
+            tableView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
+                okButton.setDisable(newSelection == null);
+            });
+        }
 
         // Фокус на первую строку
         if (!availableDevicesList.isEmpty()) {
@@ -1417,6 +1434,13 @@ public class SchemeEditorController {
 
         // Показываем диалог и возвращаем результат
         Optional<Device> result = dialog.showAndWait();
+
+        if (result.isPresent()) {
+            System.out.println("DEBUG: Dialog returned device: " + result.get().getName());
+        } else {
+            System.out.println("DEBUG: Dialog was cancelled or no device selected");
+        }
+
         return result.orElse(null);
     }
 

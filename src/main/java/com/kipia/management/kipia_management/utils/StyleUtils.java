@@ -1,11 +1,11 @@
 package com.kipia.management.kipia_management.utils;
 
+import com.kipia.management.kipia_management.models.Device;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.ScaleTransition;
 import javafx.animation.Timeline;
-import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -37,10 +37,6 @@ public class StyleUtils {
 
     // CSS классы для компонентов
     private static final String STYLED_TABLE_VIEW = "styled-table-view";
-    private static final String STYLED_DIALOG = "styled-dialog";
-    private static final String DIALOG_CONTENT = "dialog-content";
-    private static final String DIALOG_TITLE = "dialog-title";
-    private static final String DIALOG_INFO = "dialog-info";
 
     /**
      * Метод для применения CSS классов с плавной сменой классов при наведении мыши.
@@ -269,6 +265,104 @@ public class StyleUtils {
     // ============================================================
     // НОВЫЕ МЕТОДЫ ДЛЯ ТАБЛИЦ И ДИАЛОГОВ
     // ============================================================
+    /**
+     * Создание готового диалога выбора прибора
+     */
+    public static Dialog<Device> createDeviceSelectionDialog(String title, String header) {
+        Dialog<Device> dialog = new Dialog<>();
+        dialog.setTitle(title);
+        dialog.setHeaderText(header);
+
+        // Кнопки - используем стандартные ButtonType для корректной работы
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        // Переименовываем кнопку OK в "Выбрать"
+        Button okButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
+        if (okButton != null) {
+            okButton.setText("Выбрать");
+        }
+
+        // Настройка стилей
+        setupDialogStyles(dialog);
+
+        return dialog;
+    }
+
+    /**
+     * Настройка стилей диалога
+     */
+    public static void setupDialogStyles(Dialog<?> dialog) {
+        // Устанавливаем иконку окна
+        Stage dialogStage = (Stage) dialog.getDialogPane().getScene().getWindow();
+        try {
+            Image appIcon = new Image(Objects.requireNonNull(StyleUtils.class.getResourceAsStream("/images/iconApp.png")));
+            dialogStage.getIcons().add(appIcon);
+        } catch (Exception e) {
+            System.err.println("Не удалось загрузить иконку для диалога: " + e.getMessage());
+        }
+
+        // Применяем CSS стили
+        dialog.getDialogPane().getStyleClass().add("styled-dialog");
+        try {
+            dialog.getDialogPane().getStylesheets().addAll(
+                    Objects.requireNonNull(StyleUtils.class.getResource(CSS_PATH)).toExternalForm()
+            );
+        } catch (Exception e) {
+            System.err.println("Не удалось загрузить CSS для диалога: " + e.getMessage());
+        }
+
+        // Гарантируем минимальные размеры для диалога
+        dialog.getDialogPane().setMinWidth(400);
+        dialog.getDialogPane().setMinHeight(300);
+    }
+
+    /**
+     * Настройка поведения TableView (двойной клик и hover)
+     */
+    public static <T> void setupTableViewBehavior(TableView<T> tableView, Dialog<T> dialog) {
+        tableView.setRowFactory(tv -> {
+            TableRow<T> row = new TableRow<>();
+            row.setOnMouseClicked(event -> {
+                if (event.getClickCount() == 2 && (!row.isEmpty())) {
+                    // При двойном клике сразу устанавливаем результат и закрываем
+                    dialog.setResult(row.getItem());
+                }
+            });
+            return row;
+        });
+
+        // Дополнительная настройка: делаем так, чтобы кнопка "Выбрать" была активна только при выборе элемента
+        Button okButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
+        if (okButton != null) {
+            // Изначально кнопка неактивна
+            okButton.setDisable(true);
+
+            // Активируем кнопку только когда выбран элемент
+            tableView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
+                okButton.setDisable(newSelection == null);
+            });
+        }
+    }
+
+    /**
+     * Создание контента для диалога
+     */
+    public static VBox createDialogContent(String title, String infoText, TableView<?> tableView) {
+        VBox content = new VBox(10);
+        content.getStyleClass().add("dialog-content");
+        content.setPadding(new Insets(20));
+
+        // Заголовок
+        Label titleLabel = new Label(title);
+        titleLabel.getStyleClass().add("dialog-title");
+
+        // Информационная строка
+        Label infoLabel = new Label(infoText);
+        infoLabel.getStyleClass().add("dialog-info");
+
+        content.getChildren().addAll(titleLabel, infoLabel, tableView);
+        return content;
+    }
 
     /**
      * Создание стилизованного TableView
@@ -305,88 +399,6 @@ public class StyleUtils {
         column.setCellValueFactory(new PropertyValueFactory<>(property));
         column.setPrefWidth(width);
         return column;
-    }
-
-    /**
-     * Настройка стилей диалога
-     */
-    public static void setupDialogStyles(Dialog<?> dialog) {
-        // Устанавливаем иконку окна
-        Stage dialogStage = (Stage) dialog.getDialogPane().getScene().getWindow();
-        try {
-            Image appIcon = new Image(Objects.requireNonNull(StyleUtils.class.getResourceAsStream("/images/app-icon.png")));
-            dialogStage.getIcons().add(appIcon);
-        } catch (Exception e) {
-            System.err.println("Не удалось загрузить иконку для диалога: " + e.getMessage());
-        }
-
-        // Применяем CSS стили
-        dialog.getDialogPane().getStyleClass().add(STYLED_DIALOG);
-        try {
-            dialog.getDialogPane().getStylesheets().addAll(
-                    Objects.requireNonNull(StyleUtils.class.getResource(CSS_PATH)).toExternalForm(),
-                    Objects.requireNonNull(StyleUtils.class.getResource(CSS_PATH)).toExternalForm()
-            );
-        } catch (Exception e) {
-            System.err.println("Не удалось загрузить CSS для диалога: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Создание контента для диалога
-     */
-    public static VBox createDialogContent(String title, String infoText, TableView<?> tableView) {
-        VBox content = new VBox(10);
-        content.getStyleClass().add(DIALOG_CONTENT);
-        content.setPadding(new Insets(20));
-
-        // Заголовок
-        Label titleLabel = new Label(title);
-        titleLabel.getStyleClass().add(DIALOG_TITLE);
-
-        // Информационная строка
-        Label infoLabel = new Label(infoText);
-        infoLabel.getStyleClass().add(DIALOG_INFO);
-
-        content.getChildren().addAll(titleLabel, infoLabel, tableView);
-        return content;
-    }
-
-    /**
-     * Настройка поведения TableView (двойной клик и hover)
-     */
-    public static <T> void setupTableViewBehavior(TableView<T> tableView, Dialog<T> dialog) {
-        tableView.setRowFactory(tv -> {
-            TableRow<T> row = new TableRow<>();
-
-            // Двойной клик для выбора
-            row.setOnMouseClicked(event -> {
-                if (event.getClickCount() == 2 && (!row.isEmpty())) {
-                    dialog.setResult(row.getItem());
-                    dialog.close();
-                }
-            });
-
-            return row;
-        });
-    }
-
-    /**
-     * Создание готового диалога выбора прибора
-     */
-    public static <T> Dialog<T> createDeviceSelectionDialog(String title, String header, ObservableList<T> items) {
-        Dialog<T> dialog = new Dialog<>();
-        dialog.setTitle(title);
-        dialog.setHeaderText(header);
-
-        // Кнопки
-        ButtonType selectButton = new ButtonType("Выбрать", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(selectButton, ButtonType.CANCEL);
-
-        // Настройка стилей
-        setupDialogStyles(dialog);
-
-        return dialog;
     }
 }
 

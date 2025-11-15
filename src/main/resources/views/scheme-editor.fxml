@@ -15,34 +15,9 @@
     <!-- Верхняя панель: инструменты -->
     <top>
         <VBox spacing="10">
-            <!-- Панель выбора схемы -->
-            <HBox spacing="10" alignment="CENTER_LEFT">
-                <Label text="Схема:" styleClass="scheme-label"/>
-                <ComboBox fx:id="schemeComboBox" prefWidth="200"/>
-                <Button fx:id="saveSchemeBtn" styleClass="tool-button">
-                    <graphic>
-                        <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
-                            <Image url="@../images/save.png"/>
-                        </ImageView>
-                    </graphic>
-                    <tooltip>
-                        <Tooltip text="Сохранить схему"/>
-                    </tooltip>
-                </Button>
-                <Button fx:id="clearSchemeBtn" styleClass="tool-button">
-                    <graphic>
-                        <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
-                            <Image url="@../images/clear.png"/>
-                        </ImageView>
-                    </graphic>
-                    <tooltip>
-                        <Tooltip text="Очистить схему"/>
-                    </tooltip>
-                </Button>
-            </HBox>
             <!-- Панель инструментов -->
             <HBox spacing="10" alignment="CENTER_LEFT">
-            <ToolBar>
+            <ToolBar style="-fx-pref-width: 1300px;">
                 <Button fx:id="undoBtn" styleClass="tool-button">
                     <graphic>
                         <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
@@ -113,19 +88,31 @@
                         <Tooltip text="Текст"/>
                     </tooltip>
                 </Button>
-                <Button fx:id="addDeviceToolBtn" styleClass="tool-button">
+                <Separator/>
+                <!-- Панель выбора схемы -->
+                <Label text="Схема:" styleClass="scheme-label"/>
+                <ComboBox fx:id="schemeComboBox" prefWidth="200"/>
+                <Button fx:id="saveSchemeBtn" styleClass="tool-button">
                     <graphic>
                         <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
-                            <Image url="@../images/add.png"/>
+                            <Image url="@../images/save.png"/>
                         </ImageView>
                     </graphic>
                     <tooltip>
-                        <Tooltip text="Добавить прибор"/>
+                        <Tooltip text="Сохранить схему"/>
                     </tooltip>
                 </Button>
-                <Separator/>
-                <Label text="Выберите прибор:" styleClass="select-label"/>
-                <ComboBox fx:id="deviceComboBox" prefWidth="200"/>
+                <Button fx:id="clearSchemeBtn" styleClass="tool-button">
+                    <graphic>
+                        <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
+                            <Image url="@../images/clear.png"/>
+                        </ImageView>
+                    </graphic>
+                    <tooltip>
+                        <Tooltip text="Очистить схему"/>
+                    </tooltip>
+                </Button>
+                <Region HBox.hgrow="ALWAYS"/> <!-- Растягивающийся регион -->
             </ToolBar>
             </HBox>
         </VBox>

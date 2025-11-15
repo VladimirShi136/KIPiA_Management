@@ -60,6 +60,9 @@ public class DevicesGroupedController {
 
     @FXML
     private void initialize() {
+        // Применяем стили к таблице
+        treeTable.getStyleClass().add("tree-table-view");
+
         treeTable.setEditable(true);
         treeTable.setShowRoot(false);
         configureColumns();
@@ -128,7 +131,7 @@ public class DevicesGroupedController {
 
         //Колонка "Фото"
         TreeTableColumn<TreeRowItem, Void> photoCol = new TreeTableColumn<>("Фото");
-        photoCol.setPrefWidth(90);
+        photoCol.setPrefWidth(100);
         photoCol.setCellFactory(createPhotoCellFactory());
 
         // Колонка "Доп. Информация."
@@ -142,7 +145,7 @@ public class DevicesGroupedController {
 
     private TreeTableColumn<TreeRowItem, String> getTreeRowItemStringTreeTableColumn() {
         TreeTableColumn<TreeRowItem, String> statusCol = new TreeTableColumn<>("Статус");
-        statusCol.setPrefWidth(70);
+        statusCol.setPrefWidth(90);
         statusCol.setCellValueFactory(param -> {
             TreeRowItem val = param.getValue().getValue();
             if (val instanceof DeviceItem(Device device))
@@ -637,10 +640,8 @@ public class DevicesGroupedController {
                 if (success) {
                     CustomAlert.showInfo("Экспорт", "Группированный экспорт завершён");
                     logger.info("Экспорт группированной таблицы успешен");
-                } else {
-                    CustomAlert.showError("Экспорт", "Ошибка экспорта группы в Excel");
-                    logger.severe("Ошибка экспорта группированной таблицы");
                 }
+                // Если success = false (пользователь отменил), НЕ показываем ошибку
             });
         }
         if (importButton != null) {

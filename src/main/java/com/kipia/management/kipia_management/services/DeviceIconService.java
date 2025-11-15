@@ -36,7 +36,7 @@ public class DeviceIconService {
     private Scheme currentScheme; // Добавьте поле для текущей схемы
 
     // Константы для стилей
-    private static final double DEFAULT_ICON_SIZE = 56.0;
+    private static final double DEFAULT_ICON_SIZE = 45.0;
     private static final double FALLBACK_CIRCLE_RADIUS = 10.0;
     private static final String DEFAULT_ICON_PATH = "/images/manometer.png";
 

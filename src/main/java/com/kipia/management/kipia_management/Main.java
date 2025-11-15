@@ -1,10 +1,7 @@
 package com.kipia.management.kipia_management;
 
 import com.kipia.management.kipia_management.controllers.MainController;
-import com.kipia.management.kipia_management.services.DatabaseService;
-import com.kipia.management.kipia_management.services.DeviceDAO;
-import com.kipia.management.kipia_management.services.DeviceLocationDAO;
-import com.kipia.management.kipia_management.services.SchemeDAO;
+import com.kipia.management.kipia_management.services.*;
 import com.kipia.management.kipia_management.utils.CustomAlert;
 
 import javafx.application.Application;
@@ -34,6 +31,7 @@ public class Main extends Application {
     // Логгер для сообщений
     private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
     private MainController mainController;
+    private Stage primaryStage;
 
     /**
      * Главный метод приложения
@@ -53,38 +51,61 @@ public class Main extends Application {
     @Override
     public void start(Stage primaryStage) {
         try {
-            // Инициализация сервисов базы данных
+            this.primaryStage = primaryStage;
+
+            LOGGER.info("Запуск приложения...");
+
+            // Инициализация сервисов базы данных ДО загрузки UI
             initializeServices();
+
+            // Проверяем что критические сервисы инициализированы
+            if (databaseService == null) {
+                LOGGER.severe("Критические сервисы не инициализированы");
+                showErrorAndExit("Критическая ошибка", "Не удалось инициализировать необходимые сервисы");
+                return;
+            }
+
             // Загружаем FXML файл
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/main.fxml"));
             Parent root = loader.load();
-            // Настраиваем сцену
-            Scene scene = new Scene(root, 1000, 700);
-            // Применяем стиль светлой темы
-            scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource("/styles/light-theme.css")).toExternalForm());
+
             // Получаем контроллер и передаем ему сервисы
             mainController = loader.getController();
             if (mainController != null) {
                 mainController.setDeviceDAO(deviceDAO);
                 mainController.setSchemeDAO(schemeDAO);
                 mainController.setDeviceLocationDAO(deviceLocationDAO);
+                LOGGER.info("Сервисы переданы в MainController");
+            } else {
+                LOGGER.warning("MainController не найден");
+            }
+
+            // Настраиваем сцену
+            Scene scene = new Scene(root, 1000, 700);
+            // Применяем стиль светлой темы
+            scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource("/styles/light-theme.css")).toExternalForm());
+
+            if (mainController != null) {
                 mainController.setScene(scene);  // Передаём Scene для темы
             }
+
             // Настраиваем главное окно
             primaryStage.setTitle("Система учёта приборов КИПиА");
             primaryStage.setScene(scene);
             primaryStage.setMinWidth(800);
             primaryStage.setMinHeight(600);
+
             // Добавляем иконку
             try {
-                Image icon = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/images/icon.png")));
+                Image icon = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/images/iconApp.png")));
                 primaryStage.getIcons().add(icon);
             } catch (Exception e) {
                 LOGGER.warning("Иконка не найдена, используется стандартная");
             }
+
             // Обработка закрытия окна - закрываем соединение с БД и сохраняем схему
             primaryStage.setOnCloseRequest(event -> {
-                System.out.println("DEBUG: Application shutdown - saving scheme");
+                LOGGER.info("Закрытие приложения - сохранение схемы");
                 // Сохраняем схему через MainController
                 if (mainController != null) {
                     mainController.saveSchemeBeforeNavigation();
@@ -94,15 +115,15 @@ public class Main extends Application {
                     databaseService.closeConnection();
                 }
             });
+
             // Показываем окно
             primaryStage.show();
+            LOGGER.info("Приложение успешно запущено");
+
         } catch (Exception e) {
-            ButtonType result = CustomAlert.showAdvancedError("Ошибка запуска приложения", e.getMessage(), e);
-            if (result == CustomAlert.RETRY_BUTTON) {
-                handleRetry("Ошибка запуска приложения");
-            } else if (result == CustomAlert.CANCEL_BUTTON) {
-                handleCancel("Ошибка запуска приложения");
-            }
+            LOGGER.severe("Ошибка запуска приложения: " + e.getMessage());
+            showErrorAndRetry("Ошибка запуска приложения",
+                    "Не удалось запустить приложение: " + e.getMessage());
         }
     }
 
@@ -111,78 +132,85 @@ public class Main extends Application {
      */
     private void initializeServices() {
         try {
+            LOGGER.info("Инициализация сервисов...");
+
             // Создаем сервис для работы с базой данных
             databaseService = new DatabaseService();
-            // Инициализируем базу данных (создаем таблицы если их нет)
-            databaseService.createTables();
-            // Проверяем создались ли таблицы
-            if (!databaseService.tablesExist()) {
-                throw new RuntimeException("Таблицы не были созданы!");
-            }
+            LOGGER.info("DatabaseService инициализирован");
+
             // Создаем DAO для работы с приборами
             deviceDAO = new DeviceDAO(databaseService);
+            LOGGER.info("DeviceDAO инициализирован");
+
             schemeDAO = new SchemeDAO(databaseService);
+            LOGGER.info("SchemeDAO инициализирован");
+
             deviceLocationDAO = new DeviceLocationDAO(databaseService);
-            // Добавляем тестовые данные если таблицы пустые
-            databaseService.addTestData();
-            LOGGER.info("Сервисы базы данных успешно инициализированы");
+            LOGGER.info("DeviceLocationDAO инициализирован");
+
+            LOGGER.info("Все сервисы успешно инициализированы");
+
         } catch (Exception e) {
-            ButtonType result = CustomAlert.showAdvancedError("Ошибка базы данных", "Не удалось подключиться к базе данных", e);
-            if (result == CustomAlert.RETRY_BUTTON) {
-                handleRetry("Ошибка базы данных");
-            } else if (result == CustomAlert.CANCEL_BUTTON) {
-                handleCancel("Ошибка базы данных");
-            }
+            LOGGER.severe("Ошибка инициализации сервисов: " + e.getMessage());
+            throw new RuntimeException("Не удалось инициализировать сервисы приложения", e);
         }
+    }
+
+    /**
+     * Показать ошибку и предложить повтор
+     */
+    private void showErrorAndRetry(String title, String message) {
+        Platform.runLater(() -> {
+            ButtonType result = CustomAlert.showAdvancedError(title, message, new Exception(message));
+            if (result == CustomAlert.RETRY_BUTTON) {
+                LOGGER.info("Повторная попытка запуска...");
+                handleRetry();
+            } else if (result == CustomAlert.CANCEL_BUTTON) {
+                LOGGER.info("Отмена запуска приложения");
+                handleCancel();
+            }
+        });
+    }
+
+    /**
+     * Показать ошибку и выйти
+     */
+    private void showErrorAndExit(String title, String message) {
+        Platform.runLater(() -> {
+            CustomAlert.showError(title, message);
+            Platform.exit();
+            System.exit(1);
+        });
     }
 
     /**
      * Обработка повторного запуска приложения
-     *
-     * @param context контекст ошибки
      */
-    private static void handleRetry(String context) {
-        if ("Ошибка базы данных".equals(context)) {
-            // Повтор инициализации сервисов (с защитой от бесконечного цикла)
-            Platform.runLater(() -> {
-                Main app = new Main();
-                try {
-                    app.initializeServices();
-                } catch (Exception e) {
-                    ButtonType retryResult = CustomAlert.showAdvancedError("Ошибка базы данных", "Повторная инициализация не удалась", e);
-                    if (retryResult == CustomAlert.RETRY_BUTTON) {
-                        handleRetry("Ошибка базы данных");
-                    }
+    private void handleRetry() {
+        Platform.runLater(() -> {
+            try {
+                LOGGER.info("Перезапуск приложения...");
+                // Создаем новый экземпляр приложения
+                Main newApp = new Main();
+                newApp.start(new Stage());
+
+                // Закрываем текущее окно если оно есть
+                if (primaryStage != null) {
+                    primaryStage.close();
                 }
-            });
-        } else if ("Ошибка запуска приложения".equals(context)) {
-            // Перезапуск приложения
-            Platform.runLater(() -> {
-                try {
-                    new Main().start(new Stage());
-                } catch (Exception e) {
-                    ButtonType retryResult = CustomAlert.showAdvancedError("Ошибка перезапуска", "Не удалось перезапустить приложение", e);
-                    if (retryResult == CustomAlert.RETRY_BUTTON) {
-                        handleRetry("Ошибка запуска приложения");
-                    }
-                }
-            });
-        } else {
-            LOGGER.info("Повторение действия...");
-        }
+            } catch (Exception e) {
+                LOGGER.severe("Ошибка перезапуска приложения: " + e.getMessage());
+                showErrorAndExit("Ошибка перезапуска", "Не удалось перезапустить приложение: " + e.getMessage());
+            }
+        });
     }
 
     /**
      * Обработка отмены действия
-     *
-     * @param context контекст ошибки
      */
-    private static void handleCancel(String context) {
-        if ("Ошибка запуска приложения".equals(context)) {
-            Platform.exit();
-            System.exit(0);
-        } else {
-            LOGGER.info("Отмена действия...");
-        }
+    private void handleCancel() {
+        LOGGER.info("Завершение работы приложения...");
+        Platform.exit();
+        System.exit(0);
     }
 }

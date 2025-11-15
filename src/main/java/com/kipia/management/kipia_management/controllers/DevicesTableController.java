@@ -96,12 +96,19 @@ public class DevicesTableController {
      * Метод, вызываемый после загрузки FXML.
      */
     public void init() {
+        // ДОБАВЬТЕ ЭТУ ПРОВЕРКУ
+        if (deviceDAO == null) {
+            logger.severe("DeviceDAO не установлен! Вызовите setDeviceDAO() перед init()");
+            CustomAlert.showError("Ошибка", "Сервис базы данных не инициализирован");
+            return;
+        }
         createTableColumns();
         loadDataFromDao();
         configureSearch();
         configureButtons();
         configureRowStyle();
         updateStatistics();
+        logger.info("DevicesTableController инициализирован успешно");
     }
 
     // -----------------------------------------------------------------
@@ -112,6 +119,8 @@ public class DevicesTableController {
      * Создаём все колонки, используя фабричные методы.
      */
     private void createTableColumns() {
+        // Применяем стили к таблице
+        deviceTable.getStyleClass().add("table-view");
 
         //  Текстовые колонки
         TableColumn<Device, String> typeCol = createEditableStringColumn(
@@ -135,7 +144,7 @@ public class DevicesTableController {
                 Device::setMeasurementLimit);
 
         TableColumn<Device, String> locationCol = createEditableStringColumn(
-                "Место установки", "location", 110,
+                "Место установки", "location", 120,
                 Device::setLocation);
 
         TableColumn<Device, String> valveNumberCol = createEditableStringColumn(
@@ -152,7 +161,7 @@ public class DevicesTableController {
 
         // Статус – ComboBox
         TableColumn<Device, String> statusCol = new TableColumn<>("Статус");
-        statusCol.setPrefWidth(70);
+        statusCol.setPrefWidth(90);
         statusCol.setCellValueFactory(new PropertyValueFactory<>("status"));
         statusCol.setCellFactory(ComboBoxTableCell.forTableColumn(
                 "Хранение", "В работе", "Утерян", "Испорчен"));
@@ -165,7 +174,7 @@ public class DevicesTableController {
 
         // Фото – две кнопки «Добавить» / «Просмотр»
         TableColumn<Device, Void> photoCol = new TableColumn<>("Фото");
-        photoCol.setPrefWidth(90);
+        photoCol.setPrefWidth(100);
         photoCol.setCellFactory(createPhotoCellFactory());
 
         // -----------------------------------------------------------------
@@ -180,6 +189,7 @@ public class DevicesTableController {
 
         // глобальный стиль выбора (можно вынести в CSS, но пока так)
         deviceTable.setStyle("-fx-selection-bar: #cce7ff; -fx-selection-bar-text: black;");
+
     }
 
     // -----------------------------------------------------------------
@@ -194,7 +204,7 @@ public class DevicesTableController {
     private TableColumn<Device, Integer> createYearColumn() {
         TableColumn<Device, Integer> yearCol = new TableColumn<>("Год выпуска");
         yearCol.setCellValueFactory(new PropertyValueFactory<>("year"));
-        yearCol.setPrefWidth(90);
+        yearCol.setPrefWidth(85);
         yearCol.setCellFactory(col -> {
             ValidatingIntegerCell cell = new ValidatingIntegerCell();
             cell.getStyleClass().add("numeric-cell");
@@ -469,15 +479,13 @@ public class DevicesTableController {
     //   Экспорт / импорт Excel (используем Apache POI)
     // -----------------------------------------------------------------
     private void exportToExcel() {
-        //ExcelImportExportUtil.exportDevicesToExcel(deviceTable.getScene().getWindow(), deviceTable.getItems());
         boolean success = ExcelImportExportUtil.exportDevicesToExcel(deviceTable.getScene().getWindow(), deviceTable.getItems());
         if (success) {
             CustomAlert.showInfo("Экспорт", "Экспорт завершён успешно");
             logger.info("Экспорт устройств в Excel завершён успешно");
-        } else {
-            CustomAlert.showError("Экспорт", "Ошибка экспорта в Excel");
-            logger.severe("Ошибка экспорта устройств в Excel");
         }
+        // Если success = false (пользователь отменил), НЕ показываем ошибку
+        // Просто молча выходим из метода
     }
 
     private void importFromExcel() {
