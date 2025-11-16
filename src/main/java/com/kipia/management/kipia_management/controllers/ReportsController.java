@@ -47,9 +47,9 @@ public class ReportsController {
         if (locationReportBtn != null) StyleUtils.applyStyleToRadioButton(locationReportBtn);
         if (yearReportBtn != null) StyleUtils.applyStyleToRadioButton(yearReportBtn);
 
-        reportTypeGroup.selectedToggleProperty().addListener((obs, oldToggle, newToggle) -> updateReport());
+        reportTypeGroup.selectedToggleProperty().addListener((_, _, _) -> updateReport());
 
-        exportReportButton.setOnAction(event -> {
+        exportReportButton.setOnAction(_ -> {
             String reportKey = getCurrentReportKey();
             if (reportKey.isEmpty()) return;
 

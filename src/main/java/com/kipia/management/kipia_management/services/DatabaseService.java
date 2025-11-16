@@ -1,7 +1,10 @@
 package com.kipia.management.kipia_management.services;
 
 import com.kipia.management.kipia_management.models.Device;
+
+import java.io.File;
 import java.sql.*;
+import java.util.Objects;
 import java.util.logging.Logger;
 
 /**
@@ -41,12 +44,10 @@ public class DatabaseService {
      */
     private void connect() {
         try {
-            // Используем абсолютный путь к базе данных в папке пользователя
-            String userHome = System.getProperty("user.home");
-            String dbPath = userHome + "/kipia_management.db";
+            String dbPath = getDatabasePath();
             String dbUrl = "jdbc:sqlite:" + dbPath;
 
-            LOGGER.info("Подключение к базе данных: " + dbUrl);
+            LOGGER.info("Подключение к базе данных: " + dbPath);
 
             connection = DriverManager.getConnection(dbUrl);
 
@@ -68,6 +69,81 @@ public class DatabaseService {
             LOGGER.severe("Ошибка подключения к базе данных: " + e.getMessage());
             throw new RuntimeException("Не удалось подключиться к базе данных", e);
         }
+    }
+
+    /**
+     * Определяет путь к базе данных в зависимости от режима запуска
+     */
+    private String getDatabasePath() {
+        // Проверяем, запущено ли из IDEA (режим разработки)
+        if (isDevelopmentMode()) {
+            // Режим разработки - база в папке проекта
+            String projectDir = System.getProperty("user.dir");
+            String dataDir = projectDir + "/data";
+
+            // Создаем папку если не существует
+            File dataFolder = new File(dataDir);
+            if (!dataFolder.exists()) {
+                dataFolder.mkdirs();
+                LOGGER.info("Создана папка для данных разработки: " + dataFolder.getAbsolutePath());
+            }
+
+            return dataDir + "/kipia_management.db";
+        } else {
+            // Режим продакшена - база в AppData
+            String userDataDir = System.getProperty("user.home") + "/AppData/Roaming/KIPiA_Management/data";
+            File dataFolder = new File(userDataDir);
+            if (!dataFolder.exists()) {
+                dataFolder.mkdirs();
+                LOGGER.info("Создана папка для данных пользователя: " + dataFolder.getAbsolutePath());
+            }
+
+            return userDataDir + "/kipia_management.db";
+        }
+    }
+
+    /**
+     * Проверяет, запущено ли приложение в режиме разработки
+     */
+    private boolean isDevelopmentMode() {
+        // ПРИОРИТЕТ 1: Принудительный продакшен режим через VM option
+        if ("true".equals(System.getProperty("production"))) {
+            LOGGER.info("Режим: ПРОДАКШЕН (принудительно через -Dproduction=true)");
+            return false;
+        }
+
+        // ПРИОРИТЕТ 2: Принудительный режим разработки
+        if ("true".equals(System.getProperty("development"))) {
+            LOGGER.info("Режим: РАЗРАБОТКА (принудительно через -Ddevelopment=true)");
+            return true;
+        }
+
+        String classPath = System.getProperty("java.class.path");
+        String javaHome = System.getProperty("java.home");
+
+        // Автоопределение по окружению
+        boolean isDev = classPath.contains("target/classes") ||
+                classPath.contains("idea_rt.jar") ||
+                javaHome.contains("IntelliJ") ||
+                classPath.contains(".idea") ||
+                !isRunningFromJAR();
+
+        if (isDev) {
+            LOGGER.info("Режим: РАЗРАБОТКА (автоопределение)");
+        } else {
+            LOGGER.info("Режим: ПРОДАКШЕН (автоопределение)");
+        }
+
+        return isDev;
+    }
+
+    /**
+     * Проверяет, запущено ли приложение из JAR файла
+     */
+    private boolean isRunningFromJAR() {
+        String className = this.getClass().getName().replace('.', '/');
+        String classJar = Objects.requireNonNull(this.getClass().getResource("/" + className + ".class")).toString();
+        return classJar.startsWith("jar:");
     }
 
     /**
@@ -107,6 +183,7 @@ public class DatabaseService {
                 scheme_id INTEGER NOT NULL,
                 x REAL NOT NULL,
                 y REAL NOT NULL,
+                rotation REAL DEFAULT 0.0,
                 PRIMARY KEY (device_id, scheme_id),
                 FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE,
                 FOREIGN KEY (scheme_id) REFERENCES schemes(id) ON DELETE CASCADE
@@ -159,20 +236,9 @@ public class DatabaseService {
         }
     }
 
-    public boolean tablesExist() {
-        try (Statement stmt = getConnection().createStatement()) {
-            ResultSet rs = stmt.executeQuery(
-                    "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('devices', 'schemes', 'device_locations')"
-            );
-            int count = 0;
-            while (rs.next()) count++;
-            return count == 3;
-        } catch (SQLException e) {
-            LOGGER.severe("Ошибка проверки существования таблиц: " + e.getMessage());
-            return false;
-        }
-    }
-
+    /**
+     * Метод для добавления тестовых данных в базу данных.
+     */
     public void addTestData() {
         if (hasData()) {
             LOGGER.info("Тестовые данные уже существуют");
@@ -245,21 +311,24 @@ public class DatabaseService {
 
         // НОВЫЕ: Добавить тестовые привязки приборов (device_locations)
         try (PreparedStatement stmtLoc = getConnection().prepareStatement(
-                "INSERT INTO device_locations (device_id, scheme_id, x, y) VALUES (?, 1, ?, ?)")) {
+                "INSERT INTO device_locations (device_id, scheme_id, x, y, rotation) VALUES (?, 1, ?, ?, ?)")) {
 
             stmtLoc.setInt(1, 1);  // Устройство ID=1 (device1)
             stmtLoc.setDouble(2, 100);
             stmtLoc.setDouble(3, 150);
+            stmtLoc.setDouble(4, 0.0);  // ← ДОБАВЛЕНО значение rotation
             stmtLoc.executeUpdate();
 
             stmtLoc.setInt(1, 2);  // Устройство ID=2 (device2)
             stmtLoc.setDouble(2, 150);
             stmtLoc.setDouble(3, 250);
+            stmtLoc.setDouble(4, 0.0);  // ← ДОБАВЛЕНО значение rotation
             stmtLoc.executeUpdate();
 
             stmtLoc.setInt(1, 3);  // Устройство ID=3 (device3)
             stmtLoc.setDouble(2, 200);
             stmtLoc.setDouble(3, 350);
+            stmtLoc.setDouble(4, 0.0);  // ← ДОБАВЛЕНО значение rotation
             stmtLoc.executeUpdate();
 
             LOGGER.info("Тестовые привязки приборов добавлены");

@@ -8,8 +8,6 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.shape.*;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
-
-import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -37,7 +35,7 @@ public class ShapeManager {
     private boolean wasResized;
     private Circle snapHighlight;
 
-    // Колбэки для взаимодействия с UI
+    // Callback для взаимодействия с UI
     private Consumer<ShapeHandler> onSelectCallback;
     private Consumer<String> statusSetter;
 
@@ -47,8 +45,8 @@ public class ShapeManager {
 
     private double previewEndX, previewEndY;
 
-    private Runnable onShapeSelected;    // Колбэк при выделении фигуры
-    private Runnable onShapeDeselected;  // Колбэк при снятии выделения
+    private Runnable onShapeSelected;    // Callback при выделении фигуры
+    private Runnable onShapeDeselected;  // Callback при снятии выделения
 
     // Команда добавления
     public class AddShapeCommand implements CommandManager.Command {
@@ -62,22 +60,19 @@ public class ShapeManager {
 
         @Override
         public void execute() {
-            // Уже добавлено в shapeService.addShape, так что ничего (или add в pane если нужно)
             if (!pane.getChildren().contains(shape)) {
                 pane.getChildren().add(shape);
             }
             shapeService.addShapeToList((ShapeBase) shape);
-            System.out.println("DEBUG: Add execute - shape in pane, shapes count=" + shapeService.getShapeCount());
         }
 
         @Override
         public void undo() {
             pane.getChildren().remove(shape);
-            shapeService.removeShapeFromList((ShapeBase) shape);  // Удаляем из списка
+            shapeService.removeShapeFromList((ShapeBase) shape);
             if (shape instanceof ShapeBase base) {
-                base.removeResizeHandles();  // Clear handles
+                base.removeResizeHandles();
             }
-            System.out.println("DEBUG: Undo add - shape removed from pane/shapes, count=" + shapeService.getShapeCount());
         }
     }
 
@@ -94,11 +89,10 @@ public class ShapeManager {
         @Override
         public void execute() {
             pane.getChildren().remove(shape);
-            shapeService.removeShapeFromList((ShapeBase) shape);  // Удаляем из списка
+            shapeService.removeShapeFromList((ShapeBase) shape);
             if (shape instanceof ShapeBase base) {
-                base.removeResizeHandles();  // Clear handles
+                base.removeResizeHandles();
             }
-            System.out.println("DEBUG: Remove execute - shape removed from pane/shapes, count=" + shapeService.getShapeCount());
         }
 
         @Override
@@ -106,9 +100,7 @@ public class ShapeManager {
             if (!pane.getChildren().contains(shape)) {
                 pane.getChildren().add(shape);
             }
-            shapeService.addShapeToList((ShapeBase) shape);  // Добавляем в список
-            // Не select автоматически, только возвращаем (handles создаст select если нужно)
-            System.out.println("DEBUG: Undo remove - shape added back to pane/shapes, count=" + shapeService.getShapeCount());
+            shapeService.addShapeToList((ShapeBase) shape);
         }
     }
 
@@ -123,20 +115,15 @@ public class ShapeManager {
             this.oldY = oldY;
             this.newX = newX;
             this.newY = newY;
-
-            System.out.println("DEBUG: MoveShapeCommand created - " + shape.getShapeType() +
-                    " from (" + oldX + "," + oldY + ") to (" + newX + "," + newY + ")");
         }
 
         @Override
         public void execute() {
-            System.out.println("DEBUG: MoveShapeCommand.execute - moving to (" + newX + "," + newY + ")");
             shape.setPosition(newX, newY);
         }
 
         @Override
         public void undo() {
-            System.out.println("DEBUG: MoveShapeCommand.undo - moving back to (" + oldX + "," + oldY + ")");
             shape.setPosition(oldX, oldY);
         }
     }
@@ -154,13 +141,11 @@ public class ShapeManager {
 
         @Override
         public void execute() {
-            // Временно блокируем автосохранение и регистрацию команд
             shape.setColorsSilent(newStroke, newFill);
         }
 
         @Override
         public void undo() {
-            // Временно блокируем автосохранение и регистрацию команд
             shape.setColorsSilent(oldStroke, oldFill);
         }
     }
@@ -186,13 +171,13 @@ public class ShapeManager {
         @Override
         public void execute() {
             shape.setPosition(newX, newY);
-            shape.applyResize(newWidth, newHeight);  // Используем публичный метод
+            shape.applyResize(newWidth, newHeight);
         }
 
         @Override
         public void undo() {
             shape.setPosition(oldX, oldY);
-            shape.applyResize(oldWidth, oldHeight);  // Используем публичный метод
+            shape.applyResize(oldWidth, oldHeight);
         }
     }
 
@@ -294,11 +279,8 @@ public class ShapeManager {
      * Обработка нажатия мыши для указанного инструмента
      */
     public void onMousePressedForTool(Tool tool, double x, double y) {
-        System.out.println("DEBUG: ShapeManager.onMousePressedForTool - tool: " + tool + ", x: " + x + ", y: " + y);
-
         // Если инструмент null - этот метод не должен вызываться
         if (tool == null) {
-            System.out.println("DEBUG: Tool is null - returning");
             return;
         }
 
@@ -306,12 +288,7 @@ public class ShapeManager {
         setStartCoordinates(x, y);
 
         switch (tool) {
-            case LINE, RECTANGLE, ELLIPSE, RHOMBUS -> {
-                System.out.println("DEBUG: Creating preview shape for: " + tool);
-                createPreviewShape(tool, x, y);
-            }
-            // ADD_DEVICE и TEXT обрабатываются в контроллере
-            default -> System.out.println("DEBUG: Tool " + tool + " doesn't create preview");
+            case LINE, RECTANGLE, ELLIPSE, RHOMBUS -> createPreviewShape(tool, x, y);
         }
     }
 
@@ -345,7 +322,6 @@ public class ShapeManager {
                     statusSetter.accept("Линия добавлена");
                 }
             } else {
-                System.out.println("DEBUG: Line too short - not creating (length: " + length + ")");
                 if (statusSetter != null) {
                     statusSetter.accept("Линия слишком короткая");
                 }
@@ -361,7 +337,6 @@ public class ShapeManager {
                     statusSetter.accept("Фигура добавлена");
                 }
             } else {
-                System.out.println("DEBUG: Shape too small - not creating (" + width + "x" + height + ")");
                 if (statusSetter != null) {
                     statusSetter.accept("Фигура слишком маленькая");
                 }
@@ -377,7 +352,6 @@ public class ShapeManager {
     public void addShape(Node shape) {
         AddShapeCommand cmd = new AddShapeCommand(pane, shape);
         commandManager.execute(cmd);  // Используем CommandManager вместо прямого управления
-        System.out.println("DEBUG: AddShape executed via CommandManager");
     }
 
     /**
@@ -386,7 +360,6 @@ public class ShapeManager {
     public void removeShape(Node shape) {
         RemoveShapeCommand cmd = new RemoveShapeCommand(pane, shape);
         commandManager.execute(cmd);  // Используем CommandManager вместо прямого управления
-        System.out.println("DEBUG: RemoveShape executed via CommandManager");
     }
 
     /**
@@ -395,7 +368,6 @@ public class ShapeManager {
     public void registerRotation(ShapeBase shape, double oldAngle, double newAngle) {
         RotateShapeCommand cmd = new RotateShapeCommand(shape, oldAngle, newAngle);
         commandManager.execute(cmd);
-        System.out.println("DEBUG: Rotation registered via CommandManager");
     }
 
     // -----------------------------------------------------------------
@@ -430,12 +402,8 @@ public class ShapeManager {
      * Регистрация перемещения фигуры в undo-стек
      */
     public void registerMove(ShapeBase shape, double oldX, double oldY, double newX, double newY) {
-        System.out.println("DEBUG: registerMove called for " + shape.getShapeType() +
-                " - from (" + oldX + "," + oldY + ") to (" + newX + "," + newY + ")");
-
         MoveShapeCommand cmd = new MoveShapeCommand(shape, oldX, oldY, newX, newY);
         commandManager.execute(cmd);
-        System.out.println("DEBUG: Move registered via CommandManager");
     }
 
     /**
@@ -444,7 +412,6 @@ public class ShapeManager {
     public void registerColorChange(ShapeBase shape, Color oldStroke, Color oldFill, Color newStroke, Color newFill) {
         ChangeColorCommand cmd = new ChangeColorCommand(shape, oldStroke, oldFill, newStroke, newFill);
         commandManager.execute(cmd);
-        System.out.println("DEBUG: Color change registered via CommandManager");
     }
 
     /**
@@ -454,7 +421,6 @@ public class ShapeManager {
                                double newX, double newY, double newWidth, double newHeight) {
         ResizeShapeCommand cmd = new ResizeShapeCommand(shape, oldX, oldY, oldWidth, oldHeight, newX, newY, newWidth, newHeight);
         commandManager.execute(cmd);
-        System.out.println("DEBUG: Resize registered via CommandManager");
     }
 
     /**
@@ -463,7 +429,6 @@ public class ShapeManager {
     public void registerFontChange(TextShape textShape, Font oldFont, Font newFont) {
         ChangeFontCommand cmd = new ChangeFontCommand(textShape, oldFont, newFont);
         commandManager.execute(cmd);
-        System.out.println("DEBUG: Font change registered via CommandManager");
     }
 
     /**
@@ -476,7 +441,6 @@ public class ShapeManager {
                 oldStartX, oldStartY, oldEndX, oldEndY,
                 newStartX, newStartY, newEndX, newEndY);
         commandManager.execute(cmd);
-        System.out.println("DEBUG: Line points change registered via CommandManager");
     }
 
     /**
@@ -504,17 +468,14 @@ public class ShapeManager {
         selectedShape = shapeHandler;
 
         if (selectedShape != null) {
-            System.out.println("DEBUG: Selecting new shape");
             selectedShape.highlightAsSelected();
             selectedShape.makeResizeHandlesVisible();
             selectedShape.updateResizeHandles();
 
-            // ВЫЗЫВАЕМ колбэк выделения
             if (onSelectCallback != null) {
                 onSelectCallback.accept(selectedShape);
             }
 
-            // ВЫЗЫВАЕМ колбэк выделения фигуры
             if (onShapeSelected != null) {
                 onShapeSelected.run();
             }
@@ -525,8 +486,6 @@ public class ShapeManager {
      * Снятие выделения с текущей фигуры
      */
     public void deselectShape() {
-        System.out.println("DEBUG: Deselecting shape");
-
         if (selectedShape != null) {
             selectedShape.resetHighlight();
 
@@ -534,7 +493,6 @@ public class ShapeManager {
                 base.removeResizeHandles();
             }
 
-            // ВЫЗЫВАЕМ колбэк снятия выделения
             if (onShapeDeselected != null) {
                 onShapeDeselected.run();
             }
@@ -542,8 +500,6 @@ public class ShapeManager {
         selectedShape = null;
         wasResized = false;
         hideSnapHighlight();
-
-        System.out.println("DEBUG: Shape deselected successfully");
     }
 
     // -----------------------------------------------------------------
@@ -606,13 +562,9 @@ public class ShapeManager {
      * Создание preview-фигуры для указанного инструмента
      */
     private void createPreviewShape(Tool tool, double x, double y) {
-        System.out.println("DEBUG: createPreviewShape - tool: " + tool);
         previewShape = createPreviewShapeByTool(tool, x, y);
         if (previewShape != null) {
-            System.out.println("DEBUG: Preview shape created, adding to pane");
             pane.getChildren().add(previewShape);
-        } else {
-            System.out.println("DEBUG: Preview shape is null!");
         }
     }
 
@@ -703,11 +655,10 @@ public class ShapeManager {
 
     private Path createRhombusPreview(double x, double y) {
         Path path = new Path();
-        path.setFill(Color.TRANSPARENT); // Делаем preview тоже прозрачным
+        path.setFill(Color.TRANSPARENT);
         path.setStroke(Color.GRAY);
         path.setStrokeWidth(1);
 
-        // ВАЖНО: устанавливаем позицию preview относительно начальных координат
         path.setLayoutX(Math.min(startX, x));
         path.setLayoutY(Math.min(startY, y));
 
@@ -755,7 +706,6 @@ public class ShapeManager {
         line.setEndX(endX);
         line.setEndY(endY);
 
-        // Показываем индикатор только при фиксации
         if (nearHorizontal || nearVertical) {
             showSnapHighlight(endX, endY);
         } else {
@@ -778,15 +728,12 @@ public class ShapeManager {
         ellipse.setRadiusY(Math.abs(y - startY) / 2);
     }
 
-    // Замени updateRhombusPreview на:
     private void updateRhombusPreview(Path path, double x, double y) {
-        // Обновляем позицию preview
         path.setLayoutX(Math.min(startX, x));
         path.setLayoutY(Math.min(startY, y));
         rebuildButterflyPath(path, x, y);
     }
 
-    // Добавь общий метод (из RhombusShape)
     private void rebuildButterflyPath(Path rhombusPath, double endX, double endY) {
         double width = Math.abs(endX - startX);
         double height = Math.abs(endY - startY);
@@ -795,7 +742,6 @@ public class ShapeManager {
         double centerX = width / 2;
         double centerY = height / 2;
 
-        // ТОЧНО ТАКАЯ ЖЕ ЛОГИКА КАК В RHOMBUSSHAPE
         double leftTopY = 0;
         double rightTopY = 0;
 
@@ -829,7 +775,6 @@ public class ShapeManager {
         }
 
         try {
-            System.out.println("DEBUG: Creating shape: " + tool + " at (" + x + ", " + y + "), coords: " + Arrays.toString(coordinates));
             ShapeBase shape = shapeService.addShape(shapeType, coordinates);
             if (shape != null) {
                 shape.addContextMenu(shapeHandler -> removeShape((Node) shapeHandler));
@@ -850,9 +795,7 @@ public class ShapeManager {
      * Обновление состояния выделения после undo/redo
      */
     private void updateSelectionAfterUndoRedo() {
-        deselectShape();  // Сброс выделения (не мешает возврату фигур)
-        // Опционально: если нужно восстановить выделение последней фигуры, добавь логику поиска
-        System.out.println("DEBUG: Selection updated after undo/redo");
+        deselectShape();  // Сброс выделения
     }
 
     /**
@@ -867,7 +810,7 @@ public class ShapeManager {
     }
 
     /**
-     * Установка статуса через колбэк
+     * Установка статуса через callback
      */
     private void setStatus(String message) {
         if (statusSetter != null) {

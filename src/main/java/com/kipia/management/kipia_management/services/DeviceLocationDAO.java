@@ -1,6 +1,7 @@
 package com.kipia.management.kipia_management.services;
 
 import com.kipia.management.kipia_management.models.DeviceLocation;
+
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -79,6 +80,7 @@ public class DeviceLocationDAO {
 
     /**
      * Удаление всех привязок для конкретной схемы
+     *
      * @param schemeId - ID схемы
      * @return - количество удаленных записей
      */

@@ -1018,15 +1018,8 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      * Десериализация фигуры из строки
      */
     public static ShapeBase deserialize(String data, AnchorPane pane, Consumer<String> statusSetter, Consumer<ShapeHandler> onSelectCallback, ShapeManager shapeManager) {
-        System.out.println("=== DEBUG DESERIALIZE START ===");
-        System.out.println("Raw data: " + data);
-
         if (data == null || data.trim().isEmpty()) return null;
         String[] parts = data.split("\\|");
-
-        System.out.println("Parts count: " + parts.length);
-        System.out.println("Parts: " + Arrays.toString(parts));
-
         try {
             String[] fixedParts = new String[parts.length];
             for (int i = 0; i < parts.length; i++) {
@@ -1044,9 +1037,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
             if (fixedParts.length > 5) {
                 try {
                     rotation = Double.parseDouble(fixedParts[5]);
-                    System.out.println("Rotation found: " + rotation);
                 } catch (NumberFormatException e) {
-                    System.out.println("No rotation found, using 0");
                     rotation = 0.0;
                 }
             }
@@ -1059,12 +1050,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
                     double startY = Double.parseDouble(fixedParts[2]);
                     double endX = Double.parseDouble(fixedParts[3]);
                     double endY = Double.parseDouble(fixedParts[4]);
-
-                    System.out.println("DEBUG: Deserializing LINE");
-                    System.out.println("  Start: (" + startX + ", " + startY + ")");
-                    System.out.println("  End: (" + endX + ", " + endY + ")");
-                    System.out.println("  Parts: " + Arrays.toString(fixedParts));
-
                     yield new LineShape(startX, startY, endX, endY, pane, statusSetter, onSelectCallback, shapeManager);
                 }
                 case "ELLIPSE" ->
@@ -1077,7 +1062,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
 
             // ВАЖНО: Применяем поворот ко всем фигурам
             if (shape != null) {
-                System.out.println("Applying rotation: " + rotation + " to " + type);
                 shape.setRotation(rotation);
 
                 // Восстанавливаем цвета
@@ -1086,15 +1070,12 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
                 }
 
                 // ОТЛАДКА: проверяем примененные цвета
-                System.out.println("DEBUG: After color restoration - Stroke: " + shape.strokeColor + ", Fill: " + shape.fillColor);
                 shape.addContextMenu(shape::handleDelete);
             }
 
-            System.out.println("=== DEBUG DESERIALIZE END ===");
             return shape;
 
         } catch (Exception e) {
-            System.out.println("ERROR in deserialize: " + e.getMessage());
             e.printStackTrace();
             return null;
         }
@@ -1112,8 +1093,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
             // Текст (индекс 6) - ВАЖНО: правильный индекс
             String text = (fixedParts.length > 6) ? fixedParts[6] : "Текст";
             text = text.replace("\\|", "|"); // Unescape
-            System.out.println("DEBUG: Text content restored: '" + text + "'");
-
             TextShape textShape = new TextShape(x, y, text, pane, statusSetter, onSelectCallback, shapeManager);
 
             // Шрифт (индексы 7-9)
@@ -1130,8 +1109,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
 
                     Font restoredFont = Font.font(fontFamily, fontWeight, fontPosture, fontSize);
                     textShape.setFont(restoredFont);
-                    System.out.println("DEBUG: Font restored: " + restoredFont);
-
                 } catch (NumberFormatException e) {
                     System.out.println("Ошибка восстановления шрифта: " + e.getMessage());
                 }
@@ -1142,7 +1119,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
                 try {
                     double rotation = Double.parseDouble(fixedParts[5]);
                     textShape.setRotation(rotation);
-                    System.out.println("DEBUG: Text rotation restored: " + rotation);
                 } catch (NumberFormatException e) {
                     System.out.println("Ошибка восстановления угла поворота текста: " + e.getMessage());
                 }
@@ -1151,21 +1127,15 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
             // ВАЖНО: ВОССТАНАВЛИВАЕМ ЦВЕТА ДЛЯ ТЕКСТА
             if (fixedParts.length > 11) {
                 // Для текста цвета находятся на позициях 10 и 11
-                System.out.println("DEBUG: Calling deserializeColors with indices 10 and 11");
                 textShape.deserializeColors(fixedParts, 10, 11);
             } else if (fixedParts.length > 9) {
                 // Старый формат - цвета на позициях 8 и 9
                 textShape.deserializeColors(fixedParts, 8, 9);
-                System.out.println("DEBUG: Text colors restored from indices 8-9 (old format)");
-            } else {
-                System.out.println("DEBUG: No color data found for text");
             }
-
             javafx.application.Platform.runLater(textShape::calculateTextSize);
             return textShape;
 
         } catch (Exception e) {
-            System.out.println("Ошибка создания TextShape: " + e.getMessage());
             e.printStackTrace();
             return null;
         }
@@ -1176,13 +1146,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      */
     protected String serializeColors() {
         String result = String.format(java.util.Locale.US, "|%.3f,%.3f,%.3f,%.3f|%.3f,%.3f,%.3f,%.3f", strokeColor.getRed(), strokeColor.getGreen(), strokeColor.getBlue(), strokeColor.getOpacity(), fillColor.getRed(), fillColor.getGreen(), fillColor.getBlue(), fillColor.getOpacity());
-
-        System.out.println("=== SERIALIZE COLORS ===");
-        System.out.println("Stroke: " + strokeColor);
-        System.out.println("Fill: " + fillColor);
-        System.out.println("Serialized: '" + result + "'");
-        System.out.println("=== END SERIALIZE COLORS ===");
-
         return result;
     }
 
@@ -1190,50 +1153,34 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      * Десериализует цвета из строки
      */
     protected void deserializeColors(String[] originalParts, int strokeIndex, int fillIndex) {
-        System.out.println("=== DESERIALIZE COLORS FOR " + getShapeType() + " ===");
-        System.out.println("Parts length: " + originalParts.length);
-        System.out.println("Stroke index: " + strokeIndex + ", Fill index: " + fillIndex);
-
         if (originalParts.length > strokeIndex) {
             String strokeData = originalParts[strokeIndex];
-            System.out.println("Stroke data: '" + strokeData + "'");
-
             // ОБРАБАТЫВАЕМ ОБА ВАРИАНТА РАЗДЕЛИТЕЛЕЙ
             double[] strokeValues = parseColorValues(strokeData);
             if (strokeValues.length == 4) {
                 strokeColor = Color.color(strokeValues[0], strokeValues[1], strokeValues[2], strokeValues[3]);
-                System.out.println("Stroke color restored: " + strokeColor);
             } else {
-                System.out.println("Invalid stroke color format, using default");
                 strokeColor = Color.BLACK;
             }
         }
 
         if (originalParts.length > fillIndex) {
             String fillData = originalParts[fillIndex];
-            System.out.println("Fill data: '" + fillData + "'");
-
             double[] fillValues = parseColorValues(fillData);
             if (fillValues.length == 4) {
                 fillColor = Color.color(fillValues[0], fillValues[1], fillValues[2], fillValues[3]);
-                System.out.println("Fill color restored: " + fillColor);
             } else {
-                System.out.println("Invalid fill color format, using default");
                 fillColor = Color.TRANSPARENT;
             }
         }
 
         applyCurrentStyle();
-        System.out.println("Colors applied to " + getShapeType() + " - Stroke: " + strokeColor + ", Fill: " + fillColor);
-        System.out.println("=== END DESERIALIZE COLORS ===");
     }
 
     /**
      * Парсит значения цвета из строки, обрабатывая оба формата разделителей
      */
     private double[] parseColorValues(String colorData) {
-        // Для формата "1.000.1.000.0.000.1.000" извлекаем числа вручную
-        // Ищем шаблон: число.число.число.число
         String[] patterns = {
                 "(\\d+\\.\\d+)\\.(\\d+\\.\\d+)\\.(\\d+\\.\\d+)\\.(\\d+\\.\\d+)", // 1.000.1.000.0.000.1.000
                 "(\\d+\\.\\d+),(\\d+\\.\\d+),(\\d+\\.\\d+),(\\d+\\.\\d+)"        // 0.200,0.102,0.502,1.000
@@ -1256,9 +1203,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
                 }
             }
         }
-
-        // Если не нашли совпадений, возвращаем значения по умолчанию
-        System.out.println("No valid color pattern found, using defaults");
         return new double[]{0.0, 0.0, 0.0, 1.0};
     }
 

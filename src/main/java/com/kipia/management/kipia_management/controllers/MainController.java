@@ -78,9 +78,10 @@ public class MainController {
 
     /**
      * Получение сцены
+     *
      * @return - сцена
      */
-    public Scene getScene () {
+    public Scene getScene() {
         return scene;
     }
 
@@ -119,25 +120,18 @@ public class MainController {
     private void saveSchemeOnExit() {
         if (schemeEditorController != null) {
             try {
-                System.out.println("DEBUG: Auto-saving scheme on application exit");
-
-                // Используем SchemeSaver из SchemeEditorController
                 SchemeSaver saver = schemeEditorController.getSchemeSaver();
                 Scheme currentScheme = schemeEditorController.getCurrentScheme();
 
                 if (saver != null && currentScheme != null) {
                     saver.saveOnExit(currentScheme);
-                    CustomAlert.showAutoSaveNotification("Сохранение при выходе", 1.3);
-                } else {
-                    System.out.println("DEBUG: No active scheme to save on exit");
+                    CustomAlert.showAutoSaveNotification("Сохранение при выходе", 0.5);
                 }
             } catch (Exception e) {
                 System.err.println("Ошибка при автосохранении схемы при выходе: " + e.getMessage());
                 CustomAlert.showWarning("Предупреждение",
                         "Не удалось сохранить схему при выходе. Последние изменения могут быть потеряны.");
             }
-        } else {
-            System.out.println("DEBUG: No active scheme editor - nothing to save on exit");
         }
     }
 
@@ -210,11 +204,9 @@ public class MainController {
         boolean confirmExit = CustomAlert.showConfirmation("Подтверждение выхода", message);
 
         if (confirmExit) {
-            // Сохраняем только если есть активный редактор
             if (schemeEditorController != null) {
                 saveSchemeOnExit();
             }
-            // Используем Timeline для задержки перед выходом
             Timeline timeline = new Timeline(new KeyFrame(
                     Duration.millis(1500), // задержка закрытия
                     _ -> Platform.exit()

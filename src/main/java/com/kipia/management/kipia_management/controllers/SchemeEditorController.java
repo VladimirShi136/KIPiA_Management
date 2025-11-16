@@ -1,5 +1,4 @@
 package com.kipia.management.kipia_management.controllers;
-
 import com.kipia.management.kipia_management.managers.ClipboardManager;
 import com.kipia.management.kipia_management.managers.ShapeManager;
 import com.kipia.management.kipia_management.models.Device;
@@ -12,7 +11,6 @@ import com.kipia.management.kipia_management.utils.StyleUtils;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
-import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseButton;
@@ -73,7 +71,6 @@ public class SchemeEditorController {
     private Scheme currentScheme;
     private ObservableList<Device> deviceList;
     private ShapeManager.Tool currentTool = null;
-    private ShapeManager.Tool previousTool = null;
 
     // ============================================================
     // DEPENDENCY INJECTION API
@@ -118,7 +115,6 @@ public class SchemeEditorController {
         try {
             setupUIComponents();
             setupPaneEventHandlers();
-            setupShapeSystem();
             setupToolButtons();
             applyButtonStyles();
             setupWindowCloseHandler();
@@ -137,13 +133,10 @@ public class SchemeEditorController {
             initializeServices();
             loadInitialData();
             setupInitialScheme();
-
             // Обновляем статус
             statusLabel.setText("Готов - выберите инструмент или работайте с фигурами");
-
             // Обновляем информацию о доступных приборах
             refreshAvailableDevices();
-
         } catch (Exception e) {
             LOGGER.severe("Ошибка в init(): " + e.getMessage());
             e.printStackTrace();
@@ -155,40 +148,29 @@ public class SchemeEditorController {
      * Инициализация сервисов и менеджеров
      */
     private void initializeServices() {
-        System.out.println("DEBUG: Initializing services...");
-
         // Создаём менеджер фигур
         this.shapeManager = new ShapeManager(schemePane, null,
                 canUndo -> undoBtn.setDisable(!canUndo),
                 canRedo -> redoBtn.setDisable(!canRedo)
         );
-
         shapeManager.setStatusSetter(statusLabel::setText);
-        System.out.println("DEBUG: Status setter configured");
-        shapeManager.setOnSelectCallback(shapeHandler -> {
-            System.out.println("DEBUG: Shape selected via callback - resetting tools");
-
+        shapeManager.setOnSelectCallback(_ -> {
             // Сбрасываем текущий инструмент при выделении фигуры
             resetCurrentTool();
-
             // Вызываем обработчик выделения
             handleShapeSelected();
         });
-
-        // Создаём фабрику фигур (теперь shapeManager не null)
+        // Создаём фабрику фигур
         ShapeFactory shapeFactory = new ShapeFactory(
                 schemePane,
                 statusLabel::setText,
-                shapeManager::selectShape,  // onSelectCallback НЕ null
+                shapeManager::selectShape,
                 shapeManager  // Теперь передаётся корректный shapeManager
         );
-
         // Создаём сервис фигур
         this.shapeService = new ShapeService(shapeFactory);
-
         // Заменяем shapeService в менеджере (разрываем цикл)
         shapeManager.setShapeService(shapeService);
-
         // Создаём сервис для иконок устройств
         this.deviceIconService = new DeviceIconService(
                 schemePane,
@@ -197,15 +179,9 @@ public class SchemeEditorController {
                 this::refreshAvailableDevices,
                 currentScheme  // Передаем текущую схему
         );
-        System.out.println("DEBUG: DeviceIconService initialized with autoSave callback: " + true);
-
-        // Настраиваем колбэки выделения/снятия выделения
         shapeManager.setOnShapeSelected(this::handleShapeSelection);
         shapeManager.setOnShapeDeselected(this::handleShapeDeselection);
-
         this.schemeSaver = new SchemeSaver(schemeDAO, deviceLocationDAO, shapeService, schemePane);
-
-        System.out.println("DEBUG: Services initialization completed");
     }
 
     /**
@@ -232,7 +208,7 @@ public class SchemeEditorController {
      */
     private void setupSchemeComboBox() {
         schemeComboBox.setConverter(createSchemeConverter());
-        schemeComboBox.valueProperty().addListener((obs, oldV, newV) -> {
+        schemeComboBox.valueProperty().addListener((_, oldV, newV) -> {
             if (newV != null && !newV.equals(oldV)) {
                 loadScheme(newV);
             }
@@ -261,10 +237,9 @@ public class SchemeEditorController {
      */
     private void setupPaneEventHandlers() {
         if (schemePane != null) {
-            schemePane.setOnMouseClicked(e -> schemePane.requestFocus());
+            schemePane.setOnMouseClicked(_ -> schemePane.requestFocus());
             schemePane.setFocusTraversable(true);
         }
-
         setupPaneKeyHandlers();
     }
 
@@ -273,7 +248,6 @@ public class SchemeEditorController {
      */
     private void setupPaneKeyHandlers() {
         schemePane.setOnKeyPressed(event -> {
-            // УБРАТЬ проверку на SELECT - горячие клавиши работают всегда при выделенной фигуре
             if (isShapeSelected()) {
                 if (event.isControlDown()) {
                     switch (event.getCode()) {
@@ -293,14 +267,11 @@ public class SchemeEditorController {
      * Настройка обработчика закрытия окна
      */
     private void setupWindowCloseHandler() {
-        // Получаем сцену и добавляем обработчик закрытия
-        schemePane.sceneProperty().addListener((observable, oldScene, newScene) -> {
+        schemePane.sceneProperty().addListener((_, _, newScene) -> {
             if (newScene != null) {
-                newScene.windowProperty().addListener((obs, oldWindow, newWindow) -> {
+                newScene.windowProperty().addListener((_, _, newWindow) -> {
                     if (newWindow != null) {
-                        // Обработчик запроса на закрытие окна
-                        newWindow.setOnCloseRequest(event -> {
-                            System.out.println("DEBUG: Window close request detected");
+                        newWindow.setOnCloseRequest(_ -> {
                             schemeSaver.saveOnExit(currentScheme);
                         });
                     }
@@ -325,25 +296,18 @@ public class SchemeEditorController {
      */
     private void pasteShape() {
         if (!ClipboardManager.hasShapeData()) {
-            System.out.println("DEBUG: No shape data in clipboard for paste");
             return;
         }
-
         try {
             String shapeData = ClipboardManager.getCopiedShapeData();
             ShapeBase pastedShape = ShapeBase.deserialize(shapeData, schemePane,
                     statusLabel::setText, shapeManager::selectShape, shapeManager);
-
             if (pastedShape != null) {
-                // Для горячих клавиш используем старую логику смещения
                 double[] lastPos = getPastePosition();
                 pastedShape.setPosition(lastPos[0] + 20, lastPos[1] + 20);
-
                 pastedShape.addToPane();
                 shapeManager.addShape(pastedShape);
-
                 statusLabel.setText("Фигура вставлена");
-                System.out.println("DEBUG: Shape pasted via hotkey at (" + (lastPos[0] + 20) + ", " + (lastPos[1] + 20) + ")");
             }
         } catch (Exception e) {
             LOGGER.severe("Ошибка при вставке фигуры: " + e.getMessage());
@@ -355,33 +319,27 @@ public class SchemeEditorController {
      * Получает позицию для вставки (смещение от последней фигуры или центр)
      */
     private double[] getPastePosition() {
-        // Если есть выделенная фигура - используем ее позицию
         ShapeHandler selected = shapeManager.getSelectedShape();
         if (selected != null) {
-            double[] pos = selected.getPosition();
-            System.out.println("DEBUG: Paste position from selected shape: (" + pos[0] + ", " + pos[1] + ")");
-            return pos;
+            return selected.getPosition();
         }
-
-        // Иначе возвращаем центр видимой области
-        System.out.println("DEBUG: Paste position from center: (400, 300)");
         return new double[]{400, 300};
     }
 
+    /**
+     * Получить объект сервиса сохранений
+     * @return - объект сервис
+     */
     public SchemeSaver getSchemeSaver() {
         return schemeSaver;
     }
 
+    /**
+     * Получить текущую схему
+     * @return - текущая схема
+     */
     public Scheme getCurrentScheme() {
         return currentScheme;
-    }
-
-    /**
-     * Настройка системы фигур
-     */
-    private void setupShapeSystem() {
-        // Инициализация будет выполнена в initializeServices()
-        // после загрузки зависимостей
     }
 
     /**
@@ -396,22 +354,21 @@ public class SchemeEditorController {
      * Настройка кнопок для инструментов рисования
      */
     private void setupShapeToolButtons() {
-        // ПРОСТЫЕ обработчики с toggle логикой
-        lineToolBtn.setOnAction(e -> toggleTool(ShapeManager.Tool.LINE, "Инструмент: Линия - кликните и перетащите для рисования"));
-        rectToolBtn.setOnAction(e -> toggleTool(ShapeManager.Tool.RECTANGLE, "Инструмент: Прямоугольник - кликните и перетащите для рисования"));
-        ellipseToolBtn.setOnAction(e -> toggleTool(ShapeManager.Tool.ELLIPSE, "Инструмент: Эллипс - кликните и перетащите для рисования"));
-        rhombusToolBtn.setOnAction(e -> toggleTool(ShapeManager.Tool.RHOMBUS, "Инструмент: Ромб - кликните и перетащите для рисования"));
-        textToolBtn.setOnAction(e -> toggleTool(ShapeManager.Tool.TEXT, "Инструмент: Текст - кликните для добавления текста"));
+        lineToolBtn.setOnAction(_ -> toggleTool(ShapeManager.Tool.LINE, "Инструмент: Линия - кликните и перетащите для рисования"));
+        rectToolBtn.setOnAction(_ -> toggleTool(ShapeManager.Tool.RECTANGLE, "Инструмент: Прямоугольник - кликните и перетащите для рисования"));
+        ellipseToolBtn.setOnAction(_ -> toggleTool(ShapeManager.Tool.ELLIPSE, "Инструмент: Эллипс - кликните и перетащите для рисования"));
+        rhombusToolBtn.setOnAction(_ -> toggleTool(ShapeManager.Tool.RHOMBUS, "Инструмент: Ромб - кликните и перетащите для рисования"));
+        textToolBtn.setOnAction(_ -> toggleTool(ShapeManager.Tool.TEXT, "Инструмент: Текст - кликните для добавления текста"));
     }
 
     /**
      * Настройка кнопок действий
      */
     private void setupActionButtons() {
-        undoBtn.setOnAction(e -> shapeManager.undo());
-        redoBtn.setOnAction(e -> shapeManager.redo());
-        saveSchemeBtn.setOnAction(e -> schemeSaver.selectButtonSaveScheme(currentScheme));
-        clearSchemeBtn.setOnAction(e -> clearScheme());
+        undoBtn.setOnAction(_ -> shapeManager.undo());
+        redoBtn.setOnAction(_ -> shapeManager.redo());
+        saveSchemeBtn.setOnAction(_ -> schemeSaver.selectButtonSaveScheme(currentScheme));
+        clearSchemeBtn.setOnAction(_ -> clearScheme());
     }
 
     /**
@@ -430,7 +387,6 @@ public class SchemeEditorController {
                 lineToolBtn, rectToolBtn, ellipseToolBtn,
                 rhombusToolBtn, textToolBtn
         );
-
         for (Button button : toolButtons) {
             StyleUtils.setupShapeToolButton(button);
         }
@@ -453,37 +409,27 @@ public class SchemeEditorController {
      * Переключение инструмента - при повторном клике отключается
      */
     private void toggleTool(ShapeManager.Tool tool, String statusMessage) {
-        System.out.println("DEBUG: Toggling tool: " + tool + ", current: " + currentTool);
-
         // Если кликнули на уже активный инструмент - отключаем его
         if (currentTool == tool) {
-            System.out.println("DEBUG: Tool already active - deactivating");
             currentTool = null;
-
             // Обновляем статус
             if (statusLabel != null) {
                 statusLabel.setText("Инструмент отключен - выберите инструмент или работайте с фигурами");
             }
         } else {
             // Включаем новый инструмент
-            System.out.println("DEBUG: Activating new tool: " + tool);
             currentTool = tool;
-
             // ОБНОВЛЯЕМ СТАТУС
             if (statusLabel != null) {
                 statusLabel.setText(statusMessage);
             }
         }
-
         // Снимаем выделение при смене инструмента
         if (shapeManager != null) {
             shapeManager.deselectShape();
         }
-
         // Обновляем стили кнопок
         updateToolButtonStyles();
-
-        System.out.println("DEBUG: Tool toggled - new state: " + currentTool);
     }
 
     /**
@@ -494,10 +440,8 @@ public class SchemeEditorController {
                 lineToolBtn, rectToolBtn, ellipseToolBtn,
                 rhombusToolBtn, textToolBtn
         );
-
         // Сбрасываем все активные стили
         toolButtons.forEach((Button btn) -> StyleUtils.setToolButtonActive(btn, false, "tool-button-active"));
-
         // Применяем активный стиль к текущему инструменту (если он есть)
         if (currentTool != null) {
             Button activeButton = getButtonForTool(currentTool);
@@ -524,10 +468,7 @@ public class SchemeEditorController {
      * Обработка двойного клика - временно сбрасываем инструмент
      */
     private void handleShapeSelection() {
-        System.out.println("DEBUG: Shape selected - no tool reset");
-
-        // НЕ сбрасываем инструмент при выделении фигуры
-        // Пользователь может продолжать работать с текущим инструментом
+        // НЕ сбрасываем инструмент при выделении фигуры, пользователь может продолжать работать с текущим инструментом
         statusLabel.setText("Фигура выделена - используйте ручки для изменения или продолжайте рисование");
     }
 
@@ -535,10 +476,7 @@ public class SchemeEditorController {
      * Обработка выделения фигуры - без сброса инструмента
      */
     private void handleShapeSelected() {
-        System.out.println("DEBUG: Shape selected - current tool remains: " + currentTool);
-
-        // НЕ сбрасываем инструмент при выделении фигуры
-        // Пользователь может продолжать работать с текущим инструментом
+        // НЕ сбрасываем инструмент при выделении фигуры, пользователь может продолжать работать с текущим инструментом
         if (statusLabel != null) {
             if (currentTool != null) {
                 statusLabel.setText("Фигура выделена - используйте ручки для изменения или продолжайте рисование с инструментом: " + getToolName(currentTool));
@@ -552,15 +490,12 @@ public class SchemeEditorController {
      * Обработка снятия выделения - восстанавливаем инструмент
      */
     private void handleShapeDeselection() {
-        System.out.println("DEBUG: Shape deselected - tool state: " + currentTool);
-
         // Обновляем статус в зависимости от состояния инструмента
         if (currentTool != null) {
             statusLabel.setText("Инструмент: " + getToolName(currentTool) + " - кликните на схему для создания");
         } else {
             statusLabel.setText("Готов - выберите инструмент или работайте с фигурами");
         }
-
         // Обновляем стили кнопок (на всякий случай)
         updateToolButtonStyles();
     }
@@ -604,14 +539,12 @@ public class SchemeEditorController {
      */
     private List<Scheme> createOrLoadSchemes(List<String> locations) {
         List<Scheme> schemes = new ArrayList<>();
-
         for (String location : locations) {
             Scheme scheme = findOrCreateScheme(location);
             if (scheme != null) {
                 schemes.add(scheme);
             }
         }
-
         return schemes;
     }
 
@@ -620,7 +553,6 @@ public class SchemeEditorController {
      */
     private Scheme findOrCreateScheme(String location) {
         Scheme scheme = schemeDAO.findSchemeByName(location);
-
         if (scheme == null) {
             scheme = createAutoScheme(location);
             if (schemeDAO.addScheme(scheme)) {
@@ -630,7 +562,6 @@ public class SchemeEditorController {
                 return null;
             }
         }
-
         return scheme;
     }
 
@@ -649,7 +580,6 @@ public class SchemeEditorController {
             handleNoSchemesFound();
             return;
         }
-
         ObservableList<Scheme> schemeList = FXCollections.observableArrayList(schemes);
         schemeComboBox.setItems(schemeList);
         LOGGER.info("Загружено " + schemeList.size() + " схем");
@@ -689,16 +619,13 @@ public class SchemeEditorController {
                 CustomAlert.showError("Ошибка сохранения", "Не удалось сохранить текущую схему. Смена схемы отменена.");
                 return;
             }
-            // Показываем уведомление на n секунд
             CustomAlert.showAutoSaveNotification("Автосохранение", 1.3);
         }
         try {
             currentScheme = scheme;
             deviceIconService.setCurrentScheme(scheme);
-
             clearSchemePane();
             loadSchemeContent(scheme);
-
             refreshAvailableDevices();
             statusLabel.setText("Загружена схема: " + scheme.getName());
         } catch (Exception e) {
@@ -725,32 +652,25 @@ public class SchemeEditorController {
     }
 
     /**
-     * Очистка схемы (полная: pane, селекты, undo, статус)
+     * Очистка схемы (полная: pane, undo, статус)
      */
     private void clearScheme() {
         boolean confirm = CustomAlert.showConfirmation("Очистка схемы",
                 "Это действие удалит ВСЕ фигуры и приборы с панели. Продолжить?");
         if (!confirm) return;
-
         try {
             if (currentScheme != null) {
                 if (deviceLocationDAO != null) {
-                    int deletedCount = deviceLocationDAO.deleteAllLocationsForScheme(currentScheme.getId());
-                    System.out.println("Удалено приборов из БД: " + deletedCount);
+                    deviceLocationDAO.deleteAllLocationsForScheme(currentScheme.getId());
                 }
-
                 currentScheme.setData("{}");
                 if (schemeDAO != null) {
-                    boolean saved = schemeDAO.updateScheme(currentScheme);
-                    System.out.println("Схема сохранена в БД: " + saved);
+                    schemeDAO.updateScheme(currentScheme);
                 }
             }
-
             clearSchemePane();
             refreshAvailableDevices();
-
             statusLabel.setText("Схема полностью очищена");
-
         } catch (Exception e) {
             LOGGER.severe("Ошибка при очистке схемы: " + e.getMessage());
             CustomAlert.showError("Ошибка", "Не удалось полностью очистить схему: " + e.getMessage());
@@ -764,37 +684,29 @@ public class SchemeEditorController {
         statusLabel.setText("Очистка старых фигур...");
         if (shapeService != null) {
             try {
-                shapeService.clearAllShapes();  // Если метод есть
-            } catch (Exception e) {  // Fallback если no clearAllShapes
+                shapeService.clearAllShapes();
+            } catch (Exception e) {
                 LOGGER.warning("clearAllShapes failed: " + e.getMessage() + " — fallback to manual");
                 if (schemePane != null) schemePane.getChildren().clear();
-                // Manual clear list in service (add method to ShapeService if needed)
                 try {
-                    shapeService.removeAllShapes();  // Existing method
+                    shapeService.removeAllShapes();
                 } catch (Exception ex) {
                     LOGGER.warning("removeAllShapes also failed");
                 }
             }
         }
         String schemeData = scheme.getData();
-        // Лог: полная инфа о данных (безопасно)
-        System.out.println("=== Загрузка фигур для схемы: " + scheme.getName() + " ===");
-        // ... (остальной код без изменений: System.out, if (isValidSchemeData), parse, deserialize, etc.)
         if (schemeData != null && !schemeData.isEmpty()) {
             System.out.println("Содержимое scheme.data: " + safeSubstring(schemeData, 100));
         }
         if (isValidSchemeData(schemeData) && shapeService != null) {
             List<String> shapeData = parseShapeData(schemeData);
-            // ... (log, sample)
-            int beforeCount = shapeService.getShapeCount();
+            shapeService.getShapeCount();
             shapeService.deserializeAndAddAll(shapeData);
-            int afterCount = shapeService.getShapeCount();
-            System.out.println("Загружено фигур: " + (afterCount - beforeCount) + " (всего: " + afterCount + ")");
+            shapeService.getShapeCount();
         } else {
-            String shortData = safeSubstring(schemeData, 50);
-            System.out.println("WARNING: Invalid scheme data для '" + scheme.getName() + "': '" + shortData + "' — пропускаем загрузку фигур");
+            safeSubstring(schemeData, 50);
         }
-        System.out.println("=== Конец загрузки фигур ===");
     }
 
     /**
@@ -814,8 +726,6 @@ public class SchemeEditorController {
         if (schemeData.equals("{}")) {
             return new ArrayList<>();
         }
-
-        // Split по ";" и фильтр
         return Arrays.stream(schemeData.split(";"))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
@@ -829,36 +739,17 @@ public class SchemeEditorController {
      */
     private void loadDevicesFromScheme(Scheme scheme) {
         List<DeviceLocation> locations = deviceLocationDAO.getLocationsBySchemeId(scheme.getId());
-
-        System.out.println("=== DEBUG: LOADING DEVICES FROM SCHEME ===");
-        System.out.println("DEBUG: Scheme ID: " + scheme.getId() + ", Name: " + scheme.getName());
-        System.out.println("DEBUG: Found " + locations.size() + " device locations in database");
-
-        for (int i = 0; i < locations.size(); i++) {
-            DeviceLocation location = locations.get(i);
-            System.out.println("DEBUG: Location " + i + " - device_id: " + location.getDeviceId() +
-                    ", x: " + location.getX() + ", y: " + location.getY() +
-                    ", rotation: " + location.getRotation());
-
+        for (DeviceLocation location : locations) {
             Device device = deviceDAO.getDeviceById(location.getDeviceId());
             if (device != null) {
-                System.out.println("DEBUG: Creating device - " + device.getName() +
-                        " at (" + location.getX() + ", " + location.getY() +
-                        ") with rotation " + location.getRotation() + "°");
-
                 Node deviceNode = deviceIconService.createDeviceIcon(
                         location.getX(), location.getY(), device, currentScheme
                 );
-
                 // Применяем сохраненный угол поворота
                 deviceNode.setRotate(location.getRotation());
-
                 schemePane.getChildren().add(deviceNode);
-            } else {
-                System.out.println("DEBUG: ERROR - Device not found for ID: " + location.getDeviceId());
             }
         }
-        System.out.println("=== END DEBUG: LOADING DEVICES ===");
 
         LOGGER.info("Загружено " + locations.size() + " устройств на схему");
     }
@@ -889,19 +780,15 @@ public class SchemeEditorController {
             statusLabel.setText("Схема не выбрана");
             return;
         }
-
         // Просто логируем информацию о доступных приборах
         String selectedSchemeName = currentScheme.getName();
         List<Integer> usedDeviceIds = getUsedDeviceIds();
         List<Integer> currentSchemeDeviceIds = getCurrentSchemeDeviceIds();
-
-        long availableCount = deviceList.stream()
+        deviceList.stream()
                 .filter(device -> selectedSchemeName.equals(device.getLocation()))
                 .filter(device -> !usedDeviceIds.contains(device.getId()))
                 .filter(device -> !currentSchemeDeviceIds.contains(device.getId()))
                 .count();
-
-        System.out.println("DEBUG: Available devices for scheme '" + selectedSchemeName + "': " + availableCount);
     }
 
     /**
@@ -928,7 +815,6 @@ public class SchemeEditorController {
      */
     private String getToolName(ShapeManager.Tool tool) {
         if (tool == null) return "нет инструмента";
-
         return switch (tool) {
             case LINE -> "Линия";
             case RECTANGLE -> "Прямоугольник";
@@ -948,7 +834,6 @@ public class SchemeEditorController {
 
         // ЕСЛИ ПРАВАЯ КНОПКА - обрабатываем контекстное меню
         if (event.isSecondaryButtonDown()) {
-            System.out.println("DEBUG: Right button pressed - handling context menu");
             return; // Позволяем обработать контекстное меню
         }
 
@@ -960,18 +845,11 @@ public class SchemeEditorController {
         Point2D panePoint = getAbsolutePaneCoordinates(event.getSceneX(), event.getSceneY());
         double x = panePoint.getX();
         double y = panePoint.getY();
-
-        System.out.println("DEBUG: LEFT Mouse pressed at scene(" + event.getSceneX() + "," + event.getSceneY() +
-                ") -> pane(" + x + "," + y + ")");
-        System.out.println("DEBUG: Current tool: " + currentTool);
-
         // ПРОВЕРЯЕМ, ЕСЛИ КЛИКНУЛИ ПО ФИГУРЕ
         Node clickedNode = findNodeAtPosition(x, y);
         boolean clickedOnShape = clickedNode != null && isShapeOrDevice(clickedNode);
-
         // ЕСЛИ ЕСТЬ ВЫДЕЛЕННАЯ ФИГУРА И КЛИКНУЛИ НА ПУСТУЮ ОБЛАСТЬ - снимаем выделение
         if (shapeManager.getSelectedShape() != null && !clickedOnShape) {
-            System.out.println("DEBUG: Click on empty area - deselecting shape");
             shapeManager.deselectShape();
             event.consume();
             return;
@@ -979,30 +857,22 @@ public class SchemeEditorController {
 
         // ЕСЛИ КЛИКНУЛИ ПО ЛИНИИ ОДИНОЧНЫМ КЛИКОМ - начинаем перетаскивание
         if (clickedOnShape && clickedNode instanceof LineShape lineShape) {
-            System.out.println("DEBUG: Single click on LineShape - preparing for drag");
-            // Выделяем линию и показываем handles
             shapeManager.selectShape(lineShape);
             // ДЛЯ ЛИНИИ: handles показываются сразу для перетаскивания
             lineShape.makeResizeHandlesVisible();
             return; // Позволяем LineShape обработать перетаскивание
         }
-
         if (clickedOnShape) {
-            System.out.println("DEBUG: Clicked on existing shape - allowing shape to handle events");
             // НЕ выделяем фигуру здесь - пусть она сама обработает клик
             return;
         }
 
         // ЕСЛИ ИНСТРУМЕНТ ВЫБРАН И КЛИКНУЛИ НА ПУСТУЮ ОБЛАСТЬ - начинаем создание фигуры
         if (currentTool != null) {
-            System.out.println("DEBUG: Starting shape creation with tool: " + currentTool);
             shapeManager.resetWasResized();
-
             // ВАЖНО: Вызываем метод ShapeManager для создания preview
             shapeManager.onMousePressedForTool(currentTool, x, y);
 
-        } else {
-            System.out.println("DEBUG: No tool selected - allowing shape interaction");
         }
     }
 
@@ -1017,11 +887,8 @@ public class SchemeEditorController {
         double x = panePoint.getX();
         double y = panePoint.getY();
 
-        System.out.println("DEBUG: Mouse dragged to (" + x + ", " + y + ") with tool: " + currentTool);
-
         // ЕСЛИ ИНСТРУМЕНТ ВЫБРАН - обрабатываем перетаскивание для создания фигур
         if (currentTool != null) {
-            System.out.println("DEBUG: Calling shapeManager.onMouseDraggedForTool");
             shapeManager.onMouseDraggedForTool(currentTool, x, y);
         }
     }
@@ -1031,8 +898,6 @@ public class SchemeEditorController {
         Point2D panePoint = getAbsolutePaneCoordinates(event.getSceneX(), event.getSceneY());
         double x = panePoint.getX();
         double y = panePoint.getY();
-
-        System.out.println("DEBUG: Mouse released at (" + x + ", " + y + ") with tool: " + currentTool);
 
         if (event.getButton() == MouseButton.PRIMARY) { // Левая кнопка
             handleLeftMouseRelease(x, y);
@@ -1047,31 +912,20 @@ public class SchemeEditorController {
      * Обработка отпускания ПРАВОЙ кнопки мыши (контекстное меню)
      */
     private void handleRightMouseClick(double sceneX, double sceneY) {
-        System.out.println("DEBUG: Right click at scene coordinates: (" + sceneX + ", " + sceneY + ")");
-
         // Преобразуем координаты сцены в координаты панели
         Point2D paneCoords = schemePane.sceneToLocal(sceneX, sceneY);
         double paneX = paneCoords.getX();
         double paneY = paneCoords.getY();
 
-        System.out.println("DEBUG: Converted to pane coordinates: (" + paneX + ", " + paneY + ")");
-
         // Находим элемент под курсором в координатах панели
         Node clickedNode = findNodeAtPosition(paneX, paneY);
 
         if (clickedNode != null) {
-            System.out.println("DEBUG: Right click on node: " + clickedNode.getClass().getSimpleName());
-
             // ЕСЛИ КЛИКНУЛИ ПО ФИГУРЕ - НЕ ПОКАЗЫВАЕМ ОБЩЕЕ МЕНЮ
             if (isShapeOrDevice(clickedNode)) {
-                System.out.println("DEBUG: Shape/device clicked - skipping general context menu");
                 return;
             }
         }
-
-        // СЮДА ДОЙДЕМ ТОЛЬКО ЕСЛИ кликнули по пустой области ИЛИ по не-фигуре
-        System.out.println("DEBUG: Showing general context menu at pane coordinates (" + paneX + ", " + paneY + ")");
-        System.out.println("DEBUG: Clipboard has data: " + ClipboardManager.hasShapeData());
         showGeneralContextMenu(paneX, paneY);
     }
 
@@ -1141,22 +995,11 @@ public class SchemeEditorController {
      * Сброс текущего инструмента
      */
     private void resetCurrentTool() {
-        System.out.println("DEBUG: Resetting current tool");
-
-        // Сохраняем предыдущий инструмент (если нужно)
-        if (currentTool != null) {
-            previousTool = currentTool;
-        }
-
         currentTool = null;
-
         // Обновляем статус
         if (statusLabel != null) {
             statusLabel.setText("Фигура выделена - используйте ручки для изменения");
         }
-
-        System.out.println("DEBUG: Tool reset - currentTool: null, previousTool: " +
-                (previousTool != null ? previousTool.toString() : "null"));
     }
 
     /**
@@ -1167,16 +1010,14 @@ public class SchemeEditorController {
 
         // Пункт "Вставить"
         MenuItem pasteItem = new MenuItem("Вставить");
-        pasteItem.setOnAction(event -> {
-            System.out.println("DEBUG: General context menu - Paste clicked at (" + paneX + ", " + paneY + ")");
+        pasteItem.setOnAction(_ -> {
             pasteShapeAtPosition(paneX, paneY);
             contextMenu.hide();
         });
 
         // Пункт "Добавить прибор"
         MenuItem addDeviceItem = new MenuItem("Добавить прибор");
-        addDeviceItem.setOnAction(event -> {
-            System.out.println("DEBUG: General context menu - Add Device clicked at (" + paneX + ", " + paneY + ")");
+        addDeviceItem.setOnAction(_ -> {
             addDeviceAtPosition(paneX, paneY);
             contextMenu.hide();
         });
@@ -1199,16 +1040,12 @@ public class SchemeEditorController {
      */
     private void pasteShapeAtPosition(double x, double y) {
         if (!ClipboardManager.hasShapeData()) {
-            System.out.println("DEBUG: No shape data in clipboard for paste");
             return;
         }
-
         try {
             // Проверяем, чтобы координаты были в пределах панели
             double safeX = Math.max(0, Math.min(x, schemePane.getWidth() - 50));
             double safeY = Math.max(0, Math.min(y, schemePane.getHeight() - 50));
-
-            System.out.println("DEBUG: pasteShapeAtPosition - at (" + safeX + ", " + safeY + ")");
 
             String shapeData = ClipboardManager.getCopiedShapeData();
             ShapeBase pastedShape = ShapeBase.deserialize(shapeData, schemePane,
@@ -1219,14 +1056,11 @@ public class SchemeEditorController {
                 pastedShape.setPosition(safeX, safeY);
                 pastedShape.addToPane();
                 shapeManager.addShape(pastedShape);
-
                 statusLabel.setText("Фигура вставлена в позицию курсора");
-                System.out.println("DEBUG: Shape pasted at cursor position (" + safeX + ", " + safeY + ")");
 
                 // Автоматически выделяем вставленную фигуру
                 shapeManager.selectShape(pastedShape);
             } else {
-                System.out.println("DEBUG: Failed to deserialize shape in pasteShapeAtPosition");
                 statusLabel.setText("Ошибка вставки фигуры");
             }
         } catch (Exception e) {
@@ -1243,12 +1077,10 @@ public class SchemeEditorController {
     private void handleLeftMouseRelease(double x, double y) {
         // ЕСЛИ ИНСТРУМЕНТ НЕ ВЫБРАН - ничего не делаем
         if (currentTool == null) {
-            System.out.println("DEBUG: No tool selected - ignoring mouse release");
             return;
         }
 
         if (currentTool == ShapeManager.Tool.TEXT) {
-            System.out.println("DEBUG: Handling TEXT tool release");
             // Текст создается по клику (отдельный диалог)
             Optional<String> result = CustomAlert.showTextInputDialog("Добавление текста", "Введите текст для добавления на схему:", "Новый текст");
             if (result.isPresent()) {
@@ -1271,8 +1103,6 @@ public class SchemeEditorController {
                 }
             }
         } else {
-            // Для остальных фигур - создаем только если был drag (перетаскивание)
-            System.out.println("DEBUG: Handling shape tool release for: " + currentTool);
             shapeManager.onMouseReleasedForTool(currentTool, x, y);
         }
     }
@@ -1321,30 +1151,22 @@ public class SchemeEditorController {
         // Показываем красивый диалог выбора прибора
         Device selectedDevice = showDeviceSelectionDialog();
         if (selectedDevice == null) {
-            System.out.println("DEBUG: No device selected - cancelling add operation");
             return; // Пользователь отменил выбор
         }
 
         try {
-            System.out.println("DEBUG: Adding device to scheme: " + selectedDevice.getName() + " at (" + x + ", " + y + ")");
-
             if (deviceIconService != null) {
                 Node deviceNode = deviceIconService.createDeviceIcon(x, y, selectedDevice, currentScheme);
                 if (schemePane != null) schemePane.getChildren().add(deviceNode);
-
                 if (currentScheme != null && deviceLocationDAO != null) {
                     DeviceLocation location = new DeviceLocation(
                             selectedDevice.getId(), currentScheme.getId(), x, y
                     );
                     boolean added = deviceLocationDAO.addDeviceLocation(location);
-                    System.out.println("DEBUG: Device location added to DB: " + added);
-
                     if (!added) {
-                        System.out.println("ERROR: Failed to add device location to database!");
                         CustomAlert.showError("Ошибка", "Не удалось сохранить прибор в базу данных");
                     }
                 }
-
                 refreshAvailableDevices();
                 statusLabel.setText("Прибор добавлен: " + selectedDevice.getName());
 
@@ -1408,7 +1230,6 @@ public class SchemeEditorController {
             if (dialogButton == ButtonType.OK) {
                 Device selectedDevice = tableView.getSelectionModel().getSelectedItem();
                 if (selectedDevice != null) {
-                    System.out.println("DEBUG: Device selected via OK button: " + selectedDevice.getName());
                     return selectedDevice;
                 } else {
                     CustomAlert.showWarning("Выбор прибора", "Пожалуйста, выберите прибор из таблицы!");
@@ -1421,26 +1242,16 @@ public class SchemeEditorController {
         Button okButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
         if (okButton != null) {
             okButton.setDisable(true);
-
-            tableView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
+            tableView.getSelectionModel().selectedItemProperty().addListener((_, _, newSelection) -> {
                 okButton.setDisable(newSelection == null);
             });
         }
-
         // Фокус на первую строку
         if (!availableDevicesList.isEmpty()) {
             tableView.getSelectionModel().selectFirst();
         }
-
         // Показываем диалог и возвращаем результат
         Optional<Device> result = dialog.showAndWait();
-
-        if (result.isPresent()) {
-            System.out.println("DEBUG: Dialog returned device: " + result.get().getName());
-        } else {
-            System.out.println("DEBUG: Dialog was cancelled or no device selected");
-        }
-
         return result.orElse(null);
     }
 
