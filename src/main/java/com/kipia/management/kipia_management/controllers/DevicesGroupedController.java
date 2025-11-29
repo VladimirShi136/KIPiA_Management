@@ -5,11 +5,13 @@ import com.kipia.management.kipia_management.services.DeviceDAO;
 import com.kipia.management.kipia_management.utils.ExcelImportExportUtil;
 import com.kipia.management.kipia_management.utils.StyleUtils;
 import com.kipia.management.kipia_management.utils.CustomAlert;
+import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.collections.FXCollections;
 import javafx.collections.transformation.FilteredList;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.ComboBoxTreeTableCell;
 import javafx.scene.control.cell.TextFieldTreeTableCell;
@@ -21,8 +23,8 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 import javafx.util.converter.DefaultStringConverter;
-
-import java.util.logging.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.util.*;
@@ -30,7 +32,7 @@ import java.util.*;
 public class DevicesGroupedController {
 
     // логгер для сообщений
-    private static final Logger logger = Logger.getLogger(DevicesGroupedController.class.getName());
+    private static final Logger LOGGER = LogManager.getLogger(DevicesGroupedController.class);
 
     @FXML
     private TreeTableView<TreeRowItem> treeTable;
@@ -45,6 +47,14 @@ public class DevicesGroupedController {
     private FilteredList<Device> filteredList;
     private SchemeEditorController schemeEditorController;
 
+    // Пропорции ширины колонок для древовидной таблицы (в процентах) - под ваши 11 колонок
+    private final double[] TREE_COLUMN_WIDTHS = {15, 12, 12, 8, 6, 10, 8, 6, 8, 6, 15};
+
+    /**
+     * Устанавливает DAO для работы с устройствами
+     *
+     * @param dao - DAO для устройств
+     */
     public void setDeviceDAO(DeviceDAO dao) {
         this.deviceDAO = dao;
     }
@@ -62,7 +72,6 @@ public class DevicesGroupedController {
     private void initialize() {
         // Применяем стили к таблице
         treeTable.getStyleClass().add("tree-table-view");
-
         treeTable.setEditable(true);
         treeTable.setShowRoot(false);
         configureColumns();
@@ -73,7 +82,8 @@ public class DevicesGroupedController {
 
     public void init() {
         loadData();
-        logger.info("Контроллер группированных устройств инициализирован");
+        setupSmartTreeColumnResizing();
+        LOGGER.info("Контроллер группированных устройств инициализирован");
     }
 
     // --- Типы строк дерева ---
@@ -131,7 +141,8 @@ public class DevicesGroupedController {
 
         //Колонка "Фото"
         TreeTableColumn<TreeRowItem, Void> photoCol = new TreeTableColumn<>("Фото");
-        photoCol.setPrefWidth(100);
+        //photoCol.setPrefWidth(100);
+        photoCol.setStyle("-fx-alignment: CENTER;");
         photoCol.setCellFactory(createPhotoCellFactory());
 
         // Колонка "Доп. Информация."
@@ -145,7 +156,7 @@ public class DevicesGroupedController {
 
     private TreeTableColumn<TreeRowItem, String> getTreeRowItemStringTreeTableColumn() {
         TreeTableColumn<TreeRowItem, String> statusCol = new TreeTableColumn<>("Статус");
-        statusCol.setPrefWidth(90);
+        //statusCol.setPrefWidth(90);
         statusCol.setCellValueFactory(param -> {
             TreeRowItem val = param.getValue().getValue();
             if (val instanceof DeviceItem(Device device))
@@ -154,7 +165,7 @@ public class DevicesGroupedController {
                 return new ReadOnlyObjectWrapper<>("");
         });
 
-        statusCol.setCellFactory(column -> new ComboBoxTreeTableCell<>("Хранение", "В работе", "Утерян", "Испорчен") {
+        statusCol.setCellFactory(_ -> new ComboBoxTreeTableCell<>("Хранение", "В работе", "Утерян", "Испорчен") {
             @Override
             public void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
@@ -203,7 +214,7 @@ public class DevicesGroupedController {
 
     private TreeTableColumn<TreeRowItem, Double> getTreeRowItemDoubleTreeTableColumn() {
         TreeTableColumn<TreeRowItem, Double> accuracyClassCol = new TreeTableColumn<>("Класс точности");
-        accuracyClassCol.setPrefWidth(90);
+        //accuracyClassCol.setPrefWidth(90);
         accuracyClassCol.setCellValueFactory(param -> {
             TreeRowItem val = param.getValue().getValue();
             if (val instanceof DeviceItem(Device device)) {
@@ -212,7 +223,7 @@ public class DevicesGroupedController {
                 return new ReadOnlyObjectWrapper<>(null);
             }
         });
-        accuracyClassCol.setCellFactory(col -> new com.kipia.management.kipia_management.controllers.cell.tree_table_cell.ValidatingDoubleTreeCell() {
+        accuracyClassCol.setCellFactory(_ -> new com.kipia.management.kipia_management.controllers.cell.tree_table_cell.ValidatingDoubleTreeCell() {
             {
                 getStyleClass().add("numeric-cell");
             }
@@ -254,7 +265,7 @@ public class DevicesGroupedController {
 
     private TreeTableColumn<TreeRowItem, Integer> getTreeRowItemIntegerTreeTableColumn() {
         TreeTableColumn<TreeRowItem, Integer> yearCol = new TreeTableColumn<>("Год выпуска");
-        yearCol.setPrefWidth(90);
+        //yearCol.setPrefWidth(90);
         yearCol.setCellValueFactory(param -> {
             TreeRowItem val = param.getValue().getValue();
             if (val instanceof DeviceItem(Device device)) {
@@ -263,7 +274,7 @@ public class DevicesGroupedController {
                 return new ReadOnlyObjectWrapper<>(null);
             }
         });
-        yearCol.setCellFactory(col -> new com.kipia.management.kipia_management.controllers.cell.tree_table_cell.ValidatingIntegerTreeCell() {
+        yearCol.setCellFactory(_ -> new com.kipia.management.kipia_management.controllers.cell.tree_table_cell.ValidatingIntegerTreeCell() {
             {
                 getStyleClass().add("numeric-cell");
             }
@@ -317,73 +328,102 @@ public class DevicesGroupedController {
     }
 
     private Callback<TreeTableColumn<TreeRowItem, Void>, TreeTableCell<TreeRowItem, Void>> createPhotoCellFactory() {
-        return col -> new TreeTableCell<>() {
+        return _ -> new TreeTableCell<>() {
             private final Button addBtn = new Button();
             private final Button viewBtn = new Button();
+            private final HBox buttonContainer = new HBox(2, addBtn, viewBtn);
 
             {
-                // Создаем иконки
-                ImageView addIcon = createIcon("/images/add_photo.png", 12, 12);
-                ImageView viewIcon = createIcon("/images/view.png", 12, 12);
+                // ПЕРВОЕ: применяем CSS классы для цветов
+                addBtn.getStyleClass().add("table-button-add");
+                viewBtn.getStyleClass().add("table-button-view");
 
-                addBtn.setGraphic(addIcon);
-                viewBtn.setGraphic(viewIcon);
+                // ВТОРОЕ: применяем hover стили через StyleUtils
+                StyleUtils.applyHoverAndAnimation(addBtn, "table-button-add", "table-button-add-hover");
+                StyleUtils.applyHoverAndAnimation(viewBtn, "table-button-view", "table-button-view-hover");
 
-                // Tooltips для пояснения
-                Tooltip addTooltip = new Tooltip("Добавить фото");
-                Tooltip viewTooltip = new Tooltip("Просмотреть фото");
-                addBtn.setTooltip(addTooltip);
-                viewBtn.setTooltip(viewTooltip);
+                // ТРЕТЬЕ: устанавливаем начальные размеры
+                updateButtonSizes(80);
 
-                addBtn.getStyleClass().addAll("table-button-add");
-                viewBtn.getStyleClass().addAll("table-button-view");
-                StyleUtils.applyHoverAndAnimation(addBtn,
-                        "table-button-add", "table-button-add-hover");
-                StyleUtils.applyHoverAndAnimation(viewBtn,
-                        "table-button-view", "table-button-view-hover");
+                // Слушатель изменения ширины колонки
+                widthProperty().addListener((_, _, newWidth) -> updateButtonSizes(newWidth.doubleValue()));
 
-                // Уменьшаем размер кнопок для иконок
-                addBtn.setPrefSize(32, 22);
-                viewBtn.setPrefSize(32, 22);
-                addBtn.setMinSize(32, 22);
-                viewBtn.setMinSize(32, 22);
+                // Tooltips
+                addBtn.setTooltip(new Tooltip("Добавить фото"));
+                viewBtn.setTooltip(new Tooltip("Просмотреть фото"));
 
-                addBtn.setOnAction(e -> {
+                addBtn.setOnAction(_ -> {
                     Device device = getCurrentDevice();
                     if (device != null) {
                         addPhoto(device);
                     }
                 });
 
-                viewBtn.setOnAction(e -> {
+                viewBtn.setOnAction(_ -> {
                     Device device = getCurrentDevice();
                     if (device != null) {
                         viewPhotos(device);
                     }
                 });
+                setAlignment(Pos.CENTER);
             }
 
-            private ImageView createIcon(String path, double width, double height) {
-                try {
-                    Image image = new Image(Objects.requireNonNull(getClass().getResourceAsStream(path)));
-                    ImageView imageView = new ImageView(image);
-                    imageView.setFitWidth(width);
-                    imageView.setFitHeight(height);
-                    imageView.setPreserveRatio(true);
-                    return imageView;
-                } catch (Exception e) {
-                    // Fallback - создаем текстовую метку если иконка не найдена
-                    logger.warning("Не удалось загрузить иконку: " + path);
-                    return createTextIcon("+", width, height);
+            private void updateButtonSizes(double columnWidth) {
+                if (columnWidth <= 0) return;
+
+                double buttonSize, iconSize;
+                double spacing;
+
+                if (columnWidth < 60) {
+                    buttonSize = 20; iconSize = 14; spacing = 1;
+                } else if (columnWidth < 80) {
+                    buttonSize = 24; iconSize = 16; spacing = 2;
+                } else if (columnWidth < 100) {
+                    buttonSize = 28; iconSize = 18; spacing = 3;
+                } else {
+                    buttonSize = 32; iconSize = 20; spacing = 4;
                 }
+
+                // Устанавливаем размеры через inline стили, но оставляем CSS классы для цветов
+                String sizeStyle = String.format(
+                        "-fx-min-width: %fpx; -fx-pref-width: %fpx; -fx-max-width: %fpx; " +
+                                "-fx-min-height: %fpx; -fx-pref-height: %fpx; -fx-max-height: %fpx; " +
+                                "-fx-padding: 0px;",
+                        buttonSize, buttonSize, buttonSize, buttonSize, buttonSize, buttonSize
+                );
+
+                addBtn.setStyle(sizeStyle);
+                viewBtn.setStyle(sizeStyle);
+
+                buttonContainer.setSpacing(spacing);
+                buttonContainer.setMaxWidth(columnWidth - 4);
+                buttonContainer.setPrefWidth((buttonSize * 2) + spacing);
+                buttonContainer.setAlignment(Pos.CENTER);
+
+                updateIcons(iconSize);
+                buttonContainer.requestLayout();
             }
 
-            private ImageView createTextIcon(String text, double width, double height) {
-                // Создаем временное решение для отображения текста вместо иконки
-                ImageView fallback = new ImageView();
-                fallback.setFitWidth(width);
-                fallback.setFitHeight(height);
-                return fallback;
+            private void updateIcons(double iconSize) {
+                try {
+                    Image addImage = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/images/add_photo.png")));
+                    ImageView addIcon = new ImageView(addImage);
+                    addIcon.setFitWidth(iconSize);
+                    addIcon.setFitHeight(iconSize);
+                    addIcon.setPreserveRatio(true);
+
+                    Image viewImage = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/images/view.png")));
+                    ImageView viewIcon = new ImageView(viewImage);
+                    viewIcon.setFitWidth(iconSize);
+                    viewIcon.setFitHeight(iconSize);
+                    viewIcon.setPreserveRatio(true);
+
+                    addBtn.setGraphic(addIcon);
+                    viewBtn.setGraphic(viewIcon);
+
+                } catch (Exception e) {
+                    LOGGER.warn("Не удалось загрузить иконки для кнопок фото");
+                }
             }
 
             private Device getCurrentDevice() {
@@ -413,7 +453,7 @@ public class DevicesGroupedController {
                 List<String> photos = device.getPhotos();
                 if (photos == null || photos.isEmpty()) {
                     CustomAlert.showInfo("Просмотр фото", "Фотографии не добавлены");
-                    logger.warning("Просмотр фото: нет фото для устройства " + device.getName());
+                    LOGGER.warn("Просмотр фото: нет фото для устройства {}", device.getName());
                     return;
                 }
                 Stage stage = new Stage();
@@ -431,9 +471,9 @@ public class DevicesGroupedController {
                         vbox.getChildren().add(new Label("Ошибка загрузки: " + path));
                     }
                 }
-                stage.setScene(new javafx.scene.Scene(new ScrollPane(vbox), 300, 600));
+                stage.setScene(new Scene(new ScrollPane(vbox), 300, 600));
                 stage.show();
-                logger.info("Показ фото для устройства: " + device.getName());
+                LOGGER.info("Показ фото для устройства: {}", device.getName());
             }
 
             @Override
@@ -441,13 +481,10 @@ public class DevicesGroupedController {
                 super.updateItem(item, empty);
                 if (empty) {
                     setGraphic(null);
+                    setText(null); // ВАЖНО для TreeTableCell
                 } else {
-                    // Показываем кнопки только для DeviceItem, для GroupItem пусто
-                    if (getCurrentDevice() != null) {
-                        setGraphic(new HBox(4, addBtn, viewBtn)); // Уменьшил расстояние между кнопками
-                    } else {
-                        setGraphic(null);
-                    }
+                    setGraphic(buttonContainer);
+                    setText(null); // ВАЖНО для TreeTableCell - убираем любой текст
                 }
             }
         };
@@ -455,14 +492,14 @@ public class DevicesGroupedController {
 
     private TreeTableColumn<TreeRowItem, String> getTreeRowTableForLocation() {
         TreeTableColumn<TreeRowItem, String> locationCol = new TreeTableColumn<>("Тип прибора");
-        locationCol.setPrefWidth(120);
+        //locationCol.setPrefWidth(120);
         locationCol.setCellValueFactory(param -> {
             TreeRowItem val = param.getValue().getValue();
             if (val instanceof GroupItem(String location)) return new ReadOnlyObjectWrapper<>(location);
             else if (val instanceof DeviceItem(Device device)) return new ReadOnlyObjectWrapper<>(device.getType());
             else return new ReadOnlyObjectWrapper<>("");
         });
-        locationCol.setCellFactory(col -> new TextFieldTreeTableCell<>(new DefaultStringConverter()) {
+        locationCol.setCellFactory(_ -> new TextFieldTreeTableCell<>(new DefaultStringConverter()) {
             @Override
             public void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
@@ -522,7 +559,7 @@ public class DevicesGroupedController {
                                                                             java.util.function.Function<Device, String> getter,
                                                                             java.util.function.BiConsumer<Device, String> setter) {
         TreeTableColumn<TreeRowItem, String> col = new TreeTableColumn<>(title);
-        col.setPrefWidth(width);
+        //col.setPrefWidth(width);
         col.setCellValueFactory(param -> {
             TreeRowItem val = param.getValue().getValue();
             if (val instanceof DeviceItem(Device device)) {
@@ -530,7 +567,7 @@ public class DevicesGroupedController {
             }
             return new ReadOnlyObjectWrapper<>("");
         });
-        col.setCellFactory(column -> new TextFieldTreeTableCell<>(new DefaultStringConverter()) {
+        col.setCellFactory(_ -> new TextFieldTreeTableCell<>(new DefaultStringConverter()) {
             @Override
             public void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
@@ -571,12 +608,81 @@ public class DevicesGroupedController {
         return col;
     }
 
+    // --- Методы для адаптации размеров колонок ---
+
+    /**
+     * Настройка адаптивного изменения размеров колонок для TreeTableView
+     */
+    private void setupSmartTreeColumnResizing() {
+        // Слушатель изменения размера таблицы
+        treeTable.widthProperty().addListener((_, _, newWidth) -> updateTreeColumnWidths(newWidth.doubleValue()));
+
+        // Первоначальная настройка ширины колонок
+        Platform.runLater(() -> updateTreeColumnWidths(treeTable.getWidth()));
+    }
+
+    /**
+     * Обновление ширины колонок пропорционально для TreeTableView
+     */
+    private void updateTreeColumnWidths(double tableWidth) {
+        if (treeTable.getColumns().isEmpty() || tableWidth <= 0) return;
+
+        // Вычитаем ширину скроллбара, границы и отступ для дерева
+        double availableWidth = tableWidth - 40; // Больше отступ из-за иерархии
+
+        List<TreeTableColumn<TreeRowItem, ?>> columns = treeTable.getColumns();
+
+        // Устанавливаем пропорциональные ширины
+        for (int i = 0; i < Math.min(columns.size(), TREE_COLUMN_WIDTHS.length); i++) {
+            double width = availableWidth * (TREE_COLUMN_WIDTHS[i] / 100);
+            columns.get(i).setPrefWidth(width);
+
+            // Для древовидной таблицы первая колонка (с иерархией) должна быть шире
+            double minWidth = (i == 0) ? 120 : 60;
+
+            // Особые настройки для колонки фото (предпоследняя колонка)
+            if (i == columns.size() - 2) { // Колонка "Фото"
+                minWidth = 55; // Гарантируем что обе кнопки поместятся
+                columns.get(i).setMinWidth(minWidth);
+                columns.get(i).setMaxWidth(120);
+            } else if (i == 0) {
+                // Первая колонка с иерархией
+                columns.get(i).setMinWidth(minWidth);
+                columns.get(i).setMaxWidth(500);
+            } else if (i < columns.size() - 1) {
+                // Обычные колонки
+                columns.get(i).setMinWidth(minWidth);
+                columns.get(i).setMaxWidth(300);
+            } else {
+                // Последняя колонка
+                columns.get(i).setMinWidth(minWidth);
+                columns.get(i).setMaxWidth(400);
+            }
+        }
+
+        // Обработка случая когда колонок больше чем predefined widths
+        if (columns.size() > TREE_COLUMN_WIDTHS.length) {
+            double remainingPercentage = 108 - Arrays.stream(TREE_COLUMN_WIDTHS).sum();
+            double extraWidthPerColumn = availableWidth * (remainingPercentage / 100) / (columns.size() - TREE_COLUMN_WIDTHS.length);
+
+            for (int i = TREE_COLUMN_WIDTHS.length; i < columns.size(); i++) {
+                columns.get(i).setPrefWidth(extraWidthPerColumn);
+                // Для колонки фото устанавливаем особый минимум
+                if (i == columns.size() - 2) {
+                    columns.get(i).setMinWidth(55);
+                } else {
+                    columns.get(i).setMinWidth(60);
+                }
+            }
+        }
+    }
+
     // --- Загрузка и обработка данных ---
 
     private void loadData() {
         if (deviceDAO == null) return;
         List<Device> devices = deviceDAO.getAllDevices();
-        filteredList = new FilteredList<>(FXCollections.observableArrayList(devices), d -> true);
+        filteredList = new FilteredList<>(FXCollections.observableArrayList(devices), _ -> true);
         updateTreeItems();
         updateStatistics();
     }
@@ -588,9 +694,8 @@ public class DevicesGroupedController {
         for (Device d : filteredList) {
             String location = d.getLocation();
             if (location == null || location.isEmpty()) location = "Без места";
-            grouped.computeIfAbsent(location, k -> new ArrayList<>()).add(d);
+            grouped.computeIfAbsent(location, _ -> new ArrayList<>()).add(d);
         }
-
         TreeItem<TreeRowItem> root = new TreeItem<>();
         root.setExpanded(true);
         for (Map.Entry<String, List<Device>> entry : grouped.entrySet()) {
@@ -605,10 +710,10 @@ public class DevicesGroupedController {
     }
 
     private void configureSearch() {
-        searchField.textProperty().addListener((obs, oldVal, newVal) -> {
+        searchField.textProperty().addListener((_, _, newVal) -> {
             String filter = newVal.toLowerCase().trim();
             if (filteredList != null) {
-                if (filter.isEmpty()) filteredList.setPredicate(d -> true);
+                if (filter.isEmpty()) filteredList.setPredicate(_ -> true);
                 else filteredList.setPredicate(d ->
                         (d.getName() != null && d.getName().toLowerCase().contains(filter)) ||
                                 (d.getType() != null && d.getType().toLowerCase().contains(filter)) ||
@@ -631,22 +736,21 @@ public class DevicesGroupedController {
     private void configureButtons() {
         if (deleteButton != null) {
             StyleUtils.applyHoverAndAnimation(deleteButton, "button-delete", "button-delete-hover");
-            deleteButton.setOnAction(e -> deleteSelectedDevice());
+            deleteButton.setOnAction(_ -> deleteSelectedDevice());
         }
         if (exportButton != null) {
             StyleUtils.applyHoverAndAnimation(exportButton, "button-export", "button-export-hover");
-            exportButton.setOnAction(e -> {
+            exportButton.setOnAction(_ -> {
                 boolean success = ExcelImportExportUtil.exportGroupedTreeTableToExcel(treeTable.getScene().getWindow(), treeTable);
                 if (success) {
                     CustomAlert.showInfo("Экспорт", "Группированный экспорт завершён");
-                    logger.info("Экспорт группированной таблицы успешен");
+                    LOGGER.info("Экспорт группированной таблицы успешен");
                 }
-                // Если success = false (пользователь отменил), НЕ показываем ошибку
             });
         }
         if (importButton != null) {
             StyleUtils.applyHoverAndAnimation(importButton, "button-import", "button-import-hover");
-            importButton.setOnAction(e ->
+            importButton.setOnAction(_ ->
                     ExcelImportExportUtil.importGroupedTreeTableFromExcel(treeTable.getScene().getWindow(), deviceDAO, treeTable,
                             () -> {
                                 loadData();
@@ -654,11 +758,11 @@ public class DevicesGroupedController {
                                 if (schemeEditorController != null) {
                                     schemeEditorController.refreshSchemesAndDevices();
                                 }
-                                logger.info("Импорт группированной таблицы успешен");
+                                LOGGER.info("Импорт группированной таблицы успешен");
                             },
                             () -> {
                                 CustomAlert.showError("Импорт", "Не удалось импортировать данные из Excel");
-                                logger.severe("Ошибка импорта группированной таблицы");
+                                LOGGER.error("Ошибка импорта группированной таблицы");
                             })
             );
         }
@@ -671,9 +775,9 @@ public class DevicesGroupedController {
             return;
         }
         Device dev = ((DeviceItem) selected.getValue()).device();
-        boolean confirmed = CustomAlert.showConfirmation("Подтверждение", "Удалить прибор \"" + dev.getName() + "\"?");  // Возвращает boolean
+        boolean confirmed = CustomAlert.showConfirmation("Подтверждение", "Удалить прибор \"" + dev.getName() + "\"?");
         if (confirmed) {  // True = YES, false = NO/CANCEL
-            logger.info("Начато удаление прибора: " + dev.getName());
+            LOGGER.info("Начато удаление прибора: {}", dev.getName());
             boolean success = deviceDAO.deleteDevice(dev.getId());
             if (success) {
                 filteredList.getSource().remove(dev);
@@ -682,18 +786,16 @@ public class DevicesGroupedController {
                 if (schemeEditorController != null) {
                     schemeEditorController.refreshSchemesAndDevices();
                 }
-                logger.info("Прибор удалён: " + dev.getName());
+                LOGGER.info("Прибор удалён: {}", dev.getName());
             } else {
                 CustomAlert.showError("Ошибка удаления", "Не удалось удалить прибор из базы данных");
-                logger.severe("Ошибка удаления прибора: " + dev.getName());
+                LOGGER.error("Ошибка удаления прибора: {}", dev.getName());
             }
-        } else {
-            logger.info("Удаление отменено пользователем: " + dev.getName());
-        }
+        } else LOGGER.info("Удаление отменено пользователем: {}", dev.getName());
     }
 
     private void configureRowFactory() {
-        treeTable.setRowFactory(tv -> new TreeTableRow<>() {
+        treeTable.setRowFactory(_ -> new TreeTableRow<>() {
             @Override
             protected void updateItem(TreeRowItem item, boolean empty) {
                 super.updateItem(item, empty);
@@ -703,7 +805,6 @@ public class DevicesGroupedController {
                     getStyleClass().add("selected-row");
                 } else if (item instanceof GroupItem) {
                     getStyleClass().add("group-row");
-                    // Убрали setAlignment — теперь в ячейках
                 } else {
                     if (getIndex() % 2 == 0) {
                         getStyleClass().add("even-row");

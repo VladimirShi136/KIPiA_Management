@@ -88,13 +88,10 @@ public class RectangleShape extends ShapeBase {
     @Override
     protected void resizeShape(double newWidth, double newHeight) {
         if (rectangle != null) {
-            System.out.println("DEBUG: RectangleShape.resizeShape - new width: " + newWidth + ", new height: " + newHeight);
             rectangle.setWidth(newWidth);
             rectangle.setHeight(newHeight);
         }
-        // Новое: Set stored exact
         setCurrentDimensions(newWidth, newHeight);
-        System.out.println("DEBUG: Rectangle resized to " + newWidth + "x" + newHeight);
     }
 
     /**

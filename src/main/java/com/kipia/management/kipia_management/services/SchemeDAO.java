@@ -1,10 +1,10 @@
 package com.kipia.management.kipia_management.services;
 
 import com.kipia.management.kipia_management.models.Scheme;
-
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import java.sql.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
 
 /**
  * Класс SchemeDAO (Data Access Object) предоставляет методы для работы с данными схем в базе данных.
@@ -18,7 +18,7 @@ public class SchemeDAO {
     // Сервис для работы с базой данных
     private final DatabaseService databaseService;
     // логгер для сообщений
-    private static final Logger LOGGER = Logger.getLogger(SchemeDAO.class.getName());
+    private static final Logger LOGGER = LogManager.getLogger(SchemeDAO.class);
 
     /**
      * Конструктор класса SchemeDAO
@@ -50,7 +50,7 @@ public class SchemeDAO {
             }
             return false;
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Ошибка добавления схемы: " + e.getMessage());
+            LOGGER.error("Ошибка добавления схемы: {}", e.getMessage(), e);
             return false;
         }
     }
@@ -63,7 +63,7 @@ public class SchemeDAO {
      */
     public boolean updateScheme(Scheme scheme) {
         if (scheme == null || scheme.getId() <= 0) {
-            LOGGER.warning("DAO updateScheme: Invalid scheme (null or id <=0)");
+            LOGGER.warn("DAO updateScheme: Invalid scheme (null or id <=0)");
             return false;
         }
 
@@ -75,7 +75,7 @@ public class SchemeDAO {
 
             // Дополнительная проверка
             if (conn == null || conn.isClosed()) {
-                LOGGER.severe("Не удалось получить активное соединение с БД");
+                LOGGER.error("Не удалось получить активное соединение с БД");
                 return false;
             }
 
@@ -89,12 +89,12 @@ public class SchemeDAO {
                 boolean success = rows > 0;
 
                 // Логирование для отладки
-                LOGGER.info("Схема обновлена: " + scheme.getName() + " (ID: " + scheme.getId() + "), строк затронуто: " + rows);
+                LOGGER.info("Схема обновлена: {} (ID: {}), строк затронуто: {}", scheme.getName(), scheme.getId(), rows);
 
                 return success;
             }
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "SQLException in updateScheme: " + e.getMessage(), e);
+            LOGGER.error("SQLException in updateScheme: {}", e.getMessage(), e);
             return false;
         }
     }
@@ -113,7 +113,7 @@ public class SchemeDAO {
                 return createSchemeFromResultSet(rs);
             }
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Ошибка поиска схемы: " + e.getMessage());
+            LOGGER.error("Ошибка поиска схемы: {}", e.getMessage(), e);
         }
         return null;
     }

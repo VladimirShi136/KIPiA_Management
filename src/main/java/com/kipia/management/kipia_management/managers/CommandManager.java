@@ -38,7 +38,6 @@ public class CommandManager {
         undoStack.push(command);
         redoStack.clear();
         updateUIState();
-        System.out.println("DEBUG: Command executed, undoStack=" + undoStack.size() + ", redoStack=" + redoStack.size());
     }
 
     /**
@@ -50,7 +49,6 @@ public class CommandManager {
             command.undo();
             redoStack.push(command);
             updateUIState();
-            System.out.println("DEBUG: Undo executed, undoStack=" + undoStack.size() + ", redoStack=" + redoStack.size());
         }
     }
 
@@ -63,7 +61,6 @@ public class CommandManager {
             command.execute();
             undoStack.push(command);
             updateUIState();
-            System.out.println("DEBUG: Redo executed, undoStack=" + undoStack.size() + ", redoStack=" + redoStack.size());
         }
     }
 

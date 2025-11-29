@@ -18,9 +18,10 @@ import javafx.geometry.Bounds;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontPosture;
 import javafx.scene.text.FontWeight;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -48,6 +49,8 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     protected Color fillColor = Color.TRANSPARENT;
     // Добавляем флаг для блокировки автосохранения во время undo/redo
     private final boolean isUndoRedoInProgress = false;
+    //Логгер
+    private static final Logger LOGGER = LogManager.getLogger(ShapeBase.class);
 
     // Добавляем поля для сохранения начальной позиции перед перемещением
     private double dragStartX, dragStartY;
@@ -59,7 +62,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     protected final AnchorPane pane;
     protected final Consumer<String> statusSetter;
     protected final Consumer<ShapeHandler> onSelectCallback;
-    protected final ShapeManager shapeManager;  // Ссылка на менеджер для проверки инструмента
+    protected final ShapeManager shapeManager;  // Ссылка для проверки инструмента
 
 
     // ============================================================
@@ -105,7 +108,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         this.shapeManager = shapeManager;
         initializeState();
         setupEventHandlers();
-        //setupContextMenu(); // Создаем контекстное меню по умолчанию
     }
 
     /**
@@ -156,8 +158,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     @Override
     public void createResizeHandles() {
         if (resizeHandles != null) return;
-
-        System.out.println("DEBUG: Creating resize handles for " + getShapeType());
         resizeHandles = new Circle[RESIZE_HANDLE_COUNT];
 
         for (int i = 0; i < RESIZE_HANDLE_COUNT; i++) {
@@ -165,10 +165,8 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
             pane.getChildren().add(resizeHandles[i]);
             resizeHandles[i].setVisible(false);
         }
-
         // ВАЖНО: Настраиваем обработчики после создания handles
         setupResizeHandleHandlers();
-        System.out.println("DEBUG: Resize handles created and handlers setup for " + getShapeType());
     }
 
     /**
@@ -230,7 +228,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
 
     /**
      * Возвращает сообщение о перемещении для данного типа фигуры
-     * Может быть переопределен в подклассах для кастомных сообщений
      */
     protected String getMoveStatusMessage() {
         return "Позиция фигуры изменена";
@@ -238,7 +235,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
 
     /**
      * Возвращает сообщение об изменении размера для данного типа фигуры
-     * Может быть переопределен в подклассах для кастомных сообщений
      */
     protected String getResizeStatusMessage() {
         return "Размер фигуры изменен";
@@ -250,7 +246,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     @Override
     public void updateResizeHandles() {
         if (resizeHandles == null) return;
-
         Bounds bounds = getBoundsInParent();
         HandlePositions positions = calculateHandlePositions(bounds);
         applyHandlePositions(positions);
@@ -264,7 +259,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         double y0 = bounds.getMinY();
         double width = bounds.getWidth();
         double height = bounds.getHeight();
-
         return new HandlePositions(x0, y0, width, height);
     }
 
@@ -324,8 +318,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     @Override
     public void makeResizeHandlesVisible() {
         if (resizeHandles != null) return;
-
-        System.out.println("DEBUG: Creating resize handles for " + getShapeType());
         resizeHandles = new Circle[RESIZE_HANDLE_COUNT];
 
         for (int i = 0; i < RESIZE_HANDLE_COUNT; i++) {
@@ -336,7 +328,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
 
         // ВАЖНО: Настраиваем обработчики после создания handles
         setupResizeHandleHandlers();
-        System.out.println("DEBUG: Resize handles created and handlers setup for " + getShapeType());
     }
 
     // ============================================================
@@ -384,7 +375,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
             if (event.getButton() == MouseButton.PRIMARY) {
                 if (event.getClickCount() == 2) {
                     // Двойной клик - выделяем фигуру и показываем handles
-                    System.out.println("DEBUG: Double click - selecting shape with handles");
                     handleDoubleClickSelection();
                     event.consume();
                 }
@@ -397,31 +387,22 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      * Обработка выделения по двойному клику
      */
     private void handleDoubleClickSelection() {
-        System.out.println("DEBUG: Double click selection - selecting shape WITH handles");
-
         // Выделяем эту фигуру через менеджер
         if (onSelectCallback != null) {
             onSelectCallback.accept(this);
         }
-
         // Показываем handles для ресайза ТОЛЬКО при двойном клике
         makeResizeHandlesVisible();
-
         if (statusSetter != null) {
             statusSetter.accept("Фигура выделена: " + getShapeType() + " - используйте ручки для изменения");
         }
-
-        System.out.println("DEBUG: Double click - resize handles shown");
     }
 
     /**
      * Настройка обработчиков для ручек изменения размера
      */
     private void setupResizeHandleHandlers() {
-        System.out.println("DEBUG: Setting up resize handle handlers for " + getShapeType());
-
         if (resizeHandles == null || resizeHandles.length == 0) {
-            System.out.println("DEBUG: No resize handles to setup handlers for");
             return;
         }
 
@@ -433,51 +414,38 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
                 handle.setOnMousePressed(null);
                 handle.setOnMouseDragged(null);
                 handle.setOnMouseReleased(null);
-
                 // ДОБАВИТЬ новые обработчики
                 final int handleIndex = i;
-
                 handle.setOnMousePressed(event -> {
-                    System.out.println("DEBUG: Resize handle " + handleIndex + " PRESSED");
                     if (!event.isPrimaryButtonDown()) {
-                        System.out.println("DEBUG: Not primary button - ignoring");
                         event.consume();
                         return;
                     }
                     Point2D pressPoint = pane.sceneToLocal(event.getSceneX(), event.getSceneY());
-                    System.out.println("DEBUG: Init resize at (" + pressPoint.getX() + ", " + pressPoint.getY() + ")");
                     initResize(pressPoint.getX(), pressPoint.getY());
                     event.consume();
                 });
 
                 handle.setOnMouseDragged(event -> {
-                    System.out.println("DEBUG: Resize handle " + handleIndex + " DRAGGED");
                     if (!event.isPrimaryButtonDown()) {
-                        System.out.println("DEBUG: Not primary button - ignoring");
                         event.consume();
                         return;
                     }
                     Point2D currentPoint = pane.sceneToLocal(event.getSceneX(), event.getSceneY());
-                    System.out.println("DEBUG: Handle drag to (" + currentPoint.getX() + ", " + currentPoint.getY() + ")");
                     handleResizeDrag(handleIndex, currentPoint.getX(), currentPoint.getY());
                     event.consume();
                 });
 
                 handle.setOnMouseReleased(event -> {
-                    System.out.println("DEBUG: Resize handle " + handleIndex + " RELEASED");
                     if (event.getButton() == MouseButton.PRIMARY) {
-                        System.out.println("DEBUG: Handling resize release");
                         handleResizeRelease();
                     }
                     event.consume();
                 });
 
                 handlersSetup++;
-                System.out.println("DEBUG: Handlers setup for handle " + handleIndex);
             }
         }
-
-        System.out.println("DEBUG: Total " + handlersSetup + " resize handle handlers setup for " + getShapeType());
     }
 
     // ============================================================
@@ -490,18 +458,14 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     private void handleDragPressed(MouseEvent event) {
         Point2D mousePos = pane.sceneToLocal(event.getSceneX(), event.getSceneY());
         initializeDrag(mousePos);
-
         // ВАЖНО: Для линии выделение происходит при ЛЮБОМ клике
         if (this instanceof LineShape) {
-            System.out.println("DEBUG: Line drag started - selecting line");
             if (onSelectCallback != null) {
                 onSelectCallback.accept(this);
             }
             makeResizeHandlesVisible();
         }
-
         isDragging = false; // Сбрасываем флаг в начале
-        System.out.println("DEBUG: Drag pressed at (" + mousePos.getX() + "," + mousePos.getY() + ")");
         event.consume();
     }
 
@@ -511,15 +475,9 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     protected void initializeDrag(Point2D mousePos) {
         dragOffsetX = mousePos.getX() - getLayoutX();
         dragOffsetY = mousePos.getY() - getLayoutY();
-
         // СОХРАНЯЕМ НАЧАЛЬНУЮ ПОЗИЦИЮ ДЛЯ UNDO
         dragStartX = getLayoutX();
         dragStartY = getLayoutY();
-
-        System.out.println("DEBUG: initializeDrag - current pos: (" + getLayoutX() + "," + getLayoutY() +
-                "), mouse: (" + mousePos.getX() + "," + mousePos.getY() +
-                "), offset: (" + dragOffsetX + "," + dragOffsetY + ")");
-        System.out.println("DEBUG: start position saved: (" + dragStartX + "," + dragStartY + ")");
     }
 
     /**
@@ -528,16 +486,12 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     private void handleDragDragged(MouseEvent event) {
         if (!isDragging) {
             isDragging = true;
-            System.out.println("DEBUG: Drag started - isDragging set to true");
         }
 
         Point2D scenePos = new Point2D(event.getSceneX(), event.getSceneY());
         Point2D panePos = pane.sceneToLocal(scenePos);
         double newX = panePos.getX() - dragOffsetX;
         double newY = panePos.getY() - dragOffsetY;
-
-        System.out.println("DEBUG: Drag dragged to (" + newX + "," + newY + ")");
-
         setPosition(newX, newY);
         updateResizeHandles();
         event.consume();
@@ -547,14 +501,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      * Обработка окончания перетаскивания
      */
     private void handleDragReleased(MouseEvent event) {
-        System.out.println("DEBUG: === handleDragReleased START ===");
-        System.out.println("DEBUG: isDragging: " + isDragging);
-        System.out.println("DEBUG: event.getButton(): " + event.getButton());
-        System.out.println("DEBUG: MouseButton.PRIMARY: " + MouseButton.PRIMARY);
-
         if (isDragging && statusSetter != null && event.getButton() == MouseButton.PRIMARY) {
-            System.out.println("DEBUG: Conditions met for registering move");
-
             // ИСПОЛЬЗУЕМ КАСТОМНОЕ СООБЩЕНИЕ ДЛЯ ТИПА ФИГУРЫ
             statusSetter.accept(getMoveStatusMessage());
 
@@ -565,20 +512,13 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
             // ИСПОЛЬЗУЕМ СОХРАНЕННЫЕ НАЧАЛЬНЫЕ КООРДИНАТЫ ИЗ handleDragPressed
             double oldX = dragStartX;
             double oldY = dragStartY;
-
-            System.out.println("DEBUG: Drag released - from (" + oldX + "," + oldY + ") to (" + currentX + "," + currentY + ")");
-
             if (shapeManager != null) {
                 shapeManager.registerMove(this, oldX, oldY, currentX, currentY);
-                System.out.println("DEBUG: Movement registered for " + getShapeType());
             }
-        } else {
-            System.out.println("DEBUG: Conditions NOT met for registering move");
         }
         isDragging = false;
         updateResizeHandles();
         event.consume();
-        System.out.println("DEBUG: === handleDragReleased END ===");
     }
 
     // ============================================================
@@ -609,11 +549,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     private void handleResizeDrag(int handleIndex, double currentX, double currentY) {
         double deltaX = currentX - pressPaneX;
         double deltaY = currentY - pressPaneY;
-
-        System.out.println("DEBUG: handleResizeDrag - handle: " + handleIndex + ", deltaX: " + deltaX + ", deltaY: " + deltaY);
-
         if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) return;
-
         resizeByHandle(handleIndex, deltaX, deltaY);
     }
 
@@ -624,7 +560,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         if (wasResizedInSession && statusSetter != null) {
             // ИСПОЛЬЗУЕМ КАСТОМНОЕ СООБЩЕНИЕ ДЛЯ ТИПА ФИГУРЫ
             statusSetter.accept(getResizeStatusMessage());
-
             // РЕГИСТРИРУЕМ РЕСАЙЗ В UNDO/REDO
             double currentX = getLayoutX();
             double currentY = getLayoutY();
@@ -642,11 +577,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      */
     @Override
     public void resizeByHandle(int handleIndex, double deltaX, double deltaY) {
-        System.out.println("DEBUG: resizeByHandle - handle: " + handleIndex + ", deltaX: " + deltaX + ", deltaY: " + deltaY);
-
         ResizeParams params = calculateResizeParams(handleIndex, deltaX, deltaY);
-        System.out.println("DEBUG: Calculated params - x: " + params.x + ", y: " + params.y + ", width: " + params.width + ", height: " + params.height);
-
         applyResize(params);
         updateResizeHandles();
     }
@@ -659,7 +590,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         double newY = initialY;
         double newWidth = initialWidth;
         double newHeight = initialHeight;
-
         // Применяем изменения в зависимости от ручки
         switch (handleIndex) {
             case 0: // Верхний левый
@@ -697,7 +627,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
                 newHeight += deltaY;
                 break;
         }
-
         return new ResizeParams(newX, newY, newWidth, newHeight);
     }
 
@@ -707,25 +636,14 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     private void applyResize(ResizeParams params) {
         // Корректируем отрицательные размеры
         ResizeParams corrected = correctNegativeDimensions(params);
-        System.out.println("DEBUG: After correction - x: " + corrected.x + ", y: " + corrected.y + ", width: " + corrected.width + ", height: " + corrected.height);
-
         // Проверяем минимальный размер
         corrected = enforceMinimumSize(corrected);
-        System.out.println("DEBUG: After min size - x: " + corrected.x + ", y: " + corrected.y + ", width: " + corrected.width + ", height: " + corrected.height);
-
         // Проверяем, было ли реальное изменение
         wasResizedInSession = hasRealSizeChange(corrected);
-        System.out.println("DEBUG: Was resized: " + wasResizedInSession);
-
         // Применяем изменения
-        System.out.println("DEBUG: Applying resize - layoutX: " + corrected.x + ", layoutY: " + corrected.y);
         setLayoutX(corrected.x);
         setLayoutY(corrected.y);
-
-        System.out.println("DEBUG: Calling resizeShape with: " + corrected.width + "x" + corrected.height);
         resizeShape(corrected.width, corrected.height);
-
-        System.out.println("DEBUG: Resize applied successfully");
     }
 
     /**
@@ -736,7 +654,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         double newY = params.y;
         double newWidth = params.width;
         double newHeight = params.height;
-
         if (newWidth < 0) {
             newWidth = Math.abs(newWidth);
             newX -= newWidth;
@@ -745,7 +662,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
             newHeight = Math.abs(newHeight);
             newY -= newHeight;
         }
-
         return new ResizeParams(newX, newY, newWidth, newHeight);
     }
 
@@ -837,31 +753,31 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
 
         // Пункт "Повернуть"
         MenuItem rotateItem = new MenuItem("Повернуть");
-        rotateItem.setOnAction(event -> handleRotationInMenu());
+        rotateItem.setOnAction(_ -> handleRotationInMenu());
 
         // Пункт "Копировать"
         MenuItem copyItem = new MenuItem("Копировать");
-        copyItem.setOnAction(event -> copyToClipboard());
+        copyItem.setOnAction(_ -> copyToClipboard());
 
         // Пункт "Вставить" (будет активен только если есть что вставлять)
         MenuItem pasteItem = new MenuItem("Вставить");
-        pasteItem.setOnAction(event -> pasteFromClipboard());
+        pasteItem.setOnAction(_ -> pasteFromClipboard());
         pasteItem.disableProperty().bind(ClipboardManager.hasShapeDataProperty().not());
 
         // Пункт "Изменить цвет контура"
         MenuItem strokeColorItem = new MenuItem("Изменить цвет контура");
-        strokeColorItem.setOnAction(event -> changeStrokeColor());
+        strokeColorItem.setOnAction(_ -> changeStrokeColor());
 
         // Пункт "Изменить цвет заливки" (только для фигур с заливкой)
         MenuItem fillColorItem = new MenuItem("Изменить цвет заливки");
-        fillColorItem.setOnAction(event -> changeFillColor());
+        fillColorItem.setOnAction(_ -> changeFillColor());
 
         // Разделитель
         SeparatorMenuItem separator = new SeparatorMenuItem();
 
         // Пункт "Удалить"
         MenuItem deleteItem = new MenuItem("Удалить");
-        deleteItem.setOnAction(event -> {
+        deleteItem.setOnAction(_ -> {
             if (deleteAction != null) {
                 deleteAction.accept(this);
             }
@@ -870,10 +786,8 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         contextMenu.getItems().addAll(copyItem, pasteItem, strokeColorItem, fillColorItem, rotateItem, separator, deleteItem);
         // УБЕДИТЕСЬ, что событие потребляется
         setOnContextMenuRequested(event -> {
-            System.out.println("DEBUG: ShapeBase context menu requested");
             contextMenu.show(this, event.getScreenX(), event.getScreenY());
             event.consume(); // ВАЖНО: предотвращаем всплытие
-            System.out.println("DEBUG: ShapeBase context menu event consumed");
         });
     }
 
@@ -887,8 +801,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     @Override
     public void highlightAsSelected() {
         applySelectedStyle();
-        // УБИРАЕМ вызов makeRotationHandleVisible()
-        System.out.println("DEBUG: Shape selected - only resize handles shown");
     }
 
     /**
@@ -922,14 +834,8 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      */
     @Override
     public void setPosition(double x, double y) {
-        double oldX = getLayoutX();
-        double oldY = getLayoutY();
-
         setLayoutX(x);
         setLayoutY(y);
-
-        System.out.println("DEBUG: setPosition - from (" + oldX + "," + oldY + ") to (" + x + "," + y + ")");
-
         // Принудительно обновляем handles если они есть
         if (resizeHandles != null) {
             updateResizeHandles();
@@ -952,7 +858,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         Bounds bounds = getBoundsInLocal();
         double centerX = getLayoutX() + bounds.getMinX() + bounds.getWidth() / 2;
         double centerY = getLayoutY() + bounds.getMinY() + bounds.getHeight() / 2;
-
         return new Point2D(mouseX - centerX, mouseY - centerY);
     }
 
@@ -978,8 +883,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     public void addToPane() {
         if (!pane.getChildren().contains(this)) {
             pane.getChildren().add(this);
-            System.out.println("DEBUG: Shape added to pane at position (" + getLayoutX() + ", " + getLayoutY() + ")");
-            System.out.println("DEBUG: Shape bounds in parent: " + getBoundsInParent());
         }
     }
 
@@ -1004,12 +907,10 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         double w = getCurrentWidth();
         double h = getCurrentHeight();
         String type = getShapeType();
-
         // Для всех фигур КРОМЕ TEXT используем этот формат
         if (!"TEXT".equals(type)) {
             return String.format(java.util.Locale.US, "%s|%.2f|%.2f|%.2f|%.2f|%.1f%s", type, pos[0], pos[1], w, h, rotationAngle, serializeColors());
         }
-
         // Для Text будет вызван переопределенный метод
         return "";
     }
@@ -1025,13 +926,11 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
             for (int i = 0; i < parts.length; i++) {
                 fixedParts[i] = parts[i].replace(",", ".");
             }
-
             String type = fixedParts[0];
             double x = Double.parseDouble(fixedParts[1]);
             double y = Double.parseDouble(fixedParts[2]);
             double width = Double.parseDouble(fixedParts[3]);
             double height = Double.parseDouble(fixedParts[4]);
-
             // Чтение угла поворота
             double rotation = 0.0;
             if (fixedParts.length > 5) {
@@ -1059,22 +958,17 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
                 case "TEXT" -> createTextShape(fixedParts, pane, statusSetter, onSelectCallback, shapeManager);
                 default -> null;
             };
-
             // ВАЖНО: Применяем поворот ко всем фигурам
             if (shape != null) {
                 shape.setRotation(rotation);
-
                 // Восстанавливаем цвета
                 if (!"TEXT".equals(type) && fixedParts.length > 6) {
                     shape.deserializeColors(parts, 6, 7);
                 }
-
                 // ОТЛАДКА: проверяем примененные цвета
                 shape.addContextMenu(shape::handleDelete);
             }
-
             return shape;
-
         } catch (Exception e) {
             e.printStackTrace();
             return null;
@@ -1110,20 +1004,18 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
                     Font restoredFont = Font.font(fontFamily, fontWeight, fontPosture, fontSize);
                     textShape.setFont(restoredFont);
                 } catch (NumberFormatException e) {
-                    System.out.println("Ошибка восстановления шрифта: " + e.getMessage());
+                    LOGGER.info("Ошибка восстановления шрифта: {}", e.getMessage(), e);
                 }
             }
-
             // Угол поворота (индекс 5) - ВАЖНО: применяем ДО цветов
             if (fixedParts.length > 5) {
                 try {
                     double rotation = Double.parseDouble(fixedParts[5]);
                     textShape.setRotation(rotation);
                 } catch (NumberFormatException e) {
-                    System.out.println("Ошибка восстановления угла поворота текста: " + e.getMessage());
+                    LOGGER.info("Ошибка восстановления угла поворота текста: {}", e.getMessage(), e);
                 }
             }
-
             // ВАЖНО: ВОССТАНАВЛИВАЕМ ЦВЕТА ДЛЯ ТЕКСТА
             if (fixedParts.length > 11) {
                 // Для текста цвета находятся на позициях 10 и 11
@@ -1134,7 +1026,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
             }
             javafx.application.Platform.runLater(textShape::calculateTextSize);
             return textShape;
-
         } catch (Exception e) {
             e.printStackTrace();
             return null;
@@ -1145,8 +1036,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      * Сериализует цвета в строку
      */
     protected String serializeColors() {
-        String result = String.format(java.util.Locale.US, "|%.3f,%.3f,%.3f,%.3f|%.3f,%.3f,%.3f,%.3f", strokeColor.getRed(), strokeColor.getGreen(), strokeColor.getBlue(), strokeColor.getOpacity(), fillColor.getRed(), fillColor.getGreen(), fillColor.getBlue(), fillColor.getOpacity());
-        return result;
+        return String.format(java.util.Locale.US, "|%.3f,%.3f,%.3f,%.3f|%.3f,%.3f,%.3f,%.3f", strokeColor.getRed(), strokeColor.getGreen(), strokeColor.getBlue(), strokeColor.getOpacity(), fillColor.getRed(), fillColor.getGreen(), fillColor.getBlue(), fillColor.getOpacity());
     }
 
     /**
@@ -1199,7 +1089,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
                             Double.parseDouble(matcher.group(4))
                     };
                 } catch (NumberFormatException e) {
-                    System.out.println("ERROR parsing with pattern: " + patternStr);
+                    LOGGER.error("ERROR parsing with pattern: {}", patternStr);
                 }
             }
         }
@@ -1321,10 +1211,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     protected void setCurrentDimensions(double width, double height) {
         this.currentWidth = Math.max(1.0, width);  // Min 1px
         this.currentHeight = Math.max(1.0, height);
-
-        // Опционально: Принудительно обновить JavaFX bounds (для consistency)
         requestLayout();
-        // Если need sync: Platform.runLater(() -> System.out.println("Bounds after set: " + getBoundsInLocal()));  // Debug
     }
 
     public void setStrokeColor(Color newColor) {
@@ -1368,7 +1255,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     protected void handleRotationInMenu() {
         // Для линии этот метод не должен вызываться
         if (this instanceof LineShape) {
-            System.out.println("DEBUG: Rotation disabled for LineShape");
             return;
         }
 
@@ -1422,7 +1308,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Ошибка при вставке фигуры: " + e.getMessage());
+            LOGGER.error("Ошибка при вставке фигуры: {}", e.getMessage(), e);
             if (statusSetter != null) {
                 statusSetter.accept("Ошибка вставки фигуры");
             }

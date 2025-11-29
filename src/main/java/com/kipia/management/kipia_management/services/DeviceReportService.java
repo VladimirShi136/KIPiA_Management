@@ -2,6 +2,8 @@ package com.kipia.management.kipia_management.services;
 
 import com.kipia.management.kipia_management.models.Device;
 import javafx.scene.layout.BorderPane;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.fx.ChartViewer;
@@ -13,7 +15,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
@@ -25,7 +26,7 @@ import java.util.stream.Collectors;
 
 public class DeviceReportService {
     // логгер для сообщений
-    private static final Logger LOGGER = Logger.getLogger(DeviceReportService.class.getName());
+    private static final Logger LOGGER = LogManager.getLogger(DeviceReportService.class);
 
     // Возвращает map подсчёта по выбранному критерию
     public Map<String, Long> getReportData(List<Device> devices, String reportKey) {
@@ -39,7 +40,7 @@ public class DeviceReportService {
                     .collect(Collectors.groupingBy(d -> d.getYear().toString(), Collectors.counting()));
             default -> Collections.emptyMap();
         };
-        LOGGER.info("Сгенерированы данные отчета для '" + reportKey + "': " + result.size() + " записей");  // Logger для success
+        LOGGER.info("Сгенерированы данные отчета для '{}': {} записей", reportKey, result.size());  // Logger для success
         return result;
     }
 
@@ -52,7 +53,7 @@ public class DeviceReportService {
     // Метод построения JFreeChart диаграммы с обновлением темы
     public ChartViewer buildPieChart(Map<String, Long> dataMap, String chartTitle, BorderPane chartPane, boolean isDarkTheme) {
         if (dataMap.isEmpty()) {
-            LOGGER.warning("Пустые данные для графика '" + chartTitle + "' — график не создан");  // Logger для предупреждения
+            LOGGER.warn("Пустые данные для графика '{}' — график не создан", chartTitle);  // Logger для предупреждения
             // Не возвращаем ничего или null; контроллер xử lý
             return null;
         }
@@ -76,7 +77,7 @@ public class DeviceReportService {
         ChartViewer chartViewer = new ChartViewer(chart);
         chartViewer.setPrefSize(600, 400);
         chartPane.setCenter(chartViewer);
-        LOGGER.info("График '" + chartTitle + "' построен успешно");  // Logger для success
+        LOGGER.info("График '{}' построен успешно", chartTitle);  // Logger для success
         return chartViewer;
     }
 

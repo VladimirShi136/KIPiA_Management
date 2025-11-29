@@ -6,8 +6,10 @@ import com.kipia.management.kipia_management.models.Scheme;
 import com.kipia.management.kipia_management.utils.CustomAlert;
 import javafx.scene.Node;
 import javafx.scene.layout.AnchorPane;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.util.List;
-import java.util.logging.Logger;
 
 /**
  * Сервис для сохранения схемы, включая фигуры и позиции устройств.
@@ -15,7 +17,7 @@ import java.util.logging.Logger;
  */
 public class SchemeSaver {
 
-    private static final Logger LOGGER = Logger.getLogger(SchemeSaver.class.getName());
+    private static final Logger LOGGER = LogManager.getLogger(SchemeSaver.class);
 
     private final SchemeDAO schemeDAO;
     private final DeviceLocationDAO deviceLocationDAO;
@@ -39,16 +41,16 @@ public class SchemeSaver {
      */
     public boolean saveScheme(Scheme scheme) {
         if (scheme == null) {
-            LOGGER.warning("Попытка сохранить null-схему");
+            LOGGER.warn("Попытка сохранить null-схему");
             return false;
         }
         try {
             saveSchemeData(scheme);
             saveDeviceLocations(scheme);
-            LOGGER.info("Схема сохранена: " + scheme.getName() + ", ID=" + scheme.getId());
+            LOGGER.info("Схема сохранена: {}, ID={}", scheme.getName(), scheme.getId());
             return true;
         } catch (Exception e) {
-            LOGGER.severe("Ошибка при сохранении схемы '" + scheme.getName() + "': " + e.getMessage());
+            LOGGER.error("Ошибка при сохранении схемы '{}': {}", scheme.getName(), e.getMessage(), e);
             return false;
         }
     }
@@ -61,7 +63,7 @@ public class SchemeSaver {
         if (currentScheme == null) return true; // Нет текущей схемы — можно менять
         boolean saved = saveScheme(currentScheme);
         if (!saved) {
-            LOGGER.warning("Не удалось сохранить схему перед сменой: " + currentScheme.getName());
+            LOGGER.warn("Не удалось сохранить схему перед сменой: {}", currentScheme.getName());
         }
         return saved;
     }
@@ -73,7 +75,7 @@ public class SchemeSaver {
         if (currentScheme != null) {
             boolean saved = saveScheme(currentScheme);
             if (!saved) {
-                LOGGER.severe("Не удалось сохранить схему при выходе: " + currentScheme.getName());
+                LOGGER.error("Не удалось сохранить схему при выходе: {}", currentScheme.getName());
             }
         }
     }
@@ -87,7 +89,7 @@ public class SchemeSaver {
 
         boolean saved = saveScheme(currentScheme);
         if (!saved) {
-            LOGGER.warning("Сохранение перед навигацией не удалось: " + currentScheme.getName());
+            LOGGER.warn("Сохранение перед навигацией не удалось: {}", currentScheme.getName());
         }
     }
 
@@ -158,8 +160,7 @@ public class SchemeSaver {
 
         boolean saved = deviceLocationDAO.addDeviceLocation(location);
         if (!saved) {
-            LOGGER.warning("Не удалось сохранить позицию устройства (ID=" + device.getId() +
-                    ") для схемы ID=" + scheme.getId());
+            LOGGER.warn("Не удалось сохранить позицию устройства (ID={}) для схемы ID={}", device.getId(), scheme.getId());
         }
     }
 }

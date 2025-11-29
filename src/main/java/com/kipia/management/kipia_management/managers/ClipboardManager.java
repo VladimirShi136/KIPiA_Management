@@ -18,7 +18,6 @@ public class ClipboardManager {
         if (shape != null) {
             copiedShapeData = shape.serialize();
             hasShapeData.set(true);
-            System.out.println("DEBUG: Фигура скопирована в буфер");
         }
     }
 

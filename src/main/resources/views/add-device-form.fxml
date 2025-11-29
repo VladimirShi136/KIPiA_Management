@@ -2,87 +2,114 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<!--
-  Author: vladimir_shi
-  Since: 28.08.2025
-  * Окно добавления прибора *
--->
-
 <VBox xmlns="http://javafx.com/javafx/17.0.2-ea"
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.kipia.management.kipia_management.controllers.AddDeviceController"
-      spacing="10" styleClass="add-device-root" style="-fx-padding: 15;">
+      styleClass="add-device-root"
+      VBox.vgrow="ALWAYS">
 
-    <!-- 1️⃣ ПАНЕЛЬ ДОБАВЛЕНИЯ -->
-    <Label text="Добавление нового прибора" styleClass="form-header"/>
-    <GridPane hgap="10" vgap="10" styleClass="form-grid">
-        <Label text="Тип прибора:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
-        <TextField fx:id="typeField" GridPane.rowIndex="0" GridPane.columnIndex="1" prefWidth="200"
-                   styleClass="form-input" promptText="Например, Манометр"/>
+    <!-- ScrollPane для всей формы -->
+    <ScrollPane fitToWidth="true"
+                style="-fx-background: transparent; -fx-border-color: transparent;"
+                VBox.vgrow="ALWAYS">
 
-        <Label text="Модель:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
-        <TextField fx:id="nameField" GridPane.rowIndex="1" GridPane.columnIndex="1" prefWidth="200"
-                   styleClass="form-input" promptText="Например, МП4-УУ2"/>
+        <VBox spacing="20" alignment="TOP_CENTER" style="-fx-padding: 20;">
 
-        <Label text="Инвентарный номер:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
-        <TextField fx:id="inventoryNumberField" GridPane.rowIndex="2" GridPane.columnIndex="1" prefWidth="200"
-                   styleClass="form-input" promptText="Введите номер через ТМ, например, ТМ-001"/>
+            <!-- Заголовок -->
+            <Label text="Добавление нового прибора" styleClass="form-header"/>
 
-        <Label text="Место установки:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
-        <TextField fx:id="locationField" GridPane.rowIndex="3" GridPane.columnIndex="1" prefWidth="200"
-                   styleClass="form-input" promptText="Например, 88 км Губкин"/>
+            <!-- Форма в центрированном контейнере -->
+            <VBox spacing="15" alignment="CENTER" prefWidth="500">
+                <GridPane hgap="15" vgap="12" styleClass="form-grid">
+                    <columnConstraints>
+                        <ColumnConstraints halignment="RIGHT" prefWidth="180"/>
+                        <ColumnConstraints halignment="LEFT" prefWidth="280"/>
+                    </columnConstraints>
 
-        <Label text="Кран № (опционально):" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
-        <TextField fx:id="valveNumberField" GridPane.rowIndex="4" GridPane.columnIndex="1" prefWidth="200"
-                   styleClass="form-input" promptText="Например, Р1-333"/>
+                    <!-- СТРОКА 0: Тип прибора -->
+                    <Label text="Тип прибора:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                    <TextField fx:id="typeField" GridPane.rowIndex="0" GridPane.columnIndex="1" prefWidth="280"
+                               styleClass="form-input" promptText="Например, Манометр"/>
 
-        <Label text="Статус:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
-        <ComboBox fx:id="statusComboBox" GridPane.rowIndex="5" GridPane.columnIndex="1" prefWidth="200"
-                  styleClass="form-input" promptText="Выберите статус прибора"/>
+                    <!-- СТРОКА 1: Модель -->
+                    <Label text="Модель:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                    <TextField fx:id="nameField" GridPane.rowIndex="1" GridPane.columnIndex="1" prefWidth="280"
+                               styleClass="form-input" promptText="Например, МП4-УУ2"/>
 
-        <Label text="Предел измерений (опционально):" GridPane.rowIndex="6" GridPane.columnIndex="0"
-               styleClass="form-label"/>
-        <TextField fx:id="measurementLimitField" GridPane.rowIndex="6" GridPane.columnIndex="1" prefWidth="200"
-                   styleClass="form-input" promptText="В кг или МПа"/>
+                    <!-- СТРОКА 2: Инвентарный номер -->
+                    <Label text="Инвентарный номер:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                    <TextField fx:id="inventoryNumberField" GridPane.rowIndex="2" GridPane.columnIndex="1" prefWidth="280"
+                               styleClass="form-input" promptText="Например, ТМ-001"/>
 
-        <Label text="Класс точности (опционально):" GridPane.rowIndex="7" GridPane.columnIndex="0"
-               styleClass="form-label"/>
-        <TextField fx:id="accuracyClassField" GridPane.rowIndex="7" GridPane.columnIndex="1" prefWidth="200"
-                   styleClass="form-input" promptText="Введите число в %"/>
+                    <!-- СТРОКА 3: Место установки -->
+                    <Label text="Место установки:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                    <TextField fx:id="locationField" GridPane.rowIndex="3" GridPane.columnIndex="1" prefWidth="280"
+                               styleClass="form-input" promptText="Например, 88 км Губкин"/>
 
-        <Label text="Производитель (опционально):" GridPane.rowIndex="8" GridPane.columnIndex="0"
-               styleClass="form-label"/>
-        <TextField fx:id="manufacturerField" GridPane.rowIndex="8" GridPane.columnIndex="1" prefWidth="200"
-                   promptText="Например, ОАО Манотомь" styleClass="form-input"/>
+                    <!-- СТРОКА 4: Кран № -->
+                    <Label text="Кран № (опционально):" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+                    <TextField fx:id="valveNumberField" GridPane.rowIndex="4" GridPane.columnIndex="1" prefWidth="280"
+                               styleClass="form-input" promptText="Например, Р1-333"/>
 
-        <Label text="Год выпуска (опционально):" GridPane.rowIndex="9" GridPane.columnIndex="0"
-               styleClass="form-label"/>
-        <TextField fx:id="yearField" GridPane.rowIndex="9" GridPane.columnIndex="1" prefWidth="200"
-                   promptText="Год (число), напр. 2023" styleClass="form-input"/>
+                    <!-- СТРОКА 5: Статус -->
+                    <Label text="Статус:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
+                    <ComboBox fx:id="statusComboBox" GridPane.rowIndex="5" GridPane.columnIndex="1" prefWidth="280"
+                              styleClass="form-input" promptText="Выберите статус прибора"/>
 
-        <Label text="Доп. информация (опционально):" GridPane.rowIndex="10" GridPane.columnIndex="0"
-               styleClass="form-label"/>
-        <TextArea fx:id="additionalInfoField" GridPane.rowIndex="10" GridPane.columnIndex="1" prefWidth="200"
-                  prefHeight="60" promptText="Любая дополнительная информация" styleClass="form-textarea"/>
+                    <!-- СТРОКА 6: Предел измерений -->
+                    <Label text="Предел измерений:" GridPane.rowIndex="6" GridPane.columnIndex="0"
+                           styleClass="form-label"/>
+                    <TextField fx:id="measurementLimitField" GridPane.rowIndex="6" GridPane.columnIndex="1" prefWidth="280"
+                               styleClass="form-input" promptText="В кг или МПа"/>
 
-        <Label text="Фото (несколько):" GridPane.rowIndex="11" GridPane.columnIndex="0" styleClass="form-label"/>
-        <HBox spacing="5" GridPane.rowIndex="11" GridPane.columnIndex="1" styleClass="photo-picker">
-            <TextField fx:id="photoPathField" prefWidth="180" editable="false" promptText="Выберите файл"
-                       styleClass="form-input"/>
-            <Button fx:id="photoChooseBtn" text="Выбрать фото" onAction="#onChooseFiles" styleClass="photo-choose-btn"/>
-        </HBox>
+                    <!-- СТРОКА 7: Класс точности -->
+                    <Label text="Класс точности:" GridPane.rowIndex="7" GridPane.columnIndex="0"
+                           styleClass="form-label"/>
+                    <TextField fx:id="accuracyClassField" GridPane.rowIndex="7" GridPane.columnIndex="1" prefWidth="280"
+                               styleClass="form-input" promptText="Введите число в %"/>
 
-        <Label text="Выбранные фото:" GridPane.rowIndex="12" GridPane.columnIndex="0" styleClass="form-label"/>
-        <ListView fx:id="selectedPhotosListView" GridPane.rowIndex="12" GridPane.columnIndex="1" prefHeight="100"
-                  prefWidth="200" styleClass="photo-list"/>
-    </GridPane>
+                    <!-- СТРОКА 8: Производитель -->
+                    <Label text="Производитель:" GridPane.rowIndex="8" GridPane.columnIndex="0"
+                           styleClass="form-label"/>
+                    <TextField fx:id="manufacturerField" GridPane.rowIndex="8" GridPane.columnIndex="1" prefWidth="280"
+                               promptText="Например, ОАО Манотомь" styleClass="form-input"/>
 
-    <!-- 2️⃣ КНОПКИ ДОБАВЛЕНИЯ И ОТМЕНЫ -->
-    <HBox spacing="10" alignment="CENTER_RIGHT" styleClass="form-buttons">
-        <Button fx:id="cancelBtn" text="Отмена" onAction="#onCancel" styleClass="button-cancel"/>
-        <Button fx:id="addBtn" text="Добавить" onAction="#onAddDevice" styleClass="button-add"/>
-    </HBox>
+                    <!-- СТРОКА 9: Год выпуска -->
+                    <Label text="Год выпуска:" GridPane.rowIndex="9" GridPane.columnIndex="0"
+                           styleClass="form-label"/>
+                    <TextField fx:id="yearField" GridPane.rowIndex="9" GridPane.columnIndex="1" prefWidth="280"
+                               promptText="Год (число), напр. 2023" styleClass="form-input"/>
 
-    <!-- 3️⃣ СООБЩЕНИЯ -->
-    <Label fx:id="messageLabel" styleClass="form-message"/>
+                    <!-- СТРОКА 10: Доп. информация -->
+                    <Label text="Доп. информация:" GridPane.rowIndex="10" GridPane.columnIndex="0"
+                           styleClass="form-label"/>
+                    <TextArea fx:id="additionalInfoField" GridPane.rowIndex="10" GridPane.columnIndex="1" prefWidth="280"
+                              prefHeight="60" wrapText="true" promptText="Любая дополнительная информация"
+                              styleClass="form-textarea"/>
+
+                    <!-- СТРОКА 11: Фото -->
+                    <Label text="Фото (несколько):" GridPane.rowIndex="11" GridPane.columnIndex="0" styleClass="form-label"/>
+                    <HBox spacing="10" GridPane.rowIndex="11" GridPane.columnIndex="1" alignment="CENTER_LEFT">
+                        <TextField fx:id="photoPathField" prefWidth="200" editable="false" promptText="Выберите файл"
+                                   styleClass="form-input"/>
+                        <Button fx:id="photoChooseBtn" text="Выбрать" onAction="#onChooseFiles"
+                                styleClass="photo-choose-btn" prefWidth="80"/>
+                    </HBox>
+
+                    <!-- СТРОКА 12: Выбранные фото -->
+                    <Label text="Выбранные фото:" GridPane.rowIndex="12" GridPane.columnIndex="0" styleClass="form-label"/>
+                    <ListView fx:id="selectedPhotosListView" GridPane.rowIndex="12" GridPane.columnIndex="1"
+                              prefHeight="80" prefWidth="280" styleClass="photo-list"/>
+                </GridPane>
+
+                <!-- Кнопки - всегда видимы внизу -->
+                <HBox spacing="20" alignment="CENTER" style="-fx-padding: 20 0 0 0;">
+                    <Button fx:id="cancelBtn" text="Отмена" onAction="#onCancel"
+                            styleClass="button-cancel" prefWidth="120" prefHeight="35"/>
+                    <Button fx:id="addBtn" text="Добавить" onAction="#onAddDevice"
+                            styleClass="button-add" prefWidth="120" prefHeight="35"/>
+                </HBox>
+            </VBox>
+        </VBox>
+    </ScrollPane>
 </VBox>

@@ -3,6 +3,7 @@ package com.kipia.management.kipia_management;
 import com.kipia.management.kipia_management.controllers.MainController;
 import com.kipia.management.kipia_management.services.*;
 import com.kipia.management.kipia_management.utils.CustomAlert;
+import com.kipia.management.kipia_management.utils.LoggingConfig;
 
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -12,9 +13,10 @@ import javafx.scene.Scene;
 import javafx.scene.control.ButtonType;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.Objects;
-import java.util.logging.Logger;
 
 /**
  * Главный класс приложения "Система учёта приборов КИПиА"
@@ -29,7 +31,7 @@ public class Main extends Application {
     private SchemeDAO schemeDAO;
     private DeviceLocationDAO deviceLocationDAO;
     // Логгер для сообщений
-    private static final Logger LOGGER = Logger.getLogger(Main.class.getName());
+    private static final Logger LOGGER = LogManager.getLogger(Main.class);
     private MainController mainController;
     private Stage primaryStage;
 
@@ -39,7 +41,22 @@ public class Main extends Application {
      * @param args аргументы командной строки
      */
     public static void main(String[] args) {
-        launch(args);
+        // Инициализация логгера ПЕРВОЙ - ИСПРАВЛЕНО
+        LoggingConfig.initialize();
+        LOGGER.info("Запуск главного метода приложения...");
+
+        try {
+            launch(args);
+        } catch (Exception e) {
+            LOGGER.fatal("Критическая ошибка при запуске приложения: {}", e.getMessage(), e);
+            System.exit(1);
+        }
+    }
+
+    @Override
+    public void init() {
+        // Инициализация ДО создания UI - ИСПРАВЛЕНО
+        LOGGER.info("Инициализация приложения...");
     }
 
     /**
@@ -60,7 +77,7 @@ public class Main extends Application {
 
             // Проверяем что критические сервисы инициализированы
             if (databaseService == null) {
-                LOGGER.severe("Критические сервисы не инициализированы");
+                LOGGER.error("Критические сервисы не инициализированы");
                 showErrorAndExit("Критическая ошибка", "Не удалось инициализировать необходимые сервисы");
                 return;
             }
@@ -77,7 +94,7 @@ public class Main extends Application {
                 mainController.setDeviceLocationDAO(deviceLocationDAO);
                 LOGGER.info("Сервисы переданы в MainController");
             } else {
-                LOGGER.warning("MainController не найден");
+                LOGGER.warn("MainController не найден");
             }
 
             // Настраиваем сцену
@@ -99,12 +116,13 @@ public class Main extends Application {
             try {
                 Image icon = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/images/iconApp.png")));
                 primaryStage.getIcons().add(icon);
+                LOGGER.debug("Иконка приложения загружена");
             } catch (Exception e) {
-                LOGGER.warning("Иконка не найдена, используется стандартная");
+                LOGGER.warn("Иконка не найдена, используется стандартная: {}", e.getMessage());
             }
 
             // Обработка закрытия окна - закрываем соединение с БД и сохраняем схему
-            primaryStage.setOnCloseRequest(event -> {
+            primaryStage.setOnCloseRequest(_ -> {
                 LOGGER.info("Закрытие приложения - сохранение схемы");
                 // Сохраняем схему через MainController
                 if (mainController != null) {
@@ -113,6 +131,7 @@ public class Main extends Application {
                 // Закрываем соединение с БД
                 if (databaseService != null) {
                     databaseService.closeConnection();
+                    LOGGER.info("Соединение с БД закрыто");
                 }
             });
 
@@ -121,7 +140,7 @@ public class Main extends Application {
             LOGGER.info("Приложение успешно запущено");
 
         } catch (Exception e) {
-            LOGGER.severe("Ошибка запуска приложения: " + e.getMessage());
+            LOGGER.error("Ошибка запуска приложения: {}", e.getMessage(), e);
             showErrorAndRetry("Ошибка запуска приложения",
                     "Не удалось запустить приложение: " + e.getMessage());
         }
@@ -151,7 +170,7 @@ public class Main extends Application {
             LOGGER.info("Все сервисы успешно инициализированы");
 
         } catch (Exception e) {
-            LOGGER.severe("Ошибка инициализации сервисов: " + e.getMessage());
+            LOGGER.error("Ошибка инициализации сервисов: {}", e.getMessage(), e);
             throw new RuntimeException("Не удалось инициализировать сервисы приложения", e);
         }
     }
@@ -199,7 +218,7 @@ public class Main extends Application {
                     primaryStage.close();
                 }
             } catch (Exception e) {
-                LOGGER.severe("Ошибка перезапуска приложения: " + e.getMessage());
+                LOGGER.error("Ошибка перезапуска приложения: {}", e.getMessage(), e);
                 showErrorAndExit("Ошибка перезапуска", "Не удалось перезапустить приложение: " + e.getMessage());
             }
         });
@@ -212,5 +231,14 @@ public class Main extends Application {
         LOGGER.info("Завершение работы приложения...");
         Platform.exit();
         System.exit(0);
+    }
+
+    @Override
+    public void stop() {
+        LOGGER.info("Приложение завершает работу");
+        // Дополнительная очистка ресурсов
+        if (databaseService != null) {
+            databaseService.closeConnection();
+        }
     }
 }

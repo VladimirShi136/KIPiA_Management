@@ -34,10 +34,6 @@ public class LineShape extends ShapeBase {
     private static final double HIT_THRESHOLD = 20.0; // Порог захвата в пикселях
 
     // Границы красного квадрата
-    private static final double MIN_X = 0;
-    private static final double MIN_Y = 0;
-    private static final double MAX_X = 1600;
-    private static final double MAX_Y = 1200;
 
     public LineShape(double startX, double startY, double endX, double endY,
                      AnchorPane pane, Consumer<String> statusSetter,
@@ -60,8 +56,6 @@ public class LineShape extends ShapeBase {
         createLineHandles();
         setCurrentDimensions(Math.abs(endX - startX), Math.abs(endY - startY));
         setupLineEventHandlers();
-
-        System.out.println("DEBUG: Line created from (" + startX + "," + startY + ") to (" + endX + "," + endY + ")");
     }
 
     /**
@@ -78,15 +72,6 @@ public class LineShape extends ShapeBase {
         return containsPoint(localPoint.getX(), localPoint.getY());
     }
 
-//    // Методы для ограничения координат
-//    private double clampX(double x) {
-//        return Math.max(MIN_X, Math.min(x, MAX_X));
-//    }
-//
-//    private double clampY(double y) {
-//        return Math.max(MIN_Y, Math.min(y, MAX_Y));
-//    }
-
     /**
      * Получает абсолютные координаты обеих точек линии
      */
@@ -96,10 +81,6 @@ public class LineShape extends ShapeBase {
         double endXAbs = getLayoutX() + line.getEndX();
         double endYAbs = getLayoutY() + line.getEndY();  // ← ИСПРАВИТЬ НА getEndY()
         return new double[]{startXAbs, startYAbs, endXAbs, endYAbs};
-    }
-
-    public Line getLine() {
-        return line;
     }
 
     @Override
@@ -152,8 +133,6 @@ public class LineShape extends ShapeBase {
         // ВАЖНО: НАСТРАИВАЕМ ОБРАБОТЧИКИ СРАЗУ
         setupLineHandleEvents();
         updateResizeHandles();
-
-        System.out.println("DEBUG: Line handles created and events setup");
     }
 
     @Override
@@ -173,9 +152,6 @@ public class LineShape extends ShapeBase {
             startHandle.setCenterY(startYAbs);
             endHandle.setCenterX(endXAbs);
             endHandle.setCenterY(endYAbs);
-
-            System.out.println("DEBUG: Handles updated - start: (" + startXAbs + "," + startYAbs +
-                    "), end: (" + endXAbs + "," + endYAbs + ")");
         }
     }
 
@@ -185,8 +161,6 @@ public class LineShape extends ShapeBase {
     private void setupLineEventHandlers() {
         line.setOnMousePressed(event -> {
             if (event.isPrimaryButtonDown()) {
-                System.out.println("DEBUG: Line PRESSED with precise hit detection");
-
                 // Используем родительскую логику инициализации перетаскивания
                 Point2D mousePos = pane.sceneToLocal(event.getSceneX(), event.getSceneY());
                 initializeDrag(mousePos);
@@ -195,7 +169,6 @@ public class LineShape extends ShapeBase {
                 if (onSelectCallback != null) {
                     onSelectCallback.accept(this);
                 }
-
                 // Показываем handles при одинарном клике
                 makeResizeHandlesVisible();
 
@@ -206,8 +179,6 @@ public class LineShape extends ShapeBase {
         // Двойной клик на линии
         line.setOnMouseClicked(clickEvent -> {
             if (clickEvent.getButton() == MouseButton.PRIMARY && clickEvent.getClickCount() == 2) {
-                System.out.println("DEBUG: Line DOUBLE CLICK");
-
                 if (onSelectCallback != null) {
                     onSelectCallback.accept(this);
                 }
@@ -215,9 +186,6 @@ public class LineShape extends ShapeBase {
                 clickEvent.consume();
             }
         });
-
-        // НЕ переопределяем dragged и released - используем родительские из ShapeBase
-        // Они уже содержат правильную логику регистрации undo/redo
     }
 
     /**
@@ -307,8 +275,6 @@ public class LineShape extends ShapeBase {
                     final double[][] initialCoordsHolder = new double[1][];
 
                     handle.setOnMousePressed(event -> {
-                        System.out.println("DEBUG: Line handle PRESSED");
-
                         double handleX = getLayoutX() + (handle == startHandle ? line.getStartX() : line.getEndX());
                         double handleY = getLayoutY() + (handle == startHandle ? line.getStartY() : line.getEndY());
                         initialX = handleX;
@@ -372,8 +338,6 @@ public class LineShape extends ShapeBase {
                                 if (statusSetter != null) {
                                     statusSetter.accept("Размер линии изменен");
                                 }
-
-                                System.out.println("DEBUG: Line points change registered in undo/redo");
                             }
                         }
                         event.consume();
@@ -697,14 +661,14 @@ public class LineShape extends ShapeBase {
 
         // Пункт "Копировать"
         MenuItem copyItem = new MenuItem("Копировать");
-        copyItem.setOnAction(event -> {
+        copyItem.setOnAction(_ -> {
             copyToClipboard();
             lineContextMenu.hide();
         });
 
         // Пункт "Вставить"
         MenuItem pasteItem = new MenuItem("Вставить");
-        pasteItem.setOnAction(event -> {
+        pasteItem.setOnAction(_ -> {
             pasteFromClipboard();
             lineContextMenu.hide();
         });
@@ -712,7 +676,7 @@ public class LineShape extends ShapeBase {
 
         // Пункт "Изменить цвет линии"
         MenuItem strokeColorItem = new MenuItem("Изменить цвет линии");
-        strokeColorItem.setOnAction(event -> {
+        strokeColorItem.setOnAction(_ -> {
             changeLineColor();
             lineContextMenu.hide();
         });
@@ -721,7 +685,7 @@ public class LineShape extends ShapeBase {
 
         // Пункт "Удалить"
         MenuItem deleteItem = new MenuItem("Удалить");
-        deleteItem.setOnAction(event -> {
+        deleteItem.setOnAction(_ -> {
             if (deleteAction != null) {
                 deleteAction.accept(this);
             }
@@ -732,14 +696,12 @@ public class LineShape extends ShapeBase {
 
         // Настраиваем обработчик контекстного меню на линию
         line.setOnContextMenuRequested(event -> {
-            System.out.println("DEBUG: LineShape context menu requested");
             lineContextMenu.show(line, event.getScreenX(), event.getScreenY());
             event.consume();
         });
 
         // Также настраиваем на группу
         setOnContextMenuRequested(event -> {
-            System.out.println("DEBUG: LineShape GROUP context menu requested");
             lineContextMenu.show(this, event.getScreenX(), event.getScreenY());
             event.consume();
         });
@@ -786,29 +748,20 @@ public class LineShape extends ShapeBase {
 
     @Override
     public void makeResizeHandlesVisible() {
-        System.out.println("=== DEBUG LineShape makeResizeHandlesVisible ===");
-
         // ВАЖНО: Всегда пересоздаем handles если их нет
         if (startHandle == null || endHandle == null) {
-            System.out.println("Creating line handles...");
             removeResizeHandles(); // Очищаем старые если есть
             createLineHandles();
         }
-
         // ВАЖНО: Всегда перенастраиваем обработчики
         setupLineHandleEvents();
-
         if (startHandle != null) {
             startHandle.setVisible(true);
-            System.out.println("Start handle made visible");
         }
         if (endHandle != null) {
             endHandle.setVisible(true);
-            System.out.println("End handle made visible");
         }
-
         updateResizeHandles();
-        System.out.println("=== END DEBUG LineShape ===");
     }
 
     @Override
@@ -843,9 +796,6 @@ public class LineShape extends ShapeBase {
      * Устанавливает абсолютные координаты линии (для использования в командах undo/redo)
      */
     public void setLinePoints(double startX, double startY, double endX, double endY) {
-        System.out.println("=== DEBUG setLinePoints ===");
-        System.out.println("Input: start(" + startX + "," + startY + ") end(" + endX + "," + endY + ")");
-
         // ВАЖНО: Правильно вычисляем относительные координаты
         double relStartX = 0;
         double relStartY = 0;
@@ -861,43 +811,14 @@ public class LineShape extends ShapeBase {
         setLayoutX(startX);
         setLayoutY(startY);
 
-        debugLineCoordinates();
-
         // Обновляем handles
         updateResizeHandles();
-        System.out.println("=== END DEBUG ===");
-    }
-
-    /**
-     * Отладочный метод для проверки координат линии
-     */
-    public void debugLineCoordinates() {
-        Line line = getLine();
-        double startXAbs = getLayoutX() + line.getStartX();
-        double startYAbs = getLayoutY() + line.getStartY();
-        double endXAbs = getLayoutX() + line.getEndX();
-        double endYAbs = getLayoutY() + line.getEndY();
-
-        System.out.println("=== DEBUG LINE COORDINATES ===");
-        System.out.println("Layout: (" + getLayoutX() + ", " + getLayoutY() + ")");
-        System.out.println("Relative line: (" + line.getStartX() + ", " + line.getStartY() + ") to (" +
-                line.getEndX() + ", " + line.getEndY() + ")");
-        System.out.println("Absolute line: (" + startXAbs + ", " + startYAbs + ") to (" +
-                endXAbs + ", " + endYAbs + ")");
-        System.out.println("Line length: " + Math.sqrt(Math.pow(endXAbs - startXAbs, 2) + Math.pow(endYAbs - startYAbs, 2)));
-        System.out.println("=== END DEBUG ===");
     }
 
     @Override
     public void setPosition(double x, double y) {
-        double oldX = getLayoutX();
-        double oldY = getLayoutY();
-
         setLayoutX(x);
         setLayoutY(y);
-
-        System.out.println("DEBUG: Line setPosition - from (" + oldX + "," + oldY + ") to (" + x + "," + y + ")");
-
         // Принудительно обновляем handles если они есть
         if (startHandle != null && endHandle != null) {
             updateResizeHandles();
@@ -910,7 +831,6 @@ public class LineShape extends ShapeBase {
     @Override
     public void setRotation(double angle) {
         // Линия не поддерживает поворот
-        System.out.println("DEBUG: Rotation disabled for LineShape");
     }
 
     /**
@@ -918,7 +838,6 @@ public class LineShape extends ShapeBase {
      */
     @Override
     protected void handleRotationInMenu() {
-        System.out.println("DEBUG: Rotation disabled for LineShape");
         // Линия не поддерживает поворот через контекстное меню
         if (statusSetter != null) {
             statusSetter.accept("Поворот линии не поддерживается");
@@ -931,10 +850,7 @@ public class LineShape extends ShapeBase {
     @Override
     public String serialize() {
         double[] absCoords = getAbsoluteCoordinates();
-        String result = String.format("LINE|%.2f|%.2f|%.2f|%.2f|%.1f%s",
+        return String.format("LINE|%.2f|%.2f|%.2f|%.2f|%.1f%s",
                 absCoords[0], absCoords[1], absCoords[2], absCoords[3], 0.0, serializeColors());
-
-        System.out.println("DEBUG: Serializing LINE: " + result);
-        return result;
     }
 }

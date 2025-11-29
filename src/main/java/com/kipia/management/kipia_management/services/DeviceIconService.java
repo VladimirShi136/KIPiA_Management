@@ -14,10 +14,11 @@ import javafx.scene.shape.Circle;
 import javafx.scene.Cursor;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.Objects;
 import java.util.function.BiConsumer;
-import java.util.logging.Logger;
 
 /**
  * Сервис для создания и управления иконками устройств на схеме
@@ -28,7 +29,7 @@ import java.util.logging.Logger;
  */
 public class DeviceIconService {
 
-    private static final Logger LOGGER = Logger.getLogger(DeviceIconService.class.getName());
+    private static final Logger LOGGER = LogManager.getLogger(DeviceIconService.class);
 
     private final AnchorPane schemePane;
     private final BiConsumer<Node, Device> onDeviceMovedCallback;
@@ -68,8 +69,7 @@ public class DeviceIconService {
         try {
             return createIconWithImage(x, y, device, currentScheme);
         } catch (Exception e) {
-            LOGGER.warning("Не удалось создать иконку с изображением для '" +
-                    device.getName() + "': " + e.getMessage());
+            LOGGER.warn("Не удалось создать иконку с изображением для '{}': {}", device.getName(), e.getMessage());
             return createFallbackIcon(x, y, device, currentScheme);
         }
     }
@@ -132,9 +132,6 @@ public class DeviceIconService {
      * Конфигурация иконки устройства
      */
     private void configureIcon(Node icon, double x, double y, Device device, Scheme currentScheme) {
-        System.out.println("DEBUG: Configuring device icon - " + device.getName() +
-                " at (" + x + ", " + y + ")");
-
         icon.setLayoutX(x);
         icon.setLayoutY(y);
         icon.setCursor(Cursor.HAND);
@@ -144,16 +141,12 @@ public class DeviceIconService {
 
         addMovementHandlers(icon);
         addContextMenu(icon, device, currentScheme);
-
-        System.out.println("DEBUG: Device icon configured successfully");
     }
 
     /**
      * Сохранение позиции и угла поворота устройства
      */
     private void saveDevicePositionAndRotation(Node node, Device device) {
-        System.out.println("DEBUG: Saving device position and rotation after rotation");
-
         if (currentScheme != null && deviceLocationDAO != null) {
             double x = node.getLayoutX();
             double y = node.getLayoutY();
@@ -165,22 +158,15 @@ public class DeviceIconService {
                 y -= 10;
             }
 
-            System.out.println("DEBUG: Saving device position after rotation - X: " + x + ", Y: " + y +
-                    ", Rotation: " + rotation + "°, Scheme ID: " + currentScheme.getId() +
-                    ", Device ID: " + device.getId());
-
             DeviceLocation location = new DeviceLocation(device.getId(), currentScheme.getId(), x, y, rotation);
 
             boolean saved = deviceLocationDAO.addDeviceLocation(location);
 
             if (saved) {
-                System.out.println("DEBUG: Device position and rotation successfully saved to database after rotation");
+                LOGGER.debug("Device position and rotation successfully saved to database after rotation");
             } else {
-                System.out.println("DEBUG: FAILED to save device position and rotation after rotation!");
+                LOGGER.debug("FAILED to save device position and rotation after rotation!");
             }
-        } else {
-            System.out.println("DEBUG: Cannot save device position and rotation - " +
-                    "scheme: " + (currentScheme != null) + ", DAO: " + (deviceLocationDAO != null));
         }
     }
 
@@ -190,12 +176,10 @@ public class DeviceIconService {
     private void addMovementHandlers(Node node) {
         // Создаем callbacks для отслеживания состояния
         Runnable onDragStart = () -> {
-            System.out.println("DEBUG: Device drag started tracking");
             // Здесь можно добавить дополнительную логику при начале перемещения
         };
 
         Runnable onDragEnd = () -> {
-            System.out.println("DEBUG: Device drag ended tracking");
             // Здесь можно добавить дополнительную логику при завершении перемещения
         };
 
@@ -242,10 +226,10 @@ public class DeviceIconService {
         MenuItem rotate180 = new MenuItem("180° (перевернуть)");
         MenuItem rotate270 = new MenuItem("270° (влево)");
 
-        rotate0.setOnAction(event -> rotateDeviceIcon(node, 0, device));
-        rotate90.setOnAction(event -> rotateDeviceIcon(node, 90, device));
-        rotate180.setOnAction(event -> rotateDeviceIcon(node, 180, device));
-        rotate270.setOnAction(event -> rotateDeviceIcon(node, 270, device));
+        rotate0.setOnAction(_ -> rotateDeviceIcon(node, 0, device));
+        rotate90.setOnAction(_ -> rotateDeviceIcon(node, 90, device));
+        rotate180.setOnAction(_ -> rotateDeviceIcon(node, 180, device));
+        rotate270.setOnAction(_ -> rotateDeviceIcon(node, 270, device));
 
         rotateMenu.getItems().addAll(rotate0, rotate90, rotate180, rotate270);
         return rotateMenu;
@@ -255,8 +239,6 @@ public class DeviceIconService {
      * Поворот иконки устройства
      */
     private void rotateDeviceIcon(Node node, double angle, Device device) {
-        System.out.println("DEBUG: Rotating device '" + device.getName() + "' to " + angle + " degrees");
-
         // Применяем поворот
         node.setRotate(angle);
 
@@ -265,8 +247,6 @@ public class DeviceIconService {
 
         // ВАЖНО: Сохраняем позицию и угол поворота в БД
         saveDevicePositionAndRotation(node, device);
-
-        System.out.println("DEBUG: Device rotated to " + angle + " degrees, position and rotation saved");
     }
 
     /**
@@ -274,7 +254,7 @@ public class DeviceIconService {
      */
     private MenuItem createDeleteMenuItem(Node node, Scheme currentScheme) {
         MenuItem deleteItem = new MenuItem("Удалить прибор");
-        deleteItem.setOnAction(event -> handleDeviceDeletion(node, currentScheme));
+        deleteItem.setOnAction(_ -> handleDeviceDeletion(node, currentScheme));
         return deleteItem;
     }
 
@@ -322,11 +302,11 @@ public class DeviceIconService {
             }
 
             schemePane.getChildren().remove(node);
-            LOGGER.info("Прибор '" + device.getName() + "' удален со схемы");
+            LOGGER.info("Прибор '{}' удален со схемы", device.getName());
             CustomAlert.showInfo("Удаление", "Прибор '" + device.getName() + "' удалён со схемы");
 
         } catch (Exception e) {
-            LOGGER.severe("Ошибка при удалении прибора '" + device.getName() + "': " + e.getMessage());
+            LOGGER.error("Ошибка при удалении прибора '{}': {}", device.getName(), e.getMessage());
             CustomAlert.showError("Ошибка удаления", "Не удалось удалить прибор: " + e.getMessage());
         }
     }
@@ -336,7 +316,7 @@ public class DeviceIconService {
      */
     private MenuItem createInfoMenuItem(Node node) {  // Добавьте параметр Node
         MenuItem infoItem = new MenuItem("Показать информацию");
-        infoItem.setOnAction(event -> showDeviceInfo(node));  // Передайте node
+        infoItem.setOnAction(_ -> showDeviceInfo(node));  // Передайте node
         return infoItem;
     }
 
@@ -420,9 +400,6 @@ public class DeviceIconService {
          * Прикрепление обработчиков событий мыши
          */
         public void attach() {
-            System.out.println("DEBUG: Attaching drag handlers to device node - " +
-                    node.getClass().getSimpleName());
-
             // Удаляем старые обработчики на всякий случай
             node.setOnMousePressed(null);
             node.setOnMouseDragged(null);
@@ -433,20 +410,11 @@ public class DeviceIconService {
             node.setOnMouseDragged(this::handleMouseDragged);
             node.setOnMouseReleased(this::handleMouseReleased);
 
-            // Проверяем, что обработчики установлены
-            System.out.println("DEBUG: Handlers attached - " +
-                    "onMousePressed: " + (node.getOnMousePressed() != null) +
-                    ", onMouseDragged: " + (node.getOnMouseDragged() != null) +
-                    ", onMouseReleased: " + (node.getOnMouseReleased() != null));
-
             // Важно для улучшения отслеживания
             node.setOnDragDetected(event -> {
-                System.out.println("DEBUG: Drag detected");
                 node.startFullDrag();
                 event.consume();
             });
-
-            System.out.println("DEBUG: Drag handlers attached successfully");
         }
 
         private void handleMousePressed(javafx.scene.input.MouseEvent event) {
@@ -461,8 +429,6 @@ public class DeviceIconService {
                 } else {
                     deviceName = "Unknown";
                 }
-
-                System.out.println("DEBUG: Device drag START - Device: " + deviceName);
 
                 // Уведомляем о начале перемещения
                 if (onDragStartCallback != null) {
@@ -503,21 +469,14 @@ public class DeviceIconService {
             // Немедленно обновляем позицию
             node.setLayoutX(newX);
             node.setLayoutY(newY);
-
             isDragging = true;
-
             // Лог при перемещении
-            System.out.println("DEBUG: Device dragging - X: " + newX + ", Y: " + newY);
-
             event.consume(); // Критически важно!
         }
 
 
         private void handleMouseReleased(javafx.scene.input.MouseEvent event) {
-            System.out.println("DEBUG: Device drag END - isDragging: " + isDragging);
-
             node.setCursor(Cursor.HAND);
-
             if (isDragging && onMoveCallback != null) {
                 // Получаем устройство из UserData (может быть Device или DeviceWithRotation)
                 Object userData = node.getUserData();
@@ -527,9 +486,6 @@ public class DeviceIconService {
                 } else {
                     device = (Device) userData;
                 }
-
-                System.out.println("DEBUG: Calling onMoveCallback for device: " + device.getName());
-
                 onMoveCallback.accept(node, device);
             }
 

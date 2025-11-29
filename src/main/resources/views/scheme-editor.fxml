@@ -1,23 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-
-<!--
-Автор: vladimir_shi
-Создал: 2025-09-18 (на основе существующих FXML)
--->
-
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.image.Image?>
+
+<!--
+  Author: vladimir_shi
+  Since: 18.09.2025
+  * Окно редактора схем *
+-->
+
 <BorderPane xmlns="http://javafx.com/javafx/23"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.kipia.management.kipia_management.controllers.SchemeEditorController">
     <!-- Верхняя панель: инструменты -->
     <top>
-        <VBox spacing="10">
+        <VBox spacing="10" style="-fx-padding: 10;">
             <!-- Панель инструментов -->
-            <HBox spacing="10" alignment="CENTER_LEFT">
-            <ToolBar style="-fx-pref-width: 1300px;">
+            <ToolBar style="-fx-background-color: #f8f9fa; -fx-border-color: #dee2e6; -fx-border-width: 0 0 1 0;">
+                <!-- Группа инструментов редактирования -->
                 <Button fx:id="undoBtn" styleClass="tool-button">
                     <graphic>
                         <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
@@ -38,6 +39,8 @@
                         <Tooltip text="Повторить"/>
                     </tooltip>
                 </Button>
+                <Separator orientation="VERTICAL"/>
+                <!-- Группа инструментов рисования -->
                 <Button fx:id="lineToolBtn" styleClass="tool-button">
                     <graphic>
                         <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
@@ -88,9 +91,9 @@
                         <Tooltip text="Текст"/>
                     </tooltip>
                 </Button>
-                <Separator/>
-                <!-- Панель выбора схемы -->
-                <Label text="Схема:" styleClass="scheme-label"/>
+                <Separator orientation="VERTICAL"/>
+                <!-- Группа управления схемами -->
+                <Label text="Схема:" styleClass="scheme-label" style="-fx-padding: 0 5 0 10;"/>
                 <ComboBox fx:id="schemeComboBox" prefWidth="200"/>
                 <Button fx:id="saveSchemeBtn" styleClass="tool-button">
                     <graphic>
@@ -112,19 +115,25 @@
                         <Tooltip text="Очистить схему"/>
                     </tooltip>
                 </Button>
-                <Region HBox.hgrow="ALWAYS"/> <!-- Растягивающийся регион -->
+                <!-- Растягивающийся регион для выравнивания -->
+                <Region HBox.hgrow="ALWAYS"/>
             </ToolBar>
+            <!-- Дополнительная панель статуса инструментов (опционально) -->
+            <HBox spacing="10" alignment="CENTER_LEFT" style="-fx-padding: 5 10;">
+                <Label text="Выберите инструмент для рисования"
+                       style="-fx-text-fill: #666; -fx-font-size: 12px;"/>
             </HBox>
         </VBox>
     </top>
     <!-- Центральная область: холст схемы -->
     <center>
-        <ScrollPane fx:id="schemeScrollPane">
+        <ScrollPane fx:id="schemeScrollPane" styleClass="scheme-scroll" style="-fx-background: #ffffff;">
             <AnchorPane fx:id="schemePane"
                         prefWidth="2200"
                         prefHeight="1800"
                         minWidth="1200"
                         minHeight="800"
+                        style="-fx-background-color: white;"
                         onMousePressed="#onPaneMousePressed"
                         onMouseDragged="#onPaneMouseDragged"
                         onMouseReleased="#onPaneMouseReleased">
@@ -134,8 +143,9 @@
     </center>
     <!-- Нижняя панель: статус -->
     <bottom>
-        <HBox styleClass="bottom">
+        <HBox styleClass="bottom" style="-fx-padding: 5 10;">
             <Label fx:id="statusLabel" text="Готово к редактированию" styleClass="status-label"/>
+            <Region HBox.hgrow="ALWAYS"/>
         </HBox>
     </bottom>
 </BorderPane>

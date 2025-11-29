@@ -12,7 +12,7 @@
 <?import javafx.scene.image.Image?>
 <VBox xmlns="http://javafx.com/javafx/23" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.kipia.management.kipia_management.controllers.DevicesGroupedController"
-      spacing="10" prefWidth="1000" prefHeight="700">
+      spacing="10" prefWidth="1000" prefHeight="700" VBox.vgrow="ALWAYS">
 
     <!-- 1️⃣ ПАНЕЛЬ ПОИСКА И УДАЛЕНИЯ -->
     <HBox spacing="10" alignment="CENTER_LEFT">
@@ -82,5 +82,5 @@
     </VBox>
 
     <!-- 3️⃣ ГРУППИРОВАННАЯ ТАБЛИЦА ПРИБОРОВ -->
-    <TreeTableView fx:id="treeTable" editable="true" VBox.vgrow="always" prefHeight="500" prefWidth="980"/>
+    <TreeTableView fx:id="treeTable" editable="true" VBox.vgrow="always"/>
 </VBox>

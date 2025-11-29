@@ -5,7 +5,9 @@ import com.kipia.management.kipia_management.models.Device;
 import java.io.File;
 import java.sql.*;
 import java.util.Objects;
-import java.util.logging.Logger;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Класс DatabaseService предоставляет функционал для подключения к SQLite базе данных,
@@ -16,7 +18,7 @@ import java.util.logging.Logger;
  */
 public class DatabaseService {
     // логгер для сообщений
-    private static final Logger LOGGER = Logger.getLogger(DatabaseService.class.getName());
+    private static final Logger LOGGER = LogManager.getLogger(DatabaseService.class);
 
     // Объект подключения к базе данных
     private Connection connection;
@@ -27,7 +29,7 @@ public class DatabaseService {
             Class.forName("org.sqlite.JDBC");
             LOGGER.info("SQLite драйвер успешно зарегистрирован");
         } catch (ClassNotFoundException e) {
-            LOGGER.severe("SQLite драйвер не найден: " + e.getMessage());
+            LOGGER.error("SQLite драйвер не найден: {}", e.getMessage(), e);
             throw new RuntimeException("SQLite драйвер не найден", e);
         }
     }
@@ -47,14 +49,13 @@ public class DatabaseService {
             String dbPath = getDatabasePath();
             String dbUrl = "jdbc:sqlite:" + dbPath;
 
-            LOGGER.info("Подключение к базе данных: " + dbPath);
-
+            LOGGER.info("Подключение к базе данных: {}", dbPath);
             connection = DriverManager.getConnection(dbUrl);
 
             // Проверяем что соединение установлено и драйвер работает
             if (connection != null && !connection.isClosed()) {
                 DatabaseMetaData meta = connection.getMetaData();
-                LOGGER.info("Подключение к SQLite установлено! Драйвер: " + meta.getDriverName() + " версия: " + meta.getDriverVersion());
+                LOGGER.info("Подключение к SQLite установлено! Драйвер: {} версия: {}", meta.getDriverName(), meta.getDriverVersion());
 
                 // Создаем таблицы после успешного подключения
                 createTables();
@@ -64,9 +65,8 @@ public class DatabaseService {
                     addTestData();
                 }
             }
-
         } catch (SQLException e) {
-            LOGGER.severe("Ошибка подключения к базе данных: " + e.getMessage());
+            LOGGER.error("Ошибка подключения к базе данных: {}", e.getMessage(), e);
             throw new RuntimeException("Не удалось подключиться к базе данных", e);
         }
     }
@@ -75,29 +75,26 @@ public class DatabaseService {
      * Определяет путь к базе данных в зависимости от режима запуска
      */
     private String getDatabasePath() {
-        // Проверяем, запущено ли из IDEA (режим разработки)
         if (isDevelopmentMode()) {
-            // Режим разработки - база в папке проекта
+            // Режим разработки - база в resources/data
             String projectDir = System.getProperty("user.dir");
-            String dataDir = projectDir + "/data";
+            String dataDir = projectDir + "/src/main/resources/data";
 
-            // Создаем папку если не существует
             File dataFolder = new File(dataDir);
             if (!dataFolder.exists()) {
                 dataFolder.mkdirs();
-                LOGGER.info("Создана папка для данных разработки: " + dataFolder.getAbsolutePath());
+                LOGGER.info("Создана папка для данных разработки: {}", dataFolder.getAbsolutePath());
             }
 
             return dataDir + "/kipia_management.db";
         } else {
             // Режим продакшена - база в AppData
-            String userDataDir = System.getProperty("user.home") + "/AppData/Roaming/KIPiA_Management/data";
+            String userDataDir = System.getenv("APPDATA") + "/KIPiA_Management/data";
             File dataFolder = new File(userDataDir);
             if (!dataFolder.exists()) {
                 dataFolder.mkdirs();
-                LOGGER.info("Создана папка для данных пользователя: " + dataFolder.getAbsolutePath());
+                LOGGER.info("Создана папка для данных пользователя: {}", dataFolder.getAbsolutePath());
             }
-
             return userDataDir + "/kipia_management.db";
         }
     }
@@ -133,7 +130,6 @@ public class DatabaseService {
         } else {
             LOGGER.info("Режим: ПРОДАКШЕН (автоопределение)");
         }
-
         return isDev;
     }
 
@@ -152,42 +148,42 @@ public class DatabaseService {
      */
     public void createTables() {
         String sqlDevices = """
-            CREATE TABLE IF NOT EXISTS devices (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                type TEXT NOT NULL,
-                name TEXT,
-                manufacturer TEXT,
-                inventory_number TEXT UNIQUE NOT NULL,
-                year INTEGER,
-                measurement_limit TEXT,
-                accuracy_class REAL,
-                location TEXT NOT NULL,
-                valve_number TEXT,
-                status TEXT DEFAULT 'В работе',
-                additional_info TEXT,
-                photo_path TEXT,
-                photos TEXT
-            );""";
+                CREATE TABLE IF NOT EXISTS devices (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    type TEXT NOT NULL,
+                    name TEXT,
+                    manufacturer TEXT,
+                    inventory_number TEXT UNIQUE NOT NULL,
+                    year INTEGER,
+                    measurement_limit TEXT,
+                    accuracy_class REAL,
+                    location TEXT NOT NULL,
+                    valve_number TEXT,
+                    status TEXT DEFAULT 'В работе',
+                    additional_info TEXT,
+                    photo_path TEXT,
+                    photos TEXT
+                );""";
 
         String sqlSchemes = """
-            CREATE TABLE IF NOT EXISTS schemes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                description TEXT,
-                data TEXT
-            );""";
+                CREATE TABLE IF NOT EXISTS schemes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    description TEXT,
+                    data TEXT
+                );""";
 
         String sqlDeviceLocations = """
-            CREATE TABLE IF NOT EXISTS device_locations (
-                device_id INTEGER NOT NULL,
-                scheme_id INTEGER NOT NULL,
-                x REAL NOT NULL,
-                y REAL NOT NULL,
-                rotation REAL DEFAULT 0.0,
-                PRIMARY KEY (device_id, scheme_id),
-                FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE,
-                FOREIGN KEY (scheme_id) REFERENCES schemes(id) ON DELETE CASCADE
-            );""";
+                CREATE TABLE IF NOT EXISTS device_locations (
+                    device_id INTEGER NOT NULL,
+                    scheme_id INTEGER NOT NULL,
+                    x REAL NOT NULL,
+                    y REAL NOT NULL,
+                    rotation REAL DEFAULT 0.0,
+                    PRIMARY KEY (device_id, scheme_id),
+                    FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE,
+                    FOREIGN KEY (scheme_id) REFERENCES schemes(id) ON DELETE CASCADE
+                );""";
 
         // Выполнение SQL-запросов для создания таблиц
         try (Statement stmt = getConnection().createStatement()) {
@@ -196,7 +192,7 @@ public class DatabaseService {
             stmt.executeUpdate(sqlDeviceLocations);
             LOGGER.info("Таблицы созданы успешно!");
         } catch (SQLException e) {
-            LOGGER.severe("Ошибка создания таблиц: " + e.getMessage());
+            LOGGER.error("Ошибка создания таблиц: {}", e.getMessage(), e);
             throw new RuntimeException("Ошибка создания таблиц базы данных", e);
         }
     }
@@ -208,12 +204,12 @@ public class DatabaseService {
     public Connection getConnection() {
         try {
             if (connection == null || connection.isClosed()) {
-                LOGGER.warning("Соединение с БД закрыто, пересоздаем...");
+                LOGGER.warn("Соединение с БД закрыто, пересоздаем...");
                 connect();
             }
             return connection;
         } catch (SQLException e) {
-            LOGGER.severe("Ошибка при проверке соединения: " + e.getMessage());
+            LOGGER.error("Ошибка при проверке соединения: {}", e.getMessage(), e);
             // Пытаемся пересоздать соединение
             connect();
             return connection;
@@ -232,7 +228,7 @@ public class DatabaseService {
                 LOGGER.info("Подключение закрыто.");
             }
         } catch (SQLException e) {
-            LOGGER.severe("Ошибка закрытия подключения: " + e.getMessage());
+            LOGGER.error("Ошибка закрытия подключения: {}", e.getMessage(), e);
         }
     }
 
@@ -293,7 +289,7 @@ public class DatabaseService {
             deviceDAO.addDevice(device3);
             LOGGER.info("Тестовые устройства добавлены");
         } catch (Exception e) {
-            LOGGER.severe("Ошибка добавления тестовых устройств: " + e.getMessage());
+            LOGGER.error("Ошибка добавления тестовых устройств: {}", e.getMessage(), e);
         }
 
         // НОВЫЕ: Добавить тестовую схему
@@ -306,7 +302,7 @@ public class DatabaseService {
             stmtScheme.executeUpdate();
             LOGGER.info("Тестовая схема добавлена");
         } catch (SQLException e) {
-            LOGGER.severe("Ошибка добавления тестовой схемы: " + e.getMessage());
+            LOGGER.error("Ошибка добавления тестовой схемы: {}", e.getMessage(), e);
         }
 
         // НОВЫЕ: Добавить тестовые привязки приборов (device_locations)
@@ -333,7 +329,7 @@ public class DatabaseService {
 
             LOGGER.info("Тестовые привязки приборов добавлены");
         } catch (SQLException e) {
-            LOGGER.severe("Ошибка добавления тестовых локаций: " + e.getMessage());
+            LOGGER.error("Ошибка добавления тестовых локаций: {}", e.getMessage(), e);
         }
 
         LOGGER.info("Тестовые данные добавлены успешно");
@@ -344,7 +340,7 @@ public class DatabaseService {
             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM devices");
             return rs.getInt(1) > 0;
         } catch (SQLException e) {
-            LOGGER.severe("Ошибка проверки наличия данных: " + e.getMessage());
+            LOGGER.error("Ошибка проверки наличия данных: {}", e.getMessage(), e);
             return false;
         }
     }

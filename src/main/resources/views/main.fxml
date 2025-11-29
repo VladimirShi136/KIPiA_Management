@@ -19,7 +19,10 @@
     <!-- 1️⃣ ── Верхняя панель ──  -->
     <top>
         <HBox alignment="CENTER" styleClass="top">
+            <Region HBox.hgrow="ALWAYS"/>
             <Label text="Учёт приборов КИПиА" styleClass="header-label"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label text="ver 1.0.2" styleClass="version-label"/>
         </HBox>
     </top>
 

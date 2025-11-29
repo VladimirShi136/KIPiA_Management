@@ -9,7 +9,9 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
-import java.util.logging.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,7 +24,7 @@ import java.util.List;
  */
 public class AddDeviceController {
     // ----- логгер для сообщений --------
-    private static final Logger LOGGER = Logger.getLogger(AddDeviceController.class.getName());
+    private static final Logger LOGGER = LogManager.getLogger(AddDeviceController.class);
     // ---------- FXML‑элементы ----------
     @FXML
     private TextField nameField;
@@ -52,8 +54,7 @@ public class AddDeviceController {
     private ListView<String> selectedPhotosListView;
     @FXML
     private Button photoChooseBtn;
-    @FXML
-    private Label messageLabel;
+
     // ---------- Кнопки -----------
     public Button cancelBtn;
     public Button addBtn;
@@ -89,7 +90,6 @@ public class AddDeviceController {
     private void initialize() {
         statusComboBox.setItems(FXCollections.observableArrayList("Хранение", "В работе", "Утерян", "Испорчен"));
         statusComboBox.getSelectionModel().selectFirst();
-        messageLabel.setText("");
 
         if (addBtn != null) {
             StyleUtils.applyHoverAndAnimation(addBtn, "button-add", "button-add-hover");
@@ -103,7 +103,7 @@ public class AddDeviceController {
 
         // Настройка списка фото (без редактирования)
         selectedPhotosListView.setItems(FXCollections.observableArrayList(selectedPhotos));
-        selectedPhotosListView.setCellFactory(param -> new ListCell<>() {
+        selectedPhotosListView.setCellFactory(_ -> new ListCell<>() {
             @Override
             protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
@@ -116,7 +116,7 @@ public class AddDeviceController {
         });
 
         // ИСПОЛЬЗОВАНИЕ photoChooseBtn: Установка обработчика на кнопку для выбора фото
-        photoChooseBtn.setOnAction(event -> onChooseFiles());  // Убираем @FXML из метода, используем прямой вызов
+        photoChooseBtn.setOnAction(_ -> onChooseFiles());  // Убираем @FXML из метода, используем прямой вызов
         LOGGER.info("Форма добавления прибора инициализирована");
     }
 
@@ -128,7 +128,7 @@ public class AddDeviceController {
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Выбрать фото для прибора");
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Изображения", "*.png", "*.jpg", "*.gif"));
-        Stage stage = (Stage) messageLabel.getScene().getWindow();
+        Stage stage = (Stage) photoChooseBtn.getScene().getWindow();
         chooser.setSelectedExtensionFilter(chooser.getExtensionFilters().getFirst());  // Значение по умолчанию
         // Включить выбор нескольких файлов
         List<File> files = chooser.showOpenMultipleDialog(stage);
@@ -137,9 +137,9 @@ public class AddDeviceController {
                 selectedPhotos.add(file.getAbsolutePath());
             }
             selectedPhotosListView.setItems(FXCollections.observableArrayList(selectedPhotos));  // Обновить список
-            LOGGER.info("Выбрано " + files.size() + " фото для прибора");
+            LOGGER.info("Выбрано {} фото для прибора", files.size());
         } else {
-            LOGGER.warning("Пользователь отменил выбор фото");
+            LOGGER.warn("Пользователь отменил выбор фото");
         }
     }
 
@@ -159,9 +159,8 @@ public class AddDeviceController {
             try {
                 year = Integer.parseInt(yearStr);
             } catch (NumberFormatException e) {
-                messageLabel.setText("Год должен быть числом");
                 CustomAlert.showWarning("Валидация", "Год должен быть числом");
-                LOGGER.warning("Ошибка валидации: год должен быть числом");
+                LOGGER.warn("Ошибка валидации: год должен быть числом");
                 return;
             }
         }
@@ -172,9 +171,8 @@ public class AddDeviceController {
             try {
                 accuracyClass = Double.parseDouble(accuracyClassStr);
             } catch (NumberFormatException e) {
-                messageLabel.setText("Класс точности должен быть числом");
                 CustomAlert.showWarning("Валидация", "Класс точности должен быть числом");
-                LOGGER.warning("Ошибка валидации: класс точности должен быть числом");
+                LOGGER.warn("Ошибка валидации: класс точности должен быть числом");
                 return;
             }
         }
@@ -183,17 +181,15 @@ public class AddDeviceController {
         String status = statusComboBox.getValue();
 
         if (name.isEmpty() || type.isEmpty() || inventoryNumber.isEmpty() || location.isEmpty() || status == null) {
-            messageLabel.setText("Пожалуйста, заполните все поля");
             CustomAlert.showWarning("Валидация", "Пожалуйста, заполните все обязательные поля");
-            LOGGER.warning("Ошибка валидации:не все поля заполнены");
+            LOGGER.warn("Ошибка валидации:не все поля заполнены");
             return;
         }
 
         // Проверка уникальности инвентарного номера
         if (deviceDAO.findDeviceByInventoryNumber(inventoryNumber) != null) {
-            messageLabel.setText("Прибор с таким инвентарным номером уже существует");
             CustomAlert.showError("Ошибка", "Прибор с таким инвентарным номером уже существует");
-            LOGGER.warning("Инвентарный номер уже существует: " + inventoryNumber);
+            LOGGER.warn("Инвентарный номер уже существует: {}", inventoryNumber);
             return;
         }
 
@@ -220,23 +216,19 @@ public class AddDeviceController {
         if (!selectedPhotos.isEmpty()) {
             device.setPhotoPath(selectedPhotos.getFirst());
         }
-        LOGGER.info("Попытка добавить прибор: " + name + " (инв.: " + inventoryNumber + ")");
+        LOGGER.info("Попытка добавить прибор: {} (инв.: {})", name, inventoryNumber);
         // Сохраняем в DAO
         boolean success = deviceDAO.addDevice(device);
         if (success) {
-            messageLabel.setStyle("-fx-text-fill: green;");
-            messageLabel.setText("Прибор успешно добавлен");
             CustomAlert.showInfo("Добавление", "Прибор успешно добавлен!");
             clearForm();
             if (schemeEditorController != null) {
                 schemeEditorController.refreshSchemesAndDevices();
             }
-            LOGGER.info("Прибор успешно добавлен: " + name);
+            LOGGER.info("Прибор успешно добавлен: {}", name);
         } else {
-            messageLabel.setStyle("-fx-text-fill: red;");
-            messageLabel.setText("Ошибка при добавлении прибора");
             CustomAlert.showError("Ошибка добавления", "Не удалось добавить прибор в базу данных");
-            LOGGER.severe("Ошибка при добавлении прибора: " + name);
+            LOGGER.error("Ошибка при добавлении прибора: {}", name);
         }
     }
 
@@ -273,7 +265,6 @@ public class AddDeviceController {
     @FXML
     private void onCancel() {
         clearForm();
-        messageLabel.setText("");
         LOGGER.info("Добавление прибора отменено, форма очищена");
     }
 }

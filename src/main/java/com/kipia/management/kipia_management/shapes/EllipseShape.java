@@ -61,16 +61,12 @@ public class EllipseShape extends ShapeBase {
         if (ellipse != null) {
             double newRadiusX = newWidth / 2;
             double newRadiusY = newHeight / 2;
-
-            System.out.println("DEBUG: EllipseShape.resizeShape - new radii: " + newRadiusX + ", " + newRadiusY);
-
             ellipse.setCenterX(newWidth / 2);  // Relative в группе (fixed offset)
             ellipse.setCenterY(newHeight / 2);
             ellipse.setRadiusX(newRadiusX);
             ellipse.setRadiusY(newRadiusY);
         }
         setCurrentDimensions(newWidth, newHeight);
-        System.out.println("DEBUG: Ellipse resized to " + newWidth + "x" + newHeight);
     }
 
     @Override

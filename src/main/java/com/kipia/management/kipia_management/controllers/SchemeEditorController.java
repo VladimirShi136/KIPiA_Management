@@ -1,4 +1,5 @@
 package com.kipia.management.kipia_management.controllers;
+
 import com.kipia.management.kipia_management.managers.ClipboardManager;
 import com.kipia.management.kipia_management.managers.ShapeManager;
 import com.kipia.management.kipia_management.models.Device;
@@ -20,9 +21,10 @@ import javafx.scene.Node;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.*;
 import javafx.util.StringConverter;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.*;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 /**
@@ -55,7 +57,7 @@ public class SchemeEditorController {
     // DEPENDENCIES & SERVICES
     // ============================================================
 
-    private static final Logger LOGGER = Logger.getLogger(SchemeEditorController.class.getName());
+    private static final Logger LOGGER = LogManager.getLogger(SchemeEditorController.class);
     private DeviceDAO deviceDAO;
     private SchemeDAO schemeDAO;
     private DeviceLocationDAO deviceLocationDAO;
@@ -119,7 +121,7 @@ public class SchemeEditorController {
             applyButtonStyles();
             setupWindowCloseHandler();
         } catch (Exception e) {
-            LOGGER.severe("Ошибка в initialize(): " + e.getMessage());
+            LOGGER.error("Ошибка в initialize(): {}", e.getMessage(), e);
             e.printStackTrace();
         }
     }
@@ -138,7 +140,7 @@ public class SchemeEditorController {
             // Обновляем информацию о доступных приборах
             refreshAvailableDevices();
         } catch (Exception e) {
-            LOGGER.severe("Ошибка в init(): " + e.getMessage());
+            LOGGER.error("Ошибка в init(): {}", e.getMessage(), e);
             e.printStackTrace();
             if (statusLabel != null) statusLabel.setText("Ошибка запуска: " + e.getMessage());
         }
@@ -271,9 +273,7 @@ public class SchemeEditorController {
             if (newScene != null) {
                 newScene.windowProperty().addListener((_, _, newWindow) -> {
                     if (newWindow != null) {
-                        newWindow.setOnCloseRequest(_ -> {
-                            schemeSaver.saveOnExit(currentScheme);
-                        });
+                        newWindow.setOnCloseRequest(_ -> schemeSaver.saveOnExit(currentScheme));
                     }
                 });
             }
@@ -310,7 +310,7 @@ public class SchemeEditorController {
                 statusLabel.setText("Фигура вставлена");
             }
         } catch (Exception e) {
-            LOGGER.severe("Ошибка при вставке фигуры: " + e.getMessage());
+            LOGGER.error("Ошибка при вставке фигуры: {}", e.getMessage(), e);
             statusLabel.setText("Ошибка вставки фигуры");
         }
     }
@@ -328,6 +328,7 @@ public class SchemeEditorController {
 
     /**
      * Получить объект сервиса сохранений
+     *
      * @return - объект сервис
      */
     public SchemeSaver getSchemeSaver() {
@@ -336,6 +337,7 @@ public class SchemeEditorController {
 
     /**
      * Получить текущую схему
+     *
      * @return - текущая схема
      */
     public Scheme getCurrentScheme() {
@@ -522,7 +524,7 @@ public class SchemeEditorController {
      */
     private void loadDevices() {
         deviceList = FXCollections.observableArrayList(deviceDAO.getAllDevices());
-        LOGGER.info("Загружено " + deviceList.size() + " устройств");
+        LOGGER.info("Загружено {} устройств", deviceList.size());
     }
 
     /**
@@ -556,9 +558,9 @@ public class SchemeEditorController {
         if (scheme == null) {
             scheme = createAutoScheme(location);
             if (schemeDAO.addScheme(scheme)) {
-                LOGGER.info("Создана автоматическая схема для: " + location);
+                LOGGER.info("Создана автоматическая схема для: {}", location);
             } else {
-                LOGGER.warning("Не удалось создать схему для: " + location);
+                LOGGER.warn("Не удалось создать схему для: {}", location);
                 return null;
             }
         }
@@ -582,14 +584,14 @@ public class SchemeEditorController {
         }
         ObservableList<Scheme> schemeList = FXCollections.observableArrayList(schemes);
         schemeComboBox.setItems(schemeList);
-        LOGGER.info("Загружено " + schemeList.size() + " схем");
+        LOGGER.info("Загружено {} схем", schemeList.size());
     }
 
     /**
      * Обработка случая, когда схемы не найдены
      */
     private void handleNoSchemesFound() {
-        LOGGER.warning("Список схем пуст");
+        LOGGER.warn("Список схем пуст");
         CustomAlert.showWarning("Загрузка схем",
                 "Не удалось загрузить или создать схемы. Возможно, отсутствуют устройства с расположениями.");
     }
@@ -672,7 +674,7 @@ public class SchemeEditorController {
             refreshAvailableDevices();
             statusLabel.setText("Схема полностью очищена");
         } catch (Exception e) {
-            LOGGER.severe("Ошибка при очистке схемы: " + e.getMessage());
+            LOGGER.error("Ошибка при очистке схемы: {}", e.getMessage(), e);
             CustomAlert.showError("Ошибка", "Не удалось полностью очистить схему: " + e.getMessage());
         }
     }
@@ -686,18 +688,18 @@ public class SchemeEditorController {
             try {
                 shapeService.clearAllShapes();
             } catch (Exception e) {
-                LOGGER.warning("clearAllShapes failed: " + e.getMessage() + " — fallback to manual");
+                LOGGER.warn("clearAllShapes failed: {} — fallback to manual", e.getMessage(), e);
                 if (schemePane != null) schemePane.getChildren().clear();
                 try {
                     shapeService.removeAllShapes();
                 } catch (Exception ex) {
-                    LOGGER.warning("removeAllShapes also failed");
+                    LOGGER.warn("removeAllShapes also failed");
                 }
             }
         }
         String schemeData = scheme.getData();
         if (schemeData != null && !schemeData.isEmpty()) {
-            System.out.println("Содержимое scheme.data: " + safeSubstring(schemeData, 100));
+            LOGGER.info("Содержимое scheme.data: {}", safeSubstring(schemeData, 100));
         }
         if (isValidSchemeData(schemeData) && shapeService != null) {
             List<String> shapeData = parseShapeData(schemeData);
@@ -745,20 +747,19 @@ public class SchemeEditorController {
                 Node deviceNode = deviceIconService.createDeviceIcon(
                         location.getX(), location.getY(), device, currentScheme
                 );
-                // Применяем сохраненный угол поворота
                 deviceNode.setRotate(location.getRotation());
                 schemePane.getChildren().add(deviceNode);
             }
         }
 
-        LOGGER.info("Загружено " + locations.size() + " устройств на схему");
+        LOGGER.info("Загружено {} устройств на схему", locations.size());
     }
 
     /**
      * Обработка ошибки загрузки схемы
      */
     private void handleSchemeLoadError(Scheme scheme, Exception e) {
-        LOGGER.severe("Ошибка при загрузке схемы '" + scheme.getName() + "': " + e.getMessage());
+        LOGGER.error("Ошибка при загрузке схемы '{}': {}", scheme.getName(), e.getMessage());
         CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить схему: " + e.getMessage());
         statusLabel.setText("Ошибка загрузки схемы");
     }
@@ -933,11 +934,8 @@ public class SchemeEditorController {
      * Проверка, является ли узел фигурой или прибором
      */
     private boolean isShapeOrDevice(Node node) {
-        System.out.println("DEBUG: Checking if node is shape/device: " + node.getClass().getSimpleName());
-
         // Фигуры наследуются от ShapeBase (который extends Group)
         if (node instanceof ShapeBase) {
-            System.out.println("DEBUG: Node is ShapeBase - it's a shape");
             return true;
         }
 
@@ -946,11 +944,8 @@ public class SchemeEditorController {
             Object userData = node.getUserData();
             boolean isDevice = (userData instanceof Device) ||
                     (userData instanceof DeviceIconService.DeviceWithRotation);
-            System.out.println("DEBUG: Node has userData - is device: " + isDevice);
             return isDevice;
         }
-
-        System.out.println("DEBUG: Node is NOT shape or device");
         return false;
     }
 
@@ -958,8 +953,6 @@ public class SchemeEditorController {
      * Поиск узла (фигуры или прибора) в указанной позиции
      */
     private Node findNodeAtPosition(double paneX, double paneY) {
-        System.out.println("DEBUG: Searching for node at PANE coordinates (" + paneX + ", " + paneY + ")");
-
         // Ищем в обратном порядке (сверху вниз)
         for (int i = schemePane.getChildren().size() - 1; i >= 0; i--) {
             Node node = schemePane.getChildren().get(i);
@@ -976,18 +969,13 @@ public class SchemeEditorController {
 
             if (node instanceof LineShape lineShape) {
                 boolean contains = lineShape.containsPoint(paneX, paneY);
-                System.out.println("DEBUG: LineShape contains check: " + contains +
-                        " at coords (" + paneX + ", " + paneY + ")");
                 if (contains) return node;
             }
             // Для остальных фигур используем стандартную проверку bounding box
             if (node.getBoundsInParent().contains(paneX, paneY)) {
-                System.out.println("DEBUG: Found node: " + node.getClass().getSimpleName());
                 return node;
             }
         }
-
-        System.out.println("DEBUG: No node found at pane position");
         return null;
     }
 
@@ -1057,14 +1045,13 @@ public class SchemeEditorController {
                 pastedShape.addToPane();
                 shapeManager.addShape(pastedShape);
                 statusLabel.setText("Фигура вставлена в позицию курсора");
-
                 // Автоматически выделяем вставленную фигуру
                 shapeManager.selectShape(pastedShape);
             } else {
                 statusLabel.setText("Ошибка вставки фигуры");
             }
         } catch (Exception e) {
-            LOGGER.severe("Ошибка при вставке фигуры: " + e.getMessage());
+            LOGGER.error("Ошибка при вставке фигуры: {}", e.getMessage(), e);
             statusLabel.setText("Ошибка вставки фигуры");
             System.err.println("ERROR in pasteShapeAtPosition: " + e.getMessage());
             e.printStackTrace();
@@ -1079,7 +1066,6 @@ public class SchemeEditorController {
         if (currentTool == null) {
             return;
         }
-
         if (currentTool == ShapeManager.Tool.TEXT) {
             // Текст создается по клику (отдельный диалог)
             Optional<String> result = CustomAlert.showTextInputDialog("Добавление текста", "Введите текст для добавления на схему:", "Новый текст");
@@ -1095,7 +1081,7 @@ public class SchemeEditorController {
                             statusLabel.setText("Текст добавлен: '" + newText + "'");
                         }
                     } catch (Exception e) {
-                        LOGGER.severe("ERROR adding TEXT: " + e.getMessage());
+                        LOGGER.error("ERROR adding TEXT: {}", e.getMessage(), e);
                         CustomAlert.showError("Ошибка добавления текста", "Не удалось добавить текст: " + e.getMessage());
                     }
                 } else {
@@ -1175,7 +1161,7 @@ public class SchemeEditorController {
                         "Прибор '" + selectedDevice.getName() + "' успешно добавлен на схему");
             }
         } catch (Exception e) {
-            LOGGER.severe("Ошибка добавления устройства: " + e.getMessage());
+            LOGGER.error("Ошибка добавления устройства: {}", e.getMessage(), e);
             CustomAlert.showError("Ошибка", "Не удалось добавить прибор: " + e.getMessage());
         }
     }
@@ -1242,9 +1228,7 @@ public class SchemeEditorController {
         Button okButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
         if (okButton != null) {
             okButton.setDisable(true);
-            tableView.getSelectionModel().selectedItemProperty().addListener((_, _, newSelection) -> {
-                okButton.setDisable(newSelection == null);
-            });
+            tableView.getSelectionModel().selectedItemProperty().addListener((_, _, newSelection) -> okButton.setDisable(newSelection == null));
         }
         // Фокус на первую строку
         if (!availableDevicesList.isEmpty()) {

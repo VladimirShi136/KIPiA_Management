@@ -22,7 +22,8 @@ import javafx.util.Duration;
 
 import java.io.IOException;
 import java.util.Objects;
-import java.util.logging.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Главный контроллер – отвечает за навигацию
@@ -30,7 +31,7 @@ import java.util.logging.Logger;
  */
 public class MainController {
     // ── Логгер для сообщений ────────
-    private static final Logger LOGGER = Logger.getLogger(MainController.class.getName());
+    private static final Logger LOGGER = LogManager.getLogger(MainController.class);
     // ── Кнопки меню ─────────────────────────────────────
     public Button devicesBtn;
     public Button addDeviceBtn;
@@ -102,7 +103,6 @@ public class MainController {
         }
 
         try {
-            System.out.println("DEBUG: Saving scheme before navigation from editor");
             schemeEditorController.getSchemeSaver().saveBeforeNavigation(schemeEditorController.getCurrentScheme());
 
             // Показываем уведомление на n секунд
@@ -256,7 +256,7 @@ public class MainController {
                 // ТЕПЕРЬ вызываем init() после установки deviceDAO
                 ctrl.init();  // инициализируем таблицу
             } else {
-                LOGGER.warning("DevicesTableController не найден");
+                LOGGER.warn("DevicesTableController не найден");
             }
 
             contentArea.getChildren().add(view);
@@ -264,7 +264,7 @@ public class MainController {
         } catch (IOException e) {
             statusLabel.setText("Ошибка загрузки списка приборов: " + e.getMessage());
             CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить список приборов");
-            LOGGER.severe("Ошибка загрузки списка приборов: " + e.getMessage());
+            LOGGER.error("Ошибка загрузки списка приборов: {}", e.getMessage(), e);
         }
     }
 
@@ -305,15 +305,15 @@ public class MainController {
                 // ТЕПЕРЬ вызываем init() после установки deviceDAO
                 ctrl.init();
             } else {
-                LOGGER.warning("DevicesGroupedController не найден");
+                LOGGER.warn("DevicesGroupedController не найден");
             }
 
             contentArea.getChildren().add(view);
             LOGGER.info("Группированный список приборов загружен успешно");
-        } catch (Exception ex) {
-            statusLabel.setText("Ошибка загрузки списка приборов по месту установки: " + ex.getMessage());
+        } catch (Exception e) {
+            statusLabel.setText("Ошибка загрузки списка приборов по месту установки: " + e.getMessage());
             CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить группированный список приборов");
-            LOGGER.severe("Ошибка загрузки группированного списка приборов: " + ex.getMessage());
+            LOGGER.error("Ошибка загрузки группированного списка приборов: {}", e.getMessage(), e);
         }
     }
 
@@ -354,7 +354,7 @@ public class MainController {
                 // ТЕПЕРЬ вызываем init() после установки всех DAO
                 schemeEditorController.init();
             } else {
-                LOGGER.warning("SchemeEditorController не найден");
+                LOGGER.warn("SchemeEditorController не найден");
             }
 
             contentArea.getChildren().clear();
@@ -367,7 +367,7 @@ public class MainController {
         } catch (IOException e) {
             statusLabel.setText("Ошибка загрузки редактора схем: " + e.getMessage());
             CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить редактор схем");
-            LOGGER.severe("Ошибка загрузки редактора схем: " + e.getMessage());
+            LOGGER.error("Ошибка загрузки редактора схем: {}", e.getMessage(), e);
         }
     }
 
@@ -407,7 +407,7 @@ public class MainController {
                 }
                 // AddDeviceController может не иметь метода init()
             } else {
-                LOGGER.warning("AddDeviceController не найден");
+                LOGGER.warn("AddDeviceController не найден");
             }
 
             contentArea.getChildren().add(view);
@@ -415,7 +415,7 @@ public class MainController {
         } catch (IOException e) {
             statusLabel.setText("Ошибка загрузки формы: " + e.getMessage());
             CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить форму добавления");
-            LOGGER.severe("Ошибка загрузки формы: " + e.getMessage());
+            LOGGER.error("Ошибка загрузки формы: {}", e.getMessage(), e);
         }
     }
 
@@ -449,7 +449,7 @@ public class MainController {
                 ctrl.init(deviceDAO, (Stage) contentArea.getScene().getWindow());
                 LOGGER.info("ReportsController инициализирован");
             } else {
-                LOGGER.warning("ReportsController не найден");
+                LOGGER.warn("ReportsController не найден");
             }
 
             contentArea.getChildren().add(view);
@@ -457,7 +457,7 @@ public class MainController {
         } catch (IOException e) {
             statusLabel.setText("Ошибка загрузки отчётов: " + e.getMessage());
             CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить отчёты");
-            LOGGER.severe("Ошибка загрузки отчётов: " + e.getMessage());
+            LOGGER.error("Ошибка загрузки отчётов: {}", e.getMessage(), e);
         }
     }
 }

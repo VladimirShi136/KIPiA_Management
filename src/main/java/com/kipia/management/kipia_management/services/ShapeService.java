@@ -4,13 +4,14 @@ import com.kipia.management.kipia_management.shapes.ShapeBase;
 import com.kipia.management.kipia_management.shapes.ShapeFactory;
 import com.kipia.management.kipia_management.shapes.ShapeHandler;
 import com.kipia.management.kipia_management.shapes.ShapeType;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-import java.util.logging.Logger;
 
 /**
  * @author vladimir_shi
@@ -18,7 +19,7 @@ import java.util.logging.Logger;
  */
 
 public class ShapeService {
-    private static final Logger LOGGER = Logger.getLogger(ShapeService.class.getName());
+    private static final Logger LOGGER = LogManager.getLogger(ShapeService.class);
 
     private final Consumer<ShapeHandler> deleteAction;
     private final ShapeFactory factory;
@@ -30,20 +31,16 @@ public class ShapeService {
     }
 
     public ShapeBase addShape(ShapeType type, double... coordinates) {
-        System.out.println("DEBUG: ShapeService.addShape - type: " + type + ", coords: " + Arrays.toString(coordinates));
-
         try {
             ShapeBase shape = factory.createShape(type, coordinates);
-            System.out.println("DEBUG: ShapeFactory created: " + (shape != null));
-
             if (shape != null) {
                 shape.addToPane();
                 shapes.add(shape);
-                System.out.println("DEBUG: Shape added to service, count: " + shapes.size());
+                LOGGER.info("Фигура добавлена в сервис, количество: {}", shapes.size());
             }
             return shape;
         } catch (Exception e) {
-            System.err.println("ERROR in ShapeService.addShape: " + e.getMessage());
+            LOGGER.error("ОШИБКА в ShapeService.addShape: {}", e.getMessage(), e);
             e.printStackTrace();
             return null;
         }
@@ -77,51 +74,40 @@ public class ShapeService {
      */
     public void deserializeAndAddAll(List<String> shapeData) {
         if (shapeData == null || shapeData.isEmpty()) {
-            System.out.println("Нет данных фигур для десериализации (shapeData пустой)");
+            LOGGER.info("Нет данных фигур для десериализации shapeData пустой");
             return;
         }
-
         int loaded = 0;
         int failed = 0;
-        System.out.println("Начинаем десериализацию " + shapeData.size() + " фигур...");
-
         for (int i = 0; i < shapeData.size(); i++) {
             String data = shapeData.get(i);
             if (data != null && !data.trim().isEmpty()) {
                 try {
                     ShapeBase shape = ShapeBase.deserialize(data.trim(),
                             factory.pane(), factory.statusSetter(), factory.onSelectCallback(), factory.shapeManager());
-
                     if (shape != null) {
                         shapes.add(shape);
                         shape.addToPane();
                         loaded++;
-                        System.out.println("OK: Десериализована фигура #" + (i+1) + " (" + safeSubstring(shape.getShapeType(), 20) + ") на позицию (" +
-                                String.format("%.1f, %.1f", shape.getLayoutX(), shape.getLayoutY()) + ")");
                     } else {
                         failed++;
-                        String shortData = safeSubstring(data, 50);  // Безопасный!
-                        System.out.println("FAIL: Не удалось десериализовать фигуру #" + (i+1) + ": '" + shortData + "' (null shape)");
                     }
                 } catch (Exception e) {
                     failed++;
                     String shortData = safeSubstring(data, 50);  // Безопасный!
-                    System.out.println("ERROR: Ошибка десериализации фигуры #" + (i+1) + ": '" + shortData + "'");
-                    System.out.println("  Детали: " + e.getClass().getSimpleName() + ": " + e.getMessage());
+                    LOGGER.error("ERROR: Ошибка десериализации фигуры #{}: '{}'", i + 1, shortData, e);
                     e.printStackTrace();  // Полный стек для анализа (в консоли)
                 }
             } else {
-                System.out.println("SKIP: Пустая data для фигуры #" + (i+1));
+                LOGGER.info("SKIP: Пустая data для фигуры #{}", i + 1);
             }
         }
-
-        System.out.println("Итог десериализации: OK=" + loaded + ", FAIL=" + failed + ", всего=" + shapeData.size());
         if (loaded > 0) {
-            System.out.println("Успешно добавлены фигур: " + loaded);
+            LOGGER.info("Успешно добавлены фигур: {}", loaded);
         } else if (failed == shapeData.size()) {
-            System.out.println("Все фигур failed — проверь формат данных в БД (возможно, ',' вместо '.'). Очисти scheme.data='{}' и пересохрани.");
+            LOGGER.error("Все фигур failed — проверь формат данных в БД");
         }
-        System.out.println("Общее количество фигур в сервисе: " + shapes.size());
+        LOGGER.info("Общее количество фигур в сервисе: {}", shapes.size());
     }
 
     /**
@@ -142,7 +128,7 @@ public class ShapeService {
      */
     public void clearAllShapes() {
         if (shapes.isEmpty()) {
-            System.out.println("No shapes to clear");  // Или LOGGER
+            LOGGER.info("No shapes to clear");
             return;
         }
 
@@ -162,7 +148,6 @@ public class ShapeService {
     public void addShapeToList(ShapeBase shape) {
         if (shape != null && !shapes.contains(shape)) {
             shapes.add(shape);
-            System.out.println("DEBUG: Added shape to list, count now: " + shapes.size());
         }
     }
 
@@ -173,7 +158,7 @@ public class ShapeService {
     public void removeShapeFromList(ShapeBase shape) {
         boolean removed = shapes.remove(shape);
         if (removed) {
-            System.out.println("DEBUG: Removed shape from list, count now: " + shapes.size());
+            LOGGER.info("Удалена фигура из списка, количество сейчас: {}", shapes.size());
         }
     }
 

@@ -111,8 +111,15 @@ public class ReportsController {
     }
 
     private boolean isDarkThemeActive() {
-        // Простая проверка по стилям сцены или настройкам
         if (chartPane == null || chartPane.getScene() == null) return false;
         return chartPane.getScene().getStylesheets().stream().anyMatch(s -> s.contains("dark-theme.css"));
+    }
+
+    public ChartViewer getCurrentChartViewer() {
+        return currentChartViewer;
+    }
+
+    public Stage getPrimaryStage() {
+        return primaryStage;
     }
 }

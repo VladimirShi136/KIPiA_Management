@@ -1,14 +1,14 @@
 package com.kipia.management.kipia_management.services;
 
 import com.kipia.management.kipia_management.models.Device;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
-import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 /**
@@ -20,12 +20,12 @@ import java.util.stream.Collectors;
 
 public class ExcelExportReportsService {
     // логгер для сообщений
-    private static final Logger LOGGER = Logger.getLogger(ExcelExportReportsService.class.getName());
+    private static final Logger LOGGER = LogManager.getLogger(ExcelExportReportsService.class);
 
     // Обновлено: принимает File, возвращает boolean
     public boolean exportReport(List<Device> devices, String reportKey, File file) {
         if (file == null) {
-            LOGGER.warning("Файл для экспорта не указан");
+            LOGGER.warn("Файл для экспорта не указан");
             return false;
         }
 
@@ -48,10 +48,10 @@ public class ExcelExportReportsService {
                 workbook.write(out);
             }
 
-            LOGGER.info("Отчёт " + reportKey + " успешно экспортирован: " + file.getAbsolutePath());  // Logger вместо Alert
+            LOGGER.info("Отчёт {} успешно экспортирован: {}", reportKey, file.getAbsolutePath());  // Logger вместо Alert
             return true;
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Ошибка экспорта отчёта " + reportKey + ": " + e.getMessage());  // Logger вместо Alert
+            LOGGER.error("Ошибка экспорта отчёта {}: {}", reportKey, e.getMessage(), e);  // Logger вместо Alert
             return false;
         }
     }

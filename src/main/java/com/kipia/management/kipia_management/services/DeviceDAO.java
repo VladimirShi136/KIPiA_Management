@@ -1,12 +1,14 @@
 package com.kipia.management.kipia_management.services;
 
 import com.kipia.management.kipia_management.models.Device;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
 
 /**
  * Класс DeviceDAO (Data Access Object) предоставляет методы для работы с данными приборов
@@ -19,7 +21,7 @@ public class DeviceDAO {
     // Сервис для работы с базой данных
     private final DatabaseService databaseService;
     // логгер для сообщений
-    private static final Logger LOGGER = Logger.getLogger(DeviceDAO.class.getName());
+    private static final Logger LOGGER = LogManager.getLogger(DeviceDAO.class);
 
     /**
      * Конструктор класса DeviceDAO
@@ -58,7 +60,7 @@ public class DeviceDAO {
             stmt.executeUpdate();
             return true;
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Ошибка добавления прибора: " + e.getMessage());  // Замена println на logger
+            LOGGER.error("Ошибка добавления прибора: {}", e.getMessage(), e);
             return false;
         }
     }
@@ -77,7 +79,7 @@ public class DeviceDAO {
                 devices.add(createDeviceSQL(rs));
             }
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Ошибка получения приборов: " + e.getMessage());  // Замена println
+            LOGGER.error("Ошибка получения приборов: {}", e.getMessage(), e);  // Замена println
         }
         return devices;
     }
@@ -95,7 +97,7 @@ public class DeviceDAO {
             stmt.setInt(14, device.getId());  // Устанавливаем 14: id для WHERE
             stmt.executeUpdate();
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Ошибка обновления прибора: " + e.getMessage());  // Замена println на logger
+            LOGGER.error("Ошибка обновления прибора: {}", e.getMessage(), e);
         }
     }
 
@@ -111,7 +113,7 @@ public class DeviceDAO {
             stmt.executeUpdate();
             return true;
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Ошибка удаления прибора: " + e.getMessage());  // Замена println на logger
+            LOGGER.error("Ошибка удаления прибора: {}", e.getMessage(), e);
             return false;
         }
     }
@@ -130,7 +132,7 @@ public class DeviceDAO {
                 return createDeviceSQL(rs);
             }
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Ошибка поиска прибора: " + e.getMessage());  // Замена println на logger
+            LOGGER.error("Ошибка поиска прибора: {}", e.getMessage(), e);
         }
         return null;
     }
@@ -147,7 +149,7 @@ public class DeviceDAO {
                 return createDeviceSQL(rs);
             }
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Ошибка получения прибора по ID: " + e.getMessage());  // Замена println на logger
+            LOGGER.error("Ошибка получения прибора по ID: {}", e.getMessage(), e);
         }
         return null;
     }
@@ -165,7 +167,7 @@ public class DeviceDAO {
                 locations.add(rs.getString("location"));
             }
         } catch (SQLException e) {
-            LOGGER.log(Level.SEVERE, "Ошибка получения уникальных локаций: " + e.getMessage());  // Замена println на logger
+            LOGGER.error("Ошибка получения уникальных локаций: {}", e.getMessage(), e);
         }
         return locations;
     }

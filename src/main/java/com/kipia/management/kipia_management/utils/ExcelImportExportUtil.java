@@ -7,6 +7,8 @@ import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableView;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
@@ -15,8 +17,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Класс с утилитами для работы с импортом и экспортом таблицы БД
@@ -26,7 +26,7 @@ import java.util.logging.Logger;
  */
 public class ExcelImportExportUtil {
     // --- Логгер ---
-    private static final Logger LOGGER = Logger.getLogger(ExcelImportExportUtil.class.getName());
+    private static final Logger LOGGER = LogManager.getLogger(ExcelImportExportUtil.class);
     // --- Список заголовков столбцов ---
     private static final String[] HEADERS = {
             "Тип прибора", "Модель", "Завод изготовитель", "Инв. №", "Год выпуска",
@@ -60,10 +60,10 @@ public class ExcelImportExportUtil {
             try (FileOutputStream fos = new FileOutputStream(file)) {
                 wb.write(fos);
             }
-            LOGGER.info("Экспорт завершён: " + file.getAbsolutePath());  // Logger для уведомлений
+            LOGGER.info("Экспорт завершён: {}", file.getAbsolutePath());
             return true;
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Ошибка экспорта: " + e.getMessage());  // Logger для ошибок
+            LOGGER.error("Ошибка экспорта: {}", e.getMessage(), e);
             return false;
         }
     }
@@ -87,7 +87,7 @@ public class ExcelImportExportUtil {
              Workbook wb = new XSSFWorkbook(fis)) {
             Sheet sheet = wb.getSheet("Devices");
             if (sheet == null) {
-                LOGGER.severe("Лист 'Devices' не найден в файле");  // Логгирование ошибки
+                LOGGER.error("Лист 'Devices' не найден в файле");  // Логгирование ошибки
                 runSafe(onError);
                 return null;
             }
@@ -98,7 +98,7 @@ public class ExcelImportExportUtil {
             LOGGER.info(result);  // Логгирование успеха
             return result;
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Ошибка импорта: " + e.getMessage());  // Логгирование ошибки
+            LOGGER.error("Ошибка импорта: {}", e.getMessage(), e);
             runSafe(onError);
             return null;
         }
@@ -147,10 +147,10 @@ public class ExcelImportExportUtil {
             try (FileOutputStream fos = new FileOutputStream(file)) {
                 wb.write(fos);
             }
-            LOGGER.info("Экспорт завершён: " + file.getAbsolutePath());  // Логгирование успеха
+            LOGGER.info("Экспорт завершён: {}", file.getAbsolutePath());  // Логгирование успеха
             return true;
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Ошибка экспорта: " + e.getMessage());  // Логгирование ошибки
+            LOGGER.error("Ошибка экспорта: {}", e.getMessage(), e);  // Логгирование ошибки
             return false;
         }
     }
@@ -175,7 +175,7 @@ public class ExcelImportExportUtil {
              Workbook wb = new XSSFWorkbook(fis)) {
             Sheet sheet = wb.getSheet("GroupedDevices");
             if (sheet == null) {
-                LOGGER.severe("Лист 'GroupedDevices' не найден в файле");  // Логгирование ошибки
+                LOGGER.error("Лист 'GroupedDevices' не найден в файле");  // Логгирование ошибки
                 runSafe(onError);
                 return;
             }
@@ -212,10 +212,9 @@ public class ExcelImportExportUtil {
             }
             treeTable.setRoot(root);
             runSafe(onSuccessUpdate);
-            String result = "Импорт завершён!\nДобавлено: " + imported + "\nОбновлено: " + updated;
-            LOGGER.info(result);  // Логгирование успеха
+            LOGGER.info("Импорт завершён!\nДобавлено: {}\nОбновлено: {}", imported, updated);  // Логгирование успеха
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Ошибка импорта: " + e.getMessage());  // Логгирование ошибки
+            LOGGER.error("Ошибка импорта: {}", e.getMessage(), e);  // Логгирование ошибки
             runSafe(onError);
         }
     }

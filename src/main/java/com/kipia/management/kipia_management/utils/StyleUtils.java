@@ -27,14 +27,12 @@ import java.util.Objects;
 public class StyleUtils {
     // Путь к файлу со стилями css
     private static final String CSS_PATH = "/styles/light-theme.css";
-
     // CSS классы для разных типов алертов
     private static final String INFO_ALERT = "info-alert";
     private static final String WARNING_ALERT = "warning-alert";
     private static final String ERROR_ALERT = "error-alert";
     private static final String CONFIRM_ALERT = "confirm-alert";
     private static final String SUCCESS_ALERT = "success-alert";
-
     // CSS классы для компонентов
     private static final String STYLED_TABLE_VIEW = "styled-table-view";
 
@@ -48,13 +46,13 @@ public class StyleUtils {
     public static void applyHoverAndAnimation(Button button, String defaultCssClass, String hoverCssClass) {
         button.getStyleClass().removeIf(c -> c.equals(defaultCssClass) || c.equals(hoverCssClass));
         button.getStyleClass().add(defaultCssClass);
-        button.setOnMouseEntered(e -> {
+        button.setOnMouseEntered(_ -> {
             button.getStyleClass().remove(defaultCssClass);
             if (!button.getStyleClass().contains(hoverCssClass)) {
                 button.getStyleClass().add(hoverCssClass);
             }
         });
-        button.setOnMouseExited(e -> {
+        button.setOnMouseExited(_ -> {
             button.getStyleClass().remove(hoverCssClass);
             if (!button.getStyleClass().contains(defaultCssClass)) {
                 button.getStyleClass().add(defaultCssClass);
@@ -105,13 +103,13 @@ public class StyleUtils {
                 )
         );
 
-        button.setOnMouseEntered(e -> {
+        button.setOnMouseEntered(_ -> {
             button.setEffect(glow);
             hoverIn.playFromStart();
             scaleIn.playFromStart();
         });
 
-        button.setOnMouseExited(e -> {
+        button.setOnMouseExited(_ -> {
             button.setEffect(null);
             hoverIn.stop();
             button.setStyle(
@@ -168,7 +166,6 @@ public class StyleUtils {
      */
     public static String getAlertStyleClass(String alertType) {
         return switch (alertType.toLowerCase()) {
-            case "info" -> INFO_ALERT;
             case "warning" -> WARNING_ALERT;
             case "error" -> ERROR_ALERT;
             case "confirm" -> CONFIRM_ALERT;
@@ -191,7 +188,7 @@ public class StyleUtils {
         button.getStyleClass().add(defaultCssClass);
 
         // Обработчик наведения мыши
-        button.setOnMouseEntered(e -> {
+        button.setOnMouseEntered(_ -> {
             // Не применяем hover, если кнопка уже активна
             if (!button.getStyleClass().contains(activeCssClass)) {
                 button.getStyleClass().remove(defaultCssClass);
@@ -202,7 +199,7 @@ public class StyleUtils {
         });
 
         // Обработчик ухода мыши
-        button.setOnMouseExited(e -> {
+        button.setOnMouseExited(_ -> {
             // Не меняем обратно, если кнопка активна
             if (!button.getStyleClass().contains(activeCssClass)) {
                 button.getStyleClass().remove(hoverCssClass);
@@ -320,7 +317,7 @@ public class StyleUtils {
      * Настройка поведения TableView (двойной клик и hover)
      */
     public static <T> void setupTableViewBehavior(TableView<T> tableView, Dialog<T> dialog) {
-        tableView.setRowFactory(tv -> {
+        tableView.setRowFactory(_ -> {
             TableRow<T> row = new TableRow<>();
             row.setOnMouseClicked(event -> {
                 if (event.getClickCount() == 2 && (!row.isEmpty())) {
@@ -338,9 +335,7 @@ public class StyleUtils {
             okButton.setDisable(true);
 
             // Активируем кнопку только когда выбран элемент
-            tableView.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
-                okButton.setDisable(newSelection == null);
-            });
+            tableView.getSelectionModel().selectedItemProperty().addListener((_, _, newSelection) -> okButton.setDisable(newSelection == null));
         }
     }
 

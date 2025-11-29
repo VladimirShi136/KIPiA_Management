@@ -13,7 +13,8 @@
 <VBox xmlns="http://javafx.com/javafx/23"
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.kipia.management.kipia_management.controllers.DevicesTableController"
-      spacing="10">
+      spacing="10"
+      VBox.vgrow="ALWAYS">
 
     <!-- 1️⃣ ПАНЕЛЬ ПОИСКА И УДАЛЕНИЯ -->
     <HBox spacing="10" alignment="CENTER_LEFT">
@@ -107,5 +108,5 @@
     <!-- 3️⃣ ТАБЛИЦА ПРИБОРОВ -->
     <TableView fx:id="deviceTable"
                editable="true"
-               prefHeight="400"/>
+               VBox.vgrow="ALWAYS"/>
 </VBox>

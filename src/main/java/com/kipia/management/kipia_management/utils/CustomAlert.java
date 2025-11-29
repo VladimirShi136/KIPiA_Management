@@ -9,67 +9,116 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.stage.*;
 import javafx.util.Duration;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.Objects;
 import java.util.Optional;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
- * Класс CustomAlert предоставляет методы для создания и отображения пользовательских alerts.
+ * Класс CustomAlert предоставляет методы для создания и отображения пользовательских alerts на русском языке.
  *
  * @author vladimir_shi
  * @since 10.10.2025
  */
 public class CustomAlert {
-    private static final Logger LOGGER = Logger.getLogger(CustomAlert.class.getName());
-    // Статические константы для кнопок (для consistency и сравнения)
-    public static final ButtonType RETRY_BUTTON = new ButtonType("Повторить");
-    public static final ButtonType CANCEL_BUTTON = new ButtonType("Отмена");
-    // Простые статические методы для базовых алертов (замена стандартных Alert.alert)
+    private static final Logger LOGGER = LogManager.getLogger(CustomAlert.class);
+
+    // Константы для русских кнопок
+    public static final ButtonType RETRY_BUTTON = new ButtonType("Повторить", ButtonBar.ButtonData.APPLY);
+    public static final ButtonType CANCEL_BUTTON = new ButtonType("Отмена", ButtonBar.ButtonData.CANCEL_CLOSE);
+    private static final ButtonType OK_BUTTON = new ButtonType("ОК", ButtonBar.ButtonData.OK_DONE);
+    private static final ButtonType YES_BUTTON = new ButtonType("Да", ButtonBar.ButtonData.YES);
+    private static final ButtonType NO_BUTTON = new ButtonType("Нет", ButtonBar.ButtonData.NO);
+
+    // Базовые методы с русифицированными заголовками и текстом
+
     public static void showInfo(String title, String message) {
-        showSimpleAlert(Alert.AlertType.INFORMATION, title, message, "info");
+        showSimpleAlert(
+                Alert.AlertType.INFORMATION,
+                title,
+                message,
+                "info",
+                "Информация"  // Русский заголовок по умолчанию
+        );
     }
+
     public static void showWarning(String title, String message) {
-        showSimpleAlert(Alert.AlertType.WARNING, title, message, "warning");
+        showSimpleAlert(
+                Alert.AlertType.WARNING,
+                title,
+                message,
+                "warning",
+                "Предупреждение"
+        );
     }
+
     public static void showError(String title, String message) {
-        showSimpleAlert(Alert.AlertType.ERROR, title, message, "error");
+        showSimpleAlert(
+                Alert.AlertType.ERROR,
+                title,
+                message,
+                "error",
+                "Ошибка"
+        );
     }
+
     public static void showSuccess(String title, String message) {
-        showSimpleAlert(Alert.AlertType.INFORMATION, title, message, "success");
+        showSimpleAlert(
+                Alert.AlertType.INFORMATION,
+                title,
+                message,
+                "success",
+                "Успех"
+        );
     }
+
+    // Подтверждение (Да/Нет)
     public static boolean showConfirmation(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION, message, ButtonType.YES, ButtonType.NO);
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle(title);
+        alert.setHeaderText("Подтверждение");  // Русский заголовок вверху окна
+        alert.setContentText(message);
+
+        alert.getButtonTypes().clear();
+        alert.getButtonTypes().addAll(YES_BUTTON, NO_BUTTON);
+
         StyleUtils.setupAlertStyle(alert, title, StyleUtils.getAlertStyleClass("confirm"));
         alert.showAndWait();
-        return alert.getResult() == ButtonType.YES;
+        return alert.getResult() == YES_BUTTON;
     }
-    // Новый метод для ввода текста (для редактирования TEXT фигур)
+
+    // Ввод текста
     public static Optional<String> showTextInputDialog(String title, String message, String defaultValue) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         StyleUtils.setupAlertStyle(alert, title, StyleUtils.getAlertStyleClass("confirm"));
+        alert.setTitle(title);
         alert.setHeaderText(message);
 
         TextField textField = new TextField(defaultValue != null ? defaultValue : "");
         alert.setGraphic(textField);
-        alert.getButtonTypes().setAll(ButtonType.OK, ButtonType.CANCEL);
+
+        alert.getButtonTypes().clear();
+        alert.getButtonTypes().addAll(OK_BUTTON, CANCEL_BUTTON);
 
         Optional<ButtonType> result = alert.showAndWait();
-        if (result.isPresent() && result.get() == ButtonType.OK) {
+        if (result.isPresent() && result.get() == OK_BUTTON) {
             return Optional.of(textField.getText());
         } else {
             return Optional.empty();
         }
     }
-    // Расширенный метод для ошибок с кнопками, expandable content и логгингом (заменяет showErrorDialog)
+
+    // Расширенный предупреждение об ошибке
     public static ButtonType showAdvancedError(String title, String message, Throwable exception) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         StyleUtils.setupAlertStyle(alert, title, StyleUtils.getAlertStyleClass("error"));
+        alert.setTitle(title);
         alert.setHeaderText("Произошла ошибка!");
         alert.setContentText(message);
 
-        alert.getButtonTypes().setAll(ButtonType.OK, RETRY_BUTTON, CANCEL_BUTTON);
+        alert.getButtonTypes().clear();
+        alert.getButtonTypes().addAll(OK_BUTTON, RETRY_BUTTON, CANCEL_BUTTON);
 
         if (exception != null) {
             TextArea textArea = new TextArea(exception.toString());
@@ -86,20 +135,16 @@ public class CustomAlert {
         }
 
         if (exception != null) {
-            LOGGER.log(Level.SEVERE, "Ошибка: " + message, exception);
+            LOGGER.error("Ошибка: {}", message, exception);
         } else {
-            LOGGER.log(Level.SEVERE, "Ошибка: " + message);
+            LOGGER.error("Ошибка: {}", message);
         }
 
         alert.showAndWait();
         return alert.getResult();
     }
 
-    /**
-     * Показывает окно автосохранения с предустановленными стилями.
-     * @param message текст сообщения (например, "Автосохранение...")
-     * @param durationSec время отображения в секундах
-     */
+    // Уведомление об автосохранении
     public static void showAutoSaveNotification(String message, double durationSec) {
         try {
             Stage notificationStage = new Stage();
@@ -108,7 +153,6 @@ public class CustomAlert {
             notificationStage.setAlwaysOnTop(true);
             notificationStage.setResizable(false);
 
-            // Используем CSS класс вместо inline стилей
             Label label = new Label(message);
             label.getStyleClass().add("auto-save-notification");
 
@@ -118,12 +162,14 @@ public class CustomAlert {
             Scene scene = new Scene(root);
             scene.setFill(Color.TRANSPARENT);
 
-            // Подключаем CSS файл
-            scene.getStylesheets().add(Objects.requireNonNull(CustomAlert.class.getResource("/styles/light-theme.css")).toExternalForm());
+            scene.getStylesheets().add(
+                    Objects.requireNonNull(
+                            CustomAlert.class.getResource("/styles/light-theme.css")
+                    ).toExternalForm()
+            );
 
             notificationStage.setScene(scene);
 
-            // Позиционируем в правом верхнем углу
             Window mainWindow = Stage.getWindows().stream()
                     .filter(Window::isShowing)
                     .findFirst()
@@ -136,7 +182,6 @@ public class CustomAlert {
                 notificationStage.setY(mainWindow.getY() + offsetY);
             }
 
-            // Анимация появления/исчезновения
             root.setOpacity(0);
             FadeTransition fadeIn = new FadeTransition(Duration.millis(300), root);
             fadeIn.setFromValue(0);
@@ -145,13 +190,13 @@ public class CustomAlert {
             FadeTransition fadeOut = new FadeTransition(Duration.millis(300), root);
             fadeOut.setFromValue(1);
             fadeOut.setToValue(0);
-            fadeOut.setOnFinished(e -> notificationStage.close());
+            fadeOut.setOnFinished(_ -> notificationStage.close());
 
             notificationStage.show();
             fadeIn.play();
 
             PauseTransition pause = new PauseTransition(Duration.seconds(durationSec));
-            pause.setOnFinished(e -> fadeOut.play());
+            pause.setOnFinished(_ -> fadeOut.play());
             pause.play();
 
         } catch (Exception e) {
@@ -159,9 +204,21 @@ public class CustomAlert {
         }
     }
 
+    // Вспомогательный метод для простых алерт-окон
+    private static void showSimpleAlert(
+            Alert.AlertType type,
+            String title,
+            String message,
+            String styleType,
+            String defaultHeader
+    ) {
+        Alert alert = new Alert(type);
+        alert.setTitle(title);
+        alert.setHeaderText(defaultHeader);  // Русский заголовок вверху окна
+        alert.setContentText(message);
+        alert.getButtonTypes().clear();
+        alert.getButtonTypes().add(OK_BUTTON);
 
-    private static void showSimpleAlert(Alert.AlertType type, String title, String message, String styleType) {
-        Alert alert = new Alert(type, message, ButtonType.OK);
         StyleUtils.setupAlertStyle(alert, title, StyleUtils.getAlertStyleClass(styleType));
         alert.showAndWait();
     }

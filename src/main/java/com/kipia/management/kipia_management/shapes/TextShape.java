@@ -104,10 +104,7 @@ public class TextShape extends ShapeBase {
             // УСТАНАВЛИВАЕМ реальные размеры текста + небольшие отступы
             double textWidth = textBounds.getWidth() + 4;  // +2px с каждой стороны
             double textHeight = textBounds.getHeight() + 4; // +2px сверху и снизу
-
             setCurrentDimensions(textWidth, textHeight);
-
-            System.out.println("Text calculated size: " + textWidth + "x" + textHeight);
         });
     }
 
@@ -148,7 +145,7 @@ public class TextShape extends ShapeBase {
 
     @Override
     public void makeResizeHandlesVisible() {
-        System.out.println("DEBUG: TextShape - no resize handles, only rotation");
+        // НЕ показываем handles - ресайз через меню
     }
 
     @Override
@@ -165,7 +162,7 @@ public class TextShape extends ShapeBase {
 
         // ДОБАВИТЬ пункт поворота
         MenuItem rotateItem = new MenuItem("Повернуть");
-        rotateItem.setOnAction(event -> {
+        rotateItem.setOnAction(_ -> {
             double newAngle = (rotationAngle + 45) % 360;
             setRotation(newAngle);
 
@@ -177,27 +174,27 @@ public class TextShape extends ShapeBase {
 
         // Пункт "Копировать"
         MenuItem copyItem = new MenuItem("Копировать");
-        copyItem.setOnAction(event -> copyToClipboard());
+        copyItem.setOnAction(_ -> copyToClipboard());
 
         // Пункт "Вставить"
         MenuItem pasteItem = new MenuItem("Вставить");
-        pasteItem.setOnAction(event -> pasteFromClipboard());
+        pasteItem.setOnAction(_ -> pasteFromClipboard());
         pasteItem.disableProperty().bind(ClipboardManager.hasShapeDataProperty().not());
 
         // Специфичные для текста пункты
         MenuItem textColorItem = new MenuItem("Изменить цвет текста");
-        textColorItem.setOnAction(e -> changeTextColor());
+        textColorItem.setOnAction(_ -> changeTextColor());
 
         MenuItem editTextItem = new MenuItem("Изменить текст");
-        editTextItem.setOnAction(e -> openTextEditDialog());
+        editTextItem.setOnAction(_ -> openTextEditDialog());
 
         MenuItem changeFontItem = new MenuItem("Изменить шрифт");
-        changeFontItem.setOnAction(e -> openFontDialog());
+        changeFontItem.setOnAction(_ -> openFontDialog());
 
         SeparatorMenuItem separator = new SeparatorMenuItem();
 
         MenuItem deleteItem = new MenuItem("Удалить");
-        deleteItem.setOnAction(e -> {
+        deleteItem.setOnAction(_ -> {
             if (deleteAction != null) {
                 deleteAction.accept(this);
             }
@@ -371,15 +368,11 @@ public class TextShape extends ShapeBase {
         String fontStyle = font.getStyle();
 
         // Формат: TEXT|X|Y|W|H|ROTATION|TEXT|FONT_SIZE|FONT_FAMILY|FONT_STYLE|STROKE_COLOR|FILL_COLOR
-        String result = String.format(java.util.Locale.US, "TEXT|%.2f|%.2f|%.2f|%.2f|%.1f|%s|%.1f|%s|%s%s",
+        return String.format(java.util.Locale.US, "TEXT|%.2f|%.2f|%.2f|%.2f|%.1f|%s|%.1f|%s|%s%s",
                 pos[0], pos[1], width, height,
                 rotationAngle,
                 escapedText, fontSize, fontFamily, fontStyle,
                 serializeColors());
-
-        System.out.println("DEBUG: Text serialized: " + result);
-        System.out.println("DEBUG: Colors in serialization - Stroke: " + strokeColor + ", Fill: " + fillColor);
-        return result;
     }
 
     /**

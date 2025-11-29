@@ -35,6 +35,13 @@
     -fx-font-weight: bold;
 }
 
+.version-label {
+    -fx-text-fill: #bdc3c7;
+    -fx-font-size: 12px;
+    -fx-font-style: italic;
+    -fx-padding: 0 15px 0 0;
+}
+
 /* Левая навигация */
 .left {
     -fx-background-color: #527091;
@@ -291,45 +298,204 @@
     -fx-text-fill: #555;
 }
 
-/* Кнопки в таблице, колонка "Фото" */
+/* Адаптивные размеры для кнопок фото */
+/* Базовые стили для кнопок фото - ТОЛЬКО ЦВЕТА И ВНЕШНИЙ ВИД */
 .table-button-add {
     -fx-background-color: #4CAF50;
     -fx-text-fill: white;
-    -fx-font-size: 8px;
-    -fx-background-radius: 5px;
-    -fx-border-radius: 5px;
+    -fx-background-radius: 4px;
+    -fx-border-radius: 4px;
     -fx-border-color: #388E3C;
     -fx-border-width: 1;
-    -fx-padding: 3 6;
     -fx-cursor: hand;
     -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
-    -fx-transition: background-color 0.2s ease;
 }
 
 .table-button-add-hover {
-    -fx-background-color: #66BB6A; /* светлее зелёный */
-    -fx-padding: 3 6;
-    -fx-font-size: 8px;
+    -fx-background-color: #66BB6A;
 }
 
 .table-button-view {
     -fx-background-color: #2196F3;
     -fx-text-fill: white;
-    -fx-font-size: 8px;
-    -fx-background-radius: 5px;
-    -fx-border-radius: 5px;
+    -fx-background-radius: 4px;
+    -fx-border-radius: 4px;
     -fx-border-color: #1976D2;
     -fx-border-width: 1;
-    -fx-padding: 3 6;
     -fx-cursor: hand;
     -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
-    -fx-transition: background-color 0.2s ease;
 }
 
 .table-button-view-hover {
-    -fx-background-color: #64B5F6; /* светлее синий */
-    -fx-padding: 3 6;
-    -fx-font-size: 8px;
+    -fx-background-color: #64B5F6;
+}
+
+/* ===== СТИЛИ ДЛЯ ПРОСМОТРЩИКА ФОТОГРАФИЙ ===== */
+
+/* Полностью черный фон при зуме */
+.photo-viewer-container.zoomed {
+    -fx-background-color: #000000 !important;
+}
+
+/* Верхняя панель при зуме - полностью черная */
+.photo-viewer-top-panel.zoomed {
+    -fx-background-color: #000000 !important;
+    -fx-border-color: #333333 !important;
+    -fx-effect: dropshadow(three-pass-box, rgba(255,255,255,0.1), 5, 0, 0, 1) !important;
+}
+
+/* Текст и элементы верхней панели при зуме */
+.photo-viewer-top-panel.zoomed .photo-viewer-device-info {
+    -fx-border-color: #444444 !important;
+    -fx-background-color: rgba(30, 30, 30, 0.8) !important;
+}
+
+.photo-viewer-top-panel.zoomed .photo-viewer-device-text {
+    -fx-text-fill: #888888 !important; /* Серый текст */
+}
+
+.photo-viewer-top-panel.zoomed .photo-viewer-counter {
+    -fx-background-color: rgba(50, 50, 50, 0.8) !important;
+    -fx-text-fill: #888888 !important;
+    -fx-border-color: #444444 !important;
+}
+
+.photo-viewer-top-panel.zoomed .photo-viewer-nav-button {
+    -fx-background-color: #1a331a !important; /* Очень темно-зеленый */
+    -fx-text-fill: #666666 !important;
+    -fx-border-color: #2d4d2d !important;
+}
+
+.photo-viewer-top-panel.zoomed .photo-viewer-nav-button:hover {
+    -fx-background-color: #2d4d2d !important;
+    -fx-text-fill: #888888 !important;
+}
+
+.photo-viewer-top-panel.zoomed .photo-viewer-system-button {
+    -fx-background-color: #331408 !important; /* Очень темно-оранжевый */
+    -fx-text-fill: #666666 !important;
+    -fx-border-color: #4d260f !important;
+}
+
+.photo-viewer-top-panel.zoomed .photo-viewer-system-button:hover {
+    -fx-background-color: #4d260f !important;
+    -fx-text-fill: #888888 !important;
+}
+
+/* Оверлей для затемнения - теперь не нужен или полностью черный */
+.zoom-overlay {
+    -fx-background-color: #000000; /* Полностью черный */
+}
+
+/* Контейнер для фото при зуме */
+.photo-viewer-image-pane.zoomed {
+    -fx-background-color: #000000;
+    -fx-cursor: move;
+}
+
+/* Стиль для ImageView при зуме */
+.photo-viewer-image.zoomed {
+    -fx-cursor: move;
+}
+
+/* Остальные стили без изменений */
+.photo-viewer-device-info {
+    -fx-background-color: transparent;
+    -fx-padding: 6px 10px;
+    -fx-border-color: white;
+    -fx-border-width: 1px;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-max-width: 320px;
+    -fx-pref-width: 320px;
+}
+
+.photo-viewer-device-text {
+    -fx-font-size: 11px !important;
+    -fx-text-fill: white !important;
+    -fx-font-weight: bold;
+    -fx-wrap-text: true;
+}
+
+.photo-viewer-top-panel {
+    -fx-background-color: #456381;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 8, 0, 0, 2);
+    -fx-padding: 15px;
+    -fx-border-color: #3a546d;
+    -fx-border-width: 0 0 2px 0;
+    -fx-spacing: 20px;
+}
+
+.photo-viewer-center-container {
+    -fx-alignment: center;
+    -fx-spacing: 15px;
+}
+
+.photo-viewer-nav-container {
+    -fx-alignment: center;
+    -fx-spacing: 10px;
+}
+
+.photo-viewer-nav-button {
+    -fx-background-color: #2e7d32;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-cursor: hand;
+    -fx-pref-width: 90px;
+    -fx-pref-height: 32px;
+    -fx-font-size: 13px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 3, 0, 0, 1);
+}
+
+.photo-viewer-nav-button:hover {
+    -fx-background-color: #4caf50;
+}
+
+.photo-viewer-counter {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-text-fill: white !important;
+    -fx-padding: 6px 12px;
+    -fx-border-color: white;
+    -fx-border-radius: 12px;
+    -fx-background-radius: 12px;
+    -fx-border-width: 1px;
+    -fx-min-width: 120px;
+    -fx-alignment: center;
+}
+
+.photo-viewer-system-button {
+    -fx-background-color: #d84315;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-padding: 8px 16px;
+    -fx-cursor: hand;
+    -fx-font-size: 13px;
+    -fx-min-width: 280px;
+    -fx-pref-width: 280px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 3, 0, 0, 1);
+}
+
+.photo-viewer-system-button:hover {
+    -fx-background-color: #ff5722;
+}
+
+.photo-viewer-container {
+    -fx-background-color: #f8f9fa;
+}
+
+.photo-viewer-image-pane {
+    -fx-alignment: center;
+    -fx-background-color: #ecf0f1;
+}
+
+.photo-viewer-image {
+    -fx-alignment: center;
 }
 
 /* Нижняя панель */
@@ -387,32 +553,92 @@
 }
 
 /* Add-device-form.fxml */
+/* Центрирование всей формы */
 .add-device-root {
-    -fx-padding: 15px;
+    -fx-background-color: #f0f0f0;
+    -fx-padding: 0px;
+    -fx-spacing: 0px;
+}
+
+.scroll-pane {
+    -fx-background: transparent;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 0px;
+}
+
+.scroll-pane .viewport {
+    -fx-background-color: transparent;
+}
+
+.scroll-pane .scroll-bar:vertical {
+    -fx-background-color: transparent;
+}
+
+.scroll-pane .scroll-bar:vertical .thumb {
+    -fx-background-color: #c0c0c0;
+    -fx-background-radius: 4px;
+}
+
+.scroll-pane .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #a0a0a0;
+}
+
+/* Центрирование контейнера формы */
+.add-device-root > ScrollPane > VBox {
+    -fx-alignment: top-center;
+    -fx-background-color: white;
+    -fx-padding: 20px;
 }
 
 .form-header {
-    -fx-font-size: 16px;
+    -fx-font-size: 18px;
     -fx-font-weight: bold;
-    -fx-padding-bottom: 10px;
+    -fx-text-fill: #2c3e50;
+    -fx-padding: 0px 0px 10px 0px;
 }
 
 .form-grid {
-    -fx-hgap: 10px;
-    -fx-vgap: 10px;
+    -fx-hgap: 15px;
+    -fx-vgap: 12px;
+    -fx-alignment: center;
 }
 
 .form-label {
     -fx-alignment: center-right;
+    -fx-text-alignment: right;
+    -fx-pref-width: 180px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2c3e50;
 }
 
 .form-input {
-    -fx-pref-width: 200px;
+    -fx-pref-width: 280px;
+    -fx-background-color: white;
+    -fx-border-color: #bdc3c7;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-padding: 8px;
+}
+
+.form-input:focused {
+    -fx-border-color: #3498db;
 }
 
 .form-textarea {
-    -fx-pref-width: 200px;
+    -fx-pref-width: 280px;
     -fx-pref-height: 60px;
+    -fx-background-color: white;
+    -fx-border-color: #bdc3c7;
+    -fx-border-radius: 4px;
+    -fx-padding: 8px;
+}
+
+/* Центрирование кнопок под формой */
+.add-device-root .form-buttons {
+    -fx-alignment: CENTER !important;  /* ⬅️ ЦЕНТРИРОВАТЬ КНОПКИ */
+    -fx-spacing: 20px;
+    -fx-padding: 20px 0px 0px 0px;
 }
 
 .photo-picker {
@@ -442,8 +668,12 @@
 }
 
 .photo-list {
-    -fx-pref-height: 100px;
-    -fx-pref-width: 200px;
+    -fx-pref-width: 280px;
+    -fx-pref-height: 80px;
+    -fx-background-color: white;
+    -fx-border-color: #bdc3c7;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
 }
 
 .form-buttons {
@@ -454,8 +684,8 @@
 .button-cancel {
     -fx-background-color: #932014;
     -fx-text-fill: white;
-    -fx-min-width: 110px;
-    -fx-pref-width: 110px;
+    -fx-pref-width: 120px;
+    -fx-pref-height: 35px;
     -fx-padding: 5px 10px;
     -fx-background-radius: 5px;
     -fx-border-radius: 5px;
@@ -467,8 +697,8 @@
 }
 
 .button-cancel-hover {
-    -fx-min-width: 110px;
-    -fx-pref-width: 110px;
+    -fx-pref-width: 120px;
+    -fx-pref-height: 35px;
     -fx-background-color: #f43420;
     -fx-padding: 5px 10px;
 }
@@ -476,8 +706,8 @@
 .button-add {
     -fx-background-color: #1eb15e;
     -fx-text-fill: white;
-    -fx-min-width: 110px;
-    -fx-pref-width: 110px;
+    -fx-pref-width: 120px;
+    -fx-pref-height: 35px;
     -fx-padding: 5px 10px;
     -fx-background-radius: 5px;
     -fx-border-radius: 5px;
@@ -489,15 +719,17 @@
 }
 
 .button-add-hover {
-    -fx-min-width: 110px;
-    -fx-pref-width: 110px;
+    -fx-pref-width: 120px;
+    -fx-pref-height: 35px;
     -fx-background-color: #1bd568;
     -fx-padding: 5px 10px;
 }
 
-.form-message {
-    -fx-text-fill: red;
-    -fx-padding-top: 10px;
+/* Контейнер кнопок */
+.add-device-root HBox {
+    -fx-alignment: center;
+    -fx-spacing: 20px;
+    -fx-padding: 20px 0px 0px 0px;
 }
 
 /* Scheme-editor.fxml */
@@ -563,6 +795,15 @@
 
 .scheme-label, .select-label {
     -fx-font-weight: bold;
+}
+
+.scheme-scroll .scroll-bar .thumb {
+    -fx-background-color: #c0c0c0; /* Серый цвет как в TableView */
+    -fx-background-radius: 4px; /* Закругление углов как в TableView */
+}
+
+.scheme-scroll .scroll-bar .thumb:hover {
+    -fx-background-color: #a0a0a0; /* Темнее при наведении как в TableView */
 }
 
 /* Стили для обычной TableView в DevicesTableController */
@@ -638,6 +879,17 @@
 }
 
 .table-view .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #a0a0a0;
+}
+
+.table-view .scroll-bar:horizontal {
+    -fx-background-color: #f0f0f0; /* как у вертикального */
+}
+.table-view .scroll-bar:horizontal .thumb {
+    -fx-background-color: #c0c0c0;
+    -fx-background-radius: 4px;
+}
+.table-view .scroll-bar:horizontal .thumb:hover {
     -fx-background-color: #a0a0a0;
 }
 
@@ -756,6 +1008,17 @@
 }
 
 .tree-table-view .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #a0a0a0;
+}
+
+.tree-table-view .scroll-bar:horizontal {
+    -fx-background-color: #f0f0f0;
+}
+.tree-table-view .scroll-bar:horizontal .thumb {
+    -fx-background-color: #c0c0c0;
+    -fx-background-radius: 4px;
+}
+.tree-table-view .scroll-bar:horizontal .thumb:hover {
     -fx-background-color: #a0a0a0;
 }
 
