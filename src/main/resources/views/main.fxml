@@ -12,17 +12,25 @@
   * Главное окно *
 -->
 
+<?import javafx.geometry.Insets?>
 <BorderPane xmlns="http://javafx.com/javafx/23"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.kipia.management.kipia_management.controllers.MainController">
 
     <!-- 1️⃣ ── Верхняя панель ──  -->
     <top>
-        <HBox alignment="CENTER" styleClass="top">
+        <HBox alignment="CENTER_LEFT" styleClass="top">
+            <Label text="Учёт приборов КИПиА" styleClass="header-label">
+                <padding>
+                    <Insets left="25"/>
+                </padding>
+            </Label>
             <Region HBox.hgrow="ALWAYS"/>
-            <Label text="Учёт приборов КИПиА" styleClass="header-label"/>
-            <Region HBox.hgrow="ALWAYS"/>
-            <Label text="ver 1.0.2" styleClass="version-label"/>
+            <Label text="ver 1.0.2" styleClass="version-label">
+                <padding>
+                    <Insets right="15"/>
+                </padding>
+            </Label>
         </HBox>
     </top>
 
@@ -39,6 +47,11 @@
                     onAction="#showGroupedDevices"
                     text="Приборы по месту установки"
                     styleClass="button-grouped"/>
+            <Button fx:id="photoGalleryBtn"
+                    maxWidth="Infinity"
+                    onAction="#showPhotoGallery"
+                    text="Фото по местам установки"
+                    styleClass="button-photo-gallery"/>
             <Button fx:id="schemesBtn"
                     maxWidth="Infinity"
                     onAction="#showSchemesEditor"

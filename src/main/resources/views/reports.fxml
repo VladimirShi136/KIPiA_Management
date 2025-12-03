@@ -49,5 +49,5 @@
     </HBox>
 
     <!-- BorderPane с графиком -->
-    <BorderPane fx:id="chartPane" prefWidth="600" prefHeight="400" styleClass="chart-pane"/>
+    <BorderPane fx:id="chartPane" styleClass="chart-pane" VBox.vgrow="ALWAYS"/>
 </VBox>

@@ -1,10 +1,10 @@
 package com.kipia.management.kipia_management;
 
 import com.kipia.management.kipia_management.controllers.MainController;
+import com.kipia.management.kipia_management.managers.PhotoManager;
 import com.kipia.management.kipia_management.services.*;
 import com.kipia.management.kipia_management.utils.CustomAlert;
 import com.kipia.management.kipia_management.utils.LoggingConfig;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
@@ -18,33 +18,18 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.Objects;
 
-/**
- * Главный класс приложения "Система учёта приборов КИПиА"
- *
- * @author vladimir_shi
- * @since 23.08.2025
- */
 public class Main extends Application {
-    // Сервисы базы данных
     private DatabaseService databaseService;
     private DeviceDAO deviceDAO;
     private SchemeDAO schemeDAO;
     private DeviceLocationDAO deviceLocationDAO;
-    // Логгер для сообщений
     private static final Logger LOGGER = LogManager.getLogger(Main.class);
     private MainController mainController;
     private Stage primaryStage;
 
-    /**
-     * Главный метод приложения
-     *
-     * @param args аргументы командной строки
-     */
     public static void main(String[] args) {
-        // Инициализация логгера ПЕРВОЙ - ИСПРАВЛЕНО
         LoggingConfig.initialize();
         LOGGER.info("Запуск главного метода приложения...");
-
         try {
             launch(args);
         } catch (Exception e) {
@@ -55,28 +40,20 @@ public class Main extends Application {
 
     @Override
     public void init() {
-        // Инициализация ДО создания UI - ИСПРАВЛЕНО
         LOGGER.info("Инициализация приложения...");
     }
 
-    /**
-     * @param primaryStage the primary stage for this application, onto which
-     *                     the application scene can be set.
-     *                     Applications may create other stages, if needed, but they will not be
-     *                     primary stages.
-     */
     @Override
     public void start(Stage primaryStage) {
         try {
             this.primaryStage = primaryStage;
-
             LOGGER.info("Запуск приложения...");
 
-            // Инициализация сервисов базы данных ДО загрузки UI
+            // Инициализация сервисов базы данных
             initializeServices();
 
             // Проверяем что критические сервисы инициализированы
-            if (databaseService == null) {
+            if (databaseService == null || deviceDAO == null) {
                 LOGGER.error("Критические сервисы не инициализированы");
                 showErrorAndExit("Критическая ошибка", "Не удалось инициализировать необходимые сервисы");
                 return;
@@ -89,21 +66,26 @@ public class Main extends Application {
             // Получаем контроллер и передаем ему сервисы
             mainController = loader.getController();
             if (mainController != null) {
+                // ⭐⭐ ИЗМЕНЕНИЕ: Теперь передаем DatabaseService вместо отдельных DAO ⭐⭐
+                mainController.setDatabaseService(databaseService);
+
+                // Но также передаем и отдельные DAO для совместимости
                 mainController.setDeviceDAO(deviceDAO);
                 mainController.setSchemeDAO(schemeDAO);
                 mainController.setDeviceLocationDAO(deviceLocationDAO);
-                LOGGER.info("Сервисы переданы в MainController");
+
+                LOGGER.info("Все сервисы переданы в MainController");
             } else {
                 LOGGER.warn("MainController не найден");
             }
 
             // Настраиваем сцену
             Scene scene = new Scene(root, 1000, 700);
-            // Применяем стиль светлой темы
-            scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource("/styles/light-theme.css")).toExternalForm());
+            scene.getStylesheets().add(Objects.requireNonNull(
+                    getClass().getResource("/styles/light-theme.css")).toExternalForm());
 
             if (mainController != null) {
-                mainController.setScene(scene);  // Передаём Scene для темы
+                mainController.setScene(scene);
             }
 
             // Настраиваем главное окно
@@ -114,21 +96,20 @@ public class Main extends Application {
 
             // Добавляем иконку
             try {
-                Image icon = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/images/iconApp.png")));
+                Image icon = new Image(Objects.requireNonNull(
+                        getClass().getResourceAsStream("/images/iconApp.png")));
                 primaryStage.getIcons().add(icon);
                 LOGGER.debug("Иконка приложения загружена");
             } catch (Exception e) {
                 LOGGER.warn("Иконка не найдена, используется стандартная: {}", e.getMessage());
             }
 
-            // Обработка закрытия окна - закрываем соединение с БД и сохраняем схему
+            // Обработка закрытия окна
             primaryStage.setOnCloseRequest(_ -> {
                 LOGGER.info("Закрытие приложения - сохранение схемы");
-                // Сохраняем схему через MainController
                 if (mainController != null) {
                     mainController.saveSchemeBeforeNavigation();
                 }
-                // Закрываем соединение с БД
                 if (databaseService != null) {
                     databaseService.closeConnection();
                     LOGGER.info("Соединение с БД закрыто");
@@ -147,37 +128,37 @@ public class Main extends Application {
     }
 
     /**
-     * Инициализация сервисов базы данных
+     * Инициализация сервисов базы данных - ОБНОВЛЕННЫЙ
      */
     private void initializeServices() {
         try {
-            LOGGER.info("Инициализация сервисов...");
+            LOGGER.info("🔄 Инициализация сервисов...");
 
-            // Создаем сервис для работы с базой данных
             databaseService = new DatabaseService();
-            LOGGER.info("DatabaseService инициализирован");
+            LOGGER.info("✅ DatabaseService инициализирован");
 
-            // Создаем DAO для работы с приборами
             deviceDAO = new DeviceDAO(databaseService);
-            LOGGER.info("DeviceDAO инициализирован");
+            LOGGER.info("✅ DeviceDAO инициализирован");
 
             schemeDAO = new SchemeDAO(databaseService);
-            LOGGER.info("SchemeDAO инициализирован");
+            LOGGER.info("✅ SchemeDAO инициализирован");
 
             deviceLocationDAO = new DeviceLocationDAO(databaseService);
-            LOGGER.info("DeviceLocationDAO инициализирован");
+            LOGGER.info("✅ DeviceLocationDAO инициализирован");
 
-            LOGGER.info("Все сервисы успешно инициализированы");
+            // ⭐⭐ ИНИЦИАЛИЗИРУЕМ PhotoManager как синглтон ⭐⭐
+            PhotoManager photoManager = PhotoManager.getInstance();
+            photoManager.setDeviceDAO(deviceDAO); // Для автосохранения в БД
+            LOGGER.info("✅ PhotoManager инициализирован");
+
+            LOGGER.info("🎉 Все сервисы успешно инициализированы");
 
         } catch (Exception e) {
-            LOGGER.error("Ошибка инициализации сервисов: {}", e.getMessage(), e);
+            LOGGER.error("❌ Ошибка инициализации сервисов: {}", e.getMessage(), e);
             throw new RuntimeException("Не удалось инициализировать сервисы приложения", e);
         }
     }
 
-    /**
-     * Показать ошибку и предложить повтор
-     */
     private void showErrorAndRetry(String title, String message) {
         Platform.runLater(() -> {
             ButtonType result = CustomAlert.showAdvancedError(title, message, new Exception(message));
@@ -191,9 +172,6 @@ public class Main extends Application {
         });
     }
 
-    /**
-     * Показать ошибку и выйти
-     */
     private void showErrorAndExit(String title, String message) {
         Platform.runLater(() -> {
             CustomAlert.showError(title, message);
@@ -202,18 +180,12 @@ public class Main extends Application {
         });
     }
 
-    /**
-     * Обработка повторного запуска приложения
-     */
     private void handleRetry() {
         Platform.runLater(() -> {
             try {
                 LOGGER.info("Перезапуск приложения...");
-                // Создаем новый экземпляр приложения
                 Main newApp = new Main();
                 newApp.start(new Stage());
-
-                // Закрываем текущее окно если оно есть
                 if (primaryStage != null) {
                     primaryStage.close();
                 }
@@ -224,9 +196,6 @@ public class Main extends Application {
         });
     }
 
-    /**
-     * Обработка отмены действия
-     */
     private void handleCancel() {
         LOGGER.info("Завершение работы приложения...");
         Platform.exit();
@@ -236,7 +205,6 @@ public class Main extends Application {
     @Override
     public void stop() {
         LOGGER.info("Приложение завершает работу");
-        // Дополнительная очистка ресурсов
         if (databaseService != null) {
             databaseService.closeConnection();
         }

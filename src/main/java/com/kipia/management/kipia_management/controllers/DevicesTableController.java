@@ -282,8 +282,8 @@ public class DevicesTableController {
             private final Button viewBtn = new Button();
             private final HBox buttonContainer = new HBox(2, addBtn, viewBtn);
 
-            private final PhotoManager photoManager = new PhotoManager();
-
+            // ⭐⭐ ИСПОЛЬЗУЕМ СИНГЛТОН PhotoManager ⭐⭐
+            private final PhotoManager photoManager = PhotoManager.getInstance();
             {
                 // Стилизация кнопок
                 addBtn.getStyleClass().add("table-button-add");

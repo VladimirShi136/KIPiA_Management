@@ -5,7 +5,6 @@ import com.kipia.management.kipia_management.models.Device;
 import java.io.File;
 import java.sql.*;
 import java.util.Objects;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 

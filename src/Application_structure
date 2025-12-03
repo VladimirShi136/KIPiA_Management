@@ -61,6 +61,7 @@ src/
     │       └── managers/  # Менеджеры
     │           ├── ClipboardManager.java   # Менеджер для работы с буфером обмена
     │           ├── CommandManager.java   # Менеджер команд undo/redo
+    │           ├── PhotoManager.java   # Менеджер для работы с фотографиями
     │           └── ShapeManager.java   # Менеджер для работы с фигурами
     │
     ├── resources/

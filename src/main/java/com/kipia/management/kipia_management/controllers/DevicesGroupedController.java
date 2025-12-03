@@ -1,5 +1,6 @@
 package com.kipia.management.kipia_management.controllers;
 
+import com.kipia.management.kipia_management.managers.PhotoManager;
 import com.kipia.management.kipia_management.models.Device;
 import com.kipia.management.kipia_management.services.DeviceDAO;
 import com.kipia.management.kipia_management.utils.ExcelImportExportUtil;
@@ -11,24 +12,25 @@ import javafx.collections.FXCollections;
 import javafx.collections.transformation.FilteredList;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
-import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.ComboBoxTreeTableCell;
 import javafx.scene.control.cell.TextFieldTreeTableCell;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
-import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 import javafx.util.converter.DefaultStringConverter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import java.io.File;
 import java.util.*;
 
+/**
+ * Контроллер, отвечающий за отображение и управление древовидной таблицей устройств
+ *
+ * @author vladimir_shi
+ * @since 11.10.2025
+ */
 public class DevicesGroupedController {
 
     // логгер для сообщений
@@ -333,38 +335,53 @@ public class DevicesGroupedController {
             private final Button viewBtn = new Button();
             private final HBox buttonContainer = new HBox(2, addBtn, viewBtn);
 
+            // ⭐⭐ ИСПОЛЬЗУЕМ СИНГЛТОН PhotoManager ⭐⭐
+            private final PhotoManager photoManager = PhotoManager.getInstance();
+
             {
-                // ПЕРВОЕ: применяем CSS классы для цветов
+                // Стилизация кнопок
                 addBtn.getStyleClass().add("table-button-add");
                 viewBtn.getStyleClass().add("table-button-view");
 
-                // ВТОРОЕ: применяем hover стили через StyleUtils
                 StyleUtils.applyHoverAndAnimation(addBtn, "table-button-add", "table-button-add-hover");
                 StyleUtils.applyHoverAndAnimation(viewBtn, "table-button-view", "table-button-view-hover");
 
-                // ТРЕТЬЕ: устанавливаем начальные размеры
+                // Начальные размеры
                 updateButtonSizes(80);
 
                 // Слушатель изменения ширины колонки
-                widthProperty().addListener((_, _, newWidth) -> updateButtonSizes(newWidth.doubleValue()));
+                widthProperty().addListener((_, _, newWidth) -> {
+                    if (newWidth.doubleValue() > 0) {
+                        updateButtonSizes(newWidth.doubleValue());
+                    }
+                });
 
                 // Tooltips
                 addBtn.setTooltip(new Tooltip("Добавить фото"));
                 viewBtn.setTooltip(new Tooltip("Просмотреть фото"));
 
+                // Обработчики с использованием PhotoManager
                 addBtn.setOnAction(_ -> {
                     Device device = getCurrentDevice();
                     if (device != null) {
-                        addPhoto(device);
+                        Stage stage = (Stage) addBtn.getScene().getWindow();
+                        photoManager.addPhotosToDevice(device, stage);
+                        // Обновляем таблицу после добавления фото
+                        Platform.runLater(() -> {
+                            treeTable.refresh();
+                            updateStatistics();
+                        });
                     }
                 });
 
                 viewBtn.setOnAction(_ -> {
                     Device device = getCurrentDevice();
                     if (device != null) {
-                        viewPhotos(device);
+                        Stage stage = (Stage) viewBtn.getScene().getWindow();
+                        photoManager.viewDevicePhotos(device, stage);
                     }
                 });
+
                 setAlignment(Pos.CENTER);
             }
 
@@ -374,17 +391,35 @@ public class DevicesGroupedController {
                 double buttonSize, iconSize;
                 double spacing;
 
-                if (columnWidth < 60) {
-                    buttonSize = 20; iconSize = 14; spacing = 1;
-                } else if (columnWidth < 80) {
-                    buttonSize = 24; iconSize = 16; spacing = 2;
-                } else if (columnWidth < 100) {
-                    buttonSize = 28; iconSize = 18; spacing = 3;
+                // ⬇️ ОБНОВЛЕННЫЕ РАЗМЕРЫ ДЛЯ МИНИМУМА 70px
+                if (columnWidth < 75) {
+                    // МИНИМАЛЬНЫЙ РАЗМЕР - компактные кнопки, но ОБЕ видны
+                    buttonSize = 24;
+                    iconSize = 12;
+                    spacing = 2;
+                    addBtn.setVisible(true);
+                    viewBtn.setVisible(true);
+                } else if (columnWidth < 85) {
+                    buttonSize = 30;
+                    iconSize = 17;
+                    spacing = 3;
+                    addBtn.setVisible(true);
+                    viewBtn.setVisible(true);
+                } else if (columnWidth < 105) {
+                    buttonSize = 32;
+                    iconSize = 18;
+                    spacing = 4;
+                    addBtn.setVisible(true);
+                    viewBtn.setVisible(true);
                 } else {
-                    buttonSize = 32; iconSize = 20; spacing = 4;
+                    buttonSize = 34;
+                    iconSize = 20;
+                    spacing = 5;
+                    addBtn.setVisible(true);
+                    viewBtn.setVisible(true);
                 }
 
-                // Устанавливаем размеры через inline стили, но оставляем CSS классы для цветов
+                // Устанавливаем размеры через inline стили
                 String sizeStyle = String.format(
                         "-fx-min-width: %fpx; -fx-pref-width: %fpx; -fx-max-width: %fpx; " +
                                 "-fx-min-height: %fpx; -fx-pref-height: %fpx; -fx-max-height: %fpx; " +
@@ -401,7 +436,6 @@ public class DevicesGroupedController {
                 buttonContainer.setAlignment(Pos.CENTER);
 
                 updateIcons(iconSize);
-                buttonContainer.requestLayout();
             }
 
             private void updateIcons(double iconSize) {
@@ -422,7 +456,17 @@ public class DevicesGroupedController {
                     viewBtn.setGraphic(viewIcon);
 
                 } catch (Exception e) {
-                    LOGGER.warn("Не удалось загрузить иконки для кнопок фото");
+                    LOGGER.warn("Не удалось загрузить иконки для кнопок фото: {}", e.getMessage());
+                    // Устанавливаем текстовые метки если иконки не загрузились
+                    // ⭐⭐ ИСПРАВЛЕНИЕ: используем columnWidth из параметра updateButtonSizes ⭐⭐
+                    double columnWidth = getWidth();
+                    if (columnWidth < 50) {
+                        addBtn.setText("+");
+                        viewBtn.setText("👁");
+                    } else {
+                        addBtn.setText("Доб");
+                        viewBtn.setText("Просм");
+                    }
                 }
             }
 
@@ -434,57 +478,22 @@ public class DevicesGroupedController {
                 return null;
             }
 
-            private void addPhoto(Device device) {
-                FileChooser chooser = new FileChooser();
-                chooser.setTitle("Выберите фото прибора");
-                chooser.getExtensionFilters().add(
-                        new FileChooser.ExtensionFilter("Изображения", "*.png", "*.jpg", "*.gif"));
-                Stage stage = (Stage) addBtn.getScene().getWindow();
-                File file = chooser.showOpenDialog(stage);
-                if (file != null) {
-                    device.addPhoto(file.getAbsolutePath());
-                    deviceDAO.updateDevice(device);
-                    updateStatistics();
-                    treeTable.refresh();
-                }
-            }
-
-            private void viewPhotos(Device device) {
-                List<String> photos = device.getPhotos();
-                if (photos == null || photos.isEmpty()) {
-                    CustomAlert.showInfo("Просмотр фото", "Фотографии не добавлены");
-                    LOGGER.warn("Просмотр фото: нет фото для устройства {}", device.getName());
-                    return;
-                }
-                Stage stage = new Stage();
-                stage.setTitle("Фото прибора: " + device.getName());
-                VBox vbox = new VBox(10);
-                for (String path : photos) {
-                    try {
-                        Image img = new Image("file:" + path);
-                        ImageView iv = new ImageView(img);
-                        iv.setFitWidth(250);
-                        iv.setFitHeight(250);
-                        iv.setPreserveRatio(true);
-                        vbox.getChildren().add(iv);
-                    } catch (Exception ex) {
-                        vbox.getChildren().add(new Label("Ошибка загрузки: " + path));
-                    }
-                }
-                stage.setScene(new Scene(new ScrollPane(vbox), 300, 600));
-                stage.show();
-                LOGGER.info("Показ фото для устройства: {}", device.getName());
-            }
-
             @Override
             protected void updateItem(Void item, boolean empty) {
                 super.updateItem(item, empty);
                 if (empty) {
                     setGraphic(null);
-                    setText(null); // ВАЖНО для TreeTableCell
+                    setText(null);
                 } else {
-                    setGraphic(buttonContainer);
-                    setText(null); // ВАЖНО для TreeTableCell - убираем любой текст
+                    TreeRowItem rowItem = getTreeTableRow() == null ? null : getTreeTableRow().getItem();
+                    // Показываем кнопки только для DeviceItem, для GroupItem - ничего
+                    if (rowItem instanceof DeviceItem) {
+                        setGraphic(buttonContainer);
+                        setText(null);
+                    } else {
+                        setGraphic(null);
+                        setText(null);
+                    }
                 }
             }
         };

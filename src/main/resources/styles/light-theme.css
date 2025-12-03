@@ -1,9 +1,9 @@
-/* Основной фон */
+/* |ОСНОВНОЙ ФОН| */
 .root {
     -fx-background-color: #f0f0f0;
 }
 
-/* Общие стили для кнопок */
+/* |ОБЩИЕ СТИЛИ ДЛЯ КНОПОК| */
 .button {
     -fx-text-fill: white;
     -fx-padding: 5 10;
@@ -17,13 +17,14 @@
     -fx-transition: background-color 0.3s ease, effect 0.3s ease;
     -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
 }
-/* Сохраняем цвет и непрозрачность для отключённых кнопок */
+
+/* |ЦВЕТ И НЕПРОЗРАЧНОСТЬ ДЛЯ НЕАКТИВНЫХ КНОПОК| */
 .button:disabled {
-    -fx-opacity: 1.0;              /* Полная непрозрачность */
+    -fx-opacity: 1.0; /* Полная непрозрачность */
     -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1); /* Сохраняем тень */
 }
 
-/* Верхняя панель */
+/* |ВЕРХНЯЯ ПАНЕЛЬ (ШАПКА)| */
 .top {
     -fx-background-color: #456381;
     -fx-padding: 10px;
@@ -31,8 +32,15 @@
 
 .header-label {
     -fx-text-fill: white;
-    -fx-font-size: 20px;
+    -fx-font-size: 16px;
     -fx-font-weight: bold;
+    -fx-padding: 1px 10px;
+    -fx-border-color: rgba(255, 255, 255, 0.8);
+    -fx-border-width: 2px;
+    -fx-border-radius: 25px;
+    -fx-background-radius: 25px;
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-effect: dropshadow(three-pass-box, rgba(255, 255, 255, 0.3), 8, 0, 0, 2);
 }
 
 .version-label {
@@ -42,7 +50,7 @@
     -fx-padding: 0 15px 0 0;
 }
 
-/* Левая навигация */
+/* |ЛЕВАЯ НАВИГАЦИЯ (МЕНЮ)| */
 .left {
     -fx-background-color: #527091;
     -fx-padding: 10px;
@@ -85,6 +93,29 @@
     -fx-font-weight: bold;
     -fx-min-width: 160px;
     -fx-pref-width: 160px;
+    -fx-alignment: center;
+}
+
+.button-photo-gallery {
+    -fx-background-color: #14b1b1; /* Фиолетовый цвет */
+    -fx-padding: 10 20;
+    -fx-min-width: 160px;
+    -fx-pref-width: 160px;
+    -fx-wrap-text: true;
+    -fx-text-alignment: center;
+    -fx-font-weight: bold;
+    -fx-alignment: center;
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
+}
+
+.button-photo-gallery-hover {
+    -fx-background-color: #18e6e6;
+    -fx-padding: 10 20;
+    -fx-min-width: 160px;
+    -fx-pref-width: 160px;
+    -fx-wrap-text: true;
+    -fx-text-alignment: center;
+    -fx-font-weight: bold;
     -fx-alignment: center;
 }
 
@@ -178,13 +209,13 @@
     -fx-pref-width: 160px;
 }
 
-/* Центр */
+/* |1. ЦЕНТРАЛЬНАЯ ОБЛАСТЬ (СОДЕРЖИМОЕ)| */
 #contentArea {
     -fx-padding: 10px;
     -fx-spacing: 15px;
 }
 
-/* Поиск */
+/* 1.1 Поиск */
 .search-delete-pane {
     -fx-spacing: 10px;
 }
@@ -199,7 +230,7 @@
     -fx-border-color: #bdc3c7;
 }
 
-/* Удаление */
+/* 1.2 Кнопка удаление */
 .button-delete {
     -fx-background-color: #d85548;
     -fx-text-fill: white;
@@ -220,7 +251,7 @@
     -fx-pref-width: 40px;
 }
 
-/* Кнопки экспорт и импорт*/
+/* 1.3 Кнопки экспорт и импорт */
 .button-export {
     -fx-background-color: #4CAF50;
 }
@@ -243,7 +274,7 @@
     -fx-pref-width: 40px;
 }
 
-/* Статистика */
+/* 1.4 Статистика */
 .statistics-pane {
     -fx-background-color: #f8f9fa;
     -fx-padding: 20px;
@@ -298,8 +329,7 @@
     -fx-text-fill: #555;
 }
 
-/* Адаптивные размеры для кнопок фото */
-/* Базовые стили для кнопок фото - ТОЛЬКО ЦВЕТА И ВНЕШНИЙ ВИД */
+/* |КНОПКИ ФОТО В ТАБЛИЦЕ - ДОБАВЛЕНИЕ и ПРОСМОТР| */
 .table-button-add {
     -fx-background-color: #4CAF50;
     -fx-text-fill: white;
@@ -330,21 +360,20 @@
     -fx-background-color: #64B5F6;
 }
 
-/* ===== СТИЛИ ДЛЯ ПРОСМОТРЩИКА ФОТОГРАФИЙ ===== */
-
-/* Полностью черный фон при зуме */
+/* |2. СТИЛИ ДЛЯ ПРОСМОТРЩИКА ФОТОГРАФИЙ| */
+/* 2.1 Полностью черный фон при зуме */
 .photo-viewer-container.zoomed {
     -fx-background-color: #000000 !important;
 }
 
-/* Верхняя панель при зуме - полностью черная */
+/* 2.2 Верхняя панель при зуме - полностью черная */
 .photo-viewer-top-panel.zoomed {
     -fx-background-color: #000000 !important;
     -fx-border-color: #333333 !important;
-    -fx-effect: dropshadow(three-pass-box, rgba(255,255,255,0.1), 5, 0, 0, 1) !important;
+    -fx-effect: dropshadow(three-pass-box, rgba(255, 255, 255, 0.1), 5, 0, 0, 1) !important;
 }
 
-/* Текст и элементы верхней панели при зуме */
+/* 2.3 Текст и элементы верхней панели при зуме */
 .photo-viewer-top-panel.zoomed .photo-viewer-device-info {
     -fx-border-color: #444444 !important;
     -fx-background-color: rgba(30, 30, 30, 0.8) !important;
@@ -382,23 +411,35 @@
     -fx-text-fill: #888888 !important;
 }
 
-/* Оверлей для затемнения - теперь не нужен или полностью черный */
+.photo-viewer-top-panel.zoomed .photo-viewer-delete-button {
+    -fx-background-color: #4d140f !important; /* Тёмный красно-коричневый */
+    -fx-text-fill: #666666 !important;
+    -fx-border-color: #801c12 !important;
+}
+
+.photo-viewer-top-panel.zoomed .photo-viewer-delete-button:hover {
+    -fx-background-color: #801c12 !important;
+    -fx-text-fill: #888888 !important;
+}
+
+
+/* 2.4 Оверлей для затемнения - полностью черный */
 .zoom-overlay {
     -fx-background-color: #000000; /* Полностью черный */
 }
 
-/* Контейнер для фото при зуме */
+/* 2.5 Контейнер для фото при зуме */
 .photo-viewer-image-pane.zoomed {
     -fx-background-color: #000000;
     -fx-cursor: move;
 }
 
-/* Стиль для ImageView при зуме */
+/* 2.6 Стиль для ImageView при зуме */
 .photo-viewer-image.zoomed {
     -fx-cursor: move;
 }
 
-/* Остальные стили без изменений */
+/* 2.7 Остальные стили */
 .photo-viewer-device-info {
     -fx-background-color: transparent;
     -fx-padding: 6px 10px;
@@ -419,7 +460,7 @@
 
 .photo-viewer-top-panel {
     -fx-background-color: #456381;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 8, 0, 0, 2);
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 8, 0, 0, 2);
     -fx-padding: 15px;
     -fx-border-color: #3a546d;
     -fx-border-width: 0 0 2px 0;
@@ -446,7 +487,7 @@
     -fx-pref-width: 90px;
     -fx-pref-height: 32px;
     -fx-font-size: 13px;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 3, 0, 0, 1);
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 3, 0, 0, 1);
 }
 
 .photo-viewer-nav-button:hover {
@@ -467,24 +508,6 @@
     -fx-alignment: center;
 }
 
-.photo-viewer-system-button {
-    -fx-background-color: #d84315;
-    -fx-text-fill: white;
-    -fx-font-weight: bold;
-    -fx-border-radius: 6px;
-    -fx-background-radius: 6px;
-    -fx-padding: 8px 16px;
-    -fx-cursor: hand;
-    -fx-font-size: 13px;
-    -fx-min-width: 280px;
-    -fx-pref-width: 280px;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 3, 0, 0, 1);
-}
-
-.photo-viewer-system-button:hover {
-    -fx-background-color: #ff5722;
-}
-
 .photo-viewer-container {
     -fx-background-color: #f8f9fa;
 }
@@ -498,7 +521,45 @@
     -fx-alignment: center;
 }
 
-/* Нижняя панель */
+/* 2.8 Кнопка системного просмотра фото */
+.photo-viewer-system-button {
+    -fx-background-color: #d84315;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-padding: 8px 16px;
+    -fx-cursor: hand;
+    -fx-font-size: 13px;
+    -fx-min-width: 280px;
+    -fx-pref-width: 280px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 3, 0, 0, 1);
+}
+
+.photo-viewer-system-button:hover {
+    -fx-background-color: #ff5722;
+}
+
+/* 2.9 Кнопка удаления фото */
+.photo-viewer-delete-button {
+    -fx-background-color: #c62828; /* Тёмно-красный (цвет удаления/опасности) */
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-padding: 8px 16px;
+    -fx-cursor: hand;
+    -fx-font-size: 13px;
+    -fx-min-width: 180px;
+    -fx-pref-width: 180px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 3, 0, 0, 1);
+}
+
+.photo-viewer-delete-button:hover {
+    -fx-background-color: #e53935; /* Более яркий красный при наведении */
+}
+
+/* |НИЖНЯЯ ПАНЕЛЬ| */
 .bottom {
     -fx-background-color: #ecf0f1;
     -fx-padding: 5px;
@@ -510,7 +571,7 @@
     -fx-font-size: 12px;
 }
 
-/* Reports.fxml */
+/* |REPORTS.FXML| */
 .reports-root {
     -fx-padding: 20px;
 }
@@ -532,6 +593,12 @@
 
 .chart-pane {
     -fx-background-color: transparent;
+    -fx-padding: 0;
+    /* Явно разрешаем растягивание */
+    -fx-min-width: 0;
+    -fx-min-height: 0;
+    -fx-max-width: Infinity;
+    -fx-max-height: Infinity;
 }
 
 .report-export-button {
@@ -552,7 +619,448 @@
     -fx-padding: 5 10;
 }
 
-/* Add-device-form.fxml */
+/* |3. PHOTO-GALLERY.FXML| */
+/* 3.1 Галерея фото */
+.photo-gallery-root {
+    -fx-background-color: #f5f7fa;
+    -fx-padding: 10;
+}
+
+/* 3.2 Статистика (обновленная) */
+.statistics-panel {
+    -fx-background-color: white;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-border-color: #e0e0e0;
+    -fx-border-width: 1;
+    -fx-padding: 12;
+    -fx-spacing: 8;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.05), 4, 0, 0, 1);
+}
+
+.statistics-grid {
+    -fx-alignment: center;
+    -fx-padding: 0;
+}
+
+.statistics-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2c3e50;
+    -fx-padding: 0 0 5 0;
+}
+
+.statistics-numbers {
+    -fx-spacing: 30;
+    -fx-alignment: center-right;
+    -fx-padding: 0 10 0 0;
+}
+
+.stat-item {
+    -fx-spacing: 3;
+    -fx-alignment: center;
+}
+
+.stat-big-number {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+}
+
+.stat-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: #666;
+    -fx-font-weight: normal;
+}
+
+/* 3.2.1 Вертикальный разделитель */
+.vertical-divider {
+    -fx-pref-width: 1;
+    -fx-min-width: 1;
+    -fx-max-width: 1;
+    -fx-pref-height: 35;
+    -fx-background-color: #d0d0d0;
+    -fx-margin: 0 10;
+}
+
+/* 3.2.2 Информационная панель (обновленная) */
+.filtered-stats-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2c3e50;
+    -fx-padding: 0 0 5 0;
+}
+
+.filtered-stats-container {
+    -fx-spacing: 20;
+    -fx-alignment: center-left;
+}
+
+.filtered-stat-item {
+    -fx-spacing: 3;
+    -fx-alignment: center;
+}
+
+.filtered-stat-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: #666;
+    -fx-font-weight: normal;
+}
+
+/* 3.2.3 Цвета для ОБЩЕЙ статистики (через ID) */
+#locationsCountLabel {
+    -fx-text-fill: #3498db !important;
+}
+
+#devicesCountLabel {
+    -fx-text-fill: #27ae60 !important;
+}
+
+#photosCountLabel {
+    -fx-text-fill: #e67e22 !important;
+}
+
+/* 3.2.4 Цвета для ОТФИЛЬТРОВАННОЙ статистики (через ID) */
+#filteredLocationsLabel {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #3498db !important;
+}
+
+#filteredDevicesLabel {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #27ae60 !important;
+}
+
+#filteredPhotosLabel {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #e67e22 !important;
+}
+
+#filteredWithPhotosLabel {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #9b59b6 !important;
+}
+
+/* 3.3 Панель поиска и фильтров */
+.search-filter-panel {
+    -fx-padding: 12 0;
+    -fx-spacing: 10;
+    -fx-border-color: #e0e0e0;
+    -fx-border-width: 0 0 1 0;
+}
+
+.search-row {
+    -fx-spacing: 10;
+    -fx-alignment: center-left;
+}
+
+.search-field {
+    -fx-pref-height: 34;
+    -fx-pref-width: 300;
+    -fx-background-radius: 5;
+    -fx-border-radius: 5;
+    -fx-border-color: #ddd;
+    -fx-border-width: 1;
+    -fx-padding: 4 10;
+    -fx-background-color: white;
+    -fx-font-size: 13px;
+}
+
+.search-field:focused {
+    -fx-border-color: #3498db;
+}
+
+.filter-combo {
+    -fx-pref-height: 34;
+    -fx-pref-width: 180;
+    -fx-background-radius: 5;
+    -fx-border-radius: 5;
+    -fx-background-color: white;
+    -fx-border-color: #ddd;
+    -fx-border-width: 1;
+    -fx-font-size: 13px;
+}
+
+.filter-combo .list-cell {
+    -fx-padding: 6 10;
+    -fx-font-size: 13px;
+}
+
+.filter-checkbox {
+    -fx-font-size: 13px;
+    -fx-text-fill: #555;
+}
+
+.filter-checkbox .box {
+    -fx-background-color: white;
+    -fx-border-color: #ddd;
+    -fx-border-radius: 3;
+    -fx-padding: 2;
+}
+
+.filter-checkbox:selected .box {
+    -fx-background-color: #3498db;
+    -fx-border-color: #2980b9;
+}
+
+/* 3.4 Карточка места установки */
+.location-card {
+    -fx-background-color: white;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-border-color: #e0e0e0;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.06), 4, 0, 0, 1);
+    -fx-padding: 15;
+    -fx-spacing: 10;
+    -fx-min-width: 320;
+    -fx-pref-width: 320;
+    -fx-min-height: 160;
+}
+
+.location-card-hover {
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 6, 0, 0, 2);
+    -fx-border-color: #3498db;
+    -fx-background-color: #f8fafc;
+}
+
+.location-name {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2c3e50;
+    -fx-wrap-text: true;
+    -fx-max-width: 280;
+}
+
+/* 3.5 Статистика в карточке */
+.card-stats-row {
+    -fx-spacing: 20;
+    -fx-alignment: center;
+    -fx-padding: 5 0;
+}
+
+.card-stat-item {
+    -fx-spacing: 2;
+    -fx-alignment: center;
+}
+
+.card-stat-value {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+}
+
+.card-stat-title {
+    -fx-font-size: 11px;
+    -fx-text-fill: #666;
+}
+
+/* 3.6 Кнопки в карточке */
+.card-buttons-row {
+    -fx-spacing: 8;
+    -fx-alignment: center;
+    -fx-padding: 5 0 0 0;
+}
+
+.view-all-button {
+    -fx-background-color: #2980b9;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+    -fx-background-radius: 5;
+    -fx-padding: 8 16;
+    -fx-cursor: hand;
+    -fx-pref-width: 180;
+    -fx-min-width: 180;
+}
+
+.view-all-button:hover {
+    -fx-background-color: #3097da;
+    -fx-effect: dropshadow(gaussian, rgba(52, 152, 219, 0.3), 8, 0, 0, 0);
+}
+
+.view-all-button:pressed {
+    -fx-background-color: #2471a3;
+}
+
+/* 3.7 Кнопка раскрытия списка приборов с SVG иконками */
+.toggle-devices-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #3498db;
+    -fx-font-size: 12px;
+    -fx-font-weight: 500;
+    -fx-border-width: 0;
+    -fx-padding: 4 0 4 0;
+    -fx-cursor: hand;
+    -fx-alignment: center-left;
+    -fx-graphic-text-gap: 8;
+    -fx-content-display: left;
+}
+
+/* иконка стрелки вправо (свернутое состояние) */
+.toggle-devices-button {
+    -fx-graphic: url('../images/expand.png');
+}
+
+/* иконка стрелки вниз (развернутое состояние) */
+.toggle-devices-button.expanded {
+    -fx-graphic: url('../images/collapse.png');
+}
+
+.toggle-devices-button:hover {
+    -fx-text-fill: #2980b9;
+}
+
+/* 3.8 Список приборов */
+.devices-list {
+    -fx-padding: 10;
+    -fx-background-color: #f8f9fa;
+    -fx-background-radius: 5;
+    -fx-border-radius: 5;
+    -fx-border-color: #e9ecef;
+    -fx-border-width: 1;
+    -fx-spacing: 5;
+}
+
+.device-row {
+    -fx-spacing: 8;
+    -fx-alignment: center-left;
+    -fx-padding: 6 4;
+}
+
+.device-row:hover {
+    -fx-background-color: rgba(52, 152, 219, 0.05);
+    -fx-background-radius: 3;
+}
+
+.device-name {
+    -fx-font-size: 13px;
+    -fx-font-weight: 500;
+    -fx-text-fill: #333;
+    -fx-max-width: 150;
+    -fx-wrap-text: true;
+}
+
+.device-photo-count {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+.device-view-button {
+    -fx-background-color: #2980b9;
+    -fx-text-fill: white;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 4;
+    -fx-padding: 6 12;
+    -fx-cursor: hand;
+    -fx-pref-width: 110;
+    -fx-min-width: 110;
+}
+
+.device-view-button:hover {
+    -fx-background-color: #329bdf;
+    -fx-effect: dropshadow(gaussian, rgba(127, 140, 141, 0.3), 6, 0, 0, 0);
+}
+
+.device-view-button:disabled {
+    -fx-background-color: #bdc3c7;
+    -fx-text-fill: #95a5a6;
+    -fx-opacity: 0.7;
+}
+
+/* 3.9 Стили для ListView */
+.photo-gallery-listview {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 8 0;
+}
+
+.photo-gallery-listview .list-cell {
+    -fx-background-color: transparent;
+    -fx-padding: 6px 0;
+    -fx-border-width: 0;
+}
+
+.photo-gallery-listview .list-cell:empty {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+    -fx-pref-height: 0;
+}
+
+/* 3.10 Общие стили */
+.button {
+    -fx-cursor: hand;
+    -fx-font-family: "Segoe UI", "Arial", sans-serif;
+    -fx-transition: -fx-background-color 0.2s;
+}
+
+/* 3.11 Стили для скроллбара */
+.photo-gallery-listview .scroll-bar:vertical {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 1;
+}
+
+.photo-gallery-listview .scroll-bar:vertical .track {
+    -fx-background-color: #f0f0f0;
+    -fx-background-radius: 3px;
+}
+
+.photo-gallery-listview .scroll-bar:vertical .thumb {
+    -fx-background-color: #c0c0c0;
+    -fx-background-radius: 3px;
+}
+
+.photo-gallery-listview .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #a0a0a0;
+}
+
+/* 3.12 Кнопки управления фото в строке прибора */
+.device-add-photo-button {
+    -fx-background-color: #27ae60;
+    -fx-text-fill: white;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 4;
+    -fx-padding: 6 12;
+    -fx-cursor: hand;
+    -fx-pref-width: 110;
+    -fx-min-width: 110;
+}
+
+.device-add-photo-button:hover {
+    -fx-background-color: #2ecc71;
+    -fx-effect: dropshadow(gaussian, rgba(46, 204, 113, 0.3), 6, 0, 0, 0);
+}
+
+.device-delete-photo-button {
+    -fx-background-color: #e74c3c;
+    -fx-text-fill: white;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 4;
+    -fx-padding: 6 12;
+    -fx-cursor: hand;
+    -fx-pref-width: 110;
+    -fx-min-width: 110;
+}
+
+.device-delete-photo-button:hover {
+    -fx-background-color: #c0392b;
+    -fx-effect: dropshadow(gaussian, rgba(231, 76, 60, 0.3), 6, 0, 0, 0);
+}
+
+.device-delete-photo-button:disabled {
+    -fx-background-color: #bdc3c7;
+    -fx-text-fill: #95a5a6;
+    -fx-opacity: 0.7;
+}
+
+/* 4. ADD-DEVICE-FORM.FXML */
 /* Центрирование всей формы */
 .add-device-root {
     -fx-background-color: #f0f0f0;
@@ -636,7 +1144,7 @@
 
 /* Центрирование кнопок под формой */
 .add-device-root .form-buttons {
-    -fx-alignment: CENTER !important;  /* ⬅️ ЦЕНТРИРОВАТЬ КНОПКИ */
+    -fx-alignment: CENTER !important; /* ⬅️ ЦЕНТРИРОВАТЬ КНОПКИ */
     -fx-spacing: 20px;
     -fx-padding: 20px 0px 0px 0px;
 }
@@ -885,10 +1393,12 @@
 .table-view .scroll-bar:horizontal {
     -fx-background-color: #f0f0f0; /* как у вертикального */
 }
+
 .table-view .scroll-bar:horizontal .thumb {
     -fx-background-color: #c0c0c0;
     -fx-background-radius: 4px;
 }
+
 .table-view .scroll-bar:horizontal .thumb:hover {
     -fx-background-color: #a0a0a0;
 }
@@ -1014,10 +1524,12 @@
 .tree-table-view .scroll-bar:horizontal {
     -fx-background-color: #f0f0f0;
 }
+
 .tree-table-view .scroll-bar:horizontal .thumb {
     -fx-background-color: #c0c0c0;
     -fx-background-radius: 4px;
 }
+
 .tree-table-view .scroll-bar:horizontal .thumb:hover {
     -fx-background-color: #a0a0a0;
 }
@@ -1113,7 +1625,7 @@
     -fx-border-width: 2px;
     -fx-border-radius: 8px;
     -fx-background-radius: 8px;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.3), 10, 0, 0, 2);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 10, 0, 0, 2);
 }
 
 /* Стили для информационного алерта (синие оттенки) */
@@ -1299,6 +1811,7 @@
     -fx-font-size: 12px;
     -fx-padding: 5px 0px 10px 0px;
 }
+
 /* Стили для TableView внутри диалога */
 .dialog-content .styled-table-view {
     -fx-font-size: 13px;

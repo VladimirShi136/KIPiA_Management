@@ -1,10 +1,7 @@
 package com.kipia.management.kipia_management.controllers;
 
 import com.kipia.management.kipia_management.models.Scheme;
-import com.kipia.management.kipia_management.services.DeviceDAO;
-import com.kipia.management.kipia_management.services.DeviceLocationDAO;
-import com.kipia.management.kipia_management.services.SchemeDAO;
-import com.kipia.management.kipia_management.services.SchemeSaver;
+import com.kipia.management.kipia_management.services.*;
 import com.kipia.management.kipia_management.utils.CustomAlert;
 import com.kipia.management.kipia_management.utils.StyleUtils;
 import javafx.animation.KeyFrame;
@@ -27,89 +24,86 @@ import org.apache.logging.log4j.Logger;
 
 /**
  * Главный контроллер – отвечает за навигацию
- * (переключение представлений, переключение темы, выход из приложения).
  */
 public class MainController {
-    // ── Логгер для сообщений ────────
     private static final Logger LOGGER = LogManager.getLogger(MainController.class);
-    // ── Кнопки меню ─────────────────────────────────────
+
+    // Кнопки меню
     public Button devicesBtn;
     public Button addDeviceBtn;
     public Button groupedDevicesBtn;
+    public Button photoGalleryBtn;
     public Button schemesBtn;
     public Button reportsBtn;
     public Button exitBtn;
-    // ── UI‑элементы из main.fxml ────────
+
     @FXML
     private Label statusLabel;
     @FXML
     private VBox contentArea;
     @FXML
     private Button themeToggleBtn;
-    // ── Сервисы доступа к БД ───────────────────────────────
+
+    // Сервисы доступа к БД (УЖЕ ИНИЦИАЛИЗИРОВАНЫ В Main)
     private DeviceDAO deviceDAO;
     private SchemeDAO schemeDAO;
     private DeviceLocationDAO deviceLocationDAO;
-    // ── Экземпляр редактора схем для передачи в другие контроллеры ─
+    private DatabaseService databaseService;
+
     private SchemeEditorController schemeEditorController;
-    private Parent schemeEditorView;  // Сохранённый Root Node из FXML
-    // ── Сцена ─────────────────────────────────────────────
+    private Parent schemeEditorView;
     private Scene scene;
-    // ── Тема ─────────────────────────────────────────────
     private boolean isDarkTheme = false;
 
     // ---------------------------------------------------------
-    //  Методы, вызываемые из главного окна
+    //  Простые сеттеры (всё уже создано в Main)
     // ---------------------------------------------------------
 
     /**
-     * Внедряем DAO из главного приложения (MainApp).
+     * Просто сохраняем DatabaseService (он уже создан в Main)
      */
-    public void setDeviceDAO(DeviceDAO dao) {
-        this.deviceDAO = dao;
-    }
-
-    public void setSchemeDAO(SchemeDAO dao) {
-        this.schemeDAO = dao;
-    }
-
-    public void setDeviceLocationDAO(DeviceLocationDAO dao) {
-        this.deviceLocationDAO = dao;
+    public void setDatabaseService(DatabaseService databaseService) {
+        this.databaseService = databaseService;
+        LOGGER.info("✅ DatabaseService сохранен в MainController");
     }
 
     /**
-     * Получение сцены
-     *
-     * @return - сцена
+     * Просто сохраняем DeviceDAO (он уже создан в Main)
      */
+    public void setDeviceDAO(DeviceDAO deviceDAO) {
+        this.deviceDAO = deviceDAO;
+        LOGGER.info("✅ DeviceDAO сохранен в MainController");
+    }
+
+    public void setSchemeDAO(SchemeDAO schemeDAO) {
+        this.schemeDAO = schemeDAO;
+        LOGGER.info("✅ SchemeDAO сохранен в MainController");
+    }
+
+    public void setDeviceLocationDAO(DeviceLocationDAO deviceLocationDAO) {
+        this.deviceLocationDAO = deviceLocationDAO;
+        LOGGER.info("✅ DeviceLocationDAO сохранен в MainController");
+    }
+
     public Scene getScene() {
         return scene;
     }
 
-    /**
-     * Передаём сцену, чтобы можно было менять стили.
-     */
     public void setScene(Scene scene) {
         this.scene = scene;
     }
 
     /**
      * Сохранение схемы при переходе из редактора схем в другой контроллер.
-     * Показывает уведомление «Автосохранение» на <b>durationSec</b> секунд.
      */
     public void saveSchemeBeforeNavigation() {
-        if (schemeEditorController == null) {
-            return;
-        }
+        if (schemeEditorController == null) return;
 
         try {
             schemeEditorController.getSchemeSaver().saveBeforeNavigation(schemeEditorController.getCurrentScheme());
-
-            // Показываем уведомление на n секунд
             CustomAlert.showAutoSaveNotification("Автосохранение", 1.3);
-
         } catch (Exception e) {
-            System.err.println("Ошибка при сохранении схемы: " + e.getMessage());
+            LOGGER.error("Ошибка при сохранении схемы: {}", e.getMessage());
             CustomAlert.showError("Ошибка сохранения", "Не удалось сохранить схему: " + e.getMessage());
         }
     }
@@ -122,13 +116,12 @@ public class MainController {
             try {
                 SchemeSaver saver = schemeEditorController.getSchemeSaver();
                 Scheme currentScheme = schemeEditorController.getCurrentScheme();
-
                 if (saver != null && currentScheme != null) {
                     saver.saveOnExit(currentScheme);
                     CustomAlert.showAutoSaveNotification("Сохранение при выходе", 0.5);
                 }
             } catch (Exception e) {
-                System.err.println("Ошибка при автосохранении схемы при выходе: " + e.getMessage());
+                LOGGER.error("Ошибка при автосохранении схемы при выходе: {}", e.getMessage());
                 CustomAlert.showWarning("Предупреждение",
                         "Не удалось сохранить схему при выходе. Последние изменения могут быть потеряны.");
             }
@@ -136,7 +129,7 @@ public class MainController {
     }
 
     /**
-     * Инициализация UI‑элементов (hover‑эффекты, стили).
+     * Инициализация UI‑элементов (ТОЛЬКО UI, без бизнес-логики!)
      */
     @FXML
     private void initialize() {
@@ -150,17 +143,19 @@ public class MainController {
         StyleUtils.applyHoverAndAnimation(exitBtn, "button-exit", "button-exit-hover");
         StyleUtils.applyHoverAndAnimation(groupedDevicesBtn, "button-grouped", "button-grouped-hover");
         StyleUtils.applyHoverAndAnimation(schemesBtn, "button-schemes", "button-schemes-hover");
+        StyleUtils.applyHoverAndAnimation(photoGalleryBtn, "button-photo-gallery", "button-photo-gallery-hover");
 
-        // Подключаем CSS Alerts к сцене, если она уже доступна
+        // Подключаем CSS Alerts к сцене
         if (scene != null) {
             try {
                 scene.getStylesheets().add(
                         Objects.requireNonNull(getClass().getResource("/styles/light-theme.css")).toExternalForm()
                 );
             } catch (Exception e) {
-                System.err.println("Не удалось загрузить CSS Alerts: " + e.getMessage());
+                LOGGER.warn("Не удалось загрузить CSS Alerts: {}", e.getMessage());
             }
         }
+        LOGGER.info("✅ UI инициализирован");
     }
 
     /**
@@ -192,15 +187,10 @@ public class MainController {
      */
     @FXML
     private void exitApp() {
-        // Определяем сообщение в зависимости от наличия активного редактора
-        String message;
-        if (schemeEditorController == null) {
-            message = "Вы уверены, что хотите выйти?";
-        } else {
-            message = "Вы уверены, что хотите выйти? Текущая схема будет автоматически сохранена.";
-        }
+        String message = schemeEditorController == null
+                ? "Вы уверены, что хотите выйти?"
+                : "Вы уверены, что хотите выйти? Текущая схема будет автоматически сохранена.";
 
-        // Всегда показываем подтверждение, но с разным текстом
         boolean confirmExit = CustomAlert.showConfirmation("Подтверждение выхода", message);
 
         if (confirmExit) {
@@ -208,7 +198,7 @@ public class MainController {
                 saveSchemeOnExit();
             }
             Timeline timeline = new Timeline(new KeyFrame(
-                    Duration.millis(1500), // задержка закрытия
+                    Duration.millis(1500),
                     _ -> Platform.exit()
             ));
             timeline.play();
@@ -224,17 +214,13 @@ public class MainController {
      */
     @FXML
     private void showDevices() {
-        // Сохраняем, если редактор был открыт
         if (schemeEditorController != null) {
             saveSchemeBeforeNavigation();
-            // Очищаем ссылки (важно!)
             schemeEditorView = null;
             schemeEditorController = null;
         }
 
-        // Разблокируем кнопку
         schemesBtn.setDisable(false);
-
         statusLabel.setText("Просмотр списка приборов");
         contentArea.getChildren().clear();
 
@@ -242,10 +228,8 @@ public class MainController {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/devices.fxml"));
             Parent view = loader.load();
 
-            // Получаем контроллер и передаём ему DAO
             DevicesTableController ctrl = loader.getController();
             if (ctrl != null) {
-                // ВАЖНО: Сначала передаем deviceDAO, потом вызываем init()
                 ctrl.setDeviceDAO(deviceDAO);
                 LOGGER.info("DeviceDAO передан в DevicesTableController");
 
@@ -253,10 +237,7 @@ public class MainController {
                     ctrl.setSchemeEditorController(schemeEditorController);
                 }
 
-                // ТЕПЕРЬ вызываем init() после установки deviceDAO
-                ctrl.init();  // инициализируем таблицу
-            } else {
-                LOGGER.warn("DevicesTableController не найден");
+                ctrl.init();
             }
 
             contentArea.getChildren().add(view);
@@ -273,17 +254,13 @@ public class MainController {
      */
     @FXML
     private void showGroupedDevices() {
-        // Сохраняем, если редактор был открыт
         if (schemeEditorController != null) {
             saveSchemeBeforeNavigation();
-            // Очищаем ссылки (важно!)
             schemeEditorView = null;
             schemeEditorController = null;
         }
 
-        // Разблокируем кнопку
         schemesBtn.setDisable(false);
-
         statusLabel.setText("Просмотр списка приборов по месту установки");
         contentArea.getChildren().clear();
 
@@ -291,10 +268,8 @@ public class MainController {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/devices_grouped.fxml"));
             Parent view = loader.load();
 
-            // Получаем контроллер и передаём ему DAO
             DevicesGroupedController ctrl = loader.getController();
             if (ctrl != null) {
-                // ВАЖНО: Сначала передаем deviceDAO, потом вызываем init()
                 ctrl.setDeviceDAO(deviceDAO);
                 LOGGER.info("DeviceDAO передан в DevicesGroupedController");
 
@@ -302,10 +277,7 @@ public class MainController {
                     ctrl.setSchemeEditorController(schemeEditorController);
                 }
 
-                // ТЕПЕРЬ вызываем init() после установки deviceDAO
                 ctrl.init();
-            } else {
-                LOGGER.warn("DevicesGroupedController не найден");
             }
 
             contentArea.getChildren().add(view);
@@ -317,6 +289,40 @@ public class MainController {
         }
     }
 
+    /**
+     * Метод для отображения галереи фото.
+     */
+    @FXML
+    private void showPhotoGallery() {
+        if (schemeEditorController != null) {
+            saveSchemeBeforeNavigation();
+            schemeEditorView = null;
+            schemeEditorController = null;
+        }
+
+        schemesBtn.setDisable(false);
+        statusLabel.setText("Просмотр фотографий приборов по местам установки");
+        contentArea.getChildren().clear();
+
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/photo-gallery.fxml"));
+            Parent view = loader.load();
+
+            PhotoGalleryController ctrl = loader.getController();
+            if (ctrl != null) {
+                ctrl.setDeviceDAO(deviceDAO);
+                LOGGER.info("DeviceDAO передан в PhotoGalleryController");
+                ctrl.init();
+            }
+
+            contentArea.getChildren().add(view);
+            LOGGER.info("Галерея фото загружена успешно");
+        } catch (IOException e) {
+            statusLabel.setText("Ошибка загрузки галереи фото: " + e.getMessage());
+            CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить галерею фото");
+            LOGGER.error("Ошибка загрузки галереи фото: {}", e.getMessage(), e);
+        }
+    }
 
     /**
      * Показать редактор схем.
@@ -325,43 +331,30 @@ public class MainController {
     private void showSchemesEditor() {
         statusLabel.setText("Редактор схем");
 
-        // Если редактор уже загружен → это попытка уйти → сохраняем и очищаем ссылки
         if (schemeEditorView != null && schemeEditorController != null) {
-            saveSchemeBeforeNavigation(); // Автосохранение
-
-            // Очищаем ссылки → редактор считается закрытым
+            saveSchemeBeforeNavigation();
             schemeEditorView = null;
             schemeEditorController = null;
-
-            // Блокируем кнопку (если нужно)
             schemesBtn.setDisable(true);
             return;
         }
 
-        // Загружаем редактор (первый раз или после ухода)
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/scheme-editor.fxml"));
             schemeEditorView = loader.load();
             schemeEditorController = loader.getController();
 
-            // ВАЖНО: Сначала передаем все DAO, потом вызываем init()
             if (schemeEditorController != null) {
                 schemeEditorController.setDeviceDAO(deviceDAO);
                 schemeEditorController.setSchemeDAO(schemeDAO);
                 schemeEditorController.setDeviceLocationDAO(deviceLocationDAO);
                 LOGGER.info("Все DAO переданы в SchemeEditorController");
-
-                // ТЕПЕРЬ вызываем init() после установки всех DAO
                 schemeEditorController.init();
-            } else {
-                LOGGER.warn("SchemeEditorController не найден");
             }
 
             contentArea.getChildren().clear();
             contentArea.getChildren().add(schemeEditorView);
             LOGGER.info("Редактор схем загружен успешно");
-
-            // Блокируем кнопку, пока редактор открыт
             schemesBtn.setDisable(true);
 
         } catch (IOException e) {
@@ -371,43 +364,33 @@ public class MainController {
         }
     }
 
-
     /**
      * Показать форму добавления прибора.
      */
     @FXML
     private void showAddDeviceForm() {
-        // Сохраняем, если редактор был открыт
         if (schemeEditorController != null) {
             saveSchemeBeforeNavigation();
-            // Очищаем ссылки (важно!)
             schemeEditorView = null;
             schemeEditorController = null;
         }
 
-        // Разблокируем кнопку
         schemesBtn.setDisable(false);
-
         statusLabel.setText("Добавление нового прибора");
         contentArea.getChildren().clear();
 
         try {
-            FXMLLoader loader = new FXMLLoader(
-                    getClass().getResource("/views/add-device-form.fxml"));
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/add-device-form.fxml"));
             Parent view = loader.load();
 
             AddDeviceController ctrl = loader.getController();
             if (ctrl != null) {
-                // ВАЖНО: Сначала передаем deviceDAO
                 ctrl.setDeviceDAO(deviceDAO);
                 LOGGER.info("DeviceDAO передан в AddDeviceController");
 
                 if (schemeEditorController != null) {
                     ctrl.setSchemeEditorController(schemeEditorController);
                 }
-                // AddDeviceController может не иметь метода init()
-            } else {
-                LOGGER.warn("AddDeviceController не найден");
             }
 
             contentArea.getChildren().add(view);
@@ -424,32 +407,24 @@ public class MainController {
      */
     @FXML
     private void showReports() {
-        // Сохраняем, если редактор был открыт
         if (schemeEditorController != null) {
             saveSchemeBeforeNavigation();
-            // Очищаем ссылки (важно!)
             schemeEditorView = null;
             schemeEditorController = null;
         }
 
-        // Разблокируем кнопку
         schemesBtn.setDisable(false);
-
         statusLabel.setText("Просмотр отчётов");
         contentArea.getChildren().clear();
 
         try {
-            FXMLLoader loader = new FXMLLoader(
-                    getClass().getResource("/views/reports.fxml"));
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/reports.fxml"));
             Parent view = loader.load();
 
             ReportsController ctrl = loader.getController();
             if (ctrl != null) {
-                // ВАЖНО: Сначала передаем deviceDAO, потом вызываем init()
                 ctrl.init(deviceDAO, (Stage) contentArea.getScene().getWindow());
                 LOGGER.info("ReportsController инициализирован");
-            } else {
-                LOGGER.warn("ReportsController не найден");
             }
 
             contentArea.getChildren().add(view);

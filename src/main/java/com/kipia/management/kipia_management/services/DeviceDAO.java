@@ -1,9 +1,11 @@
 package com.kipia.management.kipia_management.services;
 
+import com.kipia.management.kipia_management.managers.PhotoManager;
 import com.kipia.management.kipia_management.models.Device;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.io.File;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -20,8 +22,10 @@ import java.util.List;
 public class DeviceDAO {
     // Сервис для работы с базой данных
     private final DatabaseService databaseService;
-    // логгер для сообщений
+    // Логгер для сообщений
     private static final Logger LOGGER = LogManager.getLogger(DeviceDAO.class);
+    // Получаем PhotoManager для миграции фото
+    private PhotoManager photoManager;
 
     /**
      * Конструктор класса DeviceDAO
@@ -31,12 +35,28 @@ public class DeviceDAO {
         this.databaseService = databaseService;
     }
 
+    // Установить PhotoManager
+    public void setPhotoManager(PhotoManager photoManager) {
+        this.photoManager = photoManager;
+    }
+
     /**
      * Вспомогательный метод: сериализация списка фото в строку.
+     * Теперь храним только имена файлов!
      */
     private String photosToString(List<String> photos) {
         if (photos == null || photos.isEmpty()) return "";
-        return String.join(";", photos);
+
+        // Фильтруем только имена файлов (без путей)
+        List<String> fileNames = new ArrayList<>();
+        for (String photo : photos) {
+            if (photo != null && !photo.trim().isEmpty()) {
+                File file = new File(photo);
+                fileNames.add(file.getName()); // ⭐⭐ ТОЛЬКО ИМЯ ФАЙЛА! ⭐⭐
+            }
+        }
+
+        return String.join(";", fileNames);
     }
 
     /**
@@ -86,18 +106,56 @@ public class DeviceDAO {
 
     /**
      * Обновление данных прибора в базе данных
-     *
-     * @param device объект прибора с обновленными данными
      */
     public void updateDevice(Device device) {
-        // Исправленный SQL
         String sql = "UPDATE devices SET type = ?, name = ?, manufacturer = ?, inventory_number = ?, year = ?, measurement_limit = ?, accuracy_class = ?, location = ?, valve_number = ?, status = ?, additional_info = ?, photo_path = ?, photos = ? WHERE id = ?";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
             installParameters(device, stmt);
-            stmt.setInt(14, device.getId());  // Устанавливаем 14: id для WHERE
+            stmt.setInt(14, device.getId());
+
+            // ВЫПОЛНЯЕМ МИГРАЦИЮ ПЕРЕД СОХРАНЕНИЕМ
+            if (photoManager != null && device.getPhotoPath() != null && !device.getPhotoPath().isEmpty()) {
+                migrateOldPhoto(device);
+            }
+
             stmt.executeUpdate();
         } catch (SQLException e) {
             LOGGER.error("Ошибка обновления прибора: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * ⭐⭐ ИСПРАВЛЕННЫЙ МЕТОД: Миграция старого фото в новую структуру ⭐⭐
+     */
+    private void migrateOldPhoto(Device device) {
+        try {
+            String oldPhotoPath = device.getPhotoPath();
+            if (oldPhotoPath != null && !oldPhotoPath.trim().isEmpty()) {
+                LOGGER.info("🔄 Мигрируем старое фото для устройства {}: {}", device.getId(), oldPhotoPath);
+
+                // ⭐⭐ ИСПРАВЛЕНИЕ: Проверяем список photos ⭐⭐
+                List<String> photos = device.getPhotos();
+                if (photos == null) {
+                    photos = new ArrayList<>();
+                    device.setPhotos(photos);
+                }
+
+                // Проверяем, не мигрировали ли уже
+                boolean alreadyMigrated = photos.stream()
+                        .anyMatch(photo -> {
+                            File photoFile = new File(photo);
+                            return photoFile.getName().contains("device_" + device.getId() + "_");
+                        });
+
+                if (!alreadyMigrated && photos.isEmpty()) {
+                    // Добавляем метку, что фото нужно мигрировать
+                    device.addPhoto("[MIGRATE]" + oldPhotoPath);
+
+                    LOGGER.info("⚠️  Отмечено для миграции: {}", oldPhotoPath);
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.error("❌ Ошибка миграции фото для устройства {}: {}", device.getId(), e.getMessage());
         }
     }
 
@@ -174,9 +232,6 @@ public class DeviceDAO {
 
     /**
      * Вспомогательный метод для создания объекта Device из ResultSet
-     * @param rs - ResultSet
-     * @return - объект Device
-     * @throws SQLException - при ошибках
      */
     private Device createDeviceSQL(ResultSet rs) throws SQLException {
         Device device = new Device();
@@ -187,15 +242,20 @@ public class DeviceDAO {
         device.setInventoryNumber(rs.getString("inventory_number"));
         Object yearObj = rs.getObject("year");
         device.setYear(yearObj != null ? (Integer) yearObj : null);
-        device.setMeasurementLimit(rs.getString("measurement_limit")); // Новое поле
+        device.setMeasurementLimit(rs.getString("measurement_limit"));
         Object accuracyObj = rs.getObject("accuracy_class");
-        device.setAccuracyClass(accuracyObj != null ? (Double) accuracyObj : null); // Новое поле
+        device.setAccuracyClass(accuracyObj != null ? (Double) accuracyObj : null);
         device.setLocation(rs.getString("location"));
         device.setValveNumber(rs.getString("valve_number"));
         device.setStatus(rs.getString("status"));
         device.setAdditionalInfo(rs.getString("additional_info"));
         device.setPhotoPath(rs.getString("photo_path"));
-        device.setPhotos(stringToPhotos(rs.getString("photos")));  // Новое
+
+        // Загружаем список фото
+        String photosStr = rs.getString("photos");
+        List<String> photos = stringToPhotos(photosStr);
+        device.setPhotos(photos);
+
         return device;
     }
 
