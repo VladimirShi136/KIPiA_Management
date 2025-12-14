@@ -6,34 +6,40 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.control.Tooltip?>
 
 <!--
   Author: vladimir_shi
   Since: 04.09.2025
   * Окно отчетов *
 -->
-
-<?import javafx.scene.image.ImageView?>
-<?import javafx.scene.image.Image?>
-<?import javafx.scene.control.Tooltip?>
+<?import java.net.URL?>
 <VBox xmlns="http://javafx.com/javafx/23" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.kipia.management.kipia_management.controllers.ReportsController"
-      spacing="20" styleClass="reports-root">
+      spacing="20" prefWidth="1000" prefHeight="700" VBox.vgrow="ALWAYS">
+
     <fx:define>
         <ToggleGroup fx:id="reportTypeGroup"/> <!-- ToggleGroup для выбора типа отчета -->
     </fx:define>
 
     <!-- 1️⃣ РАДИО-КНОПКИ ОТЧЕТОВ ПО КАТЕГОРИЯМ -->
-    <HBox spacing="20" styleClass="report-buttons">
-        <RadioButton text="По статусу" toggleGroup="$reportTypeGroup" fx:id="statusReportBtn" selected="true" styleClass="report-radio"/>
-        <RadioButton text="По типам приборов" toggleGroup="$reportTypeGroup" fx:id="typeReportBtn" styleClass="report-radio"/>
-        <RadioButton text="По производителям" toggleGroup="$reportTypeGroup" fx:id="manufacturerReportBtn" styleClass="report-radio"/>
-        <RadioButton text="По местоположению" toggleGroup="$reportTypeGroup" fx:id="locationReportBtn" styleClass="report-radio"/>
-        <RadioButton text="По годам выпуска" toggleGroup="$reportTypeGroup" fx:id="yearReportBtn" styleClass="report-radio"/>
+    <HBox alignment="CENTER" styleClass="report-buttons">
+        <RadioButton text="По статусу" toggleGroup="$reportTypeGroup" fx:id="statusReportBtn" selected="true"
+                     styleClass="report-radio"/>
+        <RadioButton text="По типам приборов" toggleGroup="$reportTypeGroup" fx:id="typeReportBtn"
+                     styleClass="report-radio"/>
+        <RadioButton text="По производителям" toggleGroup="$reportTypeGroup" fx:id="manufacturerReportBtn"
+                     styleClass="report-radio"/>
+        <RadioButton text="По местоположению" toggleGroup="$reportTypeGroup" fx:id="locationReportBtn"
+                     styleClass="report-radio"/>
+        <RadioButton text="По годам выпуска" toggleGroup="$reportTypeGroup" fx:id="yearReportBtn"
+                     styleClass="report-radio"/>
     </HBox>
 
     <!-- 2️ HBox с заголовком отчета и кнопка экспорта -->
-    <HBox alignment="CENTER_LEFT" spacing="10">
+    <HBox alignment="CENTER" spacing="10">
         <Label fx:id="titleLabel" text="Отчёт по устройствам — По статусу" styleClass="report-title"/>
         <!-- Кнопка экспорта отчета в Excel -->
         <Button fx:id="exportReportButton" styleClass="report-export-button">
@@ -49,5 +55,9 @@
     </HBox>
 
     <!-- BorderPane с графиком -->
-    <BorderPane fx:id="chartPane" styleClass="chart-pane" VBox.vgrow="ALWAYS"/>
+    <BorderPane fx:id="chartPane" styleClass="chart-pane"
+                VBox.vgrow="ALWAYS"
+                minHeight="150"
+                prefHeight="500"
+                maxHeight="Infinity"/>
 </VBox>

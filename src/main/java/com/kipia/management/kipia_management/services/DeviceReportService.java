@@ -1,16 +1,18 @@
 package com.kipia.management.kipia_management.services;
 
 import com.kipia.management.kipia_management.models.Device;
+import javafx.application.Platform;
 import javafx.scene.layout.BorderPane;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.block.BlockBorder;
 import org.jfree.chart.fx.ChartViewer;
 import org.jfree.chart.plot.PiePlot;
 import org.jfree.chart.title.LegendTitle;
-import org.jfree.chart.block.BlockBorder;
-import java.awt.Font;
+
+import java.awt.*;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -50,15 +52,16 @@ public class DeviceReportService {
                 .collect(Collectors.groupingBy(classifier, Collectors.counting()));
     }
 
-    // Метод построения JFreeChart диаграммы с обновлением темы
+    // Метод построения JFreeChart диаграммы
     public ChartViewer buildPieChart(Map<String, Long> dataMap, String chartTitle, BorderPane chartPane, boolean isDarkTheme) {
         if (dataMap.isEmpty()) {
-            LOGGER.warn("Пустые данные для графика '{}' — график не создан", chartTitle);  // Logger для предупреждения
-            // Не возвращаем ничего или null; контроллер xử lý
+            LOGGER.warn("Пустые данные для графика '{}' — график не создан", chartTitle);
             return null;
         }
+
         org.jfree.data.general.DefaultPieDataset dataset = new org.jfree.data.general.DefaultPieDataset();
         dataMap.forEach(dataset::setValue);
+
         JFreeChart chart = ChartFactory.createPieChart(
                 chartTitle,
                 dataset,
@@ -66,58 +69,84 @@ public class DeviceReportService {
                 true,
                 false
         );
+
         PiePlot plot = (PiePlot) chart.getPlot();
-        if (isDarkTheme) {
-            styleChartForDarkTheme(chart, plot);
-        } else {
-            styleChartForLightTheme(chart, plot);
-        }
-        plot.setOutlineVisible(true);
-        plot.setLabelFont(new Font("Dialog", Font.BOLD, 12));
+
+        // Прозрачный фон
+        chart.setBackgroundPaint(new java.awt.Color(0, 0, 0, 0));
+        chart.getTitle().setVisible(false);
+        plot.setBackgroundPaint(new java.awt.Color(0, 0, 0, 0));
+
+        // Применяем стили
+        applyChartTheme(chart, plot, isDarkTheme); // Выносим в отдельный метод
+
+
+        plot.setOutlineVisible(false);
+        plot.setLabelFont(new Font("Dialog", Font.BOLD, 14));
+
+
         ChartViewer chartViewer = new ChartViewer(chart);
-        chartViewer.setPrefSize(600, 400);
+
+
+        // Привязка к размерам
+        chartPane.widthProperty().addListener((_, _, newVal) ->
+                chartViewer.setPrefWidth(newVal.doubleValue() - 20)
+        );
+        chartPane.heightProperty().addListener((_, _, newVal) ->
+                chartViewer.setPrefHeight(newVal.doubleValue() - 20)
+        );
+
         chartPane.setCenter(chartViewer);
-        LOGGER.info("График '{}' построен успешно", chartTitle);  // Logger для success
+        LOGGER.info("График '{}' построен успешно", chartTitle);
         return chartViewer;
     }
 
-    private void styleChartForDarkTheme(JFreeChart chart, PiePlot plot) {
-        // Используем полное имя для java.awt.Color, чтобы избежать конфликта с javafx.scene.paint.Color
-        java.awt.Color darkBg = new java.awt.Color(43, 43, 43);
-        java.awt.Color whiteText = java.awt.Color.WHITE;
-        chart.setBackgroundPaint(darkBg);
-        plot.setBackgroundPaint(darkBg);
-        plot.setOutlinePaint(whiteText);
-        plot.setLabelPaint(whiteText);
-        plot.setLabelBackgroundPaint(null);
-        plot.setLabelOutlinePaint(null);
-        plot.setLabelShadowPaint(null);
+    /**
+     * Применяет тему к графику (используется при создании и обновлении)
+     */
+    private void applyChartTheme(JFreeChart chart, PiePlot plot, boolean isDarkTheme) {
+        // 1. Цвет фона диаграммы
+        chart.setBackgroundPaint(null);
+
+        // 2. Настройка легенды (LegendTitle)
         LegendTitle legend = chart.getLegend();
         if (legend != null) {
-            legend.setBackgroundPaint(darkBg);
-            legend.setItemPaint(whiteText);
-            legend.setItemFont(new Font("Dialog", Font.BOLD, 12));
-            legend.setFrame(new BlockBorder(java.awt.Color.DARK_GRAY));
+            legend.setItemPaint(isDarkTheme ? Color.WHITE : Color.BLACK);  // Цвет текста легенды
+            legend.setBackgroundPaint(new Color(0, 0, 0, 0));  // Прозрачный фон
+            legend.setFrame(BlockBorder.NONE);  // Убираем рамку
         }
+
+        // 3. Настройка меток сегментов (PiePlot)
+        plot.setLabelPaint(isDarkTheme ? Color.WHITE : Color.BLACK);  // Цвет текста меток
+        plot.setLabelBackgroundPaint(isDarkTheme ? Color.decode("#404040") : Color.LIGHT_GRAY);  // Фон меток
+        plot.setLabelOutlinePaint(isDarkTheme ? Color.decode("#606060") : Color.DARK_GRAY);  // Контур меток
+        plot.setLabelLinkPaint(isDarkTheme ? Color.GRAY : Color.DARK_GRAY);  // Цвет линий-выносок
+
+        // Шрифт меток (опционально)
+        Font labelFont = new Font("Arial", Font.PLAIN, 11);
+        plot.setLabelFont(labelFont);
     }
 
-    private void styleChartForLightTheme(JFreeChart chart, PiePlot plot) {
-        // Используем полное имя для java.awt.Color
-        java.awt.Color whiteBg = java.awt.Color.WHITE;
-        java.awt.Color darkText = java.awt.Color.DARK_GRAY;
-        chart.setBackgroundPaint(whiteBg);
-        plot.setBackgroundPaint(whiteBg);
-        plot.setOutlinePaint(darkText);
-        plot.setLabelPaint(darkText);
-        plot.setLabelBackgroundPaint(null);
-        plot.setLabelOutlinePaint(null);
-        plot.setLabelShadowPaint(null);
-        LegendTitle legend = chart.getLegend();
-        if (legend != null) {
-            legend.setBackgroundPaint(whiteBg);
-            legend.setItemPaint(darkText);
-            legend.setItemFont(new Font("Dialog", Font.BOLD, 12));
-            legend.setFrame(new BlockBorder(java.awt.Color.LIGHT_GRAY));
+
+
+    /**
+     * Принудительное обновление графика и темы
+     * @param chartViewer
+     * @param isDarkTheme -
+     */
+    public void updateChartTheme(ChartViewer chartViewer, boolean isDarkTheme) {
+        if (chartViewer == null) {
+            return;
         }
+
+        Platform.runLater(() -> {
+            JFreeChart chart = chartViewer.getChart();
+            PiePlot plot = (PiePlot) chart.getPlot();
+
+            applyChartTheme(chart, plot, isDarkTheme);
+
+            chartViewer.requestLayout();
+            chartViewer.applyCss();
+        });
     }
 }

@@ -19,6 +19,12 @@ import org.apache.logging.log4j.Logger;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Контроллер для работы с галереей фотографий
+ *
+ * @author vladimir_shi
+ * @since 01.12.2025
+ */
 public class PhotoGalleryController {
 
     private static final Logger LOGGER = LogManager.getLogger(PhotoGalleryController.class);
@@ -271,7 +277,7 @@ public class PhotoGalleryController {
                 Label photoLabel = new Label(photoCount + " фото");
                 photoLabel.getStyleClass().add("device-photo-count");
                 photoLabel.setStyle(photoCount > 0 ?
-                        "-fx-text-fill: #27ae60; -fx-font-weight: bold;" :
+                        "-fx-font-weight: bold;" :
                         "-fx-text-fill: #7f8c8d;");
 
                 Region spacer = new Region();
@@ -426,19 +432,21 @@ public class PhotoGalleryController {
      */
     private void updateDevicesByLocation(Device updatedDevice) {
         String location = updatedDevice.getLocation();
-        if (location == null || location.trim().isEmpty()) {
-            return;
-        }
+        if (location == null || location.trim().isEmpty()) return;
+
 
         List<Device> devices = devicesByLocation.get(location);
-        if (devices != null) {
-            // Находим и обновляем устройство в списке
-            for (int i = 0; i < devices.size(); i++) {
-                Device d = devices.get(i);
-                if (d.getId() == updatedDevice.getId()) {
-                    devices.set(i, updatedDevice);
-                    break;
-                }
+        if (devices == null) return;
+
+
+        for (Device d : devices) {
+            if (d.getId() == updatedDevice.getId()) {
+                // Полное копирование данных
+                d.setPhotos(new ArrayList<>(updatedDevice.getPhotos()));
+                d.setName(updatedDevice.getName());
+                d.setInventoryNumber(updatedDevice.getInventoryNumber());
+                // ... другие поля при необходимости
+                break;
             }
         }
     }
@@ -484,11 +492,7 @@ public class PhotoGalleryController {
             }
 
             // Фильтрация "только с фото"
-            if (photosOnly && !data.hasPhotos()) {
-                return false;
-            }
-
-            return true;
+            return !photosOnly || data.hasPhotos();
         });
 
         updateStatistics(); // Обновляем статистику после применения фильтров
@@ -529,35 +533,28 @@ public class PhotoGalleryController {
      */
     private void updateLocationCardData(String location) {
         try {
-            // 1. Находим индекс карточки
             int cardIndex = -1;
-            LocationCardData oldCardData = null;
-
             for (int i = 0; i < locationCardsData.size(); i++) {
                 if (locationCardsData.get(i).getLocation().equals(location)) {
                     cardIndex = i;
-                    oldCardData = locationCardsData.get(i);
                     break;
                 }
             }
 
-            if (cardIndex == -1 || oldCardData == null) {
-                return;
-            }
+            if (cardIndex == -1) return;
 
-            // 2. Получаем актуальный список устройств для этого местоположения
-            List<Device> devices = devicesByLocation.get(location);
-            if (devices == null) {
-                return;
-            }
 
-            // 3. Пересоздаем карточку с обновленными данными
-            LocationCardData newCardData = new LocationCardData(location, devices);
+            // Получаем актуальные устройства
+            List<Device> updatedDevices = devicesByLocation.get(location);
+            if (updatedDevices == null) return;
 
-            // 4. Заменяем старую карточку новой
+
+            // Пересоздаём карточку с новыми данными
+            LocationCardData newCardData = new LocationCardData(location, updatedDevices);
             locationCardsData.set(cardIndex, newCardData);
 
-            // 5. Обновляем статистику "Показано:"
+
+            // Обновляем статистику для отфильтрованных данных
             updateFilteredStatistics();
 
         } catch (Exception e) {
@@ -610,75 +607,91 @@ public class PhotoGalleryController {
             return;
         }
 
-        // Сохраняем состояние карточек перед изменением
+        // Сохраняем состояние раскрытия карточек
         Map<String, Boolean> previousState = new HashMap<>(cardExpansionState);
 
-        // Создаем диалог выбора фото для удаления
         ChoiceDialog<String> dialog = new ChoiceDialog<>(photos.getFirst(), photos);
         dialog.setTitle("Удаление фото");
         dialog.setHeaderText("Выберите фото для удаления из прибора: " + device.getName());
         dialog.setContentText("Фото:");
 
-        // Устанавливаем иконку окна
         Stage dialogStage = (Stage) dialog.getDialogPane().getScene().getWindow();
         dialogStage.getIcons().addAll(ownerStage.getIcons());
 
         Optional<String> result = dialog.showAndWait();
-        result.ifPresent(photoFileName -> {
+        result.ifPresent(photoPath -> {
             boolean confirm = CustomAlert.showConfirmation(
                     "Подтверждение удаления",
                     "Вы уверены, что хотите удалить фото?\n\n" +
-                            "Имя файла: " + photoFileName + "\n" +
+                            "Файл: " + photoPath + "\n" +
                             "Это действие нельзя отменить."
             );
 
             if (confirm) {
-                boolean deleted = photoManager.deletePhoto(device, photoFileName);
+                boolean deleted = photoManager.deletePhoto(device, photoPath);
                 if (deleted) {
                     CustomAlert.showInfo("Удаление фото", "Фото успешно удалено");
 
-                    // ⭐⭐ ПОЛНОЕ ОБНОВЛЕНИЕ ДАННЫХ ⭐⭐
+
                     new Thread(() -> {
                         try {
-                            Thread.sleep(500); // Даем время БД
+                            Thread.sleep(500); // Задержка для завершения операций с ФС/БД
+
 
                             Platform.runLater(() -> {
                                 try {
-                                    // 1. Обновляем устройство из БД
+                                    // 1. Получаем актуальное устройство из БД
                                     Device updatedDevice = deviceDAO.getDeviceById(device.getId());
-                                    if (updatedDevice != null) {
-                                        device.setPhotos(updatedDevice.getPhotos());
-
-                                        // 2. Обновляем статистику
-                                        updateStatistics();
-
-                                        // 3. Обновляем данные в devicesByLocation
-                                        updateDevicesByLocation(updatedDevice);
-
-                                        // 4. Обновляем карточку
-                                        String location = updatedDevice.getLocation();
-                                        if (location != null) {
-                                            updateLocationCardData(location);
-                                        }
-
-                                        // 5. Восстанавливаем состояние раскрытия
-                                        cardExpansionState.clear();
-                                        cardExpansionState.putAll(previousState);
-
-                                        // 6. Обновляем ListView
-                                        cardsListView.refresh();
+                                    if (updatedDevice == null) {
+                                        CustomAlert.showError("Ошибка", "Не удалось обновить данные прибора");
+                                        return;
                                     }
+
+                                    // 2. Обновляем локальный объект
+                                    device.setPhotos(new ArrayList<>(updatedDevice.getPhotos()));
+
+
+                                    // 3. Обновляем хранилище устройств по локациям
+                                    updateDevicesByLocation(updatedDevice);
+
+
+                                    // 4. Пересоздаём карточку местоположения
+                                    String location = updatedDevice.getLocation();
+                                    if (location != null && !location.trim().isEmpty()) {
+                                        updateLocationCardData(location);
+                                    }
+
+                                    // 5. Обновляем общую статистику
+                                    updateStatistics();
+
+
+                                    // 6. Восстанавливаем состояние раскрытия
+                                    cardExpansionState.clear();
+                                    cardExpansionState.putAll(previousState);
+
+
+                                    // 7. Принудительно обновляем фильтр и ListView
+                                    filteredCards.setPredicate(filteredCards.getPredicate());
+                                    cardsListView.refresh();
+
+
+                                    LOGGER.info("✅ Карточка обновлена после удаления фото для прибора: {}", device.getName());
+
+
                                 } catch (Exception e) {
-                                    LOGGER.error("❌ Ошибка обновления после удаления: {}", e.getMessage());
+                                    LOGGER.error("❌ Ошибка обновления после удаления фото: {}", e.getMessage(), e);
+                                    CustomAlert.showError("Ошибка", "Не удалось обновить интерфейс");
                                 }
                             });
                         } catch (InterruptedException e) {
                             Thread.currentThread().interrupt();
+                            LOGGER.error("❌ Прервано обновление после удаления фото");
                         }
                     }).start();
 
                 } else {
-                    CustomAlert.showError("Ошибка", "Не удалось удалить фото");
+                    CustomAlert.showError("Ошибка", "Не удалось удалить фото. Проверьте подключение.");
+                    LOGGER.error("❌ Не удалось удалить фото: {} для прибора {}", photoPath, device.getName());
                 }
             }
         });
@@ -690,13 +703,11 @@ public class PhotoGalleryController {
         int totalLocations = devicesByLocation.size();
         int totalDevices = allDevices.size();
         int totalPhotos = 0;
-        int devicesWithPhotos = 0;
 
         // Общая статистика
         for (Device device : allDevices) {
             List<String> photos = device.getPhotos();
             if (photos != null && !photos.isEmpty()) {
-                devicesWithPhotos++;
                 totalPhotos += photos.size();
             }
         }

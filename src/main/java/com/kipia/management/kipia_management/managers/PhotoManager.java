@@ -17,6 +17,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -25,9 +26,13 @@ import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.util.*;
 import java.util.prefs.Preferences;
+import java.util.stream.Collectors;
 
 /**
- * Утилитный класс для управления фотографиями приборов
+ * Утилитный класс-менеджер для управления фотографиями приборов
+ *
+ * @author vladimir_shi
+ * @since 30.11.2025
  */
 public class PhotoManager {
     private static final Logger LOGGER = LogManager.getLogger(PhotoManager.class);
@@ -38,12 +43,13 @@ public class PhotoManager {
     private static final PhotoManager INSTANCE = new PhotoManager();
 
     private File lastPhotoDirectory;
-    private String basePhotosPath;
+    private final String basePhotosPath;
     private DeviceDAO deviceDAO;
 
     // Приватный конструктор
     private PhotoManager() {
         LOGGER.debug("🔄 Создание PhotoManager...");
+        this.basePhotosPath = getPhotosDirectoryPath();
         restoreLastDirectoryFromPreferences();
         initPhotosDirectory(); // ⭐⭐ Сразу инициализируем папку ⭐⭐
         LOGGER.info("✅ PhotoManager создан (eager initialization)");
@@ -87,24 +93,21 @@ public class PhotoManager {
             device.setPhotos(existingPhotos);
         }
 
-        // Обработка файлов
         for (File file : files) {
             try {
-                // Базовая проверка файла
                 if (!file.exists() || file.length() == 0) {
                     LOGGER.warn("⚠️ Пропущен невалидный файл: {}", file.getName());
                     errorCount++;
                     continue;
                 }
 
-                // Проверка на дубликат
+                // Проверка на дубликат по содержимому
                 if (isFileDuplicate(file, device)) {
                     LOGGER.info("⚠️ Пропущен дубликат: {}", file.getName());
                     duplicateCount++;
                     continue;
                 }
 
-                // Копирование файла
                 String storedFileName = copyPhotoToStorage(file, device);
                 if (storedFileName == null) {
                     LOGGER.warn("⚠️ Ошибка копирования: {}", file.getName());
@@ -112,36 +115,34 @@ public class PhotoManager {
                     continue;
                 }
 
-                // Проверка, что файл создан
-                File savedFile = new File(getFullPhotoPath(storedFileName));
+                File savedFile = new File(getFullPhotoPath(device, storedFileName));
                 if (!savedFile.exists()) {
                     LOGGER.error("❌ Скопированный файл не найден: {}", storedFileName);
                     errorCount++;
                     continue;
                 }
 
-                // Добавление в список
                 device.addPhoto(storedFileName);
                 addedCount++;
                 LOGGER.info("✅ Фото добавлено: {} -> {}", file.getName(), storedFileName);
 
             } catch (Exception ex) {
-                LOGGER.error("❌ Ошибка обработки файла {}: {}", file.getName(), ex.getMessage());
+                LOGGER.error("❌ Ошибка обработки файла {}: {}", file.getName(), ex.getMessage(), ex);
                 errorCount++;
             }
         }
 
-        // Сохранение в БД
+        // Сохранение в БД только при успешном добавлении
         if (addedCount > 0 && deviceDAO != null) {
             try {
                 deviceDAO.updateDevice(device);
                 LOGGER.info("✅ Устройство обновлено в БД (+{} фото)", addedCount);
             } catch (Exception e) {
-                LOGGER.error("❌ Ошибка сохранения в БД: {}", e.getMessage());
+                LOGGER.error("❌ Ошибка сохранения в БД: {}", e.getMessage(), e);
+                CustomAlert.showError("Ошибка БД", "Не удалось сохранить изменения в базе данных.");
             }
         }
 
-        // Показ результата
         showSimpleResult(addedCount, duplicateCount, errorCount, files.size());
     }
 
@@ -177,51 +178,69 @@ public class PhotoManager {
      */
     public boolean deletePhoto(Device device, String photoFileName) {
         try {
-            LOGGER.info("🗑️ Начато удаление фото: {} для устройства ID={}",
-                    photoFileName, device.getId());
+            LOGGER.info("🗑️ Начато удаление фото: {} для устройства ID={}", photoFileName, device.getId());
 
-            // 1. Удалить из списка фото устройства
-            List<String> photos = device.getPhotos();
-            if (photos == null || !photos.contains(photoFileName)) {
-                LOGGER.warn("⚠️ Фото не найдено в списке устройства: {}", photoFileName);
+            // 1. Получаем полный путь
+            String fullPath = getFullPhotoPath(device, photoFileName);
+            if (fullPath == null) {
+                LOGGER.warn("⚠️ Не удалось определить путь для фото: {}", photoFileName);
                 return false;
             }
 
-            boolean removed = photos.remove(photoFileName);
-            if (!removed) {
-                LOGGER.error("❌ Не удалось удалить фото из списка: {}", photoFileName);
-                return false;
-            }
-
-            // 2. Удалить файл из файловой системы
-            String fullPath = getFullPhotoPath(photoFileName);
-            if (fullPath != null) {
-                File file = new File(fullPath);
-                if (file.exists()) {
-                    boolean deleted = file.delete();
-                    if (deleted) {
-                        LOGGER.info("✅ Файл удален с диска: {}", fullPath);
-                    } else {
-                        LOGGER.warn("⚠️ Не удалось удалить файл с диска: {}", fullPath);
-                        // Продолжаем, даже если файл не удален, так как запись уже удалена из списка
-                    }
-                } else {
-                    LOGGER.warn("⚠️ Файл не найден на диске: {}", fullPath);
+            File file = new File(fullPath);
+            if (!file.exists()) {
+                LOGGER.warn("⚠️ Файл не найден на диске: {}", fullPath);
+                // Удаляем запись из списка, даже если файла нет
+                device.getPhotos().remove(photoFileName);
+                if (deviceDAO != null) {
+                    deviceDAO.updateDevice(device);
                 }
+                return true; // Считаем удалением, т.к. запись убрана
             }
 
-            // 3. Обновить устройство в БД
+            // 2. Удаляем файл
+            boolean deleted = file.delete();
+            if (!deleted) {
+                LOGGER.error("❌ Не удалось удалить файл: {}", fullPath);
+                return false;
+            }
+            LOGGER.info("✅ Файл удалён с диска: {}", fullPath);
+
+            // 3. Удаляем из списка фото устройства
+            device.getPhotos().remove(photoFileName);
+
+            // 4. Обновляем БД
             if (deviceDAO != null) {
-                deviceDAO.updateDevice(device);
-                LOGGER.info("✅ Устройство обновлено в БД");
+                try {
+                    deviceDAO.updateDevice(device);
+                    LOGGER.info("✅ Устройство обновлено в БД после удаления фото");
+                } catch (Exception e) {
+                    LOGGER.error("❌ Ошибка сохранения в БД: {}", e.getMessage(), e);
+                    return false;
+                }
             } else {
                 LOGGER.warn("⚠️ DeviceDAO не установлен, обновление БД пропущено");
+            }
+
+            // 5. Проверяем и удаляем пустую папку локации
+            if (device.getLocation() != null && !device.getLocation().isEmpty()) {
+                Path locationDir = Paths.get(basePhotosPath, device.getLocation());
+                if (Files.exists(locationDir) && Files.isDirectory(locationDir)) {
+                    try (var stream = Files.list(locationDir)) {
+                        if (stream.findAny().isEmpty()) {
+                            Files.delete(locationDir);
+                            LOGGER.info("✅ Папка локации удалена (пустая): {}", locationDir.toAbsolutePath());
+                        }
+                    } catch (IOException e) {
+                        LOGGER.error("❌ Ошибка при проверке папки локации: {}", e.getMessage(), e);
+                    }
+                }
             }
 
             return true;
 
         } catch (Exception e) {
-            LOGGER.error("❌ Ошибка удаления фото: {}", e.getMessage(), e);
+            LOGGER.error("❌ Критическая ошибка при удалении фото: {}", e.getMessage(), e);
             return false;
         }
     }
@@ -229,72 +248,86 @@ public class PhotoManager {
     /**
      * Получение полного пути к файлу фото
      */
-    public String getFullPhotoPath(String storedFileName) {
-        if (storedFileName == null || storedFileName.isEmpty()) {
+    public String getFullPhotoPath(Device device, String fileName) {
+        if (device == null || fileName == null || fileName.isEmpty()) {
             return null;
         }
 
-        // Если уже полный путь
-        if (storedFileName.startsWith("/") || storedFileName.contains(":\\") || storedFileName.contains(":/")) {
-            return storedFileName;
-        }
-
-        // Иначе добавляем базовый путь
-        return basePhotosPath + File.separator + storedFileName;
+        Path path = Paths.get(basePhotosPath, device.getLocation(), fileName);
+        return path.toString();
     }
+
 
     /**
      * Просмотр фотографий
      */
     public void viewDevicePhotos(Device device, Stage ownerStage) {
-        LOGGER.info("👁️ Просмотр фото для устройства ID={}, Name={}",
-                device.getId(), device.getName());
+        LOGGER.info("👁️ Просмотр фото для устройства ID={}, Name={}", device.getId(), device.getName());
+
         List<String> photos = device.getPhotos();
         if (photos == null || photos.isEmpty()) {
             CustomAlert.showInfo("Просмотр фото", "Фотографии не добавлены");
             return;
         }
 
-        Stage viewStage = createPhotoViewStage(device, photos, ownerStage);
+        // Фильтруем только существующие файлы
+        List<String> validPhotos = photos.stream()
+                .filter(photoName -> {
+                    String fullPath = getFullPhotoPath(device, photoName);
+                    if (fullPath == null) return false;
+                    File file = new File(fullPath);
+                    return file.exists() && !file.isDirectory();
+                })
+                .collect(Collectors.toList());
+
+        if (validPhotos.isEmpty()) {
+            CustomAlert.showInfo("Просмотр фото", "Нет доступных фотографий (все файлы удалены или перемещены)");
+            return;
+        }
+
+        Stage viewStage = createPhotoViewStage(device, validPhotos, ownerStage);
         viewStage.show();
     }
+
 
     /**
      * Открытие фото в системном приложении
      */
-    public void openInSystemViewer(String storedFileName) {
+    public void openInSystemViewer(Device device, String storedFileName) {
         try {
-            String fullPath = getFullPhotoPath(storedFileName);
+            String fullPath = getFullPhotoPath(device, storedFileName);
             if (fullPath == null) {
                 CustomAlert.showWarning("Просмотр фото", "Не удалось определить путь к файлу: " + storedFileName);
                 return;
             }
 
             File photoFile = new File(fullPath);
-
-            if (photoFile.exists()) {
-                java.awt.Desktop.getDesktop().open(photoFile);
-                LOGGER.info("✅ Фото открыто в системном приложении: {}", storedFileName);
-            } else {
+            if (!photoFile.exists()) {
                 LOGGER.warn("⚠️ Файл не найден: {}", fullPath);
-
-                // Предлагаем удалить несуществующее фото
                 boolean removeBroken = CustomAlert.showConfirmation("Битое фото",
                         "Файл не найден на диске: " + storedFileName +
                                 "\n\nУдалить эту запись из списка фото?");
 
-                if (removeBroken) {
-                    // Нужно получить доступ к Device для удаления
-                    // Это нужно будет реализовать в вызывающем коде
-                    CustomAlert.showInfo("Информация",
-                            "Удаление битого фото должно быть выполнено через интерфейс просмотра фото");
+                if (removeBroken && deviceDAO != null) {
+                    device.getPhotos().remove(storedFileName);
+                    deviceDAO.updateDevice(device);
+                    CustomAlert.showInfo("Информация", "Запись удалена из списка фото");
                 }
+                return;
             }
-        } catch (Exception ex) {
-            LOGGER.error("Ошибка при открытии фото в системном приложении: {}", ex.getMessage(), ex);
-            CustomAlert.showError("Ошибка", "Не удалось открыть фото в системном приложении");
+
+            java.awt.Desktop.getDesktop().open(photoFile);
+            LOGGER.info("✅ Фото открыто в системном приложении: {}", storedFileName);
+
+        } catch (IOException ex) {
+            LOGGER.error("❌ Ошибка открытия файла в системном приложении: {}", ex.getMessage(), ex);
+            CustomAlert.showError("Ошибка", "Не удалось открыть фото в системном приложении.\n" + ex.getMessage());
+        } catch (SecurityException ex) {
+            LOGGER.error("❌ Запрещено открытие файлов: {}", ex.getMessage(), ex);
+            CustomAlert.showError("Ошибка безопасности", "Система запретила открытие файла.\nПроверьте настройки безопасности.");
         }
     }
+
 
     // ========== PRIVATE METHODS ==========
 
@@ -758,56 +791,40 @@ public class PhotoManager {
     private void deleteCurrentPhoto(Stage ownerStage, List<String> photos, int[] currentIndex,
                                     ImageView imageView, Label counterLabel,
                                     javafx.scene.Scene scene, Device device, Stage stage, Button deleteBtn) {
-        if (photos == null || photos.isEmpty()) {
-            LOGGER.warn("⚠️ Список фото пуст, нечего удалять");
+        if (photos.isEmpty() || currentIndex[0] < 0 || currentIndex[0] >= photos.size()) {
+            LOGGER.warn("⚠️ Нет фото для удаления или индекс вне диапазона");
             return;
         }
 
-        // ⭐⭐ ПРОВЕРЯЕМ ГРАНИЦЫ ПЕРЕД УДАЛЕНИЕМ ⭐⭐
-        if (currentIndex[0] >= 0 && currentIndex[0] < photos.size()) {
-            String photoToDelete = photos.get(currentIndex[0]);
+        String photoToDelete = photos.get(currentIndex[0]);
 
-            boolean confirm = CustomAlert.showConfirmation(
-                    "Удаление фото",
-                    "Удалить текущее фото?\n\n" +
-                            "Имя файла: " + photoToDelete + "\n" +
-                            "Файл будет удален с диска."
-            );
+        boolean confirm = CustomAlert.showConfirmation(
+                "Удаление фото",
+                "Удалить текущее фото?\n\n" +
+                        "Имя файла: " + photoToDelete + "\n" +
+                        "Файл будет удалён с диска."
+        );
 
-            if (confirm) {
-                // ⭐⭐ СОХРАНЯЕМ ИНДЕКС ПЕРЕД УДАЛЕНИЕМ ⭐⭐
-                int indexToDelete = currentIndex[0];
+        if (!confirm) return;
 
-                boolean deleted = deletePhoto(device, photoToDelete);
-                if (deleted) {
-                    // Удаляем из локального списка по сохраненному индексу
-                    if (indexToDelete < photos.size()) {
-                        photos.remove(indexToDelete);
-                    }
+        boolean deleted = deletePhoto(device, photoToDelete);
+        if (deleted) {
+            photos.remove(currentIndex[0]);
 
-                    if (photos.isEmpty()) {
-                        // Если фото больше нет, закрываем окно
-                        CustomAlert.showInfo("Удаление фото", "Все фото удалены");
-                        stage.close();
-                    } else {
-                        // Переходим к следующему фото, корректируем индекс
-                        if (indexToDelete >= photos.size()) {
-                            currentIndex[0] = photos.size() - 1;
-                        } else {
-                            currentIndex[0] = indexToDelete; // Остаемся на том же индексе (следующий фото сдвинулся)
-                        }
-
-                        // Обновляем интерфейс
-                        showPhotoAtIndex(photos, currentIndex[0], imageView, counterLabel,
-                                null, scene, stage, deleteBtn, device);
-                    }
-                } else {
-                    CustomAlert.showError("Ошибка", "Не удалось удалить фото");
+            if (photos.isEmpty()) {
+                CustomAlert.showInfo("Удаление фото", "Все фото удалены");
+                stage.close();
+            } else {
+                // Корректируем индекс: если удалили последний элемент, переходим на предыдущий
+                if (currentIndex[0] >= photos.size()) {
+                    currentIndex[0] = photos.size() - 1;
                 }
+                // Обновляем отображение
+                showPhotoAtIndex(photos, currentIndex[0], imageView, counterLabel,
+                        null, scene, stage, deleteBtn, device);
             }
         } else {
-            LOGGER.warn("⚠️ Текущий индекс вне границ списка фото: {} (размер: {})",
-                    currentIndex[0], photos.size());
+            CustomAlert.showError("Ошибка", "Не удалось удалить фото. Проверьте права доступа или наличие файла.");
         }
     }
 
@@ -881,100 +898,75 @@ public class PhotoManager {
                                   Label counterLabel, Button openSystemBtn,
                                   javafx.scene.Scene scene, Stage stage,
                                   Button deleteBtn, Device device) {
-        if (index >= 0 && index < photos.size()) {
-            String storedFileName = photos.get(index);
+        if (index < 0 || index >= photos.size()) {
+            LOGGER.warn("⚠️ Индекс вне диапазона: {} (размер списка: {})", index, photos.size());
+            return;
+        }
 
-            String fullPath = getFullPhotoPath(storedFileName);
+        String storedFileName = photos.get(index);
+        String fullPath = getFullPhotoPath(device, storedFileName);
 
-            if (fullPath == null) {
-                LOGGER.error("❌ Не удалось найти фото: {}", storedFileName);
-                CustomAlert.showWarning("Просмотр фото",
-                        "Файл не найден: " + storedFileName +
-                                "\nПроверьте папку: " + basePhotosPath);
-                return;
-            }
 
-            // ⭐⭐ ПРОВЕРЯЕМ СУЩЕСТВОВАНИЕ ФАЙЛА ⭐⭐
-            File photoFile = new File(fullPath);
-            if (!photoFile.exists()) {
-                LOGGER.error("❌ Файл не существует: {}", fullPath);
-                CustomAlert.showWarning("Просмотр фото",
-                        "Файл не найден: " + storedFileName +
-                                "\nПуть: " + fullPath);
+        if (fullPath == null) {
+            LOGGER.error("❌ Не удалось получить путь для фото: {}", storedFileName);
+            CustomAlert.showWarning("Ошибка", "Не найден путь к фото: " + storedFileName);
+            return;
+        }
 
-                // ⭐⭐ ПРЕДЛАГАЕМ УДАЛИТЬ НЕСУЩЕСТВУЮЩЕЕ ФОТО ⭐⭐
-                boolean removeBroken = CustomAlert.showConfirmation("Битое фото",
-                        "Файл не найден на диске: " + storedFileName +
-                                "\n\nУдалить эту запись из списка фото?");
+        File photoFile = new File(fullPath);
+        if (!photoFile.exists()) {
+            LOGGER.error("❌ Файл не существует: {}", fullPath);
+            boolean removeBroken = CustomAlert.showConfirmation("Битое фото",
+                    "Файл не найден на диске:\n" + storedFileName +
+                            "\n\nУдалить запись из списка?");
 
-                if (removeBroken) {
-                    photos.remove(index);
-                    if (deviceDAO != null) {
-                        // Обновляем устройство в БД
-                        List<String> devicePhotos = device.getPhotos();
-                        devicePhotos.remove(storedFileName);
-                        deviceDAO.updateDevice(device);
-                    }
 
-                    // Если фото остались, показываем следующее
-                    if (!photos.isEmpty()) {
-                        int newIndex = Math.min(index, photos.size() - 1);
-                        showPhotoAtIndex(photos, newIndex, imageView, counterLabel,
-                                openSystemBtn, scene, stage, deleteBtn, device);
-                    } else {
-                        CustomAlert.showInfo("Информация", "Все фото удалены");
-                        stage.close();
-                    }
-                }
-                return;
-            }
-
-            try {
-                // ⭐⭐ ИСПРАВЛЯЕМ ПУТЬ ДЛЯ Image ⭐⭐
-                // Для Windows нужно экранировать обратные слеши
-                String imagePath = photoFile.toURI().toString();
-                LOGGER.debug("🖼️ Загрузка изображения по пути: {}", imagePath);
-
-                Image image = new Image(imagePath, false);
-
-                if (image.isError()) {
-                    LOGGER.error("❌ Ошибка загрузки изображения: {}", image.getException().getMessage());
-                    CustomAlert.showError("Ошибка", "Не удалось загрузить фото: " + storedFileName +
-                            "\nОшибка: " + image.getException().getMessage());
-                    return;
+            if (removeBroken) {
+                photos.remove(index);
+                if (deviceDAO != null) {
+                    device.getPhotos().remove(storedFileName);
+                    deviceDAO.updateDevice(device);
                 }
 
-                // Ждем загрузки изображения
-                if (image.isBackgroundLoading()) {
-                    image.progressProperty().addListener((_, _, newVal) -> {
-                        if (newVal.doubleValue() == 1.0) {
-                            Platform.runLater(() -> {
-                                imageView.setImage(image);
-                                scaleImageToFitScreen(imageView, image, scene);
-                            });
-                        }
-                    });
+                if (!photos.isEmpty()) {
+                    int newIndex = Math.max(0, Math.min(index, photos.size() - 1));
+                    showPhotoAtIndex(photos, newIndex, imageView, counterLabel,
+                            openSystemBtn, scene, stage, deleteBtn, device);
                 } else {
-                    imageView.setImage(image);
-                    Platform.runLater(() -> scaleImageToFitScreen(imageView, image, scene));
+                    CustomAlert.showInfo("Информация", "Все фото удалены");
+                    stage.close();
                 }
-
-                counterLabel.setText(String.format("Фото %d из %d", index + 1, photos.size()));
-
-                if (openSystemBtn != null) {
-                    openSystemBtn.setOnAction(_ -> openInSystemViewer(storedFileName));
-                }
-
-                // ⭐⭐ ОБНОВЛЯЕМ ТЕКСТ КНОПКИ УДАЛЕНИЯ ⭐⭐
-                if (deleteBtn != null) {
-                    deleteBtn.setText("🗑 Удалить (" + (index + 1) + "/" + photos.size() + ")");
-                }
-
-            } catch (Exception ex) {
-                LOGGER.error("❌ Ошибка при загрузке фото {}: {}", fullPath, ex.getMessage(), ex);
-                imageView.setImage(null);
-                CustomAlert.showError("Ошибка", "Не удалось загрузить фото: " + storedFileName);
             }
+            return;
+        }
+
+        try {
+            String imagePath = photoFile.toURI().toString();
+            Image image = new Image(imagePath, false);
+
+            if (image.isError()) {
+                LOGGER.error("❌ Ошибка загрузки изображения: {}", image.getException().getMessage());
+                CustomAlert.showError("Ошибка", "Не удалось загрузить фото: " + storedFileName);
+                return;
+            }
+
+            imageView.setImage(image);
+            Platform.runLater(() -> scaleImageToFitScreen(imageView, image, scene));
+
+            counterLabel.setText(String.format("Фото %d из %d", index + 1, photos.size()));
+
+            if (openSystemBtn != null) {
+                openSystemBtn.setOnAction(_ -> openInSystemViewer(device, storedFileName));
+            }
+
+            if (deleteBtn != null) {
+                deleteBtn.setText("🗑 Удалить (" + (index + 1) + "/" + photos.size() + ")");
+            }
+
+        } catch (Exception ex) {
+            LOGGER.error("❌ Ошибка при загрузке фото {}: {}", fullPath, ex.getMessage(), ex);
+            imageView.setImage(null);
+            CustomAlert.showError("Ошибка", "Не удалось отобразить фото: " + storedFileName);
         }
     }
 
@@ -1021,23 +1013,11 @@ public class PhotoManager {
      */
     private void initPhotosDirectory() {
         try {
-            basePhotosPath = getPhotosDirectoryPath();
-            File photosDir = new File(basePhotosPath);
-
-            if (!photosDir.exists()) {
-                boolean created = photosDir.mkdirs();
-                if (created) {
-                    LOGGER.info("✅ Создана папка для фото: {}", basePhotosPath);
-                } else {
-                    LOGGER.error("❌ Не удалось создать папку для фото: {}", basePhotosPath);
-                }
-            }
-
-            LOGGER.info("📁 Базовая директория фото: {}", basePhotosPath);
-
+            Path basePath = Paths.get(basePhotosPath);
+            Files.createDirectories(basePath);
+            LOGGER.info("✅ Корневая папка фото создана: {}", basePath.toAbsolutePath());
         } catch (Exception e) {
-            LOGGER.error("❌ Ошибка при создании папки для фото: {}", e.getMessage());
-            basePhotosPath = System.getProperty("java.io.tmpdir") + File.separator + PHOTOS_DIR_NAME;
+            LOGGER.error("❌ Ошибка создания корневой папки фото: {}", e.getMessage(), e);
         }
     }
 
@@ -1103,8 +1083,19 @@ public class PhotoManager {
      */
     private String copyPhotoToStorage(File originalFile, Device device) {
         try {
-            if (basePhotosPath == null) return null;
-            if (!originalFile.exists() || !originalFile.canRead()) return null;
+            if (basePhotosPath == null) {
+                LOGGER.error("❌ basePhotosPath не инициализирован");
+                return null;
+            }
+            if (!originalFile.exists() || !originalFile.canRead()) {
+                LOGGER.warn("⚠️ Исходный файл не существует или недоступен: {}", originalFile.getName());
+                return null;
+            }
+
+            if (device.getLocation() == null || device.getLocation().isEmpty()) {
+                LOGGER.error("❌ location не указан для устройства ID={}", device.getId());
+                return null;
+            }
 
             String originalName = originalFile.getName();
             int dotIndex = originalName.lastIndexOf('.');
@@ -1117,40 +1108,36 @@ public class PhotoManager {
             String baseName = originalName.substring(0, dotIndex);
             String extension = originalName.substring(dotIndex);
 
-            // Очистка имени
             baseName = baseName.replaceAll("[\\\\/:*?\"<>|]", "_");
 
-            // Уникальное имя с timestamp
+
             String timestamp = String.valueOf(System.currentTimeMillis());
             String newFileName = String.format("device_%d_%s_%s%s",
                     device.getId(), baseName, timestamp, extension);
 
-            Path destinationPath = Paths.get(basePhotosPath, newFileName);
-
-            // Создаем директорию если нужно
-            File photosDir = new File(basePhotosPath);
-            if (!photosDir.exists()) {
-                photosDir.mkdirs();
-            }
-
-            // Копируем
+            Path destinationPath = Paths.get(basePhotosPath, device.getLocation(), newFileName);
+            Files.createDirectories(destinationPath.getParent());
             Files.copy(originalFile.toPath(), destinationPath, StandardCopyOption.REPLACE_EXISTING);
 
-            // Проверяем
             File copiedFile = destinationPath.toFile();
-            if (!copiedFile.exists()) return null;
+            if (!copiedFile.exists()) {
+                LOGGER.error("❌ Скопированный файл не найден: {}", destinationPath);
+                return null;
+            }
 
             LOGGER.info("📸 Фото сохранено: {} ({} байт)", newFileName, copiedFile.length());
             return newFileName;
 
         } catch (Exception e) {
-            LOGGER.error("❌ Ошибка копирования: {}", e.getMessage());
+            LOGGER.error("❌ Ошибка копирования фото: {}", e.getMessage(), e);
             return null;
         }
     }
 
+
     /**
      * Компактная проверка дубликатов по хэшу MD5
+     *
      * @return true если файл уже существует в фото устройства
      */
     private boolean isFileDuplicate(File newFile, Device device) {
@@ -1165,7 +1152,7 @@ public class PhotoManager {
 
             // Сравниваем с существующими фото
             for (String existingPhoto : existingPhotos) {
-                String fullPath = getFullPhotoPath(existingPhoto);
+                String fullPath = getFullPhotoPath(device, existingPhoto);
                 File existingFile = new File(fullPath);
 
                 if (!existingFile.exists()) continue;

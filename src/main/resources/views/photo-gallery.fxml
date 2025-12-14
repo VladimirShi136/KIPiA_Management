@@ -1,16 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  Author: vladimir_shi
+  Since: 02.12.2025
+  * Окно фотогалереи *
+-->
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-
 <VBox xmlns="http://javafx.com/javafx/23"
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.kipia.management.kipia_management.controllers.PhotoGalleryController"
       styleClass="photo-gallery-root"
-      spacing="15">
+      VBox.vgrow="ALWAYS">
 
     <!-- ПАНЕЛЬ ПОИСКА И ФИЛЬТРОВ -->
-    <VBox styleClass="search-filter-panel" spacing="10">
+    <VBox styleClass="search-filter-panel">
         <HBox styleClass="search-row" alignment="CENTER_LEFT">
+            <Label text="Поиск:" styleClass="search-label"/>
             <TextField fx:id="searchField"
                        promptText="Поиск по месту установки или прибору..."
                        styleClass="search-field"/>
@@ -89,10 +95,13 @@
             </VBox>
         </GridPane>
     </VBox>
-
     <!-- КОНТЕЙНЕР КАРТОЧЕК -->
     <ListView fx:id="cardsListView"
               VBox.vgrow="ALWAYS"
+              prefWidth="2200"
+              prefHeight="1800"
+              minWidth="600"
+              minHeight="200"
+              maxHeight="Infinity"
               styleClass="photo-gallery-listview"/>
-
 </VBox>

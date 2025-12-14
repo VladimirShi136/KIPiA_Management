@@ -32,7 +32,6 @@ import java.util.*;
  * @since 11.10.2025
  */
 public class DevicesGroupedController {
-
     // логгер для сообщений
     private static final Logger LOGGER = LogManager.getLogger(DevicesGroupedController.class);
 
@@ -783,24 +782,70 @@ public class DevicesGroupedController {
             CustomAlert.showWarning("Удаление", "Выберите прибор для удаления");
             return;
         }
+
         Device dev = ((DeviceItem) selected.getValue()).device();
-        boolean confirmed = CustomAlert.showConfirmation("Подтверждение", "Удалить прибор \"" + dev.getName() + "\"?");
-        if (confirmed) {  // True = YES, false = NO/CANCEL
-            LOGGER.info("Начато удаление прибора: {}", dev.getName());
-            boolean success = deviceDAO.deleteDevice(dev.getId());
-            if (success) {
+
+        // 1. Диалог с выбором действия
+        String title = "Подтверждение удаления";
+        String message = "Удалить прибор \"" + dev.getName() + "\"?\n" +
+                "ДА - удалить вместе с привязанными фото.\n" +
+                "НЕТ - удалить только прибор.\n" +
+                "Отмена - отменить действие.";
+
+        Optional<ButtonType> result = CustomAlert.showConfirmationWithOptions(
+                title,
+                message,
+                CustomAlert.YES_BUTTON,
+                CustomAlert.NO_BUTTON,
+                CustomAlert.CANCEL_BUTTON
+        );
+
+        if (result.isEmpty() || result.get() == CustomAlert.CANCEL_BUTTON) {
+            LOGGER.info("Удаление отменено пользователем для прибора: {}", dev.getName());
+            return;
+        }
+
+        boolean shouldDeletePhotos = result.get() == CustomAlert.YES_BUTTON;
+
+        LOGGER.info("Начато удаление прибора: {} (удалять фото: {})", dev.getName(), shouldDeletePhotos);
+
+        // 2. Удаление фото (если выбрано)
+        if (shouldDeletePhotos) {
+            PhotoManager photoManager = PhotoManager.getInstance();
+            List<String> photos = dev.getPhotos();
+            if (photos != null && !photos.isEmpty()) {
+                // Используем итератор для безопасного удаления
+                Iterator<String> iterator = photos.iterator();
+                while (iterator.hasNext()) {
+                    String photoName = iterator.next();
+                    boolean deleted = photoManager.deletePhoto(dev, photoName);
+                    if (deleted) {
+                        iterator.remove(); // Безопасное удаление через итератор
+                    } else {
+                        LOGGER.warn("Не удалось удалить фото {} для прибора {}", photoName, dev.getId());
+                    }
+                }
+            }
+        }
+
+        // 3. Удаление прибора из БД
+        boolean success = deviceDAO.deleteDevice(dev.getId());
+        if (success) {
+            // Переносим удаление из filteredList в Platform.runLater
+            Platform.runLater(() -> {
                 filteredList.getSource().remove(dev);
                 updateTreeItems();
                 updateStatistics();
                 if (schemeEditorController != null) {
                     schemeEditorController.refreshSchemesAndDevices();
                 }
-                LOGGER.info("Прибор удалён: {}", dev.getName());
-            } else {
-                CustomAlert.showError("Ошибка удаления", "Не удалось удалить прибор из базы данных");
-                LOGGER.error("Ошибка удаления прибора: {}", dev.getName());
-            }
-        } else LOGGER.info("Удаление отменено пользователем: {}", dev.getName());
+                LOGGER.info("Прибор успешно удалён: {}", dev.getName());
+                CustomAlert.showSuccess("Удаление", "Прибор успешно удалён");
+            });
+        } else {
+            CustomAlert.showError("Ошибка удаления", "Не удалось удалить прибор из базы данных");
+            LOGGER.error("Ошибка удаления прибора: {}", dev.getName());
+        }
     }
 
     private void configureRowFactory() {

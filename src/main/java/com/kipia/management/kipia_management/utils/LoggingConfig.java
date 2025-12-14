@@ -8,6 +8,9 @@ import org.apache.logging.log4j.core.config.Configurator;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 
 /**
  * Класс LoggingConfig предоставляет методы для настройки логирования.
@@ -25,6 +28,9 @@ public class LoggingConfig {
         }
 
         try {
+            // ПРОВЕРЯЕМ И КОПИРУЕМ КОНФИГ ЕСЛИ НУЖНО
+            checkAndCopyConfig();
+
             // Создаем директорию для логов если её нет
             createLogDirectory();
 
@@ -61,52 +67,88 @@ public class LoggingConfig {
     }
 
     /**
+     * Проверяет и копирует конфигурационный файл если его нет
+     */
+    private static void checkAndCopyConfig() {
+        try {
+            // Определяем целевой путь (куда должен быть конфиг)
+            String targetConfigPath = getLoggingConfigPath();
+
+            // Если путь null или пустой, пропускаем
+            if (targetConfigPath.isEmpty()) {
+                return;
+            }
+
+            File targetFile = new File(targetConfigPath);
+
+            // Если файл уже существует, ничего не делаем
+            if (targetFile.exists()) {
+                System.out.println("Конфигурационный файл уже существует: " + targetConfigPath);
+                return;
+            }
+
+            // Исходный файл для копирования
+            String sourceConfigPath = "C:/Users/kalba/IdeaProjects/KIPiA_Management/installer_resources/log4j2.xml";
+            File sourceFile = new File(sourceConfigPath);
+
+            // Проверяем существует ли исходный файл
+            if (!sourceFile.exists()) {
+                System.err.println("Исходный файл конфигурации не найден: " + sourceConfigPath);
+                return;
+            }
+
+            // Создаем директорию для целевого файла если её нет
+            File targetDir = targetFile.getParentFile();
+            if (targetDir != null && !targetDir.exists()) {
+                boolean created = targetDir.mkdirs();
+                if (!created) {
+                    System.err.println("Не удалось создать директорию: " + targetDir.getAbsolutePath());
+                    return;
+                }
+            }
+
+            // Копируем файл
+            Files.copy(
+                    Paths.get(sourceConfigPath),
+                    Paths.get(targetConfigPath),
+                    StandardCopyOption.REPLACE_EXISTING
+            );
+
+            System.out.println("Конфигурационный файл скопирован из " + sourceConfigPath + " в " + targetConfigPath);
+
+        } catch (Exception e) {
+            System.err.println("Ошибка при копировании конфигурационного файла: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
      * Определяет путь к файлу конфигурации в зависимости от режима запуска
      */
     private static String getLoggingConfigPath() {
         // ПРИОРИТЕТ 1: Принудительный путь через системное свойство
         String customConfigPath = System.getProperty("log4j.configurationFile");
         if (customConfigPath != null && !customConfigPath.trim().isEmpty()) {
+            // Убираем префикс "file:" если есть
+            if (customConfigPath.startsWith("file:")) {
+                customConfigPath = customConfigPath.substring(5);
+            }
             logger.info("Используется пользовательский путь к конфигурации: {}", customConfigPath);
             return customConfigPath;
         }
 
         // ПРИОРИТЕТ 2: Режим разработки
         if (isDevelopmentMode()) {
-            // Режим разработки - конфиг из ресурсов
+            // Режим разработки - конфиг из ресурсов проекта
             String projectDir = System.getProperty("user.dir");
             String devConfigPath = projectDir + "/src/main/resources/logs/log4j2.xml";
             logger.info("Режим разработки - конфиг из: {}", devConfigPath);
             return devConfigPath;
         } else {
-            // Режим продакшена - конфиг в AppData или рядом с EXE
+            // Режим продакшена - конфиг в AppData
             String appDataPath = System.getenv("APPDATA") + "/KIPiA_Management/log4j2.xml";
-            String currentDirPath = getCurrentDir() + "/log4j2.xml";
-
-            // Проверяем сначала в AppData, потом рядом с EXE
-            File appDataConfig = new File(appDataPath);
-            if (appDataConfig.exists()) {
-                logger.info("Режим продакшена - конфиг из AppData: {}", appDataPath);
-                return appDataPath;
-            } else {
-                logger.info("Режим продакшена - конфиг из текущей директории: {}", currentDirPath);
-                return currentDirPath;
-            }
-        }
-    }
-
-    /**
-     * Получает текущую директорию приложения
-     */
-    private static String getCurrentDir() {
-        try {
-            // Для продакшена получаем путь к директории с JAR/EXE
-            String jarPath = LoggingConfig.class.getProtectionDomain()
-                    .getCodeSource().getLocation().toURI().getPath();
-            File jarFile = new File(jarPath);
-            return jarFile.getParent();
-        } catch (Exception e) {
-            return System.getProperty("user.dir");
+            logger.info("Режим продакшена - конфиг из AppData: {}", appDataPath);
+            return appDataPath;
         }
     }
 

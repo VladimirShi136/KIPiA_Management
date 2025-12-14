@@ -99,7 +99,7 @@ public class SchemeSaver {
      */
     public void selectButtonSaveScheme(Scheme scheme) {
         saveScheme(scheme);
-        CustomAlert.showAutoSaveNotification("Сохранение схемы", 1.5);
+        CustomAlert.showAutoSaveNotification("Сохранение", 1.5);
     }
 
     // --- Вспомогательные методы (прежние) ---

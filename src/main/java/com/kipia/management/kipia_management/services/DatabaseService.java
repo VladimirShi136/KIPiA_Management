@@ -290,47 +290,6 @@ public class DatabaseService {
         } catch (Exception e) {
             LOGGER.error("Ошибка добавления тестовых устройств: {}", e.getMessage(), e);
         }
-
-        // НОВЫЕ: Добавить тестовую схему
-        String serializedScheme = "RECTANGLE,50,50,200,100;LINE,10,10,50,50";
-        try (PreparedStatement stmtScheme = getConnection().prepareStatement(
-                "INSERT INTO schemes (name, description, data) VALUES (?, ?, ?)")) {
-            stmtScheme.setString(1, "Схема предприятия");
-            stmtScheme.setString(2, "Тестовая схема с линиями");
-            stmtScheme.setString(3, serializedScheme);
-            stmtScheme.executeUpdate();
-            LOGGER.info("Тестовая схема добавлена");
-        } catch (SQLException e) {
-            LOGGER.error("Ошибка добавления тестовой схемы: {}", e.getMessage(), e);
-        }
-
-        // НОВЫЕ: Добавить тестовые привязки приборов (device_locations)
-        try (PreparedStatement stmtLoc = getConnection().prepareStatement(
-                "INSERT INTO device_locations (device_id, scheme_id, x, y, rotation) VALUES (?, 1, ?, ?, ?)")) {
-
-            stmtLoc.setInt(1, 1);  // Устройство ID=1 (device1)
-            stmtLoc.setDouble(2, 100);
-            stmtLoc.setDouble(3, 150);
-            stmtLoc.setDouble(4, 0.0);  // ← ДОБАВЛЕНО значение rotation
-            stmtLoc.executeUpdate();
-
-            stmtLoc.setInt(1, 2);  // Устройство ID=2 (device2)
-            stmtLoc.setDouble(2, 150);
-            stmtLoc.setDouble(3, 250);
-            stmtLoc.setDouble(4, 0.0);  // ← ДОБАВЛЕНО значение rotation
-            stmtLoc.executeUpdate();
-
-            stmtLoc.setInt(1, 3);  // Устройство ID=3 (device3)
-            stmtLoc.setDouble(2, 200);
-            stmtLoc.setDouble(3, 350);
-            stmtLoc.setDouble(4, 0.0);  // ← ДОБАВЛЕНО значение rotation
-            stmtLoc.executeUpdate();
-
-            LOGGER.info("Тестовые привязки приборов добавлены");
-        } catch (SQLException e) {
-            LOGGER.error("Ошибка добавления тестовых локаций: {}", e.getMessage(), e);
-        }
-
         LOGGER.info("Тестовые данные добавлены успешно");
     }
 

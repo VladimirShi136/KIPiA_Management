@@ -5,14 +5,14 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.geometry.Insets?>
 
 <!--
   Author: vladimir_shi
   Since: 24.08.2025
   * Главное окно *
 -->
-
-<?import javafx.geometry.Insets?>
+<?import java.net.URL?>
 <BorderPane xmlns="http://javafx.com/javafx/23"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.kipia.management.kipia_management.controllers.MainController">
@@ -26,7 +26,7 @@
                 </padding>
             </Label>
             <Region HBox.hgrow="ALWAYS"/>
-            <Label text="ver 1.0.2" styleClass="version-label">
+            <Label text="ver 1.0.3" styleClass="version-label">
                 <padding>
                     <Insets right="15"/>
                 </padding>

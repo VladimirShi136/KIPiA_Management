@@ -27,9 +27,9 @@ public class CustomAlert {
     // Константы для русских кнопок
     public static final ButtonType RETRY_BUTTON = new ButtonType("Повторить", ButtonBar.ButtonData.APPLY);
     public static final ButtonType CANCEL_BUTTON = new ButtonType("Отмена", ButtonBar.ButtonData.CANCEL_CLOSE);
-    private static final ButtonType OK_BUTTON = new ButtonType("ОК", ButtonBar.ButtonData.OK_DONE);
-    private static final ButtonType YES_BUTTON = new ButtonType("Да", ButtonBar.ButtonData.YES);
-    private static final ButtonType NO_BUTTON = new ButtonType("Нет", ButtonBar.ButtonData.NO);
+    public static final ButtonType OK_BUTTON = new ButtonType("ОК", ButtonBar.ButtonData.OK_DONE);
+    public static final ButtonType YES_BUTTON = new ButtonType("Да", ButtonBar.ButtonData.YES);
+    public static final ButtonType NO_BUTTON = new ButtonType("Нет", ButtonBar.ButtonData.NO);
 
     // Базовые методы с русифицированными заголовками и текстом
 
@@ -202,6 +202,33 @@ public class CustomAlert {
         } catch (Exception e) {
             System.err.println("Ошибка показа уведомления: " + e.getMessage());
         }
+    }
+
+    /**
+     * Показывает диалоговое окно подтверждения с настраиваемыми кнопками.
+     *
+     * @param title      Заголовок окна
+     * @param message    Текст сообщения
+     * @param buttons    Список кнопок (ButtonType)
+     * @return Optional<ButtonType> — выбранная кнопка или пустой Optional, если закрыто
+     */
+    public static Optional<ButtonType> showConfirmationWithOptions(
+            String title,
+            String message,
+            ButtonType... buttons
+    ) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle(title);
+        alert.setHeaderText("Подтверждение");
+        alert.setContentText(message);
+
+        alert.getButtonTypes().clear();
+        alert.getButtonTypes().addAll(buttons);
+
+
+        StyleUtils.setupAlertStyle(alert, title, StyleUtils.getAlertStyleClass("confirm"));
+        Optional<ButtonType> result = alert.showAndWait();
+        return result;
     }
 
     // Вспомогательный метод для простых алерт-окон

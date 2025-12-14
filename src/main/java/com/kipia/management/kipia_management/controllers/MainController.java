@@ -54,6 +54,7 @@ public class MainController {
     private Parent schemeEditorView;
     private Scene scene;
     private boolean isDarkTheme = false;
+    private ReportsController reportsController;
 
     // ---------------------------------------------------------
     //  Простые сеттеры (всё уже создано в Main)
@@ -167,6 +168,7 @@ public class MainController {
             CustomAlert.showError("Ошибка", "Scene не передана");
             return;
         }
+
         if (isDarkTheme) {
             scene.getStylesheets().clear();
             scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource("/styles/light-theme.css"))
@@ -179,6 +181,11 @@ public class MainController {
                     .toExternalForm());
             themeToggleBtn.setText("Светлая тема");
             isDarkTheme = true;
+        }
+
+        // Обновляем тему отчёта, если он загружен
+        if (reportsController != null) {
+            reportsController.refreshTheme();
         }
     }
 
@@ -425,6 +432,9 @@ public class MainController {
             if (ctrl != null) {
                 ctrl.init(deviceDAO, (Stage) contentArea.getScene().getWindow());
                 LOGGER.info("ReportsController инициализирован");
+
+                // Сохраняем ссылку на контроллер отчётов
+                this.reportsController = ctrl;
             }
 
             contentArea.getChildren().add(view);

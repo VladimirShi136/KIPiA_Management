@@ -21,9 +21,8 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
 import javafx.util.Callback;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
+
+import java.util.*;
 import java.util.function.BiConsumer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -488,26 +487,69 @@ public class DevicesTableController {
             CustomAlert.showWarning("Удаление", "Выберите прибор для удаления");
             return;
         }
-        // showConfirmation возвращает boolean: true — YES, false — NO/CANCEL
-        boolean confirmed = CustomAlert.showConfirmation("Подтверждение", "Удалить прибор \"" + selected.getName() + "\"?");
-        if (confirmed) {
-            LOGGER.info("Начато удаление прибора: {}", selected.getName());
-            boolean ok = deviceDAO.deleteDevice(selected.getId());
-            if (ok) {
-                filteredList.getSource().remove(selected);
-                updateStatistics();
-                if (schemeEditorController != null) {
-                    schemeEditorController.refreshSchemesAndDevices();
-                }
-                LOGGER.info("Прибор успешно удалён: {}", selected.getName());
-            } else {
-                CustomAlert.showError("Удаление", "Не удалось удалить запись из БД");
-                LOGGER.error("Не удалось удалить прибор: {}", selected.getName());
-            }
-        } else {
+
+        String title = "Подтверждение удаления";
+        String message = "Удалить прибор \"" + selected.getName() + "\"?\n" +
+                "ДА - удалить вместе с привязанными фото.\n" +
+                "НЕТ - удалить только прибор.\n" +
+                "Отмена - отменить действие.\n";
+
+        Optional<ButtonType> result = CustomAlert.showConfirmationWithOptions(
+                title, message,
+                CustomAlert.YES_BUTTON, CustomAlert.NO_BUTTON, CustomAlert.CANCEL_BUTTON);
+
+        if (result.isEmpty() || result.get() == CustomAlert.CANCEL_BUTTON) {
             LOGGER.info("Удаление отменено пользователем для прибора: {}", selected.getName());
+            return;
+        }
+
+        boolean shouldDeletePhotos = result.get() == CustomAlert.YES_BUTTON;
+        LOGGER.info("Начато удаление прибора: {} (удалять фото: {})", selected.getName(), shouldDeletePhotos);
+
+        // Удаление фото (если выбрано)
+        if (shouldDeletePhotos) {
+            PhotoManager photoManager = PhotoManager.getInstance();
+            List<String> photos = selected.getPhotos();
+            if (photos != null && !photos.isEmpty()) {
+                Iterator<String> iterator = photos.iterator();
+                while (iterator.hasNext()) {
+                    String photoName = iterator.next();
+                    boolean deleted = photoManager.deletePhoto(selected, photoName);
+                    if (deleted) {
+                        iterator.remove();
+                    } else {
+                        LOGGER.warn("Не удалось удалить фото {} для прибора {}", photoName, selected.getId());
+                    }
+                }
+            }
+        }
+
+        // Удаление прибора из БД
+        boolean ok = deviceDAO.deleteDevice(selected.getId());
+        if (ok) {
+            Platform.runLater(() -> {
+                try {
+                    filteredList.getSource().remove(selected);
+                    updateStatistics();
+                    if (schemeEditorController != null) {
+                        schemeEditorController.refreshSchemesAndDevices();
+                    }
+                    LOGGER.info("Прибор успешно удалён: {}", selected.getName());
+                    CustomAlert.showSuccess("Удаление", "Прибор успешно удалён");
+                } catch (Exception e) {
+                    LOGGER.error("Ошибка при обновлении UI после удаления прибора: {}", e.getMessage(), e);
+                    CustomAlert.showError("Ошибка", "Не удалось обновить интерфейс после удаления");
+                }
+            });
+        } else {
+            CustomAlert.showError("Удаление", "Не удалось удалить запись из БД");
+            LOGGER.error("Не удалось удалить прибор: {}", selected.getName());
         }
     }
+
+
+
+
 
     // -----------------------------------------------------------------
     //   Экспорт / импорт Excel (используем Apache POI)

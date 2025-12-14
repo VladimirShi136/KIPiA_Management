@@ -9,13 +9,14 @@
   Since: 18.09.2025
   * Окно редактора схем *
 -->
-
+<?import java.net.URL?>
 <BorderPane xmlns="http://javafx.com/javafx/23"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.kipia.management.kipia_management.controllers.SchemeEditorController">
+
     <!-- Верхняя панель: инструменты -->
     <top>
-        <VBox spacing="10" style="-fx-padding: 10;">
+        <VBox spacing="10">
             <!-- Панель инструментов -->
             <ToolBar style="-fx-background-color: #f8f9fa; -fx-border-color: #dee2e6; -fx-border-width: 0 0 1 0;">
                 <!-- Группа инструментов редактирования -->
@@ -94,7 +95,7 @@
                 <Separator orientation="VERTICAL"/>
                 <!-- Группа управления схемами -->
                 <Label text="Схема:" styleClass="scheme-label" style="-fx-padding: 0 5 0 10;"/>
-                <ComboBox fx:id="schemeComboBox" prefWidth="200"/>
+                <ComboBox fx:id="schemeComboBox" styleClass="filter-combo"/>
                 <Button fx:id="saveSchemeBtn" styleClass="tool-button">
                     <graphic>
                         <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">

@@ -2,6 +2,12 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
+<!--
+  Author: vladimir_shi
+  Since: 30.08.2025
+  * Окно добавления нового прибора *
+-->
+<?import java.net.URL?>
 <VBox xmlns="http://javafx.com/javafx/17.0.2-ea"
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.kipia.management.kipia_management.controllers.AddDeviceController"

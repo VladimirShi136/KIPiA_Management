@@ -48,19 +48,16 @@ public class ReportsController {
         if (yearReportBtn != null) StyleUtils.applyStyleToRadioButton(yearReportBtn);
 
         reportTypeGroup.selectedToggleProperty().addListener((_, _, _) -> updateReport());
-
         exportReportButton.setOnAction(_ -> {
             String reportKey = getCurrentReportKey();
             if (reportKey.isEmpty()) return;
 
-            // Открываем диалог выбора файла здесь
             FileChooser chooser = new FileChooser();
             chooser.setTitle("Экспорт отчёта " + reportKey + " в Excel");
             chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Excel файлы", "*.xlsx"));
             File file = chooser.showSaveDialog(primaryStage);
-            if (file == null) return;  // Пользователь отменил
+            if (file == null) return;
 
-            // Вызываем экспорт с файлом, получаем результат
             boolean success = excelService.exportReport(allDevices, reportKey, file);
             if (success) {
                 CustomAlert.showSuccess("Экспорт", "Отчёт " + reportKey + " экспортирован: " + file.getAbsolutePath());
@@ -69,13 +66,20 @@ public class ReportsController {
             }
         });
 
-        // Применение стилей и hover анимации
         if (exportReportButton != null) {
             exportReportButton.getStyleClass().add("report-export-button");
             StyleUtils.applyHoverAndAnimation(exportReportButton, "report-export-button", "report-export-button-hover");
         }
 
-        updateReport(); // Начальная инициализация
+        updateReport();
+    }
+
+    // Метод для обновления темы существующего графика
+    public void refreshTheme() {
+        boolean isDarkTheme = isDarkThemeActive();
+        if (currentChartViewer != null) {
+            reportService.updateChartTheme(currentChartViewer, isDarkTheme);
+        }
     }
 
     private void updateReport() {
@@ -85,8 +89,16 @@ public class ReportsController {
         titleLabel.setText("Отчёт по устройствам — " + getCurrentReportLabel());
         Map<String, Long> dataMap = reportService.getReportData(allDevices, reportKey);
 
-        boolean isDarkTheme = isDarkThemeActive(); // Реализуйте проверку темы, например, через сцены или настройки
-        currentChartViewer = reportService.buildPieChart(dataMap, getCurrentReportLabel(), chartPane, isDarkTheme);
+        boolean isDarkTheme = isDarkThemeActive();
+
+        chartPane.setCenter(null);
+
+        currentChartViewer = reportService.buildPieChart(
+                dataMap,
+                getCurrentReportLabel(),
+                chartPane,
+                isDarkTheme
+        );
     }
 
     private String getCurrentReportKey() {

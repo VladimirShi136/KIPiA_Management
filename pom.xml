@@ -6,7 +6,7 @@
 
     <groupId>com.KIPiA.Management</groupId>
     <artifactId>KIPiA_Management</artifactId>
-    <version>1.0.2</version>
+    <version>1.0.3</version>
     <name>KIPiA_Management</name>
     <packaging>jar</packaging>
 

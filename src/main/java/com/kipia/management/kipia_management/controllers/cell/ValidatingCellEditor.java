@@ -10,7 +10,6 @@ import javafx.scene.control.TextField;
  * @author vladimir_shi
  * @since 10.10.2025
  */
-
 public class ValidatingCellEditor {
     protected TextField textField;  // Поле для ввода текста
     private boolean isShowingAlert = false;  // Флаг для предотвращения множественных предупреждений
