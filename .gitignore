@@ -3,11 +3,12 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
+# Database files
+/data/kipia_management.db
+/data/kipia_management.db-journal
+
 ### IntelliJ IDEA ###
-.idea/modules.xml
-.idea/jarRepositories.xml
-.idea/compiler.xml
-.idea/libraries/
+.idea
 *.iws
 *.iml
 *.ipr
@@ -36,3 +37,20 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+# Пути к базе и логам #
+/src/main/resources/logs/kipia-management-dev.log
+/src/main/resources/data/kipia_management.db
+
+# Конфиденциальные данные
+.env
+.env.*
+*.local
+
+# Базы данных
+*.db
+*.sqlite
+
+# Ключи
+*.pem
+*.key
