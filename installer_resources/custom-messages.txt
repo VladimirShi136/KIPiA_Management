@@ -1,0 +1,5 @@
+; Пользовательские сообщения для Inno Setup
+; Язык: русский
+
+
+LaunchApp=Запустить KIPiA Management System
