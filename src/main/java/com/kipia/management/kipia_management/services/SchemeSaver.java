@@ -13,7 +13,7 @@ import java.util.List;
 
 /**
  * Сервис для сохранения схемы, включая фигуры и позиции устройств.
- * Вынесен из SchemeEditorController для соблюдения SRP.
+ * Вынесен из SchemeEditorController.
  */
 public class SchemeSaver {
 
