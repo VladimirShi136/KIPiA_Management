@@ -99,7 +99,7 @@ public class Main extends Application {
                 Image icon = new Image(Objects.requireNonNull(
                         getClass().getResourceAsStream("/images/iconApp.png")));
                 primaryStage.getIcons().add(icon);
-                LOGGER.debug("Иконка приложения загружена");
+                LOGGER.info("Иконка приложения загружена");
             } catch (Exception e) {
                 LOGGER.warn("Иконка не найдена, используется стандартная: {}", e.getMessage());
             }
@@ -122,8 +122,7 @@ public class Main extends Application {
 
         } catch (Exception e) {
             LOGGER.error("Ошибка запуска приложения: {}", e.getMessage(), e);
-            showErrorAndRetry("Ошибка запуска приложения",
-                    "Не удалось запустить приложение: " + e.getMessage());
+            showErrorAndRetry("Не удалось запустить приложение: " + e.getMessage());
         }
     }
 
@@ -159,9 +158,9 @@ public class Main extends Application {
         }
     }
 
-    private void showErrorAndRetry(String title, String message) {
+    private void showErrorAndRetry(String message) {
         Platform.runLater(() -> {
-            ButtonType result = CustomAlert.showAdvancedError(title, message, new Exception(message));
+            ButtonType result = CustomAlert.showAdvancedError("Ошибка запуска приложения", message, new Exception(message));
             if (result == CustomAlert.RETRY_BUTTON) {
                 LOGGER.info("Повторная попытка запуска...");
                 handleRetry();

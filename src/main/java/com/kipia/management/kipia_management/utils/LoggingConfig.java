@@ -19,7 +19,7 @@ import java.nio.file.StandardCopyOption;
  * @since 17.11.2025
  */
 public class LoggingConfig {
-    private static final Logger logger = LogManager.getLogger(LoggingConfig.class);
+    private static final Logger LOGGER = LogManager.getLogger(LoggingConfig.class);
     private static boolean initialized = false;
 
     public static void initialize() {
@@ -42,7 +42,7 @@ public class LoggingConfig {
                 try (FileInputStream inputStream = new FileInputStream(configFile)) {
                     ConfigurationSource source = new ConfigurationSource(inputStream, configFile);
                     Configurator.initialize(null, source);
-                    logger.info("Log4j2 сконфигурирован из файла: {}", configPath);
+                    LOGGER.info("Log4j2 сконфигурирован из файла: {}", configPath);
                 }
             } else {
                 // Используем встроенную конфигурацию из ресурсов
@@ -50,10 +50,10 @@ public class LoggingConfig {
                     if (resourceStream != null) {
                         ConfigurationSource source = new ConfigurationSource(resourceStream);
                         Configurator.initialize(null, source);
-                        logger.info("Log4j2 сконфигурирован из ресурсов: /logs/log4j2.xml");
+                        LOGGER.info("Log4j2 сконфигурирован из ресурсов: /logs/log4j2.xml");
                     } else {
                         // Фолбэк на базовую конфигурацию
-                        logger.info("Используется базовая конфигурация Log4j2");
+                        LOGGER.info("Используется базовая конфигурация Log4j2");
                     }
                 }
             }
@@ -62,7 +62,6 @@ public class LoggingConfig {
 
         } catch (Exception e) {
             System.err.println("Ошибка инициализации логгера: " + e.getMessage());
-            e.printStackTrace();
         }
     }
 
@@ -118,7 +117,6 @@ public class LoggingConfig {
 
         } catch (Exception e) {
             System.err.println("Ошибка при копировании конфигурационного файла: " + e.getMessage());
-            e.printStackTrace();
         }
     }
 
@@ -133,7 +131,7 @@ public class LoggingConfig {
             if (customConfigPath.startsWith("file:")) {
                 customConfigPath = customConfigPath.substring(5);
             }
-            logger.info("Используется пользовательский путь к конфигурации: {}", customConfigPath);
+            LOGGER.info("Используется пользовательский путь к конфигурации: {}", customConfigPath);
             return customConfigPath;
         }
 
@@ -142,12 +140,12 @@ public class LoggingConfig {
             // Режим разработки - конфиг из ресурсов проекта
             String projectDir = System.getProperty("user.dir");
             String devConfigPath = projectDir + "/src/main/resources/logs/log4j2.xml";
-            logger.info("Режим разработки - конфиг из: {}", devConfigPath);
+            LOGGER.info("Режим разработки - конфиг из: {}", devConfigPath);
             return devConfigPath;
         } else {
             // Режим продакшена - конфиг в AppData
             String appDataPath = System.getenv("APPDATA") + "/KIPiA_Management/log4j2.xml";
-            logger.info("Режим продакшена - конфиг из AppData: {}", appDataPath);
+            LOGGER.info("Режим продакшена - конфиг из AppData: {}", appDataPath);
             return appDataPath;
         }
     }
@@ -198,7 +196,7 @@ public class LoggingConfig {
             if (!logDir.exists()) {
                 boolean created = logDir.mkdirs();
                 if (created) {
-                    logger.debug("Создана папка для логов: {}", logDirPath);
+                    LOGGER.debug("Создана папка для логов: {}", logDirPath);
                 }
             }
         } catch (Exception e) {

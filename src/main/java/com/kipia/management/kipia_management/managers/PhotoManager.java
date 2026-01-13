@@ -48,7 +48,7 @@ public class PhotoManager {
 
     // Приватный конструктор
     private PhotoManager() {
-        LOGGER.debug("🔄 Создание PhotoManager...");
+        LOGGER.info("🔄 Создание PhotoManager...");
         this.basePhotosPath = getPhotosDirectoryPath();
         restoreLastDirectoryFromPreferences();
         initPhotosDirectory(); // ⭐⭐ Сразу инициализируем папку ⭐⭐
@@ -195,7 +195,7 @@ public class PhotoManager {
                 if (deviceDAO != null) {
                     deviceDAO.updateDevice(device);
                 }
-                return true; // Считаем удалением, т.к. запись убрана
+                return true;
             }
 
             // 2. Удаляем файл
@@ -623,10 +623,7 @@ public class PhotoManager {
                         finalTopPanel.getStyleClass().add("zoomed");
                         finalTopPanel.setStyle("-fx-background-color: #000000;");
                     }
-
                     isZoomed[0] = true;
-
-                    LOGGER.debug("Зум включен, полностью черный интерфейс");
                 }
                 event.consume();
             }

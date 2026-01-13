@@ -24,6 +24,7 @@ import javafx.util.Callback;
 
 import java.util.*;
 import java.util.function.BiConsumer;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -283,6 +284,7 @@ public class DevicesTableController {
 
             // ⭐⭐ ИСПОЛЬЗУЕМ СИНГЛТОН PhotoManager ⭐⭐
             private final PhotoManager photoManager = PhotoManager.getInstance();
+
             {
                 // Стилизация кнопок
                 addBtn.getStyleClass().add("table-button-add");
@@ -546,9 +548,6 @@ public class DevicesTableController {
             LOGGER.error("Не удалось удалить прибор: {}", selected.getName());
         }
     }
-
-
-
 
 
     // -----------------------------------------------------------------

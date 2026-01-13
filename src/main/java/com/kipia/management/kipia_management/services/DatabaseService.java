@@ -160,7 +160,6 @@ public class DatabaseService {
                     valve_number TEXT,
                     status TEXT DEFAULT 'В работе',
                     additional_info TEXT,
-                    photo_path TEXT,
                     photos TEXT
                 );""";
 

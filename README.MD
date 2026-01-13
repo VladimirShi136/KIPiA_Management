@@ -84,17 +84,17 @@ cd KIPiA_Management
 mvn clean package
 
 # Запуск приложения (впишите текущую версию)
-java -jar target/KIPiA_Management-1.0.3.jar
+java -jar target/KIPiA_Management-*.*.*.jar
 ```
 
 ### Прямой запуск JAR
 
-- Скачайте последний релиз KIPiA_Management-1.0.3.jar
+- Скачайте последний релиз KIPiA_Management-*.*.*.jar
 - Убедитесь, что установлена Java 23+
 - Запустите:
 
 ```bash
-java -jar KIPiA_Management-1.0.3.jar
+java -jar KIPiA_Management-*.*.*.jar
 ```
 
 ---
@@ -141,7 +141,7 @@ java -jar KIPiA_Management-1.0.3.jar
 │   ├── USER_GUIDE.md
 │   ├── SCHEME_EDITOR_GUIDE.md
 │   ├── DEPLOYMENT.md
-│   └── <b>🖼️ screenshots/</b>
+│   └── <b>🖼️ screenshots/</b>                    <i># Скриншоты к документации</i>
 │
 ├── <b>📦 installer_resources/</b>                <i># Ресурсы установщика</i>
 │   ├── setup.iss
@@ -205,10 +205,29 @@ java -jar KIPiA_Management-1.0.3.jar
 
 ### Запуск в IDE
 
-- Укажите главный класс: `com.kipia.management.kipia_management.Main`
-- Добавьте VM Options для JavaFX (если требуется):
+1. Укажите главный класс: `com.kipia.management.kipia_management.Main`
+2. VM Options:
 
-`--module-path /path/to/javafx-sdk-25.0.1/lib --add-modules javafx.controls,javafx.fxml`
+   - Для developer (путь к sdk выбрать свой):
+
+`--module-path
+"C:\javafx-sdk-25.0.1\lib"
+--add-modules
+javafx.controls,javafx.fxml,javafx.graphics,javafx.base
+-Dlog4j.configurationFile=src/main/resources/logs/log4j2.xml
+--enable-native-access=javafx.graphics,ALL-UNNAMED`
+
+  - Для production (путь к sdk и конфигуратору выбрать свой):
+
+`--module-path
+"C:\javafx-sdk-25.0.1\lib"
+--add-modules
+javafx.controls,javafx.fxml,javafx.graphics,javafx.base
+-Dproduction=true
+-Dlog4j.configurationFile=file:///C:/Users/kalba/AppData/Roaming/KIPiA_Management/log4j2.xml
+--enable-native-access=javafx.graphics,ALL-UNNAMED`
+
++ При необходимости, добавить `-Dlog4j2.debug=true` для отладки работы логгера
 
 ### База данных
 
@@ -235,7 +254,6 @@ CREATE TABLE devices (
     valve_number TEXT,               -- Номер крана/узла
     status TEXT DEFAULT 'В работе',  -- Статус
     additional_info TEXT,            -- Дополнительная информация
-    photo_path TEXT,                 -- Путь к фото (устаревшее)
     photos TEXT                      -- JSON массив путей к фото
 );
 ```

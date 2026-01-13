@@ -55,6 +55,7 @@ public class MainController {
     private Scene scene;
     private boolean isDarkTheme = false;
     private ReportsController reportsController;
+    private String currentActiveSection = null;
 
     // ---------------------------------------------------------
     //  Простые сеттеры (всё уже создано в Main)
@@ -156,8 +157,42 @@ public class MainController {
                 LOGGER.warn("Не удалось загрузить CSS Alerts: {}", e.getMessage());
             }
         }
+        currentActiveSection = null;  // Изначально нет активного раздела
+        updateNavigationButtonsState();  // Синхронизируем кнопки при старте
         LOGGER.info("✅ UI инициализирован");
     }
+
+    /**
+     * Синхронизирует состояние кнопок навигации с текущим активным разделом.
+     * Отключает кнопку текущего раздела, включает все остальные.
+     */
+    private void updateNavigationButtonsState() {
+        // Включаем все кнопки по умолчанию
+        devicesBtn.setDisable(false);
+        addDeviceBtn.setDisable(false);
+        groupedDevicesBtn.setDisable(false);
+        photoGalleryBtn.setDisable(false);
+        schemesBtn.setDisable(false);
+        reportsBtn.setDisable(false);
+
+        if (currentActiveSection == null) {
+            return;  // Ничего не отключаем, все кнопки активны
+        }
+
+        // Отключаем кнопку текущего активного раздела
+        switch (currentActiveSection) {
+            case "devices" -> devicesBtn.setDisable(true);
+            case "addDevice" -> addDeviceBtn.setDisable(true);
+            case "groupedDevices" -> groupedDevicesBtn.setDisable(true);
+            case "photoGallery" -> photoGalleryBtn.setDisable(true);
+            case "schemes" -> schemesBtn.setDisable(true);
+            case "reports" -> reportsBtn.setDisable(true);
+            default -> {
+                // Если нет активного раздела — все кнопки включены
+            }
+        }
+    }
+
 
     /**
      * Переключение светлой/тёмной темы.
@@ -221,13 +256,14 @@ public class MainController {
      */
     @FXML
     private void showDevices() {
+        currentActiveSection = "devices";
+
         if (schemeEditorController != null) {
             saveSchemeBeforeNavigation();
             schemeEditorView = null;
             schemeEditorController = null;
         }
 
-        schemesBtn.setDisable(false);
         statusLabel.setText("Просмотр списка приборов");
         contentArea.getChildren().clear();
 
@@ -249,6 +285,7 @@ public class MainController {
 
             contentArea.getChildren().add(view);
             LOGGER.info("Список приборов загружен успешно");
+            updateNavigationButtonsState();
         } catch (IOException e) {
             statusLabel.setText("Ошибка загрузки списка приборов: " + e.getMessage());
             CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить список приборов");
@@ -261,6 +298,8 @@ public class MainController {
      */
     @FXML
     private void showGroupedDevices() {
+        currentActiveSection = "groupedDevices";
+
         if (schemeEditorController != null) {
             saveSchemeBeforeNavigation();
             schemeEditorView = null;
@@ -289,6 +328,7 @@ public class MainController {
 
             contentArea.getChildren().add(view);
             LOGGER.info("Группированный список приборов загружен успешно");
+            updateNavigationButtonsState();
         } catch (Exception e) {
             statusLabel.setText("Ошибка загрузки списка приборов по месту установки: " + e.getMessage());
             CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить группированный список приборов");
@@ -301,6 +341,8 @@ public class MainController {
      */
     @FXML
     private void showPhotoGallery() {
+        currentActiveSection = "photoGallery";
+
         if (schemeEditorController != null) {
             saveSchemeBeforeNavigation();
             schemeEditorView = null;
@@ -324,6 +366,7 @@ public class MainController {
 
             contentArea.getChildren().add(view);
             LOGGER.info("Галерея фото загружена успешно");
+            updateNavigationButtonsState();
         } catch (IOException e) {
             statusLabel.setText("Ошибка загрузки галереи фото: " + e.getMessage());
             CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить галерею фото");
@@ -336,13 +379,14 @@ public class MainController {
      */
     @FXML
     private void showSchemesEditor() {
+        currentActiveSection = "schemes";
         statusLabel.setText("Редактор схем");
 
         if (schemeEditorView != null && schemeEditorController != null) {
             saveSchemeBeforeNavigation();
             schemeEditorView = null;
             schemeEditorController = null;
-            schemesBtn.setDisable(true);
+            updateNavigationButtonsState();
             return;
         }
 
@@ -362,7 +406,7 @@ public class MainController {
             contentArea.getChildren().clear();
             contentArea.getChildren().add(schemeEditorView);
             LOGGER.info("Редактор схем загружен успешно");
-            schemesBtn.setDisable(true);
+            updateNavigationButtonsState();
 
         } catch (IOException e) {
             statusLabel.setText("Ошибка загрузки редактора схем: " + e.getMessage());
@@ -376,6 +420,8 @@ public class MainController {
      */
     @FXML
     private void showAddDeviceForm() {
+        currentActiveSection = "addDevice";
+
         if (schemeEditorController != null) {
             saveSchemeBeforeNavigation();
             schemeEditorView = null;
@@ -402,6 +448,7 @@ public class MainController {
 
             contentArea.getChildren().add(view);
             LOGGER.info("Форма добавления прибора загружена успешно");
+            updateNavigationButtonsState();
         } catch (IOException e) {
             statusLabel.setText("Ошибка загрузки формы: " + e.getMessage());
             CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить форму добавления");
@@ -414,6 +461,8 @@ public class MainController {
      */
     @FXML
     private void showReports() {
+        currentActiveSection = "reports";
+
         if (schemeEditorController != null) {
             saveSchemeBeforeNavigation();
             schemeEditorView = null;
@@ -439,6 +488,7 @@ public class MainController {
 
             contentArea.getChildren().add(view);
             LOGGER.info("Отчёты загружены успешно");
+            updateNavigationButtonsState();
         } catch (IOException e) {
             statusLabel.setText("Ошибка загрузки отчётов: " + e.getMessage());
             CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить отчёты");

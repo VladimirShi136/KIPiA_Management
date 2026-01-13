@@ -34,7 +34,7 @@ public class DeviceIconService {
     private final AnchorPane schemePane;
     private final BiConsumer<Node, Device> onDeviceMovedCallback;
     private final DeviceLocationDAO deviceLocationDAO;
-    private Scheme currentScheme; // Добавьте поле для текущей схемы
+    private Scheme currentScheme; // поле для текущей схемы
 
     // Константы для стилей
     private static final double DEFAULT_ICON_SIZE = 45.0;
@@ -163,9 +163,9 @@ public class DeviceIconService {
             boolean saved = deviceLocationDAO.addDeviceLocation(location);
 
             if (saved) {
-                LOGGER.debug("Device position and rotation successfully saved to database after rotation");
+                LOGGER.info("Device position and rotation successfully saved to database after rotation");
             } else {
-                LOGGER.debug("FAILED to save device position and rotation after rotation!");
+                LOGGER.warn("FAILED to save device position and rotation after rotation!");
             }
         }
     }

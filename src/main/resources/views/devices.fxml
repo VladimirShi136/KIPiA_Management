@@ -108,5 +108,9 @@
     <!-- 3️⃣ ТАБЛИЦА ПРИБОРОВ -->
     <TableView fx:id="deviceTable"
                editable="true"
-               VBox.vgrow="ALWAYS"/>
+               VBox.vgrow="ALWAYS">
+        <placeholder>
+            <Label text="Таблица пуста" />
+        </placeholder>
+    </TableView>
 </VBox>

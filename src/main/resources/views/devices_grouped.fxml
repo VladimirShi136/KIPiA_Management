@@ -82,5 +82,11 @@
     </VBox>
 
     <!-- 3️⃣ ГРУППИРОВАННАЯ ТАБЛИЦА ПРИБОРОВ -->
-    <TreeTableView fx:id="treeTable" editable="true" VBox.vgrow="always"/>
+    <TreeTableView fx:id="treeTable"
+                   editable="true"
+                   VBox.vgrow="always">
+        <placeholder>
+            <Label text="Таблица пуста"/>
+        </placeholder>
+    </TreeTableView>
 </VBox>

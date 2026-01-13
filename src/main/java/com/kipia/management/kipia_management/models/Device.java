@@ -49,10 +49,7 @@ public class Device {
     // Доп информация
     private String additionalInfo;
 
-    // Пусть к фото
-    private String photoPath;
-
-    // Новая коллекция для путей фото
+    // Коллекция для путей фото (только имена файлов)
     private List<String> photos;
 
     /**
@@ -77,9 +74,8 @@ public class Device {
      * @param location         местонахождение
      * @param status           статус прибора
      * @param additionalInfo   дополнительная информация
-     * @param photoPath        путь к фото-изображение прибора
      */
-    public Device(int id, String type, String name, String manufacturer, String inventoryNumber, Integer year, String measurementLimit, Double accuracyClass, String location, String valveNumber, String status, String additionalInfo, String photoPath) {
+    public Device(int id, String type, String name, String manufacturer, String inventoryNumber, Integer year, String measurementLimit, Double accuracyClass, String location, String valveNumber, String status, String additionalInfo) {
         this.id = id;
         this.type = type;
         this.name = name;
@@ -92,12 +88,7 @@ public class Device {
         this.valveNumber = valveNumber;
         this.status = status;
         this.additionalInfo = additionalInfo;
-        this.photoPath = photoPath;
-
-        photos = new ArrayList<>();
-        if (photoPath != null && !photoPath.isEmpty()) {
-            photos.add(photoPath);  // Перенесём old photoPath первое фото
-        }
+        this.photos = new ArrayList<>();
     }
 
     // Геттеры и сеттеры для доступа к приватным полям класса
@@ -319,36 +310,78 @@ public class Device {
     }
 
     /**
-     * Получить путь к фото
+     * Получить список фотографий прибора.
      *
-     * @return путь к фото
+     * @return список путей к фотографиям
      */
-    public String getPhotoPath() {
-        return photoPath;
-    }
-
-    /**
-     * Установить путь к фото
-     *
-     * @param photoPath новый путь к фото
-     */
-    public void setPhotoPath(String photoPath) {
-        this.photoPath = photoPath;
-    }
-
-    // Геттеры/сеттеры для списка фотографий:
     public List<String> getPhotos() {
         return photos;
     }
 
+    /**
+     * Установить список фотографий прибора.
+     *
+     * @param photos новый список фотографий
+     */
     public void setPhotos(List<String> photos) {
         this.photos = photos;
     }
 
-    public void addPhoto(String photoPath) {
-        if (photoPath != null && !photoPath.isEmpty()) {
-            photos.add(photoPath);
+    /**
+     * Добавить фотографию в список.
+     *
+     * @param photoName имя файла фотографии
+     */
+    public void addPhoto(String photoName) {
+        if (photoName != null && !photoName.trim().isEmpty()) {
+            if (photos == null) {
+                photos = new ArrayList<>();
+            }
+            photos.add(photoName);
         }
+    }
+
+    /**
+     * Удалить фотографию из списка.
+     *
+     * @param photoName имя файла фотографии для удаления
+     * @return true если фотография была удалена, false если не найдена
+     */
+    public boolean removePhoto(String photoName) {
+        if (photos != null) {
+            return photos.remove(photoName);
+        }
+        return false;
+    }
+
+    /**
+     * Получить количество фотографий.
+     *
+     * @return количество фотографий
+     */
+    public int getPhotoCount() {
+        return photos != null ? photos.size() : 0;
+    }
+
+    /**
+     * Проверить, есть ли фотографии у прибора.
+     *
+     * @return true если есть хотя бы одна фотография
+     */
+    public boolean hasPhotos() {
+        return photos != null && !photos.isEmpty();
+    }
+
+    /**
+     * Получить основную фотографию (первую в списке).
+     *
+     * @return путь к основной фотографии или null если нет фотографий
+     */
+    public String getMainPhoto() {
+        if (hasPhotos()) {
+            return photos.get(0);
+        }
+        return null;
     }
 
     /**
@@ -372,7 +405,6 @@ public class Device {
                 ", valveNumber='" + valveNumber + '\'' +
                 ", status='" + status + '\'' +
                 ", additionalInfo='" + additionalInfo + '\'' +
-                ", photoPath='" + photoPath + '\'' +
                 ", photos=" + photos +
                 '}';
     }

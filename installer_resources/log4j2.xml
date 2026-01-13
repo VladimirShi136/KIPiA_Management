@@ -2,31 +2,42 @@
 <Configuration status="WARN">
     <Properties>
         <Property name="LOG_DIR">${sys:user.home}/AppData/Roaming/KIPiA_Management/logs</Property>
+        <Property name="ARCHIVE_DIR">${LOG_DIR}/archive</Property>
     </Properties>
-    
     <Appenders>
         <!-- Console Appender -->
         <Console name="Console" target="SYSTEM_OUT">
             <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
         </Console>
-        
-        <!-- File Appender -->
-        <File name="FileAppender" fileName="${LOG_DIR}/kipia-management.log">
+
+        <!-- RollingFile Appender -->
+        <RollingFile name="RollingFile"
+                     fileName="${LOG_DIR}/kipia-management.log"
+                     filePattern="${ARCHIVE_DIR}/kipia-management-%d{yyyy-MM-dd}.log">
             <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
-        </File>
+
+
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="24" modulate="true"/>  <!-- Раз в сутки -->
+                <SizeBasedTriggeringPolicy size="10 MB"/>  <!-- Объем 10 MB -->
+            </Policies>
+
+
+            <DefaultRolloverStrategy max="30" fileIndex="min"/>  <!-- 30 дней архивов -->
+        </RollingFile>
     </Appenders>
-    
+
+
     <Loggers>
-        <!-- Application Loggers -->
         <Logger name="com.kipia.management.kipia_management" level="INFO" additivity="false">
             <AppenderRef ref="Console"/>
-            <AppenderRef ref="FileAppender"/>
+            <AppenderRef ref="RollingFile"/>
         </Logger>
-        
-        <!-- Root Logger -->
+
+
         <Root level="INFO">
             <AppenderRef ref="Console"/>
-            <AppenderRef ref="FileAppender"/>
+            <AppenderRef ref="RollingFile"/>
         </Root>
     </Loggers>
 </Configuration>

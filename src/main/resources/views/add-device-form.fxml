@@ -7,7 +7,6 @@
   Since: 30.08.2025
   * Окно добавления нового прибора *
 -->
-<?import java.net.URL?>
 <VBox xmlns="http://javafx.com/javafx/17.0.2-ea"
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.kipia.management.kipia_management.controllers.AddDeviceController"
@@ -96,16 +95,23 @@
                     <!-- СТРОКА 11: Фото -->
                     <Label text="Фото (несколько):" GridPane.rowIndex="11" GridPane.columnIndex="0" styleClass="form-label"/>
                     <HBox spacing="10" GridPane.rowIndex="11" GridPane.columnIndex="1" alignment="CENTER_LEFT">
-                        <TextField fx:id="photoPathField" prefWidth="200" editable="false" promptText="Выберите файл"
-                                   styleClass="form-input"/>
-                        <Button fx:id="photoChooseBtn" text="Выбрать" onAction="#onChooseFiles"
-                                styleClass="photo-choose-btn" prefWidth="80"/>
+                        <Button fx:id="photoChooseBtn" text="Фото +" onAction="#onChooseFiles"
+                                styleClass="photo-choose-btn" prefWidth="120"/>
+                        <Button fx:id="photoRemoveBtn" text="Фото -" onAction="#onRemovePhoto"
+                                styleClass="button-remove" prefWidth="140"/>
                     </HBox>
 
                     <!-- СТРОКА 12: Выбранные фото -->
                     <Label text="Выбранные фото:" GridPane.rowIndex="12" GridPane.columnIndex="0" styleClass="form-label"/>
-                    <ListView fx:id="selectedPhotosListView" GridPane.rowIndex="12" GridPane.columnIndex="1"
-                              prefHeight="80" prefWidth="280" styleClass="photo-list"/>
+                    <HBox GridPane.rowIndex="12" GridPane.columnIndex="1" alignment="CENTER_LEFT">
+                        <VBox spacing="5" prefWidth="280">
+                            <ListView fx:id="selectedPhotosListView"
+                                      prefHeight="80" prefWidth="280"
+                                      styleClass="photo-list"/>
+                            <Label fx:id="photoCounterLabel" text="Выбрано файлов: 0"
+                                   styleClass="photo-counter"/>
+                        </VBox>
+                    </HBox>
                 </GridPane>
 
                 <!-- Кнопки - всегда видимы внизу -->
