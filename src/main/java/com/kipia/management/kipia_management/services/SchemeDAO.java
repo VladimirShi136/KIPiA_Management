@@ -4,6 +4,8 @@ import com.kipia.management.kipia_management.models.Scheme;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 
 /**
@@ -34,14 +36,17 @@ public class SchemeDAO {
      * @return true - если добавление прошло успешно, false - в случае ошибки
      */
     public boolean addScheme(Scheme scheme) {
-        String sql = "INSERT INTO schemes (name, description, data) VALUES (?, ?, ?)";
+        scheme.updateTimestamp(); // Обновляем timestamp
+
+        String sql = "INSERT INTO schemes (name, description, data, updated_at) VALUES (?, ?, ?, ?)";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setString(1, scheme.getName());
             stmt.setString(2, scheme.getDescription());
             stmt.setString(3, scheme.getData());
+            stmt.setLong(4, scheme.getUpdatedAt()); // Новое поле
+
             int rowsAffected = stmt.executeUpdate();
             if (rowsAffected > 0) {
-                // Получить сгенерированный ID и установить в объект
                 ResultSet keys = stmt.getGeneratedKeys();
                 if (keys.next()) {
                     scheme.setId(keys.getInt(1));
@@ -67,13 +72,13 @@ public class SchemeDAO {
             return false;
         }
 
-        String sql = "UPDATE schemes SET name=?, description=?, data=? WHERE id=?";
+        scheme.updateTimestamp(); // Обновляем timestamp
+
+        String sql = "UPDATE schemes SET name=?, description=?, data=?, updated_at=? WHERE id=?";
 
         try {
-            // Получаем соединение через getConnection() который гарантирует активное соединение
             Connection conn = databaseService.getConnection();
 
-            // Дополнительная проверка
             if (conn == null || conn.isClosed()) {
                 LOGGER.error("Не удалось получить активное соединение с БД");
                 return false;
@@ -83,13 +88,14 @@ public class SchemeDAO {
                 pstmt.setString(1, scheme.getName() != null ? scheme.getName() : "");
                 pstmt.setString(2, scheme.getDescription() != null ? scheme.getDescription() : "");
                 pstmt.setString(3, scheme.getData() != null ? scheme.getData() : "{}");
-                pstmt.setInt(4, scheme.getId());
+                pstmt.setLong(4, scheme.getUpdatedAt()); // Новое поле
+                pstmt.setInt(5, scheme.getId());
 
                 int rows = pstmt.executeUpdate();
                 boolean success = rows > 0;
 
-                // Логирование для отладки
-                LOGGER.info("Схема обновлена: {} (ID: {}), строк затронуто: {}", scheme.getName(), scheme.getId(), rows);
+                LOGGER.info("Схема обновлена: {} (ID: {}), строк затронуто: {}",
+                        scheme.getName(), scheme.getId(), rows);
 
                 return success;
             }
@@ -97,6 +103,114 @@ public class SchemeDAO {
             LOGGER.error("SQLException in updateScheme: {}", e.getMessage(), e);
             return false;
         }
+    }
+
+    /**
+     * ★★★ НОВЫЙ: Получение всех схем для экспорта
+     */
+    public List<Scheme> getAllSchemesForExport() {
+        List<Scheme> schemes = new ArrayList<>();
+        String sql = "SELECT * FROM schemes ORDER BY id";
+        try (Statement stmt = databaseService.getConnection().createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                schemes.add(createSchemeFromResultSet(rs));
+            }
+        } catch (SQLException e) {
+            LOGGER.error("Ошибка получения схем для экспорта: {}", e.getMessage(), e);
+        }
+        return schemes;
+    }
+
+    /**
+     * ★★★ НОВЫЙ: Массовое добавление/обновление схем с проверкой updated_at
+     */
+    public void insertOrUpdateSchemes(List<Scheme> schemes) {
+        String checkSql = "SELECT updated_at FROM schemes WHERE id = ?";
+        String updateSql = "UPDATE schemes SET name=?, description=?, data=?, updated_at=? WHERE id=?";
+        String insertSql = "INSERT INTO schemes (id, name, description, data, updated_at) VALUES (?, ?, ?, ?, ?)";
+
+        try {
+            Connection conn = databaseService.getConnection();
+            conn.setAutoCommit(false);
+
+            try (PreparedStatement checkStmt = conn.prepareStatement(checkSql);
+                 PreparedStatement updateStmt = conn.prepareStatement(updateSql);
+                 PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
+
+                for (Scheme scheme : schemes) {
+                    checkStmt.setInt(1, scheme.getId());
+                    ResultSet rs = checkStmt.executeQuery();
+
+                    if (rs.next()) {
+                        long existingUpdatedAt = rs.getLong("updated_at");
+                        if (scheme.getUpdatedAt() > existingUpdatedAt) {
+                            updateStmt.setString(1, scheme.getName());
+                            updateStmt.setString(2, scheme.getDescription());
+                            updateStmt.setString(3, scheme.getData());
+                            updateStmt.setLong(4, scheme.getUpdatedAt());
+                            updateStmt.setInt(5, scheme.getId());
+                            updateStmt.addBatch();
+                        }
+                    } else {
+                        insertStmt.setInt(1, scheme.getId());
+                        insertStmt.setString(2, scheme.getName());
+                        insertStmt.setString(3, scheme.getDescription());
+                        insertStmt.setString(4, scheme.getData());
+                        insertStmt.setLong(5, scheme.getUpdatedAt());
+                        insertStmt.addBatch();
+                    }
+                }
+
+                updateStmt.executeBatch();
+                insertStmt.executeBatch();
+
+                conn.commit();
+                LOGGER.info("Импорт схем завершён, обновлено/добавлено: {}", schemes.size());
+
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(true);
+            }
+
+        } catch (SQLException e) {
+            LOGGER.error("Ошибка при массовом импорте схем: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * ★★★ НОВЫЙ: Получить максимальную дату обновления схем
+     */
+    public Long getMaxUpdatedAt() {
+        String sql = "SELECT MAX(updated_at) FROM schemes";
+        try (Statement stmt = databaseService.getConnection().createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            if (rs.next()) {
+                return rs.getLong(1);
+            }
+        } catch (SQLException e) {
+            LOGGER.error("Ошибка получения MAX(updated_at) схем: {}", e.getMessage(), e);
+        }
+        return 0L;
+    }
+
+    /**
+     * ★★★ НОВЫЙ: Получение схемы по ID
+     */
+    public Scheme getSchemeById(int id) {
+        String sql = "SELECT * FROM schemes WHERE id = ?";
+        try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
+            stmt.setInt(1, id);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return createSchemeFromResultSet(rs);
+            }
+        } catch (SQLException e) {
+            LOGGER.error("Ошибка получения схемы по ID: {}", e.getMessage(), e);
+        }
+        return null;
     }
 
     /**
@@ -130,6 +244,7 @@ public class SchemeDAO {
         scheme.setName(rs.getString("name"));
         scheme.setDescription(rs.getString("description"));
         scheme.setData(rs.getString("data"));
+        scheme.setUpdatedAt(rs.getLong("updated_at")); // Новое поле
         return scheme;
     }
 }

@@ -7,7 +7,6 @@ package com.kipia.management.kipia_management.models;
  * @author vladimir_shi
  * @since 30.09.2025
  */
-
 public class Scheme {
     // Уникальный идентификатор схемы в базе данных
     private int id;
@@ -18,12 +17,15 @@ public class Scheme {
     // Данные схемы (JSON-строка с объектами: линии, фигуры и т.д.)
     private String data;
 
+    // Время обновления
+    private long updatedAt;
+
     /**
      * Конструктор по умолчанию.
      * Создает пустой объект Scheme без инициализации полей.
      */
     public Scheme() {
-        // Пустой конструктор
+        this.updatedAt = System.currentTimeMillis();
     }
 
     /**
@@ -40,6 +42,7 @@ public class Scheme {
         this.name = name;
         this.description = description;
         this.data = data;
+        this.updatedAt = System.currentTimeMillis();
     }
 
     // Геттеры и сеттеры
@@ -117,6 +120,29 @@ public class Scheme {
     }
 
     /**
+     * Получить время обновления
+     *
+     * @return - время обновления
+     */
+    public long getUpdatedAt() {
+        return updatedAt;
+    }
+
+    /**
+     * Установить время обновления
+     *
+     * @param updatedAt - время обновления
+     */
+    public void setUpdatedAt(long updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    // Метод для обновления времени
+    public void updateTimestamp() {
+        this.updatedAt = System.currentTimeMillis();
+    }
+
+    /**
      * Переопределенный метод toString() для удобного представления объекта в виде строки.
      * Используется для отладки и вывода информации о схеме.
      *
@@ -129,6 +155,7 @@ public class Scheme {
                 ", name='" + name + '\'' +
                 ", description='" + description + '\'' +
                 ", data='" + data + '\'' +
+                ", updatedAt=" + updatedAt +
                 '}';
     }
 }

@@ -2,10 +2,13 @@ package com.kipia.management.kipia_management.shapes;
 
 import com.kipia.management.kipia_management.managers.ShapeManager;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.paint.Color;
 
 import java.util.function.Consumer;
 
 /**
+ * Класс - фабрика создания фигур для редактора схем
+ *
  * @author vladimir_shi
  * @since 25.10.2025
  */
@@ -32,17 +35,23 @@ public record ShapeFactory(AnchorPane pane, Consumer<String> statusSetter, Consu
 
     private RectangleShape createRectangle(double[] coords) {
         double x = coords[0], y = coords[1], width = coords[2], height = coords[3];
-        return new RectangleShape(x, y, width, height, pane, statusSetter, onSelectCallback, shapeManager);
+        RectangleShape shape = new RectangleShape(x, y, width, height, pane, statusSetter, onSelectCallback, shapeManager);
+        // Явно устанавливаем прозрачную заливку по умолчанию
+        shape.setFillColor(Color.TRANSPARENT);
+        shape.setStrokeColor(Color.BLACK);
+        return shape;
     }
 
     private EllipseShape createEllipse(double[] coords) {
-        // Унифицируем подход: левый верхний угол + размер
         double x = coords[0], y = coords[1], width = coords[2], height = coords[3];
         double centerX = x + width / 2;
         double centerY = y + height / 2;
         double radiusX = width / 2;
         double radiusY = height / 2;
-        return new EllipseShape(centerX, centerY, radiusX, radiusY, pane, statusSetter, onSelectCallback, shapeManager);
+        EllipseShape shape = new EllipseShape(centerX, centerY, radiusX, radiusY, pane, statusSetter, onSelectCallback, shapeManager);
+        shape.setFillColor(Color.TRANSPARENT);
+        shape.setStrokeColor(Color.BLACK);
+        return shape;
     }
 
     private LineShape createLine(double[] coords) {
@@ -52,13 +61,16 @@ public record ShapeFactory(AnchorPane pane, Consumer<String> statusSetter, Consu
 
     private RhombusShape createRhombus(double[] coords) {
         double startX = coords[0], startY = coords[1], endX = coords[2], endY = coords[3];
-        // Вычисляем left-top rect (как в preview)
         double x = Math.min(startX, endX);
         double y = Math.min(startY, endY);
         double width = Math.abs(endX - startX);
         double height = Math.abs(endY - startY);
-        // Передаём x,y,width,height — RhombusShape нарисует бабочку внутри
-        return new RhombusShape(x, y, width, height, pane, statusSetter, onSelectCallback, shapeManager);
+
+        // ВАЖНО: передаем x, y, width, height
+        RhombusShape shape = new RhombusShape(x, y, width, height, pane, statusSetter, onSelectCallback, shapeManager);
+        shape.setFillColor(Color.TRANSPARENT);
+        shape.setStrokeColor(Color.BLACK);
+        return shape;
     }
 
     private TextShape createText(double... coords) {

@@ -25,7 +25,7 @@ public class CustomAlert {
     private static final Logger LOGGER = LogManager.getLogger(CustomAlert.class);
 
     // Константы для русских кнопок
-    public static final ButtonType RETRY_BUTTON = new ButtonType("Повторить", ButtonBar.ButtonData.APPLY);
+    public static final ButtonType RETRY_BUTTON = new ButtonType("Повтор", ButtonBar.ButtonData.APPLY);
     public static final ButtonType CANCEL_BUTTON = new ButtonType("Отмена", ButtonBar.ButtonData.CANCEL_CLOSE);
     public static final ButtonType OK_BUTTON = new ButtonType("ОК", ButtonBar.ButtonData.OK_DONE);
     public static final ButtonType YES_BUTTON = new ButtonType("Да", ButtonBar.ButtonData.YES);

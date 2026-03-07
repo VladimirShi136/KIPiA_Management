@@ -1,10 +1,10 @@
 package com.kipia.management.kipia_management.controllers;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.kipia.management.kipia_management.managers.ClipboardManager;
 import com.kipia.management.kipia_management.managers.ShapeManager;
-import com.kipia.management.kipia_management.models.Device;
-import com.kipia.management.kipia_management.models.Scheme;
-import com.kipia.management.kipia_management.models.DeviceLocation;
+import com.kipia.management.kipia_management.models.*;
 import com.kipia.management.kipia_management.services.*;
 import com.kipia.management.kipia_management.shapes.*;
 import com.kipia.management.kipia_management.utils.CustomAlert;
@@ -58,6 +58,9 @@ public class SchemeEditorController {
     // ============================================================
 
     private static final Logger LOGGER = LogManager.getLogger(SchemeEditorController.class);
+    private static final Gson gson = new GsonBuilder()
+            .setPrettyPrinting()
+            .create();
     private DeviceDAO deviceDAO;
     private SchemeDAO schemeDAO;
     private DeviceLocationDAO deviceLocationDAO;
@@ -179,11 +182,13 @@ public class SchemeEditorController {
                 this::saveDeviceLocation,
                 deviceLocationDAO,
                 this::refreshAvailableDevices,
-                currentScheme  // Передаем текущую схему
+                currentScheme,
+                deviceDAO
+
         );
         shapeManager.setOnShapeSelected(this::handleShapeSelection);
         shapeManager.setOnShapeDeselected(this::handleShapeDeselection);
-        this.schemeSaver = new SchemeSaver(schemeDAO, deviceLocationDAO, shapeService, schemePane);
+        this.schemeSaver = new SchemeSaver(schemeDAO, deviceLocationDAO, shapeService, schemePane,deviceDAO);
     }
 
     /**
@@ -660,12 +665,17 @@ public class SchemeEditorController {
         boolean confirm = CustomAlert.showConfirmation("Очистка схемы",
                 "Это действие удалит ВСЕ фигуры и приборы с панели. Продолжить?");
         if (!confirm) return;
+
         try {
             if (currentScheme != null) {
                 if (deviceLocationDAO != null) {
                     deviceLocationDAO.deleteAllLocationsForScheme(currentScheme.getId());
                 }
-                currentScheme.setData("{}");
+                // Сохраняем пустую JSON структуру
+                SchemeData emptyData = new SchemeData();
+                currentScheme.setData(gson.toJson(emptyData));
+                currentScheme.updateTimestamp();
+
                 if (schemeDAO != null) {
                     schemeDAO.updateScheme(currentScheme);
                 }
@@ -680,10 +690,12 @@ public class SchemeEditorController {
     }
 
     /**
-     * Загрузка фигур из схемы
+     * Загрузка фигур из схемы (JSON формат)
      */
     private void loadShapesFromScheme(Scheme scheme) {
         statusLabel.setText("Очистка старых фигур...");
+
+        // Очищаем существующие фигуры
         if (shapeService != null) {
             try {
                 shapeService.clearAllShapes();
@@ -697,43 +709,39 @@ public class SchemeEditorController {
                 }
             }
         }
+
         String schemeData = scheme.getData();
-        if (schemeData != null && !schemeData.isEmpty()) {
-            LOGGER.info("Содержимое scheme.data: {}", safeSubstring(schemeData, 100));
+        if (schemeData == null || schemeData.trim().isEmpty() || schemeData.equals("{}")) {
+            LOGGER.info("Схема пуста");
+            return;
         }
-        if (isValidSchemeData(schemeData) && shapeService != null) {
-            List<String> shapeData = parseShapeData(schemeData);
-            shapeService.getShapeCount();
-            shapeService.deserializeAndAddAll(shapeData);
-            shapeService.getShapeCount();
-        } else {
-            safeSubstring(schemeData, 50);
-        }
+
+        // Загружаем через новый JSON метод
+        shapeService.deserializeAndAddAll(schemeData);
+        LOGGER.info("Загружено фигур: {}", shapeService.getShapeCount());
     }
 
     /**
-     * Проверка валидности данных схемы
+     * Загрузка старого pipe-формата (для обратной совместимости)
      */
-    private boolean isValidSchemeData(String schemeData) {
-        return schemeData != null && !schemeData.trim().isEmpty();
-    }
+    @SuppressWarnings("unchecked")
+    private void tryLoadLegacyFormat(String schemeData) {
+        LOGGER.info("Пробуем загрузить в старом pipe-формате");
+        if (schemeData == null || schemeData.trim().isEmpty() || schemeData.equals("{}")) {
+            return;
+        }
 
-    /**
-     * Парсинг данных фигур из строки
-     */
-    private List<String> parseShapeData(String schemeData) {
-        if (schemeData == null || schemeData.trim().isEmpty()) {
-            return new ArrayList<>();
-        }
-        if (schemeData.equals("{}")) {
-            return new ArrayList<>();
-        }
-        return Arrays.stream(schemeData.split(";"))
+        List<String> shapeDataList = Arrays.stream(schemeData.split(";"))
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .filter(s -> s.contains("|"))
                 .filter(s -> s.split("\\|").length >= 5)
                 .collect(Collectors.toList());
+
+        if (!shapeDataList.isEmpty()) {
+            shapeService.deserializeAndAddAll(shapeDataList);
+            LOGGER.info("Загружено {} фигур из pipe-формата", shapeDataList.size());
+        }
     }
 
     /**
@@ -1149,10 +1157,15 @@ public class SchemeEditorController {
                             selectedDevice.getId(), currentScheme.getId(), x, y
                     );
                     boolean added = deviceLocationDAO.addDeviceLocation(location);
+                    if (added) {
+                        selectedDevice.updateTimestamp();
+                        deviceDAO.updateDevice(selectedDevice);
+                    }
                     if (!added) {
                         CustomAlert.showError("Ошибка", "Не удалось сохранить прибор в базу данных");
                     }
                 }
+
                 refreshAvailableDevices();
                 statusLabel.setText("Прибор добавлен: " + selectedDevice.getName());
 

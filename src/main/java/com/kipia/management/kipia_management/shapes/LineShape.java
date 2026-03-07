@@ -853,4 +853,43 @@ public class LineShape extends ShapeBase {
         return String.format("LINE|%.2f|%.2f|%.2f|%.2f|%.1f%s",
                 absCoords[0], absCoords[1], absCoords[2], absCoords[3], 0.0, serializeColors());
     }
+
+    // ============================================================
+    // GETTERS FOR LINE POINTS
+    // ============================================================
+
+    /**
+     * Получить начальную X координату линии
+     */
+    public double getStartX() {
+        return getLayoutX() + line.getStartX();
+    }
+
+    /**
+     * Получить начальную Y координату линии
+     */
+    public double getStartY() {
+        return getLayoutY() + line.getStartY();
+    }
+
+    /**
+     * Получить конечную X координату линии
+     */
+    public double getEndX() {
+        return getLayoutX() + line.getEndX();
+    }
+
+    /**
+     * Получить конечную Y координату линии
+     */
+    public double getEndY() {
+        return getLayoutY() + line.getEndY();
+    }
+
+    /**
+     * Получить объект Line для доступа к его свойствам
+     */
+    public Line getLine() {
+        return line;
+    }
 }

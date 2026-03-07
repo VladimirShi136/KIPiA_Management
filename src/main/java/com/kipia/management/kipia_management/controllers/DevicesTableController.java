@@ -166,20 +166,19 @@ public class DevicesTableController {
 
         // Статус – ComboBox
         TableColumn<Device, String> statusCol = new TableColumn<>("Статус");
-        //statusCol.setPrefWidth(90);
         statusCol.setCellValueFactory(new PropertyValueFactory<>("status"));
         statusCol.setCellFactory(ComboBoxTableCell.forTableColumn(
                 "Хранение", "В работе", "Утерян", "Испорчен"));
         statusCol.setOnEditCommit(event -> {
             Device dev = event.getRowValue();
             dev.setStatus(event.getNewValue());
+            dev.updateTimestamp();
             deviceDAO.updateDevice(dev);
             updateStatistics();
         });
 
         // Фото – две кнопки «Добавить» / «Просмотр»
         TableColumn<Device, Void> photoCol = new TableColumn<>("Фото");
-        //photoCol.setPrefWidth(100);
         photoCol.setCellFactory(createPhotoCellFactory());
 
         // -----------------------------------------------------------------
@@ -209,7 +208,6 @@ public class DevicesTableController {
     private TableColumn<Device, Integer> createYearColumn() {
         TableColumn<Device, Integer> yearCol = new TableColumn<>("Год выпуска");
         yearCol.setCellValueFactory(new PropertyValueFactory<>("year"));
-        //yearCol.setPrefWidth(85);
         yearCol.setCellFactory(_ -> {
             ValidatingIntegerCell cell = new ValidatingIntegerCell();
             cell.getStyleClass().add("numeric-cell");
@@ -219,6 +217,7 @@ public class DevicesTableController {
         yearCol.setOnEditCommit(event -> {
             Device device = event.getRowValue();
             device.setYear(event.getNewValue());
+            device.updateTimestamp();
             deviceDAO.updateDevice(device);
         });
         return yearCol;
@@ -232,7 +231,6 @@ public class DevicesTableController {
     private TableColumn<Device, Double> createAccuracyClassColumn() {
         TableColumn<Device, Double> accuracyClassCol = new TableColumn<>("Класс точности");
         accuracyClassCol.setCellValueFactory(new PropertyValueFactory<>("accuracyClass"));
-        //accuracyClassCol.setPrefWidth(90);
         accuracyClassCol.setCellFactory(_ -> {
             ValidatingDoubleCell cell = new ValidatingDoubleCell();
             cell.getStyleClass().add("numeric-cell");
@@ -242,6 +240,7 @@ public class DevicesTableController {
         accuracyClassCol.setOnEditCommit(event -> {
             Device device = event.getRowValue();
             device.setAccuracyClass(event.getNewValue());
+            device.updateTimestamp();
             deviceDAO.updateDevice(device);
         });
         return accuracyClassCol;
@@ -258,11 +257,11 @@ public class DevicesTableController {
 
         TableColumn<Device, String> col = new TableColumn<>(title);
         col.setCellValueFactory(new PropertyValueFactory<>(propertyName));
-        //col.setPrefWidth(prefWidth);
         col.setCellFactory(TextFieldTableCell.forTableColumn());
         col.setOnEditCommit(event -> {
             Device dev = event.getRowValue();
             onCommit.accept(dev, event.getNewValue());
+            dev.updateTimestamp();
             deviceDAO.updateDevice(dev);
             if (propertyName.equals("location")) {
                 if (schemeEditorController != null) {

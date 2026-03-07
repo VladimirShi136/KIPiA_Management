@@ -1099,7 +1099,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     /**
      * Обработчик удаления фигуры для контекстного меню
      */
-    protected void handleDelete(ShapeHandler shapeHandler) {
+    public void handleDelete(ShapeHandler shapeHandler) {
         if (shapeManager != null) {
             shapeManager.removeShape((Node) shapeHandler);
         }
@@ -1314,4 +1314,75 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
             }
         }
     }
+
+    // ============================================================
+// GETTERS FOR COLORS AND STROKE
+// ============================================================
+
+    /**
+     * Получить цвет обводки
+     */
+    public Color getStrokeColor() {
+        return strokeColor;
+    }
+
+    /**
+     * Получить цвет заливки
+     */
+    public Color getFillColor() {
+        if (fillColor == null || fillColor.equals(Color.TRANSPARENT)) {
+            return Color.TRANSPARENT;
+        }
+        return fillColor;
+    }
+
+    /**
+     * Получить ширину обводки
+     */
+    public double getStrokeWidth() {
+        // ShapeBase не является Shape, нужно проверять конкретные типы
+        if (this instanceof RectangleShape) {
+            return ((RectangleShape) this).getRectangle().getStrokeWidth();
+        } else if (this instanceof EllipseShape) {
+            return ((EllipseShape) this).getEllipse().getStrokeWidth();
+        } else if (this instanceof LineShape) {
+            return ((LineShape) this).getLine().getStrokeWidth();
+        } else if (this instanceof RhombusShape) {
+            return ((RhombusShape) this).getPath().getStrokeWidth();
+        } else if (this instanceof TextShape) {
+            return 1.0; // Текст не имеет обводки
+        }
+        return 1.0;
+    }
+
+    /**
+     * Установить ширину обводки
+     */
+    public void setStrokeWidth(double width) {
+        if (this instanceof RectangleShape) {
+            ((RectangleShape) this).getRectangle().setStrokeWidth(width);
+        } else if (this instanceof EllipseShape) {
+            ((EllipseShape) this).getEllipse().setStrokeWidth(width);
+        } else if (this instanceof LineShape) {
+            ((LineShape) this).getLine().setStrokeWidth(width);
+        } else if (this instanceof RhombusShape) {
+            ((RhombusShape) this).getPath().setStrokeWidth(width);
+        }
+        // Для TextShape игнорируем
+    }
+
+    /**
+     * Установить цвет заливки (для совместимости)
+     */
+    public void setFill(Color color) {
+        setFillColor(color);
+    }
+
+    /**
+     * Установить цвет обводки (для совместимости)
+     */
+    public void setStroke(Color color) {
+        setStrokeColor(color);
+    }
+
 }

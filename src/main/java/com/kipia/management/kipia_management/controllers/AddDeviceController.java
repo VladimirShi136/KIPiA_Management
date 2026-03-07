@@ -242,6 +242,7 @@ public class AddDeviceController {
         device.setValveNumber(valveNumber);
         device.setStatus(status);
         device.setAdditionalInfo(additionalInfoField.getText());
+        device.updateTimestamp();
 
         // Добавляем выбранные фото
         for (String photoFileName : selectedPhotoFiles) {

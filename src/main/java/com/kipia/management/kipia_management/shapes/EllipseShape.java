@@ -105,6 +105,10 @@ public class EllipseShape extends ShapeBase {
         return getCurrentHeight();
     }
 
+    public Ellipse getEllipse() {
+        return ellipse;
+    }
+
     private void applyStyle(Ellipse ellipse, Color fill, Color stroke, double strokeWidth) {
         ellipse.setFill(fill);
         ellipse.setStroke(stroke);

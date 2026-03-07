@@ -97,7 +97,7 @@
 }
 
 .button-photo-gallery {
-    -fx-background-color: #14b1b1; /* Фиолетовый цвет */
+    -fx-background-color: #14b1b1;
     -fx-padding: 10 20;
     -fx-min-width: 160px;
     -fx-pref-width: 160px;

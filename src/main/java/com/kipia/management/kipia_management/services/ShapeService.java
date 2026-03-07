@@ -1,25 +1,30 @@
 package com.kipia.management.kipia_management.services;
 
-import com.kipia.management.kipia_management.shapes.ShapeBase;
-import com.kipia.management.kipia_management.shapes.ShapeFactory;
-import com.kipia.management.kipia_management.shapes.ShapeHandler;
-import com.kipia.management.kipia_management.shapes.ShapeType;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.kipia.management.kipia_management.models.ShapeData;
+import com.kipia.management.kipia_management.models.SchemeData;
+import com.kipia.management.kipia_management.shapes.*;
+import javafx.scene.paint.Color;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 /**
+ * Сервис для работы с фигурами
+ * (Serialize, Deserialize, remove, add, clean)
+ *
  * @author vladimir_shi
  * @since 25.10.2025
  */
-
 public class ShapeService {
     private static final Logger LOGGER = LogManager.getLogger(ShapeService.class);
+    private static final Gson gson = new GsonBuilder()
+            .setPrettyPrinting()
+            .create();
 
     private final Consumer<ShapeHandler> deleteAction;
     private final ShapeFactory factory;
@@ -61,30 +66,191 @@ public class ShapeService {
         new ArrayList<>(shapes).forEach(this::removeShape);
     }
 
-    // Сериализация всех фигур
-    public List<String> serializeAll() {
-        return shapes.stream()
-                .map(ShapeBase::serialize)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+    /**
+     * Сериализация всех фигур в JSON
+     */
+    public String serializeAllToJson() {
+        SchemeData schemeData = new SchemeData();
+
+        for (ShapeBase shape : shapes) {
+            ShapeData shapeData = convertShapeToData(shape);
+            if (shapeData != null) {
+                schemeData.getShapes().add(shapeData);
+            }
+        }
+
+        return gson.toJson(schemeData);
     }
 
     /**
-     * Десериализация и добавление всех фигур (с безопасными логами)
+     * Конвертация ShapeBase в ShapeData
      */
-    public void deserializeAndAddAll(List<String> shapeData) {
-        if (shapeData == null || shapeData.isEmpty()) {
-            LOGGER.info("Нет данных фигур для десериализации shapeData пустой");
+    private ShapeData convertShapeToData(ShapeBase shape) {
+        ShapeData data = new ShapeData();
+
+        // Определяем тип
+        if (shape instanceof RectangleShape) data.setType(ShapeType.RECTANGLE);
+        else if (shape instanceof EllipseShape) data.setType(ShapeType.ELLIPSE);
+        else if (shape instanceof LineShape) data.setType(ShapeType.LINE);
+        else if (shape instanceof RhombusShape) data.setType(ShapeType.RHOMBUS);
+        else if (shape instanceof TextShape) data.setType(ShapeType.TEXT);
+        else return null;
+
+        // Общие свойства
+        data.setX(shape.getLayoutX());
+        data.setY(shape.getLayoutY());
+        data.setRotation(shape.getRotate());
+
+        // Цвета - используем новые геттеры
+        Color stroke = shape.getStrokeColor();
+        Color fill = shape.getFillColor();
+
+        data.setStrokeColor(stroke != null && !stroke.equals(Color.TRANSPARENT) ?
+                ShapeData.colorToString(stroke) : null);
+        data.setFillColor(fill != null && !fill.equals(Color.TRANSPARENT) ?
+                ShapeData.colorToString(fill) : null);
+        data.setStrokeWidth(shape.getStrokeWidth());
+
+
+        // Специфичные для типа свойства
+        if (shape instanceof LineShape line) {
+            data.setStartX(line.getStartX());
+            data.setStartY(line.getStartY());
+            data.setEndX(line.getEndX());
+            data.setEndY(line.getEndY());
+        } else if (shape instanceof TextShape text) {
+            data.setText(text.getText());
+            data.setWidth(text.getBoundsInLocal().getWidth());
+            data.setHeight(text.getBoundsInLocal().getHeight());
+        } else {
+            // Для остальных фигур - ширина и высота из bounds
+            data.setWidth(shape.getBoundsInLocal().getWidth());
+            data.setHeight(shape.getBoundsInLocal().getHeight());
+        }
+
+        return data;
+    }
+
+    /**
+     * Десериализация и добавление всех фигур из JSON
+     */
+    public void deserializeAndAddAll(String jsonData) {
+        if (jsonData == null || jsonData.trim().isEmpty() || jsonData.equals("{}")) {
+            LOGGER.info("Нет данных фигур для десериализации");
             return;
         }
+
+        try {
+            SchemeData schemeData = gson.fromJson(jsonData, SchemeData.class);
+            if (schemeData == null || schemeData.getShapes() == null) {
+                return;
+            }
+
+            int loaded = 0;
+            int failed = 0;
+
+            for (ShapeData shapeData : schemeData.getShapes()) {
+                try {
+                    ShapeBase shape = convertDataToShape(shapeData);
+                    if (shape != null) {
+                        shapes.add(shape);
+                        shape.addToPane();
+                        shape.addContextMenu(shape::handleDelete);
+                        loaded++;
+                    } else {
+                        failed++;
+                    }
+                } catch (Exception e) {
+                    failed++;
+                    LOGGER.error("Ошибка создания фигуры типа {}: {}", shapeData.getType(), e.getMessage());
+                }
+            }
+
+            LOGGER.info("Загружено фигур: {}, ошибок: {}", loaded, failed);
+
+        } catch (Exception e) {
+            LOGGER.error("Ошибка парсинга JSON: {}", e.getMessage(), e);
+            // Пробуем загрузить в старом формате как fallback
+            tryLoadLegacyFormat(jsonData);
+        }
+    }
+
+    /**
+     * Конвертация ShapeData в ShapeBase
+     */
+    private ShapeBase convertDataToShape(ShapeData data) {
+        double[] coords;
+
+        switch (data.getType()) {
+            case LINE:
+                coords = new double[]{
+                        data.getStartX(), data.getStartY(),
+                        data.getEndX(), data.getEndY()
+                };
+                break;
+            case TEXT:
+                coords = new double[]{data.getX(), data.getY(), 0};
+                break;
+            default: // RECTANGLE, ELLIPSE, RHOMBUS
+                coords = new double[]{
+                        data.getX(), data.getY(),
+                        data.getWidth(), data.getHeight()
+                };
+                break;
+        }
+
+        ShapeBase shape = factory.createShape(data.getType(), coords);
+
+        if (shape != null) {
+            // Устанавливаем цвета
+            if (data.getStrokeColor() != null) {
+                shape.setStrokeColor(ShapeData.stringToColor(data.getStrokeColor()));
+            } else {
+                shape.setStrokeColor(Color.BLACK); // Контур по умолчанию черный
+            }
+
+            if (data.getFillColor() != null) {
+                shape.setFillColor(ShapeData.stringToColor(data.getFillColor()));
+            } else {
+                shape.setFillColor(Color.TRANSPARENT); // Заливка по умолчанию прозрачная
+            }
+
+            // Используем setStrokeWidth если есть
+            try {
+                shape.setStrokeWidth(data.getStrokeWidth());
+            } catch (Exception e) {
+                // Игнорируем если метод не поддерживается
+            }
+            shape.setRotation(data.getRotation());
+
+            // Для текста
+            if (shape instanceof TextShape && data.getText() != null) {
+                ((TextShape) shape).setText(data.getText());
+            }
+        }
+
+        return shape;
+    }
+
+    /**
+     * Загрузка старого pipe-формата (для обратной совместимости)
+     */
+    private void tryLoadLegacyFormat(String data) {
+        LOGGER.info("Пробуем загрузить в старом pipe-формате");
+        if (data == null || data.trim().isEmpty() || data.equals("{}")) {
+            return;
+        }
+
+        String[] parts = data.split(";");
         int loaded = 0;
         int failed = 0;
-        for (int i = 0; i < shapeData.size(); i++) {
-            String data = shapeData.get(i);
-            if (data != null && !data.trim().isEmpty()) {
+
+        for (String part : parts) {
+            if (part != null && !part.trim().isEmpty()) {
                 try {
-                    ShapeBase shape = ShapeBase.deserialize(data.trim(),
-                            factory.pane(), factory.statusSetter(), factory.onSelectCallback(), factory.shapeManager());
+                    ShapeBase shape = ShapeBase.deserialize(part.trim(),
+                            factory.pane(), factory.statusSetter(),
+                            factory.onSelectCallback(), factory.shapeManager());
                     if (shape != null) {
                         shapes.add(shape);
                         shape.addToPane();
@@ -94,38 +260,29 @@ public class ShapeService {
                     }
                 } catch (Exception e) {
                     failed++;
-                    String shortData = safeSubstring(data, 50);  // Безопасный!
-                    LOGGER.error("ERROR: Ошибка десериализации фигуры #{}: '{}'", i + 1, shortData, e);
-                    e.printStackTrace();  // Полный стек для анализа (в консоли)
+                    LOGGER.error("Ошибка загрузки pipe-формата: {}", e.getMessage());
                 }
-            } else {
-                LOGGER.info("SKIP: Пустая data для фигуры #{}", i + 1);
             }
         }
-        if (loaded > 0) {
-            LOGGER.info("Успешно добавлены фигур: {}", loaded);
-        } else if (failed == shapeData.size()) {
-            LOGGER.error("Все фигур failed — проверь формат данных в БД");
-        }
-        LOGGER.info("Общее количество фигур в сервисе: {}", shapes.size());
+
+        LOGGER.info("Загружено из pipe: {}, ошибок: {}", loaded, failed);
     }
 
-    /**
-     * Safe для типа фигуры (добавь в ShapeService, если нужно)
-     */
-    private String safeSubstring(String str, int maxLen) {
-        if (str == null || str.isEmpty()) {
-            return "[пустая]";
-        }
-        if (str.length() <= maxLen) {
-            return str;
-        }
-        return str.substring(0, maxLen) + "...";
+    // Сохраняем старый метод для обратной совместимости, но помечаем как deprecated
+    @Deprecated
+    public List<String> serializeAll() {
+        LOGGER.warn("Используется устаревший метод serializeAll()");
+        return new ArrayList<>();
     }
 
-    /**
-     * Очистка всех фигур (из list + pane) — вызывается при смене схемы
-     */
+    @Deprecated
+    public void deserializeAndAddAll(List<String> shapeData) {
+        LOGGER.warn("Используется устаревший метод deserializeAndAddAll(List)");
+        if (shapeData == null || shapeData.isEmpty()) return;
+        deserializeAndAddAll(String.join(";", shapeData));
+    }
+
+    // Остальные методы остаются без изменений
     public void clearAllShapes() {
         if (shapes.isEmpty()) {
             LOGGER.info("No shapes to clear");
@@ -134,27 +291,19 @@ public class ShapeService {
 
         for (ShapeBase shape : shapes) {
             if (shape != null) {
-                shape.removeFromPane();  // Удаляет из pane (pane.getChildren().remove(shape))
-                shape.removeResizeHandles();  // Скрыть handles
+                shape.removeFromPane();
+                shape.removeResizeHandles();
             }
         }
-        shapes.clear();  // Clear list
+        shapes.clear();
     }
 
-    /**
-     * Добавление фигуры в список (без добавления в pane — для undo/redo синхронности).
-     * Используется в ShapeManager для команд undo.
-     */
     public void addShapeToList(ShapeBase shape) {
         if (shape != null && !shapes.contains(shape)) {
             shapes.add(shape);
         }
     }
 
-    /**
-     * Удаление фигуры из списка (без удаления из pane — для undo/redo синхронности).
-     * Используется в ShapeManager для команд execute/remove.
-     */
     public void removeShapeFromList(ShapeBase shape) {
         boolean removed = shapes.remove(shape);
         if (removed) {

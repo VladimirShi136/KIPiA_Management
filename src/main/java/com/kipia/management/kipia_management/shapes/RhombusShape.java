@@ -236,7 +236,7 @@ public class RhombusShape extends ShapeBase {
         rhombusPath.setStrokeType(StrokeType.INSIDE);
     }
 
-    /**ц
+    /**
      * УДАЛЯЕМ ТОЛЬКО 4 HANDLES
      */
     @Override
@@ -252,5 +252,9 @@ public class RhombusShape extends ShapeBase {
         }
         resizeHandles = null;
         wasResizedInSession = false;
+    }
+
+    public Path getPath() {
+        return rhombusPath;
     }
 }

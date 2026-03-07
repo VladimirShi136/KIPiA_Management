@@ -40,7 +40,7 @@ public class ValidatingCellEditor {
     public void processEdit() {
         String input = textField.getText().trim();
         if (input.contains(",")) {
-            showAlert("Используйте точку вместо запятой.");
+            showAlert();
             return;  // No commit, подкласс должен вызвать cancelEdit
         }
         if (input.isEmpty()) {
@@ -52,15 +52,14 @@ public class ValidatingCellEditor {
 
     /**
      * Показывает предупреждение, предотвращая множественные alerts.
-     * @param msg текст сообщения
      */
-    protected void showAlert(String msg) {
+    protected void showAlert() {
         if (isShowingAlert) return;
         isShowingAlert = true;
         Alert alert = new Alert(Alert.AlertType.WARNING);
         alert.setTitle("Ошибка ввода");
         alert.setHeaderText(null);
-        alert.setContentText(msg);
+        alert.setContentText("Используйте точку вместо запятой.");
         alert.showAndWait();
         isShowingAlert = false;
     }
@@ -70,8 +69,8 @@ public class ValidatingCellEditor {
      */
     private void createTextField() {
         textField = new TextField();
-        textField.setOnAction(e -> processEdit());
-        textField.focusedProperty().addListener((obs, oldVal, newVal) -> {
+        textField.setOnAction(_ -> processEdit());
+        textField.focusedProperty().addListener((_, _, newVal) -> {
             if (!newVal) processEdit();  // При потере фокуса
         });
     }

@@ -33,6 +33,7 @@ public class DeviceIconService {
 
     private final AnchorPane schemePane;
     private final BiConsumer<Node, Device> onDeviceMovedCallback;
+    private final DeviceDAO deviceDAO;
     private final DeviceLocationDAO deviceLocationDAO;
     private Scheme currentScheme; // поле для текущей схемы
 
@@ -48,12 +49,14 @@ public class DeviceIconService {
                              BiConsumer<Node, Device> onDeviceMovedCallback,
                              DeviceLocationDAO deviceLocationDAO,
                              Runnable onDeviceDeletedCallback,
-                             Scheme currentScheme) {  // Добавьте параметр
+                             Scheme currentScheme,
+                             DeviceDAO deviceDAO) {  // Добавьте параметр
         this.schemePane = schemePane;
         this.onDeviceMovedCallback = onDeviceMovedCallback;
         this.deviceLocationDAO = deviceLocationDAO;
         this.onDeviceDeletedCallback = onDeviceDeletedCallback;
         this.currentScheme = currentScheme; // Сохраняем текущую схему
+        this.deviceDAO = deviceDAO;
     }
 
     /**
@@ -163,6 +166,12 @@ public class DeviceIconService {
             boolean saved = deviceLocationDAO.addDeviceLocation(location);
 
             if (saved) {
+                // === НОВЫЙ КОД: Обновляем timestamp устройства ===
+                device.updateTimestamp();
+                if (deviceDAO != null) {
+                    deviceDAO.updateDevice(device);
+                }
+                // =================================================
                 LOGGER.info("Device position and rotation successfully saved to database after rotation");
             } else {
                 LOGGER.warn("FAILED to save device position and rotation after rotation!");
@@ -262,7 +271,7 @@ public class DeviceIconService {
      * Обработка удаления устройства
      */
     private void handleDeviceDeletion(Node node, Scheme currentScheme) {
-        // Получаем устройство из UserData (может быть Device или DeviceWithRotation)
+        // Получаем устройство из UserData
         Device deviceToDelete = extractDeviceFromUserData(node);
         assert deviceToDelete != null;
         boolean confirmed = CustomAlert.showConfirmation(
@@ -271,6 +280,13 @@ public class DeviceIconService {
         );
 
         if (confirmed) {
+            // === НОВЫЙ КОД: Обновляем timestamp устройства перед удалением ===
+            deviceToDelete.updateTimestamp();
+            if (deviceDAO != null) {
+                deviceDAO.updateDevice(deviceToDelete);
+            }
+            // ==============================================================
+
             deleteDeviceFromScheme(node, deviceToDelete, currentScheme);
         }
 

@@ -31,7 +31,6 @@ public class MainController {
     // Кнопки меню
     public Button devicesBtn;
     public Button addDeviceBtn;
-    public Button groupedDevicesBtn;
     public Button photoGalleryBtn;
     public Button schemesBtn;
     public Button reportsBtn;
@@ -143,7 +142,6 @@ public class MainController {
         StyleUtils.applyHoverAndAnimation(reportsBtn, "button-reports", "button-reports-hover");
         StyleUtils.applyHoverAndAnimation(themeToggleBtn, "button-theme-toggle", "button-theme-toggle-hover");
         StyleUtils.applyHoverAndAnimation(exitBtn, "button-exit", "button-exit-hover");
-        StyleUtils.applyHoverAndAnimation(groupedDevicesBtn, "button-grouped", "button-grouped-hover");
         StyleUtils.applyHoverAndAnimation(schemesBtn, "button-schemes", "button-schemes-hover");
         StyleUtils.applyHoverAndAnimation(photoGalleryBtn, "button-photo-gallery", "button-photo-gallery-hover");
 
@@ -170,7 +168,6 @@ public class MainController {
         // Включаем все кнопки по умолчанию
         devicesBtn.setDisable(false);
         addDeviceBtn.setDisable(false);
-        groupedDevicesBtn.setDisable(false);
         photoGalleryBtn.setDisable(false);
         schemesBtn.setDisable(false);
         reportsBtn.setDisable(false);
@@ -183,7 +180,6 @@ public class MainController {
         switch (currentActiveSection) {
             case "devices" -> devicesBtn.setDisable(true);
             case "addDevice" -> addDeviceBtn.setDisable(true);
-            case "groupedDevices" -> groupedDevicesBtn.setDisable(true);
             case "photoGallery" -> photoGalleryBtn.setDisable(true);
             case "schemes" -> schemesBtn.setDisable(true);
             case "reports" -> reportsBtn.setDisable(true);
@@ -290,49 +286,6 @@ public class MainController {
             statusLabel.setText("Ошибка загрузки списка приборов: " + e.getMessage());
             CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить список приборов");
             LOGGER.error("Ошибка загрузки списка приборов: {}", e.getMessage(), e);
-        }
-    }
-
-    /**
-     * Показать группировку приборов.
-     */
-    @FXML
-    private void showGroupedDevices() {
-        currentActiveSection = "groupedDevices";
-
-        if (schemeEditorController != null) {
-            saveSchemeBeforeNavigation();
-            schemeEditorView = null;
-            schemeEditorController = null;
-        }
-
-        schemesBtn.setDisable(false);
-        statusLabel.setText("Просмотр списка приборов по месту установки");
-        contentArea.getChildren().clear();
-
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/devices_grouped.fxml"));
-            Parent view = loader.load();
-
-            DevicesGroupedController ctrl = loader.getController();
-            if (ctrl != null) {
-                ctrl.setDeviceDAO(deviceDAO);
-                LOGGER.info("DeviceDAO передан в DevicesGroupedController");
-
-                if (schemeEditorController != null) {
-                    ctrl.setSchemeEditorController(schemeEditorController);
-                }
-
-                ctrl.init();
-            }
-
-            contentArea.getChildren().add(view);
-            LOGGER.info("Группированный список приборов загружен успешно");
-            updateNavigationButtonsState();
-        } catch (Exception e) {
-            statusLabel.setText("Ошибка загрузки списка приборов по месту установки: " + e.getMessage());
-            CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить группированный список приборов");
-            LOGGER.error("Ошибка загрузки группированного списка приборов: {}", e.getMessage(), e);
         }
     }
 

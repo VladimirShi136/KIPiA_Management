@@ -52,12 +52,16 @@ public class Device {
     // Коллекция для путей фото (только имена файлов)
     private List<String> photos;
 
+    // Время обновления
+    private long updatedAt;
+
     /**
      * Конструктор по умолчанию.
      * Создает пустой объект Device без инициализации полей.
      */
     public Device() {
         photos = new ArrayList<>();
+        this.updatedAt = System.currentTimeMillis();
     }
 
     /**
@@ -72,6 +76,7 @@ public class Device {
      * @param measurementLimit предел измерений
      * @param accuracyClass    класс точности
      * @param location         местонахождение
+     * @param valveNumber      номер крана
      * @param status           статус прибора
      * @param additionalInfo   дополнительная информация
      */
@@ -89,6 +94,7 @@ public class Device {
         this.status = status;
         this.additionalInfo = additionalInfo;
         this.photos = new ArrayList<>();
+        this.updatedAt = System.currentTimeMillis();
     }
 
     // Геттеры и сеттеры для доступа к приватным полям класса
@@ -385,6 +391,31 @@ public class Device {
     }
 
     /**
+     * Получить время последнего обновления
+     *
+     * @return - время обновления
+     */
+    public long getUpdatedAt() {
+        return updatedAt;
+    }
+
+    /**
+     * Установить время последнего обновления
+     *
+     * @param updatedAt - время обновления
+     */
+    public void setUpdatedAt(long updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    /**
+     * Метод обновления времени
+     */
+    public void updateTimestamp() {
+        this.updatedAt = System.currentTimeMillis();
+    }
+
+    /**
      * Переопределенный метод toString() для удобного представления объекта в виде строки.
      * Используется для отладки и вывода информации о приборе.
      *
@@ -406,6 +437,7 @@ public class Device {
                 ", status='" + status + '\'' +
                 ", additionalInfo='" + additionalInfo + '\'' +
                 ", photos=" + photos +
+                ", updatedAt=" + updatedAt +
                 '}';
     }
 }

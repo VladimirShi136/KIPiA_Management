@@ -142,7 +142,7 @@ public class DatabaseService {
     }
 
     /**
-     * Метод для создания таблицы devices в базе данных.
+     * Метод для создания трех таблиц в базе данных.
      * Используется SQL-запрос с конструкцией CREATE TABLE IF NOT EXISTS.
      */
     public void createTables() {
@@ -160,7 +160,8 @@ public class DatabaseService {
                     valve_number TEXT,
                     status TEXT DEFAULT 'В работе',
                     additional_info TEXT,
-                    photos TEXT
+                    photos TEXT,
+                    updated_at INTEGER DEFAULT (strftime('%%s','now') * 1000)
                 );""";
 
         String sqlSchemes = """
@@ -168,7 +169,8 @@ public class DatabaseService {
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name TEXT NOT NULL,
                     description TEXT,
-                    data TEXT
+                    data TEXT,
+                    updated_at INTEGER DEFAULT (strftime('%%s','now') * 1000)
                 );""";
 
         String sqlDeviceLocations = """

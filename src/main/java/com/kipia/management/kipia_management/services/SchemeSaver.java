@@ -20,6 +20,7 @@ public class SchemeSaver {
     private static final Logger LOGGER = LogManager.getLogger(SchemeSaver.class);
 
     private final SchemeDAO schemeDAO;
+    private final DeviceDAO deviceDAO;
     private final DeviceLocationDAO deviceLocationDAO;
     private final ShapeService shapeService;
     private final AnchorPane schemePane;
@@ -28,12 +29,13 @@ public class SchemeSaver {
             SchemeDAO schemeDAO,
             DeviceLocationDAO deviceLocationDAO,
             ShapeService shapeService,
-            AnchorPane schemePane
-    ) {
+            AnchorPane schemePane,
+            DeviceDAO deviceDAO) {
         this.schemeDAO = schemeDAO;
         this.deviceLocationDAO = deviceLocationDAO;
         this.shapeService = shapeService;
         this.schemePane = schemePane;
+        this.deviceDAO = deviceDAO;
     }
 
     /**
@@ -45,8 +47,10 @@ public class SchemeSaver {
             return false;
         }
         try {
+            scheme.updateTimestamp();
             saveSchemeData(scheme);
             saveDeviceLocations(scheme);
+
             LOGGER.info("Схема сохранена: {}, ID={}", scheme.getName(), scheme.getId());
             return true;
         } catch (Exception e) {
@@ -57,10 +61,9 @@ public class SchemeSaver {
 
     /**
      * Автосохранение перед сменой схемы.
-     * Возвращает false, если сохранение не удалось (можно отменить смену схемы).
      */
     public boolean saveBeforeSchemeChange(Scheme currentScheme) {
-        if (currentScheme == null) return true; // Нет текущей схемы — можно менять
+        if (currentScheme == null) return true;
         boolean saved = saveScheme(currentScheme);
         if (!saved) {
             LOGGER.warn("Не удалось сохранить схему перед сменой: {}", currentScheme.getName());
@@ -82,11 +85,9 @@ public class SchemeSaver {
 
     /**
      * Сохранение перед переходом в другой контроллер.
-     * Возвращает true, если можно продолжать навигацию.
      */
     public void saveBeforeNavigation(Scheme currentScheme) {
         if (currentScheme == null) return;
-
         boolean saved = saveScheme(currentScheme);
         if (!saved) {
             LOGGER.warn("Сохранение перед навигацией не удалось: {}", currentScheme.getName());
@@ -95,26 +96,25 @@ public class SchemeSaver {
 
     /**
      * Сохранение схемы через кнопку сохранить.
-     * @param scheme - сохраняемая схема
      */
     public void selectButtonSaveScheme(Scheme scheme) {
         saveScheme(scheme);
         CustomAlert.showAutoSaveNotification("Сохранение", 1.5);
     }
 
-    // --- Вспомогательные методы (прежние) ---
+    // --- Вспомогательные методы ---
 
     private void saveSchemeData(Scheme scheme) {
-        List<String> shapeData = shapeService.serializeAll();
-        String schemeData = shapeData.isEmpty() ? "{}" : String.join(";", shapeData);
-
+        // Получаем JSON из ShapeService
+        String schemeData = shapeService.serializeAllToJson();
         scheme.setData(schemeData);
+
         boolean updated = schemeDAO.updateScheme(scheme);
-
-
         if (!updated) {
             throw new RuntimeException("Не удалось обновить схему в БД (ID=" + scheme.getId() + ")");
         }
+
+        LOGGER.info("Сохранено {} фигур в JSON", shapeService.getShapeCount());
     }
 
     private void saveDeviceLocations(Scheme scheme) {
@@ -122,12 +122,11 @@ public class SchemeSaver {
             if (isDeviceNode(node)) {
                 Device device = extractDeviceFromUserData(node.getUserData());
                 if (device != null) {
-                    saveDeviceLocation(node, device, scheme); // Теперь использует исправленную версию
+                    saveDeviceLocation(node, device, scheme);
                 }
             }
         }
     }
-
 
     private boolean isDeviceNode(Node node) {
         return node.getUserData() != null &&
@@ -147,7 +146,6 @@ public class SchemeSaver {
     public void saveDeviceLocation(Node node, Device device, Scheme scheme) {
         double x = node.getLayoutX();
         double y = node.getLayoutY();
-
         double rotation = node.getRotate();
 
         DeviceLocation location = new DeviceLocation(
@@ -159,7 +157,13 @@ public class SchemeSaver {
         );
 
         boolean saved = deviceLocationDAO.addDeviceLocation(location);
-        if (!saved) {
+
+        if (saved) {
+            device.updateTimestamp();
+            if (deviceDAO != null) {
+                deviceDAO.updateDevice(device);
+            }
+        } else {
             LOGGER.warn("Не удалось сохранить позицию устройства (ID={}) для схемы ID={}", device.getId(), scheme.getId());
         }
     }
