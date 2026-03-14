@@ -62,6 +62,10 @@ public class PhotoManager {
         return INSTANCE;
     }
 
+    public String getBasePhotosPath() {
+        return basePhotosPath;
+    }
+
     /**
      * Инициализация с DeviceDAO (опционально, для автосохранения)
      */
@@ -243,6 +247,54 @@ public class PhotoManager {
             LOGGER.error("❌ Критическая ошибка при удалении фото: {}", e.getMessage(), e);
             return false;
         }
+    }
+
+    /**
+     * Удаляет ВСЕ физические файлы фото устройства.
+     * Вызывается при удалении устройства чтобы не оставлять мусор на диске.
+     *
+     * @return количество успешно удалённых файлов
+     */
+    public int deleteAllDevicePhotos(Device device) {
+        if (device == null) return 0;
+
+        List<String> photos = device.getPhotos();
+        if (photos == null || photos.isEmpty()) return 0;
+
+        int deletedCount = 0;
+
+        for (String fileName : photos) {
+            try {
+                String fullPath = getFullPhotoPath(device, fileName);
+                if (fullPath == null) continue;
+
+                File file = new File(fullPath);
+                if (file.exists() && file.delete()) {
+                    deletedCount++;
+                    LOGGER.debug("🗑️ Удалено фото: {}", fileName);
+                }
+            } catch (Exception e) {
+                LOGGER.warn("⚠️ Не удалось удалить фото {}: {}", fileName, e.getMessage());
+            }
+        }
+
+        // Удаляем папку локации если она стала пустой
+        if (device.getLocation() != null && !device.getLocation().isEmpty()) {
+            Path locationDir = Paths.get(basePhotosPath, device.getLocation());
+            if (Files.exists(locationDir) && Files.isDirectory(locationDir)) {
+                try (var stream = Files.list(locationDir)) {
+                    if (stream.findAny().isEmpty()) {
+                        Files.delete(locationDir);
+                        LOGGER.info("✅ Папка локации удалена (пустая): {}", locationDir);
+                    }
+                } catch (IOException e) {
+                    LOGGER.warn("⚠️ Не удалось удалить папку локации: {}", e.getMessage());
+                }
+            }
+        }
+
+        LOGGER.info("🗑️ Удалено {} фото для устройства ID={}", deletedCount, device.getId());
+        return deletedCount;
     }
 
     /**

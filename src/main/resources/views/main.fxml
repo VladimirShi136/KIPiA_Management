@@ -51,17 +51,24 @@
                     onAction="#showSchemesEditor"
                     text="Схемы локаций установки"
                     styleClass="button-schemes"/>
-            <Button fx:id="addDeviceBtn"
-                    maxWidth="Infinity"
-                    onAction="#showAddDeviceForm"
-                    styleClass="button-add-device"
-                    text="Добавить прибор"/>
+
             <Button fx:id="reportsBtn"
                     maxWidth="Infinity"
                     onAction="#showReports"
                     styleClass="button-reports"
                     text="Отчёты"/>
             <Region VBox.vgrow="ALWAYS"/>
+            <!-- Кнопки синхронизации БД -->
+            <Button fx:id="exportDbBtn"
+                    maxWidth="Infinity"
+                    onAction="#exportDatabase"
+                    styleClass="button-export-db"
+                    text="📤 Экспорт БД"/>
+            <Button fx:id="importDbBtn"
+                    maxWidth="Infinity"
+                    onAction="#importDatabase"
+                    styleClass="button-import-db"
+                    text="📥 Импорт БД"/>
             <Button fx:id="themeToggleBtn"
                     maxWidth="Infinity"
                     onAction="#toggleTheme"

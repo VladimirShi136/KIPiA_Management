@@ -21,7 +21,7 @@
         <VBox spacing="20" alignment="TOP_CENTER" style="-fx-padding: 20;">
 
             <!-- Заголовок -->
-            <Label text="Добавление нового прибора" styleClass="form-header"/>
+            <Label fx:id="formTitleLabel" text="Добавление нового прибора" styleClass="form-header"/>
 
             <!-- Форма в центрированном контейнере -->
             <VBox spacing="15" alignment="CENTER" prefWidth="500">
@@ -115,11 +115,15 @@
                 </GridPane>
 
                 <!-- Кнопки - всегда видимы внизу -->
-                <HBox spacing="20" alignment="CENTER" style="-fx-padding: 20 0 0 0;">
+                <HBox spacing="12" alignment="CENTER" style="-fx-padding: 20 0 0 0;">
+                    <!-- Кнопка удаления — видна только в режиме редактирования -->
+                    <Button fx:id="deleteBtn" text="Удалить" onAction="#onDeleteDevice"
+                            styleClass="button-delete" prefWidth="110" prefHeight="35"
+                            visible="false" managed="false"/>
                     <Button fx:id="cancelBtn" text="Отмена" onAction="#onCancel"
-                            styleClass="button-cancel" prefWidth="120" prefHeight="35"/>
+                            styleClass="button-cancel" prefWidth="110" prefHeight="35"/>
                     <Button fx:id="addBtn" text="Добавить" onAction="#onAddDevice"
-                            styleClass="button-add" prefWidth="120" prefHeight="35"/>
+                            styleClass="button-add" prefWidth="110" prefHeight="35"/>
                 </HBox>
             </VBox>
         </VBox>

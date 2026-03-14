@@ -23,6 +23,8 @@ import java.util.Optional;
  */
 public class CustomAlert {
     private static final Logger LOGGER = LogManager.getLogger(CustomAlert.class);
+    // Путь к иконке приложения
+    private static final String ICON_PATH = "/images/iconApp.png";
 
     // Константы для русских кнопок
     public static final ButtonType RETRY_BUTTON = new ButtonType("Повтор", ButtonBar.ButtonData.APPLY);
@@ -30,6 +32,16 @@ public class CustomAlert {
     public static final ButtonType OK_BUTTON = new ButtonType("ОК", ButtonBar.ButtonData.OK_DONE);
     public static final ButtonType YES_BUTTON = new ButtonType("Да", ButtonBar.ButtonData.YES);
     public static final ButtonType NO_BUTTON = new ButtonType("Нет", ButtonBar.ButtonData.NO);
+
+    // Применяет иконку приложения к любому Stage или Alert
+    public static void applyIcon(Stage stage) {
+        try {
+            stage.getIcons().add(new javafx.scene.image.Image(
+                    Objects.requireNonNull(CustomAlert.class.getResourceAsStream(ICON_PATH))));
+        } catch (Exception e) {
+            LOGGER.warn("Не удалось применить иконку: {}", e.getMessage());
+        }
+    }
 
     // Базовые методы с русифицированными заголовками и текстом
 
@@ -76,6 +88,11 @@ public class CustomAlert {
     // Подтверждение (Да/Нет)
     public static boolean showConfirmation(String title, String message) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        Window owner = Stage.getWindows().stream()
+                .filter(Window::isShowing)
+                .findFirst()
+                .orElse(null);
+        alert.initOwner(owner);
         alert.setTitle(title);
         alert.setHeaderText("Подтверждение");  // Русский заголовок вверху окна
         alert.setContentText(message);
@@ -91,7 +108,11 @@ public class CustomAlert {
     // Ввод текста
     public static Optional<String> showTextInputDialog(String title, String message, String defaultValue) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        StyleUtils.setupAlertStyle(alert, title, StyleUtils.getAlertStyleClass("confirm"));
+        Window owner = Stage.getWindows().stream()
+                .filter(Window::isShowing)
+                .findFirst()
+                .orElse(null);
+        alert.initOwner(owner); StyleUtils.setupAlertStyle(alert, title, StyleUtils.getAlertStyleClass("confirm"));
         alert.setTitle(title);
         alert.setHeaderText(message);
 
@@ -112,6 +133,11 @@ public class CustomAlert {
     // Расширенный предупреждение об ошибке
     public static ButtonType showAdvancedError(String title, String message, Throwable exception) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
+        Window owner = Stage.getWindows().stream()
+                .filter(Window::isShowing)
+                .findFirst()
+                .orElse(null);
+        alert.initOwner(owner);
         StyleUtils.setupAlertStyle(alert, title, StyleUtils.getAlertStyleClass("error"));
         alert.setTitle(title);
         alert.setHeaderText("Произошла ошибка!");
@@ -218,6 +244,11 @@ public class CustomAlert {
             ButtonType... buttons
     ) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        Window owner = Stage.getWindows().stream()
+                .filter(Window::isShowing)
+                .findFirst()
+                .orElse(null);
+        alert.initOwner(owner);
         alert.setTitle(title);
         alert.setHeaderText("Подтверждение");
         alert.setContentText(message);
@@ -240,6 +271,11 @@ public class CustomAlert {
             String defaultHeader
     ) {
         Alert alert = new Alert(type);
+        Window owner = Stage.getWindows().stream()
+                .filter(Window::isShowing)
+                .findFirst()
+                .orElse(null);
+        alert.initOwner(owner);
         alert.setTitle(title);
         alert.setHeaderText(defaultHeader);  // Русский заголовок вверху окна
         alert.setContentText(message);

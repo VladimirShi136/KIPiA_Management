@@ -29,7 +29,7 @@ public class ExcelImportExportUtil {
             "Тип прибора", "Модель", "Завод изготовитель", "Инв. №", "Год выпуска",
             "Предел измерений", "Класс точности", "Место установки", "Кран №",
             "Статус", "Доп. информация"
-    };
+    };  // Потом добавить "Дата обновления"
 
     // --- Основные методы ---
 
@@ -41,7 +41,7 @@ public class ExcelImportExportUtil {
      * @return true если экспорт успешен, false если ошибка (с логгированием)
      */
     public static boolean exportDevicesToExcel(Window ownerWindow, List<Device> devices) {
-        File file = showSaveDialog(ownerWindow, "Экспорт в Excel");
+        File file = showSaveDialog(ownerWindow);
         if (file == null) return false;  // Пользователь отменил
         try (Workbook wb = new XSSFWorkbook()) {
             Sheet sheet = wb.createSheet("Devices");
@@ -78,7 +78,7 @@ public class ExcelImportExportUtil {
                                                 DeviceDAO deviceDAO,
                                                 Runnable onSuccessUpdate,
                                                 Runnable onError) {
-        File file = showOpenDialog(ownerWindow, "Импорт из Excel");
+        File file = showOpenDialog(ownerWindow);
         if (file == null) return null;  // Пользователь отменил
         try (FileInputStream fis = new FileInputStream(file);
              Workbook wb = new XSSFWorkbook(fis)) {
@@ -88,7 +88,7 @@ public class ExcelImportExportUtil {
                 runSafe(onError);
                 return null;
             }
-            List<Device> devices = parseDevicesFromSheet(sheet, 1);
+            List<Device> devices = parseDevicesFromSheet(sheet);
             int[] counts = processDevices(deviceDAO, devices);
             runSafe(onSuccessUpdate);
             String result = "Импорт завершён!\nДобавлено: " + counts[0] + "\nОбновлено: " + counts[1];
@@ -131,7 +131,7 @@ public class ExcelImportExportUtil {
         style.setFont(font);
         style.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
         style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-        setBorders(style, BorderStyle.THIN);
+        setBorders(style);
         style.setAlignment(HorizontalAlignment.CENTER);
         style.setWrapText(true);
         return style;
@@ -145,7 +145,7 @@ public class ExcelImportExportUtil {
      */
     private static CellStyle createCellStyle(Workbook wb) {
         CellStyle style = wb.createCellStyle();
-        setBorders(style, BorderStyle.THIN);
+        setBorders(style);
         style.setAlignment(HorizontalAlignment.CENTER);
         return style;
     }
@@ -190,13 +190,12 @@ public class ExcelImportExportUtil {
     /**
      * Считывает приборы из листа
      *
-     * @param sheet    лист
-     * @param startRow начало чтения
+     * @param sheet лист
      * @return список приборов
      */
-    private static List<Device> parseDevicesFromSheet(Sheet sheet, int startRow) {
+    private static List<Device> parseDevicesFromSheet(Sheet sheet) {
         List<Device> devices = new ArrayList<>();
-        for (int i = startRow; i <= sheet.getLastRowNum(); i++) {
+        for (int i = 1; i <= sheet.getLastRowNum(); i++) {
             Row row = sheet.getRow(i);
             if (row != null) {
                 devices.add(parseDeviceFromRow(row));
@@ -236,6 +235,18 @@ public class ExcelImportExportUtil {
         d.setValveNumber(getStringCell(row, 8));
         d.setStatus(getStringCell(row, 9));
         d.setAdditionalInfo(getStringCell(row, 10));
+        String updatedAtStr = getStringCell(row, 11);
+        if (!updatedAtStr.trim().isEmpty()) {
+            try {
+                java.util.Date date = new java.text.SimpleDateFormat("dd.MM.yyyy HH:mm")
+                        .parse(updatedAtStr.trim());
+                d.setUpdatedAt(date.getTime());
+            } catch (java.text.ParseException e) {
+                d.setUpdatedAt(System.currentTimeMillis()); // колонка есть но не распарсилась
+            }
+        } else {
+            d.setUpdatedAt(System.currentTimeMillis()); // колонка пустая или отсутствует
+        }
         d.setPhotos(new ArrayList<>());
         return d;
     }
@@ -312,12 +323,11 @@ public class ExcelImportExportUtil {
      * Показывает диалог сохранения
      *
      * @param window окно
-     * @param title  заголовок
      * @return выбранный файл
      */
-    private static File showSaveDialog(Window window, String title) {
+    private static File showSaveDialog(Window window) {
         FileChooser chooser = new FileChooser();
-        chooser.setTitle(title);
+        chooser.setTitle("Экспорт в Excel");
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Excel файлы", "*.xlsx"));
         return chooser.showSaveDialog(window);
     }
@@ -326,12 +336,11 @@ public class ExcelImportExportUtil {
      * Показывает диалог открытия
      *
      * @param window окно
-     * @param title  заголовок
      * @return выбранный файл
      */
-    private static File showOpenDialog(Window window, String title) {
+    private static File showOpenDialog(Window window) {
         FileChooser chooser = new FileChooser();
-        chooser.setTitle(title);
+        chooser.setTitle("Импорт из Excel");
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Excel файлы", "*.xlsx"));
         return chooser.showOpenDialog(window);
     }
@@ -358,14 +367,13 @@ public class ExcelImportExportUtil {
     /**
      * Устанавливает границы ячейки
      *
-     * @param style  стиль
-     * @param border стиль границы
+     * @param style стиль
      */
-    private static void setBorders(CellStyle style, BorderStyle border) {
-        style.setBorderTop(border);
-        style.setBorderBottom(border);
-        style.setBorderLeft(border);
-        style.setBorderRight(border);
+    private static void setBorders(CellStyle style) {
+        style.setBorderTop(BorderStyle.THIN);
+        style.setBorderBottom(BorderStyle.THIN);
+        style.setBorderLeft(BorderStyle.THIN);
+        style.setBorderRight(BorderStyle.THIN);
     }
 
     /**

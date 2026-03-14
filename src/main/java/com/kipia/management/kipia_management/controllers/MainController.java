@@ -1,5 +1,6 @@
 package com.kipia.management.kipia_management.controllers;
 
+import com.kipia.management.kipia_management.managers.SyncManager;
 import com.kipia.management.kipia_management.models.Scheme;
 import com.kipia.management.kipia_management.services.*;
 import com.kipia.management.kipia_management.utils.CustomAlert;
@@ -19,6 +20,7 @@ import javafx.util.Duration;
 
 import java.io.IOException;
 import java.util.Objects;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -30,7 +32,6 @@ public class MainController {
 
     // Кнопки меню
     public Button devicesBtn;
-    public Button addDeviceBtn;
     public Button photoGalleryBtn;
     public Button schemesBtn;
     public Button reportsBtn;
@@ -42,12 +43,17 @@ public class MainController {
     private VBox contentArea;
     @FXML
     private Button themeToggleBtn;
+    @FXML
+    private Button exportDbBtn;
+    @FXML
+    private Button importDbBtn;
 
     // Сервисы доступа к БД (УЖЕ ИНИЦИАЛИЗИРОВАНЫ В Main)
     private DeviceDAO deviceDAO;
     private SchemeDAO schemeDAO;
     private DeviceLocationDAO deviceLocationDAO;
     private DatabaseService databaseService;
+    private SyncManager syncManager;
 
     private SchemeEditorController schemeEditorController;
     private Parent schemeEditorView;
@@ -84,6 +90,11 @@ public class MainController {
     public void setDeviceLocationDAO(DeviceLocationDAO deviceLocationDAO) {
         this.deviceLocationDAO = deviceLocationDAO;
         LOGGER.info("✅ DeviceLocationDAO сохранен в MainController");
+    }
+
+    public void setSyncManager(SyncManager syncManager) {
+        this.syncManager = syncManager;
+        LOGGER.info("✅ SyncManager сохранён в MainController");
     }
 
     public Scene getScene() {
@@ -138,7 +149,6 @@ public class MainController {
 
         // hover‑анимация для всех кнопок меню
         StyleUtils.applyHoverAndAnimation(devicesBtn, "button-devices", "button-devices-hover");
-        StyleUtils.applyHoverAndAnimation(addDeviceBtn, "button-add-device", "button-add-device-hover");
         StyleUtils.applyHoverAndAnimation(reportsBtn, "button-reports", "button-reports-hover");
         StyleUtils.applyHoverAndAnimation(themeToggleBtn, "button-theme-toggle", "button-theme-toggle-hover");
         StyleUtils.applyHoverAndAnimation(exitBtn, "button-exit", "button-exit-hover");
@@ -167,7 +177,6 @@ public class MainController {
     private void updateNavigationButtonsState() {
         // Включаем все кнопки по умолчанию
         devicesBtn.setDisable(false);
-        addDeviceBtn.setDisable(false);
         photoGalleryBtn.setDisable(false);
         schemesBtn.setDisable(false);
         reportsBtn.setDisable(false);
@@ -179,7 +188,6 @@ public class MainController {
         // Отключаем кнопку текущего активного раздела
         switch (currentActiveSection) {
             case "devices" -> devicesBtn.setDisable(true);
-            case "addDevice" -> addDeviceBtn.setDisable(true);
             case "photoGallery" -> photoGalleryBtn.setDisable(true);
             case "schemes" -> schemesBtn.setDisable(true);
             case "reports" -> reportsBtn.setDisable(true);
@@ -240,6 +248,59 @@ public class MainController {
                     _ -> Platform.exit()
             ));
             timeline.play();
+        }
+    }
+
+    // ---------------------------------------------------------
+    //  Синхронизация БД разных устройств
+    // ---------------------------------------------------------
+
+
+    @FXML
+    private void exportDatabase() {
+        try {
+            String path = syncManager.exportToZip(
+                    contentArea.getScene().getWindow());
+            if (path != null) {
+                statusLabel.setText("✅ Экспорт завершён: " + path);
+                CustomAlert.showSuccess("Экспорт БД", "База данных успешно экспортирована:\n" + path);
+            }
+        } catch (Exception e) {
+            LOGGER.error("Ошибка экспорта: {}", e.getMessage(), e);
+            CustomAlert.showError("Ошибка экспорта", e.getMessage());
+        }
+    }
+
+    @FXML
+    private void importDatabase() {
+        boolean confirm = CustomAlert.showConfirmation("Импорт БД",
+                "Данные из архива будут объединены с текущей БД.\n" +
+                        "Победит запись с более поздней датой обновления.\nПродолжить?");
+        if (!confirm) return;
+
+        try {
+            int[] result = syncManager.importFromZip(
+                    contentArea.getScene().getWindow());
+            if (result != null) {
+                String msg = String.format(
+                        "Приборы: добавлено %d, обновлено %d\nСхемы: добавлено %d, обновлено %d",
+                        result[0], result[1], result[2], result[3]);
+                statusLabel.setText("✅ Импорт завершён");
+                CustomAlert.showSuccess("Импорт завершён", msg);
+                // Обновляем текущий вид если открыт
+                refreshCurrentView();
+            }
+        } catch (Exception e) {
+            LOGGER.error("Ошибка импорта: {}", e.getMessage(), e);
+            CustomAlert.showError("Ошибка импорта", e.getMessage());
+        }
+    }
+
+    private void refreshCurrentView() {
+        if ("devices".equals(currentActiveSection)) {
+            showDevices();
+        } else if ("schemes".equals(currentActiveSection)) {
+            showSchemesEditor();
         }
     }
 
@@ -365,47 +426,6 @@ public class MainController {
             statusLabel.setText("Ошибка загрузки редактора схем: " + e.getMessage());
             CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить редактор схем");
             LOGGER.error("Ошибка загрузки редактора схем: {}", e.getMessage(), e);
-        }
-    }
-
-    /**
-     * Показать форму добавления прибора.
-     */
-    @FXML
-    private void showAddDeviceForm() {
-        currentActiveSection = "addDevice";
-
-        if (schemeEditorController != null) {
-            saveSchemeBeforeNavigation();
-            schemeEditorView = null;
-            schemeEditorController = null;
-        }
-
-        schemesBtn.setDisable(false);
-        statusLabel.setText("Добавление нового прибора");
-        contentArea.getChildren().clear();
-
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/add-device-form.fxml"));
-            Parent view = loader.load();
-
-            AddDeviceController ctrl = loader.getController();
-            if (ctrl != null) {
-                ctrl.setDeviceDAO(deviceDAO);
-                LOGGER.info("DeviceDAO передан в AddDeviceController");
-
-                if (schemeEditorController != null) {
-                    ctrl.setSchemeEditorController(schemeEditorController);
-                }
-            }
-
-            contentArea.getChildren().add(view);
-            LOGGER.info("Форма добавления прибора загружена успешно");
-            updateNavigationButtonsState();
-        } catch (IOException e) {
-            statusLabel.setText("Ошибка загрузки формы: " + e.getMessage());
-            CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить форму добавления");
-            LOGGER.error("Ошибка загрузки формы: {}", e.getMessage(), e);
         }
     }
 

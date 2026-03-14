@@ -39,6 +39,20 @@ public class DatabaseService {
     }
 
     /**
+     * Конструктор для подключения к произвольному файлу БД (для merge при импорте)
+     */
+    public DatabaseService(String dbPath) {
+        try {
+            String dbUrl = "jdbc:sqlite:" + dbPath;
+            connection = DriverManager.getConnection(dbUrl);
+            LOGGER.info("Подключение к внешней БД: {}", dbPath);
+        } catch (SQLException e) {
+            LOGGER.error("Ошибка подключения к внешней БД: {}", e.getMessage(), e);
+            throw new RuntimeException("Не удалось подключиться к БД: " + dbPath, e);
+        }
+    }
+
+    /**
      * Метод для установления соединения с базой данных SQLite.
      * В случае успеха сохраняет объект Connection в поле connection.
      * В случае ошибки выводит сообщение об ошибке.
@@ -71,9 +85,10 @@ public class DatabaseService {
     }
 
     /**
-     * Определяет путь к базе данных в зависимости от режима запуска
+     * Определяет путь к базе данных в зависимости от режима запуска.
+     * Публичный — используется в SyncManager чтобы не дублировать логику.
      */
-    private String getDatabasePath() {
+    public String getDatabasePath() {
         if (isDevelopmentMode()) {
             // Режим разработки - база в resources/data
             String projectDir = System.getProperty("user.dir");

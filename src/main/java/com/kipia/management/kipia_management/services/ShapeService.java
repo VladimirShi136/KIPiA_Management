@@ -6,9 +6,12 @@ import com.kipia.management.kipia_management.models.ShapeData;
 import com.kipia.management.kipia_management.models.SchemeData;
 import com.kipia.management.kipia_management.shapes.*;
 import javafx.scene.paint.Color;
+import javafx.scene.text.FontPosture;
+import javafx.scene.text.FontWeight;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import javafx.scene.text.Font;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -89,12 +92,36 @@ public class ShapeService {
         ShapeData data = new ShapeData();
 
         // Определяем тип
-        if (shape instanceof RectangleShape) data.setType(ShapeType.RECTANGLE);
-        else if (shape instanceof EllipseShape) data.setType(ShapeType.ELLIPSE);
-        else if (shape instanceof LineShape) data.setType(ShapeType.LINE);
-        else if (shape instanceof RhombusShape) data.setType(ShapeType.RHOMBUS);
-        else if (shape instanceof TextShape) data.setType(ShapeType.TEXT);
-        else return null;
+        switch (shape) {
+            case RectangleShape _ -> data.setType(ShapeType.RECTANGLE);
+            case EllipseShape _ -> data.setType(ShapeType.ELLIPSE);
+            case LineShape _ -> data.setType(ShapeType.LINE);
+            case RhombusShape _ -> {
+                data.setType(ShapeType.RHOMBUS);
+                LOGGER.info("Saving Rhombus: pos=({},{}), size={}x{}",
+                        shape.getLayoutX(), shape.getLayoutY(),
+                        shape.getCurrentWidth(), shape.getCurrentHeight());
+            }
+            case TextShape textShape -> {
+                data.setType(ShapeType.TEXT);
+                Font font = textShape.getFont();
+
+                // Сохраняем параметры шрифта
+                data.setFontSize(font.getSize());
+                data.setFontFamily(font.getFamily());
+                data.setFontStyle(font.getStyle());
+
+                LOGGER.info("Saving Text: pos=({},{}), text='{}', font={} {}",
+                        shape.getLayoutX(), shape.getLayoutY(),
+                        textShape.getText(),
+                        font.getSize(),
+                        font.getStyle());
+            }
+            case null, default -> {
+                return null;
+            }
+        }
+
 
         // Общие свойства
         data.setX(shape.getLayoutX());
@@ -110,18 +137,17 @@ public class ShapeService {
         data.setFillColor(fill != null && !fill.equals(Color.TRANSPARENT) ?
                 ShapeData.colorToString(fill) : null);
         data.setStrokeWidth(shape.getStrokeWidth());
-
-
         // Специфичные для типа свойства
         if (shape instanceof LineShape line) {
             data.setStartX(line.getStartX());
             data.setStartY(line.getStartY());
             data.setEndX(line.getEndX());
             data.setEndY(line.getEndY());
+            // Вычисляем bounding box для совместимости с Android
+            data.setWidth(Math.abs(line.getEndX() - line.getStartX()));
+            data.setHeight(Math.abs(line.getEndY() - line.getStartY()));
         } else if (shape instanceof TextShape text) {
             data.setText(text.getText());
-            data.setWidth(text.getBoundsInLocal().getWidth());
-            data.setHeight(text.getBoundsInLocal().getHeight());
         } else {
             // Для остальных фигур - ширина и высота из bounds
             data.setWidth(shape.getBoundsInLocal().getWidth());
@@ -190,8 +216,20 @@ public class ShapeService {
                 break;
             case TEXT:
                 coords = new double[]{data.getX(), data.getY(), 0};
+                LOGGER.info("Loading Text: x={}, y={}, text='{}', fontSize={}, fontStyle={}",
+                        data.getX(), data.getY(), data.getText(),
+                        data.getFontSize(), data.getFontStyle());
                 break;
-            default: // RECTANGLE, ELLIPSE, RHOMBUS
+            case RHOMBUS:
+                // Для отладки
+                LOGGER.info("Loading Rhombus: x={}, y={}, width={}, height={}",
+                        data.getX(), data.getY(), data.getWidth(), data.getHeight());
+                coords = new double[]{
+                        data.getX(), data.getY(),
+                        data.getWidth(), data.getHeight()
+                };
+                break;
+            default: // RECTANGLE, ELLIPSE
                 coords = new double[]{
                         data.getX(), data.getY(),
                         data.getWidth(), data.getHeight()
@@ -206,26 +244,49 @@ public class ShapeService {
             if (data.getStrokeColor() != null) {
                 shape.setStrokeColor(ShapeData.stringToColor(data.getStrokeColor()));
             } else {
-                shape.setStrokeColor(Color.BLACK); // Контур по умолчанию черный
+                shape.setStrokeColor(Color.BLACK);
             }
 
             if (data.getFillColor() != null) {
                 shape.setFillColor(ShapeData.stringToColor(data.getFillColor()));
             } else {
-                shape.setFillColor(Color.TRANSPARENT); // Заливка по умолчанию прозрачная
+                shape.setFillColor(Color.TRANSPARENT);
             }
 
-            // Используем setStrokeWidth если есть
             try {
                 shape.setStrokeWidth(data.getStrokeWidth());
             } catch (Exception e) {
-                // Игнорируем если метод не поддерживается
+                // Игнорируем
             }
             shape.setRotation(data.getRotation());
 
-            // Для текста
-            if (shape instanceof TextShape && data.getText() != null) {
-                ((TextShape) shape).setText(data.getText());
+            // Для текста - ВАЖНО: здесь должны быть данные о шрифте!
+            if (shape instanceof TextShape textShape && data.getText() != null) {
+                textShape.setText(data.getText());
+
+                // Восстанавливаем шрифт, если есть данные
+                if (data.getFontSize() > 0 && data.getFontStyle() != null) {
+                    FontWeight weight = data.getFontStyle().contains("Bold") ?
+                            FontWeight.BOLD : FontWeight.NORMAL;
+                    FontPosture posture = data.getFontStyle().contains("Italic") ?
+                            FontPosture.ITALIC : FontPosture.REGULAR;
+
+                    String fontFamily = data.getFontFamily() != null ?
+                            data.getFontFamily() : "Arial";
+
+                    Font restoredFont = Font.font(
+                            fontFamily,
+                            weight,
+                            posture,
+                            data.getFontSize()
+                    );
+
+                    textShape.setFont(restoredFont);
+                    textShape.calculateTextSize();
+
+                    LOGGER.info("Restored Text font: size={}, style={}",
+                            data.getFontSize(), data.getFontStyle());
+                }
             }
         }
 
@@ -309,6 +370,10 @@ public class ShapeService {
         if (removed) {
             LOGGER.info("Удалена фигура из списка, количество сейчас: {}", shapes.size());
         }
+    }
+
+    public void applyCanvasBoundsToAll(double width, double height) {
+        shapes.forEach(s -> s.setCanvasBounds(width, height));
     }
 
     public int getShapeCount() {

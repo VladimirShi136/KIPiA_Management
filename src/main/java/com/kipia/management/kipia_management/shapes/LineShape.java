@@ -778,12 +778,12 @@ public class LineShape extends ShapeBase {
     }
 
     @Override
-    protected double getCurrentWidth() {
+    public double getCurrentWidth() {
         return Math.abs(line.getEndX() - line.getStartX());
     }
 
     @Override
-    protected double getCurrentHeight() {
+    public double getCurrentHeight() {
         return Math.abs(line.getEndY() - line.getStartY());
     }
 

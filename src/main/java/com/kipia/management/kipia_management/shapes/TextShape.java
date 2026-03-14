@@ -254,7 +254,7 @@ public class TextShape extends ShapeBase {
         // СОХРАНЯЕМ СТАРЫЙ ШРИФТ ДЛЯ UNDO
         Font oldFont = text.getFont();
 
-        // СОЗДАЕМ диалог для выбора шрифта и размера
+        // СОЗДАЕМ диалог для выбора размера, жирности и курсива
         Dialog<Font> dialog = new Dialog<>();
         dialog.setTitle("Изменение шрифта");
         dialog.setHeaderText("Выберите параметры шрифта");
@@ -276,9 +276,11 @@ public class TextShape extends ShapeBase {
 
         // ВЫБОР жирности
         CheckBox boldCheckBox = new CheckBox("Жирный");
+        boldCheckBox.setSelected(text.getFont().getStyle().contains("Bold"));
 
         // ВЫБОР начертания
         CheckBox italicCheckBox = new CheckBox("Курсив");
+        italicCheckBox.setSelected(text.getFont().getStyle().contains("Italic"));
 
         grid.add(new Label("Размер:"), 0, 0);
         grid.add(fontSizeField, 1, 0);
@@ -295,11 +297,17 @@ public class TextShape extends ShapeBase {
                     fontSize = Math.max(8, Math.min(72, fontSize)); // Ограничение 8-72px
 
                     // СОЗДАЕМ новый шрифт
-                    String fontFamily = "Arial";
+                    String fontFamily = "Arial"; // Всегда используем Arial
                     FontWeight weight = boldCheckBox.isSelected() ? FontWeight.BOLD : FontWeight.NORMAL;
                     FontPosture posture = italicCheckBox.isSelected() ? FontPosture.ITALIC : FontPosture.REGULAR;
 
-                    return Font.font(fontFamily, weight, posture, fontSize);
+                    Font newFont = Font.font(fontFamily, weight, posture, fontSize);
+
+                    // Для отладки
+                    LOGGER.info("New font created: size={}, bold={}, italic={}, style={}",
+                            fontSize, boldCheckBox.isSelected(), italicCheckBox.isSelected(), newFont.getStyle());
+
+                    return newFont;
                 } catch (NumberFormatException e) {
                     CustomAlert.showError("Ошибка", "Введите корректный размер шрифта");
                 }
@@ -317,7 +325,10 @@ public class TextShape extends ShapeBase {
                 shapeManager.registerFontChange(this, oldFont, newFont);
             }
 
-            statusSetter.accept("Шрифт изменен");
+            statusSetter.accept("Шрифт изменен: " + newFont.getStyle() + " " + (int)newFont.getSize() + "px");
+
+            // Дополнительная отладка после применения
+            LOGGER.info("Font applied: size={}, style={}", newFont.getSize(), newFont.getStyle());
         });
     }
 
@@ -367,6 +378,10 @@ public class TextShape extends ShapeBase {
         String fontFamily = font.getFamily();
         String fontStyle = font.getStyle();
 
+        // Для отладки
+        LOGGER.info("Serializing Text: text='{}', fontSize={}, fontStyle='{}'",
+                textContent, fontSize, fontStyle);
+
         // Формат: TEXT|X|Y|W|H|ROTATION|TEXT|FONT_SIZE|FONT_FAMILY|FONT_STYLE|STROKE_COLOR|FILL_COLOR
         return String.format(java.util.Locale.US, "TEXT|%.2f|%.2f|%.2f|%.2f|%.1f|%s|%.1f|%s|%s%s",
                 pos[0], pos[1], width, height,
@@ -391,6 +406,13 @@ public class TextShape extends ShapeBase {
 
     public String getText() {
         return text.getText();
+    }
+
+    /**
+     * Получить текущий шрифт
+     */
+    public Font getFont() {
+        return text.getFont();
     }
 
     private void setupTextEditHandler() {

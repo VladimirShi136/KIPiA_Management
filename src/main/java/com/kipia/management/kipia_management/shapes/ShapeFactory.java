@@ -6,6 +6,8 @@ import javafx.scene.paint.Color;
 
 import java.util.function.Consumer;
 
+import static com.kipia.management.kipia_management.shapes.ShapeBase.LOGGER;
+
 /**
  * Класс - фабрика создания фигур для редактора схем
  *
@@ -60,14 +62,14 @@ public record ShapeFactory(AnchorPane pane, Consumer<String> statusSetter, Consu
     }
 
     private RhombusShape createRhombus(double[] coords) {
-        double startX = coords[0], startY = coords[1], endX = coords[2], endY = coords[3];
-        double x = Math.min(startX, endX);
-        double y = Math.min(startY, endY);
-        double width = Math.abs(endX - startX);
-        double height = Math.abs(endY - startY);
+        double x = coords[0], y = coords[1];
+        double width = coords[2], height = coords[3];
 
-        // ВАЖНО: передаем x, y, width, height
-        RhombusShape shape = new RhombusShape(x, y, width, height, pane, statusSetter, onSelectCallback, shapeManager);
+        LOGGER.info("Creating Rhombus in factory: x={}, y={}, width={}, height={}",
+                x, y, width, height);
+
+        RhombusShape shape = new RhombusShape(x, y, width, height, pane,
+                statusSetter, onSelectCallback, shapeManager);
         shape.setFillColor(Color.TRANSPARENT);
         shape.setStrokeColor(Color.BLACK);
         return shape;

@@ -27,10 +27,15 @@ public class RhombusShape extends ShapeBase {
         rhombusPath = new Path();
         getChildren().add(rhombusPath);
 
-        // ИСПОЛЬЗУЕМ ТОЧНО ТУ ЖЕ ЛОГИКУ ЧТО И В PREVIEW
+        // ВАЖНО: Сохраняем размеры ДО создания фигуры
         rebuildButterflyPath(width, height);
         applyDefaultStyle();
+
+        // Сохраняем размеры
         setCurrentDimensions(width, height);
+
+        // Для отладки
+        LOGGER.info("Rhombus created: x={}, y={}, width={}, height={}", x, y, width, height);
     }
 
     /**
@@ -45,6 +50,8 @@ public class RhombusShape extends ShapeBase {
             resizeHandles[i] = createResizeHandle();
             pane.getChildren().add(resizeHandles[i]);
         }
+
+        setupResizeHandleHandlers();
     }
 
     /**
@@ -176,6 +183,9 @@ public class RhombusShape extends ShapeBase {
 
         rebuildButterflyPath(actualWidth, actualHeight);
         setCurrentDimensions(actualWidth, actualHeight);
+
+        // Для отладки
+        LOGGER.debug("Resize Rhombus to: width={}, height={}", actualWidth, actualHeight);
     }
 
     /**
@@ -187,25 +197,26 @@ public class RhombusShape extends ShapeBase {
         double centerX = width / 2;
         double centerY = height / 2;
 
-        // ТОЧНО ТАК ЖЕ КАК В SHAPEMANAGER
-        double leftTopY = 0;
-        double rightTopY = 0;
-
-        // Левый треугольник - от верха до низа
+        // ВАЖНО: Убедимся, что path занимает ВЕСЬ bounding box
+        // Левый треугольник - от левого верхнего угла до центра и левого нижнего
         rhombusPath.getElements().addAll(
-                new MoveTo(0, leftTopY),           // Левый верх (0)
-                new LineTo(centerX, centerY),      // Центр
-                new LineTo(0, height),        // Левый низ (height)
+                new MoveTo(0, 0),                    // Левый верхний угол (0,0)
+                new LineTo(centerX, centerY),         // Центр
+                new LineTo(0, height),                 // Левый нижний угол (0, height)
                 new ClosePath()
         );
 
-        // Правый треугольник - от верха до низа
+        // Правый треугольник - от правого верхнего угла до центра и правого нижнего
         rhombusPath.getElements().addAll(
-                new MoveTo(width, rightTopY),      // Правый верх (0)
-                new LineTo(centerX, centerY),      // Центр
-                new LineTo(width, height),   // Правый низ (height)
+                new MoveTo(width, 0),                  // Правый верхний угол (width, 0)
+                new LineTo(centerX, centerY),           // Центр
+                new LineTo(width, height),               // Правый нижний угол (width, height)
                 new ClosePath()
         );
+
+        // Для отладки
+        LOGGER.debug("Rebuild butterfly: width={}, height={}, center=({},{})",
+                width, height, centerX, centerY);
     }
 
 
@@ -236,6 +247,26 @@ public class RhombusShape extends ShapeBase {
         rhombusPath.setStrokeType(StrokeType.INSIDE);
     }
 
+    @Override
+    public void makeResizeHandlesVisible() {
+        // НЕ вызываем super.makeResizeHandlesVisible()
+        // Вместо этого создаем свои 4 handles если их нет
+        if (resizeHandles == null) {
+            createResizeHandles();
+        } else {
+            // Даже если handles уже есть, убедимся что обработчики настроены
+            setupResizeHandleHandlers();
+        }
+
+        // Делаем handles видимыми
+        for (Circle handle : resizeHandles) {
+            if (handle != null) {
+                handle.setVisible(true);
+            }
+        }
+        updateResizeHandles();
+    }
+
     /**
      * УДАЛЯЕМ ТОЛЬКО 4 HANDLES
      */
@@ -256,5 +287,33 @@ public class RhombusShape extends ShapeBase {
 
     public Path getPath() {
         return rhombusPath;
+    }
+
+    // ============================================================
+    // OVERRIDE METHODS FOR CORRECT DIMENSIONS
+    // ============================================================
+
+    @Override
+    public double getCurrentWidth() {
+        return super.getCurrentWidth();
+    }
+
+    @Override
+    public double getCurrentHeight() {
+        return super.getCurrentHeight();
+    }
+
+    /**
+     * Переопределяем serialize для гарантии правильных размеров
+     */
+    @Override
+    public String serialize() {
+        double[] pos = getPosition();
+        // Используем сохраненные размеры
+        double w = getCurrentWidth();
+        double h = getCurrentHeight();
+
+        return String.format(java.util.Locale.US, "%s|%.2f|%.2f|%.2f|%.2f|%.1f%s",
+                getShapeType(), pos[0], pos[1], w, h, rotationAngle, serializeColors());
     }
 }

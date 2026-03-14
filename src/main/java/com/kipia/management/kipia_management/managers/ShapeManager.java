@@ -11,6 +11,8 @@ import javafx.scene.text.Font;
 import java.util.List;
 import java.util.function.Consumer;
 
+import static com.kipia.management.kipia_management.shapes.ShapeBase.LOGGER;
+
 /**
  * Менеджер для управления фигурами на панели схемы.
  * Отвечает за undo/redo, выделение и координацию работы с фигурами.
@@ -47,6 +49,10 @@ public class ShapeManager {
 
     private Runnable onShapeSelected;    // Callback при выделении фигуры
     private Runnable onShapeDeselected;  // Callback при снятии выделения
+
+    // Границы канваса
+    private double canvasBoundsWidth = 2000.0;
+    private double canvasBoundsHeight = 1200.0;
 
     // Команда добавления
     public class AddShapeCommand implements CommandManager.Command {
@@ -542,6 +548,11 @@ public class ShapeManager {
         this.shapeService = shapeService;
     }
 
+    public void setCanvasBounds(double width, double height) {
+        this.canvasBoundsWidth = width;
+        this.canvasBoundsHeight = height;
+    }
+
     public AnchorPane getPane() {
         return pane;
     }
@@ -735,31 +746,33 @@ public class ShapeManager {
     }
 
     private void rebuildButterflyPath(Path rhombusPath, double endX, double endY) {
+        // ВАЖНО: Вычисляем ширину и высоту от начальной точки
         double width = Math.abs(endX - startX);
         double height = Math.abs(endY - startY);
+
         rhombusPath.getElements().clear();
 
         double centerX = width / 2;
         double centerY = height / 2;
 
-        double leftTopY = 0;
-        double rightTopY = 0;
-
-        // Левый треугольник
+        // Левый треугольник - от левого верхнего угла до центра и левого нижнего
         rhombusPath.getElements().addAll(
-                new MoveTo(0, leftTopY),           // Левый верх (0)
-                new LineTo(centerX, centerY),      // Центр
-                new LineTo(0, height),        // Левый низ (height)
+                new MoveTo(0, 0),                    // Левый верхний угол (0,0)
+                new LineTo(centerX, centerY),         // Центр
+                new LineTo(0, height),                 // Левый нижний угол (0, height)
                 new ClosePath()
         );
 
-        // Правый треугольник
+        // Правый треугольник - от правого верхнего угла до центра и правого нижнего
         rhombusPath.getElements().addAll(
-                new MoveTo(width, rightTopY),      // Правый верх (0)
-                new LineTo(centerX, centerY),      // Центр
-                new LineTo(width, height),   // Правый низ (height)
+                new MoveTo(width, 0),                  // Правый верхний угол (width, 0)
+                new LineTo(centerX, centerY),           // Центр
+                new LineTo(width, height),               // Правый нижний угол (width, height)
                 new ClosePath()
         );
+
+        LOGGER.debug("Preview rebuild: width={}, height={}, center=({},{})",
+                width, height, centerX, centerY);
     }
 
     /**
@@ -769,15 +782,28 @@ public class ShapeManager {
         ShapeType shapeType = convertToolToShapeType(tool);
         if (shapeType == null) return;
 
-        double[] coordinates = calculateFinalCoordinates(shapeType, x, y);
+        double[] coordinates;
+
         if (tool == Tool.LINE) {
-            coordinates = calculateFinalCoordinates(ShapeType.LINE, previewEndX, previewEndY);
+            coordinates = new double[]{startX, startY, previewEndX, previewEndY};
+        } else if (tool == Tool.RHOMBUS) {
+            // Для ромба передаем x, y, width, height
+            double finalX = Math.min(startX, x);
+            double finalY = Math.min(startY, y);
+            double finalWidth = Math.abs(x - startX);
+            double finalHeight = Math.abs(y - startY);
+            coordinates = new double[]{finalX, finalY, finalWidth, finalHeight};
+            LOGGER.info("Creating final Rhombus: x={}, y={}, width={}, height={}",
+                    finalX, finalY, finalWidth, finalHeight);
+        } else {
+            coordinates = calculateFinalCoordinates(shapeType, x, y);
         }
 
         try {
             ShapeBase shape = shapeService.addShape(shapeType, coordinates);
             if (shape != null) {
                 shape.addContextMenu(shapeHandler -> removeShape((Node) shapeHandler));
+                shape.setCanvasBounds(canvasBoundsWidth, canvasBoundsHeight);
                 addShape(shape);
                 setStatus("Фигура добавлена");
             }
@@ -831,9 +857,15 @@ public class ShapeManager {
                 double height = Math.abs(endY - startY);
                 yield new double[]{x, y, width, height};
             }
-            case RHOMBUS ->
-                    new double[]{startX, startY, endX, endY};
-            case LINE -> new double[]{startX, startY, endX, endY}; // Для линии - start и end точки
+            case RHOMBUS -> {
+                // ВАЖНО: Для ромба передаем x, y, width, height
+                double x = Math.min(startX, endX);
+                double y = Math.min(startY, endY);
+                double width = Math.abs(endX - startX);
+                double height = Math.abs(endY - startY);
+                yield new double[]{x, y, width, height};
+            }
+            case LINE -> new double[]{startX, startY, endX, endY};
             case TEXT -> new double[]{startX, startY, 0};
         };
     }

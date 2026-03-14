@@ -3,6 +3,7 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.image.Image?>
+<?import javafx.geometry.Insets?>
 
 <!--
   Author: vladimir_shi
@@ -10,11 +11,13 @@
   * Окно основной таблицы приборов *
 -->
 
-<VBox xmlns="http://javafx.com/javafx/23"
-      xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="com.kipia.management.kipia_management.controllers.DevicesTableController"
-      spacing="10"
-      VBox.vgrow="ALWAYS">
+<!-- StackPane позволяет разместить FAB поверх таблицы -->
+<StackPane xmlns="http://javafx.com/javafx/23"
+           xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.kipia.management.kipia_management.controllers.DevicesTableController"
+           VBox.vgrow="ALWAYS">
+
+<VBox spacing="10" VBox.vgrow="ALWAYS">
 
     <!-- 1️⃣ ПАНЕЛЬ ПОИСКА И УДАЛЕНИЯ -->
     <HBox spacing="10" alignment="CENTER_LEFT">
@@ -22,17 +25,7 @@
         <TextField fx:id="searchField"
                    promptText="Введите текст для поиска"
                    styleClass="search-field"/>
-        <!-- Кнопка удаления -->
-        <Button fx:id="deleteButton" styleClass="button-delete">
-            <graphic>
-                <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
-                    <Image url="@../images/delete.png"/>
-                </ImageView>
-            </graphic>
-            <tooltip>
-                <Tooltip text="Удалить выбранный прибор"/>
-            </tooltip>
-        </Button>
+
         <!-- Кнопки импорта и экспорта -->
         <Button fx:id="exportButton" styleClass="button-export">
             <graphic>
@@ -114,3 +107,18 @@
         </placeholder>
     </TableView>
 </VBox>
+
+    <!-- FAB кнопка "+" — плавающая, нижний правый угол -->
+    <Button fx:id="fabAddButton"
+            text="+"
+            styleClass="fab"
+            onAction="#onFabAddDevice">
+        <StackPane.margin>
+            <Insets bottom="24" right="24"/>
+        </StackPane.margin>
+        <tooltip>
+            <Tooltip text="Добавить прибор"/>
+        </tooltip>
+    </Button>
+
+</StackPane>

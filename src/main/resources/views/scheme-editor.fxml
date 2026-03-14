@@ -9,7 +9,6 @@
   Since: 18.09.2025
   * Окно редактора схем *
 -->
-<?import java.net.URL?>
 <BorderPane xmlns="http://javafx.com/javafx/23"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.kipia.management.kipia_management.controllers.SchemeEditorController">
@@ -38,6 +37,17 @@
                     </graphic>
                     <tooltip>
                         <Tooltip text="Повторить"/>
+                    </tooltip>
+                </Button>
+                <Separator orientation="VERTICAL"/>
+                <Button fx:id="resetViewBtn" styleClass="tool-button" onAction="#resetView">
+                    <graphic>
+                        <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
+                            <Image url="@../images/reset_view.png"/>
+                        </ImageView>
+                    </graphic>
+                    <tooltip>
+                        <Tooltip text="Сбросить вид"/>
                     </tooltip>
                 </Button>
                 <Separator orientation="VERTICAL"/>
@@ -95,7 +105,11 @@
                 <Separator orientation="VERTICAL"/>
                 <!-- Группа управления схемами -->
                 <Label text="Схема:" styleClass="scheme-label" style="-fx-padding: 0 5 0 10;"/>
-                <ComboBox fx:id="schemeComboBox" styleClass="filter-combo"/>
+                <VBox spacing="1" alignment="CENTER_LEFT">
+                    <ComboBox fx:id="schemeComboBox" styleClass="filter-combo"/>
+                    <Label fx:id="schemeUpdatedLabel" text=""
+                           style="-fx-font-size: 10px; -fx-text-fill: #999; -fx-padding: 0 3;"/>
+                </VBox>
                 <Button fx:id="saveSchemeBtn" styleClass="tool-button">
                     <graphic>
                         <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
@@ -128,10 +142,12 @@
     </top>
     <!-- Центральная область: холст схемы -->
     <center>
-        <ScrollPane fx:id="schemeScrollPane" styleClass="scheme-scroll" style="-fx-background: #ffffff;">
+        <ScrollPane fx:id="schemeScrollPane" styleClass="scheme-scroll"
+                    style="-fx-background: #ffffff;"
+                    hbarPolicy="NEVER" vbarPolicy="NEVER">
             <AnchorPane fx:id="schemePane"
-                        prefWidth="2200"
-                        prefHeight="1800"
+                        prefWidth="2000"
+                        prefHeight="1200"
                         minWidth="1200"
                         minHeight="800"
                         style="-fx-background-color: white;"
@@ -147,6 +163,8 @@
         <HBox styleClass="bottom" style="-fx-padding: 5 10;">
             <Label fx:id="statusLabel" text="Готово к редактированию" styleClass="status-label"/>
             <Region HBox.hgrow="ALWAYS"/>
+            <Label fx:id="zoomLabel" text="Масштаб: 100%"
+                   style="-fx-text-fill: #666; -fx-font-size: 12px; -fx-padding: 0 5;"/>
         </HBox>
     </bottom>
 </BorderPane>

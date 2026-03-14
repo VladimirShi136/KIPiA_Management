@@ -74,7 +74,7 @@ public class DeviceDAO {
                 "accuracy_class, location, valve_number, status, additional_info, photos, updated_at) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
-            installParameters(device, stmt, 1); // Устанавливаем первые 12 параметров
+            installParameters(device, stmt); // Устанавливаем первые 12 параметров
             stmt.setLong(13, device.getUpdatedAt()); // 13-й - updated_at
             stmt.executeUpdate();
             return true;
@@ -105,8 +105,10 @@ public class DeviceDAO {
 
     /**
      * Обновление данных прибора в базе данных
+     *
+     * @return - результат обновления
      */
-    public void updateDevice(Device device) {
+    public boolean updateDevice(Device device) {
         // Обновляем timestamp перед сохранением
         device.updateTimestamp();
 
@@ -115,13 +117,14 @@ public class DeviceDAO {
                 "year = ?, measurement_limit = ?, accuracy_class = ?, location = ?, valve_number = ?, " +
                 "status = ?, additional_info = ?, photos = ?, updated_at = ? WHERE id = ?";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
-            installParameters(device, stmt, 1); // Устанавливаем первые 12 параметров
+            installParameters(device, stmt); // Устанавливаем первые 12 параметров
             stmt.setLong(13, device.getUpdatedAt()); // 13-й - updated_at
             stmt.setInt(14, device.getId()); // 14-й - id для WHERE
             stmt.executeUpdate();
         } catch (SQLException e) {
             LOGGER.error("Ошибка обновления прибора: {}", e.getMessage(), e);
         }
+        return false;
     }
 
     /**
@@ -213,85 +216,6 @@ public class DeviceDAO {
     }
 
     /**
-     * ★★★ НОВЫЙ: Массовое добавление/обновление с проверкой updated_at
-     */
-    public void insertOrUpdateDevices(List<Device> devices) {
-        String checkSql = "SELECT updated_at FROM devices WHERE id = ?";
-        String updateSql = "UPDATE devices SET type = ?, name = ?, manufacturer = ?, inventory_number = ?, " +
-                "year = ?, measurement_limit = ?, accuracy_class = ?, location = ?, valve_number = ?, " +
-                "status = ?, additional_info = ?, photos = ?, updated_at = ? WHERE id = ?";
-        String insertSql = "INSERT INTO devices (type, name, manufacturer, inventory_number, year, measurement_limit, " +
-                "accuracy_class, location, valve_number, status, additional_info, photos, updated_at, id) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-
-        try {
-            Connection conn = databaseService.getConnection();
-            conn.setAutoCommit(false); // Начинаем транзакцию
-
-            try (PreparedStatement checkStmt = conn.prepareStatement(checkSql);
-                 PreparedStatement updateStmt = conn.prepareStatement(updateSql);
-                 PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
-
-                for (Device device : devices) {
-                    // Проверяем существование записи
-                    checkStmt.setInt(1, device.getId());
-                    ResultSet rs = checkStmt.executeQuery();
-
-                    if (rs.next()) {
-                        // Запись существует - проверяем updated_at
-                        long existingUpdatedAt = rs.getLong("updated_at");
-                        if (device.getUpdatedAt() > existingUpdatedAt) {
-                            // Обновляем
-                            installParameters(device, updateStmt, 1);
-                            updateStmt.setLong(13, device.getUpdatedAt());
-                            updateStmt.setInt(14, device.getId());
-                            updateStmt.addBatch();
-                        }
-                    } else {
-                        // Новая запись - вставляем
-                        installParameters(device, insertStmt, 1);
-                        insertStmt.setLong(13, device.getUpdatedAt());
-                        insertStmt.setInt(14, device.getId());
-                        insertStmt.addBatch();
-                    }
-                }
-
-                // Выполняем батчи
-                updateStmt.executeBatch();
-                insertStmt.executeBatch();
-
-                conn.commit(); // Подтверждаем транзакцию
-                LOGGER.info("Импорт устройств завершён, обновлено/добавлено: {}", devices.size());
-
-            } catch (SQLException e) {
-                conn.rollback(); // Откат при ошибке
-                throw e;
-            } finally {
-                conn.setAutoCommit(true);
-            }
-
-        } catch (SQLException e) {
-            LOGGER.error("Ошибка при массовом импорте устройств: {}", e.getMessage(), e);
-        }
-    }
-
-    /**
-     * ★★★ НОВЫЙ: Получить максимальную дату обновления
-     */
-    public Long getMaxUpdatedAt() {
-        String sql = "SELECT MAX(updated_at) FROM devices";
-        try (Statement stmt = databaseService.getConnection().createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-            if (rs.next()) {
-                return rs.getLong(1);
-            }
-        } catch (SQLException e) {
-            LOGGER.error("Ошибка получения MAX(updated_at): {}", e.getMessage(), e);
-        }
-        return 0L;
-    }
-
-    /**
      * Вспомогательный метод для создания объекта Device из ResultSet
      */
     private Device createDeviceSQL(ResultSet rs) throws SQLException {
@@ -329,8 +253,8 @@ public class DeviceDAO {
      * Вспомогательный метод для установки параметров PreparedStatement
      * Порядок: 1-12 для полей (соответствует addDevice и updateDevice)
      */
-    private void installParameters(Device device, PreparedStatement stmt, int startIndex) throws SQLException {
-        int idx = startIndex;
+    private void installParameters(Device device, PreparedStatement stmt) throws SQLException {
+        int idx = 1;
         stmt.setString(idx++, device.getType());
         stmt.setString(idx++, device.getName());
         stmt.setString(idx++, device.getManufacturer());

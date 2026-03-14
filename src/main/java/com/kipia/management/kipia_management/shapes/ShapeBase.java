@@ -50,7 +50,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     // Добавляем флаг для блокировки автосохранения во время undo/redo
     private final boolean isUndoRedoInProgress = false;
     //Логгер
-    private static final Logger LOGGER = LogManager.getLogger(ShapeBase.class);
+    public static final Logger LOGGER = LogManager.getLogger(ShapeBase.class);
 
     // Добавляем поля для сохранения начальной позиции перед перемещением
     private double dragStartX, dragStartY;
@@ -76,12 +76,16 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     protected double dragOffsetX, dragOffsetY;
     protected boolean isDragging;
 
+    // Границы канваса для ограничения перемещения
+    protected double canvasBoundsWidth = 2000.0;
+    protected double canvasBoundsHeight = 1200.0;
+
     // ============================================================
     // STORED DIMENSIONS (для exact сериализации, без bounds rounding)
     // ============================================================
 
-    private double currentWidth = -1.0;  // -1 = not set (initial)
-    private double currentHeight = -1.0;
+    protected double currentWidth = -1.0;  // -1 = not set (initial)
+    protected double currentHeight = -1.0;
     private ContextMenu contextMenu; // Сохраняем ссылку на меню
 
     // ============================================================
@@ -173,7 +177,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      * Получение точек привязки фигуры (углы, центр, середины сторон)
      */
     public List<Point2D> getSnapPoints() {
-        Bounds bounds = getBoundsInParent();
+        javafx.geometry.Rectangle2D bounds = getWorldBounds();
         List<Point2D> points = new ArrayList<>();
 
         // Углы
@@ -246,9 +250,30 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     @Override
     public void updateResizeHandles() {
         if (resizeHandles == null) return;
-        Bounds bounds = getBoundsInParent();
-        HandlePositions positions = calculateHandlePositions(bounds);
-        applyHandlePositions(positions);
+
+        // Получаем границы в мировых координатах
+        javafx.geometry.Rectangle2D bounds = getWorldBounds();
+
+        double x0 = bounds.getMinX();
+        double y0 = bounds.getMinY();
+        double width = bounds.getWidth();
+        double height = bounds.getHeight();
+
+        double[] xs = {x0, x0 + width / 2, x0 + width};
+        double[] ys = {y0, y0 + height / 2, y0 + height};
+
+        int index = 0;
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                if (i == 1 && j == 1) continue; // Пропускаем центр
+                if (index < resizeHandles.length && resizeHandles[index] != null) {
+                    resizeHandles[index].setCenterX(xs[i]);
+                    resizeHandles[index].setCenterY(ys[j]);
+                    resizeHandles[index].setVisible(true);
+                }
+                index++;
+            }
+        }
     }
 
     /**
@@ -330,6 +355,72 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         setupResizeHandleHandlers();
     }
 
+    /**
+     * Проверяет, пересекается ли текущая фигура с другой
+     */
+    public boolean intersects(ShapeBase other) {
+        javafx.geometry.Rectangle2D thisBounds = this.getWorldBounds();
+        javafx.geometry.Rectangle2D otherBounds = other.getWorldBounds();
+
+        return thisBounds.intersects(otherBounds);
+    }
+
+    /**
+     * Проверяет, полностью ли фигура находится внутри канваса
+     */
+    public boolean isCompletelyInsideCanvas(double canvasWidth, double canvasHeight) {
+        javafx.geometry.Rectangle2D bounds = getWorldBounds();
+        return bounds.getMinX() >= 0 && bounds.getMinY() >= 0 &&
+                bounds.getMaxX() <= canvasWidth && bounds.getMaxY() <= canvasHeight;
+    }
+
+    // ============================================================
+    // WORLD COORDINATES METHODS
+    // ============================================================
+
+    /**
+     * Установить позицию в мировых координатах (левый верхний угол)
+     */
+    public void setWorldPosition(double worldX, double worldY) {
+        setLayoutX(worldX);
+        setLayoutY(worldY);
+    }
+
+    /**
+     * Проверка, содержит ли фигура точку в мировых координатах
+     * (с учетом поворота)
+     */
+    public boolean containsWorldPoint(double worldX, double worldY) {
+        Point2D localPoint = transformWorldToLocal(worldX, worldY);
+        return containsLocalPoint(localPoint.getX(), localPoint.getY());
+    }
+
+    /**
+     * Трансформация мировых координат в локальные (с учетом поворота)
+     */
+    protected Point2D transformWorldToLocal(double worldX, double worldY) {
+        double centerX = getLayoutX() + getCurrentWidth() / 2;
+        double centerY = getLayoutY() + getCurrentHeight() / 2;
+
+        double localX = worldX - centerX;
+        double localY = worldY - centerY;
+
+        double radians = Math.toRadians(-rotationAngle);
+        double rotatedX = localX * Math.cos(radians) - localY * Math.sin(radians);
+        double rotatedY = localX * Math.sin(radians) + localY * Math.cos(radians);
+
+        return new Point2D(rotatedX + getCurrentWidth() / 2,
+                rotatedY + getCurrentHeight() / 2);
+    }
+
+    /**
+     * Проверка точки в локальных координатах (переопределяется в наследниках)
+     */
+    protected boolean containsLocalPoint(double localX, double localY) {
+        return localX >= 0 && localX <= getCurrentWidth() &&
+                localY >= 0 && localY <= getCurrentHeight();
+    }
+
     // ============================================================
     // EVENT HANDLERS SETUP
     // ============================================================
@@ -401,7 +492,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     /**
      * Настройка обработчиков для ручек изменения размера
      */
-    private void setupResizeHandleHandlers() {
+    protected void setupResizeHandleHandlers() {
         if (resizeHandles == null || resizeHandles.length == 0) {
             return;
         }
@@ -458,6 +549,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     private void handleDragPressed(MouseEvent event) {
         Point2D mousePos = pane.sceneToLocal(event.getSceneX(), event.getSceneY());
         initializeDrag(mousePos);
+
         // ВАЖНО: Для линии выделение происходит при ЛЮБОМ клике
         if (this instanceof LineShape) {
             if (onSelectCallback != null) {
@@ -465,6 +557,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
             }
             makeResizeHandlesVisible();
         }
+
         isDragging = false; // Сбрасываем флаг в начале
         event.consume();
     }
@@ -473,9 +566,11 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      * Инициализация параметров перетаскивания
      */
     protected void initializeDrag(Point2D mousePos) {
+        // Используем мировые координаты для расчета смещения
         dragOffsetX = mousePos.getX() - getLayoutX();
         dragOffsetY = mousePos.getY() - getLayoutY();
-        // СОХРАНЯЕМ НАЧАЛЬНУЮ ПОЗИЦИЮ ДЛЯ UNDO
+
+        // СОХРАНЯЕМ НАЧАЛЬНУЮ ПОЗИЦИЮ ДЛЯ UNDO (мировые координаты)
         dragStartX = getLayoutX();
         dragStartY = getLayoutY();
     }
@@ -490,9 +585,16 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
 
         Point2D scenePos = new Point2D(event.getSceneX(), event.getSceneY());
         Point2D panePos = pane.sceneToLocal(scenePos);
-        double newX = panePos.getX() - dragOffsetX;
-        double newY = panePos.getY() - dragOffsetY;
-        setPosition(newX, newY);
+
+        // Вычисляем новую позицию в мировых координатах
+        double newWorldX = panePos.getX() - dragOffsetX;
+        double newWorldY = panePos.getY() - dragOffsetY;
+        double shapeW = getCurrentWidth();
+        double shapeH = getCurrentHeight();
+        newWorldX = Math.max(0, Math.min(newWorldX, canvasBoundsWidth - shapeW));
+        newWorldY = Math.max(0, Math.min(newWorldY, canvasBoundsHeight - shapeH));
+
+        setWorldPosition(newWorldX, newWorldY);
         updateResizeHandles();
         event.consume();
     }
@@ -801,6 +903,10 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     @Override
     public void highlightAsSelected() {
         applySelectedStyle();
+        // Для RhombusShape не показываем handles через родительский метод
+        if (!(this instanceof RhombusShape)) {
+            makeResizeHandlesVisible();
+        }
     }
 
     /**
@@ -810,6 +916,10 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     public void resetHighlight() {
         applyDefaultStyle();
         hideResizeHandles();
+        // Для RhombusShape удаляем handles
+        if (this instanceof RhombusShape) {
+            removeResizeHandles();
+        }
     }
 
     /**
@@ -859,6 +969,99 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         double centerX = getLayoutX() + bounds.getMinX() + bounds.getWidth() / 2;
         double centerY = getLayoutY() + bounds.getMinY() + bounds.getHeight() / 2;
         return new Point2D(mouseX - centerX, mouseY - centerY);
+    }
+
+    /**
+     * Получить ограничивающий прямоугольник фигуры в мировых координатах
+     * (с учетом поворота)
+     */
+    public javafx.geometry.Rectangle2D getWorldBounds() {
+        if (rotationAngle == 0) {
+            return new javafx.geometry.Rectangle2D(
+                    getLayoutX(), getLayoutY(),
+                    getCurrentWidth(), getCurrentHeight()
+            );
+        }
+
+        double centerX = getLayoutX() + getCurrentWidth() / 2;
+        double centerY = getLayoutY() + getCurrentHeight() / 2;
+        double radians = Math.toRadians(rotationAngle);
+
+        double halfW = getCurrentWidth() / 2;
+        double halfH = getCurrentHeight() / 2;
+
+        // Четыре угла прямоугольника
+        double[][] corners = {
+                {-halfW, -halfH},
+                {halfW, -halfH},
+                {halfW, halfH},
+                {-halfW, halfH}
+        };
+
+        double minX = Double.MAX_VALUE;
+        double minY = Double.MAX_VALUE;
+        double maxX = -Double.MAX_VALUE;
+        double maxY = -Double.MAX_VALUE;
+
+        for (double[] corner : corners) {
+            double rotatedX = corner[0] * Math.cos(radians) - corner[1] * Math.sin(radians);
+            double rotatedY = corner[0] * Math.sin(radians) + corner[1] * Math.cos(radians);
+
+            double worldX = centerX + rotatedX;
+            double worldY = centerY + rotatedY;
+
+            minX = Math.min(minX, worldX);
+            minY = Math.min(minY, worldY);
+            maxX = Math.max(maxX, worldX);
+            maxY = Math.max(maxY, worldY);
+        }
+
+        return new javafx.geometry.Rectangle2D(minX, minY, maxX - minX, maxY - minY);
+    }
+
+    /**
+     * Ограничить позицию фигуры границами канваса
+     * @param canvasWidth ширина канваса в мировых координатах
+     * @param canvasHeight высота канваса в мировых координатах
+     * @return true если позиция была изменена
+     */
+    public boolean clampToCanvasBounds(double canvasWidth, double canvasHeight) {
+        double newX = getLayoutX();
+        double newY = getLayoutY();
+        boolean changed = false;
+
+        // Получаем границы фигуры в мировых координатах
+        javafx.geometry.Rectangle2D bounds = getWorldBounds();
+
+        // Проверяем выход за левую границу
+        if (bounds.getMinX() < 0) {
+            newX += -bounds.getMinX();
+            changed = true;
+        }
+
+        // Проверяем выход за правую границу
+        if (bounds.getMaxX() > canvasWidth) {
+            newX -= (bounds.getMaxX() - canvasWidth);
+            changed = true;
+        }
+
+        // Проверяем выход за верхнюю границу
+        if (bounds.getMinY() < 0) {
+            newY += -bounds.getMinY();
+            changed = true;
+        }
+
+        // Проверяем выход за нижнюю границу
+        if (bounds.getMaxY() > canvasHeight) {
+            newY -= (bounds.getMaxY() - canvasHeight);
+            changed = true;
+        }
+
+        if (changed) {
+            setWorldPosition(newX, newY);
+        }
+
+        return changed;
     }
 
     // ============================================================
@@ -978,7 +1181,8 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     /**
      * Creates a TextShape from serialized parts during deserialization
      */
-    private static TextShape createTextShape(String[] fixedParts, AnchorPane pane, Consumer<String> statusSetter, Consumer<ShapeHandler> onSelectCallback, ShapeManager shapeManager) {
+    private static TextShape createTextShape(String[] fixedParts, AnchorPane pane, Consumer<String> statusSetter,
+                                             Consumer<ShapeHandler> onSelectCallback, ShapeManager shapeManager) {
         try {
             // Основные параметры
             double x = Double.parseDouble(fixedParts[1]);
@@ -998,15 +1202,21 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
                     String fontFamily = fixedParts.length > 8 ? fixedParts[8] : "Arial";
                     String fontStyle = fixedParts.length > 9 ? fixedParts[9] : "Regular";
 
+                    // ВАЖНО: Правильно определяем жирность и курсив из строки стиля
                     FontWeight fontWeight = fontStyle.contains("Bold") ? FontWeight.BOLD : FontWeight.NORMAL;
                     FontPosture fontPosture = fontStyle.contains("Italic") ? FontPosture.ITALIC : FontPosture.REGULAR;
 
                     Font restoredFont = Font.font(fontFamily, fontWeight, fontPosture, fontSize);
                     textShape.setFont(restoredFont);
+
+                    LOGGER.info("Restored font: size={}, family={}, style={}, fullStyle={}",
+                            fontSize, fontFamily, fontStyle, restoredFont.getStyle());
+
                 } catch (NumberFormatException e) {
-                    LOGGER.info("Ошибка восстановления шрифта: {}", e.getMessage(), e);
+                    LOGGER.error("Ошибка восстановления шрифта: {}", e.getMessage(), e);
                 }
             }
+
             // Угол поворота (индекс 5) - ВАЖНО: применяем ДО цветов
             if (fixedParts.length > 5) {
                 try {
@@ -1016,6 +1226,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
                     LOGGER.info("Ошибка восстановления угла поворота текста: {}", e.getMessage(), e);
                 }
             }
+
             // ВАЖНО: ВОССТАНАВЛИВАЕМ ЦВЕТА ДЛЯ ТЕКСТА
             if (fixedParts.length > 11) {
                 // Для текста цвета находятся на позициях 10 и 11
@@ -1024,9 +1235,11 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
                 // Старый формат - цвета на позициях 8 и 9
                 textShape.deserializeColors(fixedParts, 8, 9);
             }
+
             javafx.application.Platform.runLater(textShape::calculateTextSize);
             return textShape;
         } catch (Exception e) {
+            LOGGER.error("Ошибка создания TextShape: {}", e.getMessage(), e);
             e.printStackTrace();
             return null;
         }
@@ -1188,7 +1401,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      *
      * @return currentWidth, или bounds если not set
      */
-    protected double getCurrentWidth() {
+    public double getCurrentWidth() {
         if (currentWidth < 0) {
             return Math.max(1.0, getBoundsInLocal().getWidth());  // Fallback на initial
         }
@@ -1198,7 +1411,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     /**
      * Получение stored height (exact)
      */
-    protected double getCurrentHeight() {
+    public double getCurrentHeight() {
         if (currentHeight < 0) {
             return Math.max(1.0, getBoundsInLocal().getHeight());
         }
@@ -1247,6 +1460,14 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         this.strokeColor = newStroke;
         this.fillColor = newFill;
         applyCurrentStyle();
+    }
+
+    /**
+     *  Метод для установки границ канваса
+     */
+    public void setCanvasBounds(double width, double height) {
+        this.canvasBoundsWidth = width;
+        this.canvasBoundsHeight = height;
     }
 
     /**
@@ -1359,30 +1580,14 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      * Установить ширину обводки
      */
     public void setStrokeWidth(double width) {
-        if (this instanceof RectangleShape) {
-            ((RectangleShape) this).getRectangle().setStrokeWidth(width);
-        } else if (this instanceof EllipseShape) {
-            ((EllipseShape) this).getEllipse().setStrokeWidth(width);
-        } else if (this instanceof LineShape) {
-            ((LineShape) this).getLine().setStrokeWidth(width);
-        } else if (this instanceof RhombusShape) {
-            ((RhombusShape) this).getPath().setStrokeWidth(width);
+        switch (this) {
+            case RectangleShape rectangleShape -> rectangleShape.getRectangle().setStrokeWidth(width);
+            case EllipseShape ellipseShape -> ellipseShape.getEllipse().setStrokeWidth(width);
+            case LineShape lineShape -> lineShape.getLine().setStrokeWidth(width);
+            case RhombusShape rhombusShape -> rhombusShape.getPath().setStrokeWidth(width);
+            default -> {
+            }
         }
         // Для TextShape игнорируем
     }
-
-    /**
-     * Установить цвет заливки (для совместимости)
-     */
-    public void setFill(Color color) {
-        setFillColor(color);
-    }
-
-    /**
-     * Установить цвет обводки (для совместимости)
-     */
-    public void setStroke(Color color) {
-        setStrokeColor(color);
-    }
-
 }

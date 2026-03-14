@@ -13,14 +13,14 @@ import javafx.collections.FXCollections;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
 import javafx.fxml.FXML;
-import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.*;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
-import javafx.scene.layout.HBox;
+import javafx.fxml.FXMLLoader;
+import javafx.geometry.Insets;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
-import javafx.util.Callback;
 
 import java.util.*;
 import java.util.function.BiConsumer;
@@ -48,6 +48,8 @@ public class DevicesTableController {
     @FXML
     private Button importButton;
     @FXML
+    private Button fabAddButton;
+    @FXML
     private Label totalDevicesLabel;
     @FXML
     private Label workingDevicesLabel;
@@ -74,7 +76,8 @@ public class DevicesTableController {
     private TableColumn<Device, String> inventoryCol;
 
     // Пропорции ширины колонок (в процентах) - под ваши 12 колонок
-    private final double[] COLUMN_WIDTHS = {10, 12, 12, 8, 6, 10, 8, 12, 6, 8, 6, 10};
+    // 11 колонок: тип, модель, завод, инв.№, год, предел, класс, место, кран, статус, доп.инфо
+    private final double[] COLUMN_WIDTHS = {10, 12, 12, 8, 6, 10, 7, 12, 6, 8, 9};
 
     // -----------------------------------------------------------------
     //                     PUBLIC API (вызывается из MainController)
@@ -177,18 +180,14 @@ public class DevicesTableController {
             updateStatistics();
         });
 
-        // Фото – две кнопки «Добавить» / «Просмотр»
-        TableColumn<Device, Void> photoCol = new TableColumn<>("Фото");
-        photoCol.setCellFactory(createPhotoCellFactory());
-
         // -----------------------------------------------------------------
-        //   Добавляем все колонки в таблицу
+        //   Добавляем все колонки в таблицу (колонка Фото убрана)
         // -----------------------------------------------------------------
         deviceTable.getColumns().addAll(
                 typeCol, nameCol, manufacturerCol, inventoryCol,
                 yearCol, measurementLimitCol, accuracyClassCol,
                 locationCol, valveNumberCol, statusCol,
-                photoCol, additionalInfoCol
+                additionalInfoCol
         );
 
         // глобальный стиль выбора
@@ -213,13 +212,7 @@ public class DevicesTableController {
             cell.getStyleClass().add("numeric-cell");
             return cell;
         });
-        yearCol.setEditable(true);
-        yearCol.setOnEditCommit(event -> {
-            Device device = event.getRowValue();
-            device.setYear(event.getNewValue());
-            device.updateTimestamp();
-            deviceDAO.updateDevice(device);
-        });
+        yearCol.setEditable(false);
         return yearCol;
     }
 
@@ -236,13 +229,7 @@ public class DevicesTableController {
             cell.getStyleClass().add("numeric-cell");
             return cell;
         });
-        accuracyClassCol.setEditable(true);
-        accuracyClassCol.setOnEditCommit(event -> {
-            Device device = event.getRowValue();
-            device.setAccuracyClass(event.getNewValue());
-            device.updateTimestamp();
-            deviceDAO.updateDevice(device);
-        });
+        accuracyClassCol.setEditable(false);
         return accuracyClassCol;
     }
 
@@ -257,170 +244,8 @@ public class DevicesTableController {
 
         TableColumn<Device, String> col = new TableColumn<>(title);
         col.setCellValueFactory(new PropertyValueFactory<>(propertyName));
-        col.setCellFactory(TextFieldTableCell.forTableColumn());
-        col.setOnEditCommit(event -> {
-            Device dev = event.getRowValue();
-            onCommit.accept(dev, event.getNewValue());
-            dev.updateTimestamp();
-            deviceDAO.updateDevice(dev);
-            if (propertyName.equals("location")) {
-                if (schemeEditorController != null) {
-                    schemeEditorController.refreshSchemesAndDevices();
-                }
-            }
-        });
+        col.setEditable(false); // редактирование через форму, не inline
         return col;
-    }
-
-    /**
-     * Фабрика ячейки для колонки «Фото».
-     */
-    private Callback<TableColumn<Device, Void>, TableCell<Device, Void>> createPhotoCellFactory() {
-        return _ -> new TableCell<>() {
-            private final Button addBtn = new Button();
-            private final Button viewBtn = new Button();
-            private final HBox buttonContainer = new HBox(2, addBtn, viewBtn);
-
-            // ⭐⭐ ИСПОЛЬЗУЕМ СИНГЛТОН PhotoManager ⭐⭐
-            private final PhotoManager photoManager = PhotoManager.getInstance();
-
-            {
-                // Стилизация кнопок
-                addBtn.getStyleClass().add("table-button-add");
-                viewBtn.getStyleClass().add("table-button-view");
-
-                StyleUtils.applyHoverAndAnimation(addBtn, "table-button-add", "table-button-add-hover");
-                StyleUtils.applyHoverAndAnimation(viewBtn, "table-button-view", "table-button-view-hover");
-
-                // Начальные размеры
-                updateButtonSizes(80);
-
-                // Слушатель изменения ширины колонки
-                widthProperty().addListener((_, _, newWidth) -> {
-                    if (newWidth.doubleValue() > 0) {
-                        updateButtonSizes(newWidth.doubleValue());
-                    }
-                });
-
-                // Tooltips
-                addBtn.setTooltip(new Tooltip("Добавить фото"));
-                viewBtn.setTooltip(new Tooltip("Просмотреть фото"));
-
-                // Обработчики с использованием PhotoManager
-                addBtn.setOnAction(_ -> {
-                    Device device = getCurrentDevice();
-                    if (device != null) {
-                        Stage stage = (Stage) addBtn.getScene().getWindow();
-                        photoManager.addPhotosToDevice(device, stage);
-                    }
-                });
-
-                viewBtn.setOnAction(_ -> {
-                    Device device = getCurrentDevice();
-                    if (device != null) {
-                        Stage stage = (Stage) viewBtn.getScene().getWindow();
-                        photoManager.viewDevicePhotos(device, stage);
-                    }
-                });
-            }
-
-            private void updateButtonSizes(double columnWidth) {
-                if (columnWidth <= 0) return;
-
-                double buttonSize, iconSize;
-                double spacing;
-
-                // ⬇️ ОБНОВЛЕННЫЕ РАЗМЕРЫ ДЛЯ МИНИМУМА 70px
-                if (columnWidth < 75) {
-                    // МИНИМАЛЬНЫЙ РАЗМЕР - компактные кнопки, но ОБЕ видны
-                    buttonSize = 24;
-                    iconSize = 12;
-                    spacing = 2;
-                    addBtn.setVisible(true);
-                    viewBtn.setVisible(true);
-                } else if (columnWidth < 85) {
-                    buttonSize = 30;
-                    iconSize = 17;
-                    spacing = 3;
-                    addBtn.setVisible(true);
-                    viewBtn.setVisible(true);
-                } else if (columnWidth < 105) {
-                    buttonSize = 32;
-                    iconSize = 18;
-                    spacing = 4;
-                    addBtn.setVisible(true);
-                    viewBtn.setVisible(true);
-                } else {
-                    buttonSize = 34;
-                    iconSize = 20;
-                    spacing = 5;
-                    addBtn.setVisible(true);
-                    viewBtn.setVisible(true);
-                }
-
-                // Устанавливаем размеры через inline стили
-                String sizeStyle = String.format(
-                        "-fx-min-width: %fpx; -fx-pref-width: %fpx; -fx-max-width: %fpx; " +
-                                "-fx-min-height: %fpx; -fx-pref-height: %fpx; -fx-max-height: %fpx; " +
-                                "-fx-padding: 0px;",
-                        buttonSize, buttonSize, buttonSize, buttonSize, buttonSize, buttonSize
-                );
-
-                addBtn.setStyle(sizeStyle);
-                viewBtn.setStyle(sizeStyle);
-
-                buttonContainer.setSpacing(spacing);
-                buttonContainer.setMaxWidth(columnWidth - 4);
-                buttonContainer.setPrefWidth((buttonSize * 2) + spacing);
-                buttonContainer.setAlignment(Pos.CENTER);
-
-                updateIcons(iconSize);
-            }
-
-            private void updateIcons(double iconSize) {
-                try {
-                    Image addImage = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/images/add_photo.png")));
-                    ImageView addIcon = new ImageView(addImage);
-                    addIcon.setFitWidth(iconSize);
-                    addIcon.setFitHeight(iconSize);
-                    addIcon.setPreserveRatio(true);
-
-                    Image viewImage = new Image(Objects.requireNonNull(getClass().getResourceAsStream("/images/view.png")));
-                    ImageView viewIcon = new ImageView(viewImage);
-                    viewIcon.setFitWidth(iconSize);
-                    viewIcon.setFitHeight(iconSize);
-                    viewIcon.setPreserveRatio(true);
-
-                    addBtn.setGraphic(addIcon);
-                    viewBtn.setGraphic(viewIcon);
-
-                } catch (Exception e) {
-                    LOGGER.warn("Не удалось загрузить иконки для кнопок фото: {}", e.getMessage());
-                    // Устанавливаем текстовые метки если иконки не загрузились
-                    if (getTableColumn().getWidth() < 50) {
-                        addBtn.setText("+");
-                        viewBtn.setText("👁");
-                    } else {
-                        addBtn.setText("Доб");
-                        viewBtn.setText("Просм");
-                    }
-                }
-            }
-
-            private Device getCurrentDevice() {
-                return getTableView().getItems().get(getIndex());
-            }
-
-            @Override
-            protected void updateItem(Void item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty) {
-                    setGraphic(null);
-                } else {
-                    setGraphic(buttonContainer);
-                }
-            }
-        };
     }
 
     // -----------------------------------------------------------------
@@ -461,33 +286,73 @@ public class DevicesTableController {
     //   Кнопки (удалить, экспорт, импорт)
     // -----------------------------------------------------------------
     private void configureButtons() {
-        deleteButton.setOnAction(_ -> deleteSelectedDevice());
         exportButton.setOnAction(_ -> exportToExcel());
         importButton.setOnAction(_ -> importFromExcel());
 
-        // Добавляем базовые CSS‑классы (уже заданы в FXML, но оставляем на всякий случай)
-        deleteButton.getStyleClass().add("button-delete");
         exportButton.getStyleClass().add("button-export");
         importButton.getStyleClass().add("button-import");
 
-        // Добавляем hover‑анимацию через ваш утилитный класс
-        StyleUtils.applyHoverAndAnimation(deleteButton,
-                "button-delete", "button-delete-hover");
         StyleUtils.applyHoverAndAnimation(exportButton,
                 "button-export", "button-export-hover");
         StyleUtils.applyHoverAndAnimation(importButton,
                 "button-import", "button-import-hover");
+
+        // FAB — выравниваем по правому нижнему углу StackPane
+        if (fabAddButton != null) {
+            StackPane.setAlignment(fabAddButton, javafx.geometry.Pos.BOTTOM_RIGHT);
+            StackPane.setMargin(fabAddButton, new Insets(0, 24, 24, 0));
+        }
     }
 
     /**
-     * Удаление выбранного прибора.
+     * Обработчик FAB-кнопки "+" — открывает форму добавления прибора
+     * в отдельном диалоговом окне поверх таблицы.
      */
-    private void deleteSelectedDevice() {
-        Device selected = deviceTable.getSelectionModel().getSelectedItem();
-        if (selected == null) {
-            CustomAlert.showWarning("Удаление", "Выберите прибор для удаления");
-            return;
+    @FXML
+    private void onFabAddDevice() {
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/views/add-device-form.fxml"));
+            Parent view = loader.load();
+
+            AddDeviceController ctrl = loader.getController();
+            if (ctrl != null) {
+                ctrl.setDeviceDAO(deviceDAO);
+                // После успешного добавления — обновляем таблицу
+                ctrl.setOnDeviceAdded(() -> Platform.runLater(() -> {
+                    loadDataFromDao();
+                    updateStatistics();
+                }));
+            }
+
+            Stage dialog = new Stage();
+            dialog.setTitle("Добавление нового прибора");
+            dialog.setScene(new Scene(view, 560, 680));
+            dialog.setResizable(false);
+
+            // Копируем иконку и стили из главного окна
+            Stage ownerStage = (Stage) deviceTable.getScene().getWindow();
+            dialog.initOwner(ownerStage);
+            dialog.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+            CustomAlert.applyIcon(dialog);
+            // Переносим CSS из родительской сцены
+            dialog.getScene().getStylesheets().addAll(
+                    ownerStage.getScene().getStylesheets());
+
+            dialog.showAndWait();
+
+            LOGGER.info("Диалог добавления прибора закрыт");
+        } catch (Exception e) {
+            LOGGER.error("Ошибка открытия формы добавления: {}", e.getMessage(), e);
+            CustomAlert.showError("Ошибка", "Не удалось открыть форму добавления прибора");
         }
+    }
+
+    /**
+     * Удаление прибора — вызывается из контекстного меню.
+     */
+    private void deleteSelectedDevice(Device selected) {
+        if (selected == null) return;
 
         String title = "Подтверждение удаления";
         String message = "Удалить прибор \"" + selected.getName() + "\"?\n" +
@@ -509,20 +374,8 @@ public class DevicesTableController {
 
         // Удаление фото (если выбрано)
         if (shouldDeletePhotos) {
-            PhotoManager photoManager = PhotoManager.getInstance();
-            List<String> photos = selected.getPhotos();
-            if (photos != null && !photos.isEmpty()) {
-                Iterator<String> iterator = photos.iterator();
-                while (iterator.hasNext()) {
-                    String photoName = iterator.next();
-                    boolean deleted = photoManager.deletePhoto(selected, photoName);
-                    if (deleted) {
-                        iterator.remove();
-                    } else {
-                        LOGGER.warn("Не удалось удалить фото {} для прибора {}", photoName, selected.getId());
-                    }
-                }
-            }
+            int deletedCount = PhotoManager.getInstance().deleteAllDevicePhotos(selected);
+            LOGGER.info("Удалено {} фото для прибора {}", deletedCount, selected.getId());
         }
 
         // Удаление прибора из БД
@@ -624,28 +477,93 @@ public class DevicesTableController {
     }
 
     /**
-     * Устанавливаем чередующийся фон строк (чётные/нечётные).
+     * Чередующийся фон строк + двойной клик = редактирование
+     * + контекстное меню (правая кнопка мыши)
      */
     private void configureRowStyle() {
-        deviceTable.setRowFactory(_ -> new TableRow<>() {
-            @Override
-            protected void updateItem(Device item, boolean empty) {
-                super.updateItem(item, empty);
-                getStyleClass().removeAll("even-row", "odd-row", "selected-row");
-                if (empty) {
-                    return;
-                }
-                if (isSelected()) {
-                    getStyleClass().add("selected-row");
-                } else {
-                    if (getIndex() % 2 == 0) {
-                        getStyleClass().add("even-row");
+        deviceTable.setRowFactory(_ -> {
+            TableRow<Device> row = new TableRow<>() {
+                @Override
+                protected void updateItem(Device item, boolean empty) {
+                    super.updateItem(item, empty);
+                    getStyleClass().removeAll("even-row", "odd-row", "selected-row");
+                    if (empty) return;
+                    if (isSelected()) {
+                        getStyleClass().add("selected-row");
                     } else {
-                        getStyleClass().add("odd-row");
+                        getStyleClass().add(getIndex() % 2 == 0 ? "even-row" : "odd-row");
                     }
                 }
-            }
+            };
+
+            // Двойной клик — открыть форму редактирования
+            row.setOnMouseClicked(event -> {
+                if (event.getClickCount() == 2 && !row.isEmpty()) {
+                    openEditForm(row.getItem());
+                }
+            });
+
+            // Контекстное меню (правая кнопка мыши)
+            ContextMenu contextMenu = new ContextMenu();
+
+            MenuItem editItem = new MenuItem("Редактировать");
+            editItem.setOnAction(_ -> {
+                if (!row.isEmpty()) openEditForm(row.getItem());
+            });
+
+            MenuItem deleteItem = new MenuItem("Удалить");
+            deleteItem.setOnAction(_ -> {
+                if (!row.isEmpty()) deleteSelectedDevice(row.getItem());
+            });
+
+            contextMenu.getItems().addAll(editItem, new SeparatorMenuItem(), deleteItem);
+
+            // Показываем меню только на непустых строках
+            row.contextMenuProperty().bind(
+                    javafx.beans.binding.Bindings.when(row.emptyProperty())
+                            .then((ContextMenu) null)
+                            .otherwise(contextMenu)
+            );
+
+            return row;
         });
+    }
+
+    /**
+     * Открывает форму редактирования для выбранного прибора.
+     */
+    private void openEditForm(Device device) {
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/views/add-device-form.fxml"));
+            Parent view = loader.load();
+
+            AddDeviceController ctrl = loader.getController();
+            if (ctrl != null) {
+                ctrl.setDeviceDAO(deviceDAO);
+                ctrl.setEditMode(device); // заполняем форму данными прибора
+                ctrl.setOnDeviceAdded(() -> Platform.runLater(() -> {
+                    loadDataFromDao();
+                    updateStatistics();
+                }));
+            }
+
+            Stage dialog = new Stage();
+            dialog.setTitle("Редактирование прибора: " + device.getName());
+            dialog.setScene(new Scene(view, 560, 680));
+            dialog.setResizable(false);
+
+            Stage ownerStage = (Stage) deviceTable.getScene().getWindow();
+            dialog.initOwner(ownerStage);
+            dialog.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+            CustomAlert.applyIcon(dialog);
+            dialog.getScene().getStylesheets().addAll(ownerStage.getScene().getStylesheets());
+
+            dialog.showAndWait();
+        } catch (Exception e) {
+            LOGGER.error("Ошибка открытия формы редактирования: {}", e.getMessage(), e);
+            CustomAlert.showError("Ошибка", "Не удалось открыть форму редактирования");
+        }
     }
 
     /**
@@ -691,12 +609,7 @@ public class DevicesTableController {
                 // Устанавливаем минимальные ширины
                 double minWidth;
 
-                // Особые настройки для колонки фото (предпоследняя колонка)
-                if (i == columns.size() - 2) { // Колонка "Фото"
-                    minWidth = 70; // ⬅️ УВЕЛИЧИЛИ МИНИМУМ до 70px чтобы обе кнопки были видны
-                    columns.get(i).setMinWidth(minWidth);
-                    columns.get(i).setMaxWidth(120);
-                } else if (i < columns.size() - 1) {
+                if (i < columns.size() - 1) {
                     // Обычные колонки
                     minWidth = Math.max(width * 0.4, 50);
                     columns.get(i).setMinWidth(minWidth);
@@ -717,12 +630,7 @@ public class DevicesTableController {
                     double extraWidthPerColumn = availableWidth * (remainingPercentage / 100) / (columns.size() - COLUMN_WIDTHS.length);
                     for (int i = COLUMN_WIDTHS.length; i < columns.size(); i++) {
                         columns.get(i).setPrefWidth(extraWidthPerColumn);
-                        // Для колонки фото устанавливаем особый минимум
-                        if (i == columns.size() - 2) {
-                            columns.get(i).setMinWidth(70); // ⬅️ ТАКЖЕ ЗДЕСЬ
-                        } else {
-                            columns.get(i).setMinWidth(50);
-                        }
+                        columns.get(i).setMinWidth(50);
                     }
                 }
             }

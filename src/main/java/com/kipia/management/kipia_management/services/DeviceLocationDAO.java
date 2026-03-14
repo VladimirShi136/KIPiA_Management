@@ -154,4 +154,17 @@ public class DeviceLocationDAO {
         }
         return locations;
     }
+
+    public boolean locationExists(int deviceId, int schemeId) {
+        String sql = "SELECT COUNT(*) FROM device_locations WHERE device_id = ? AND scheme_id = ?";
+        try (PreparedStatement ps = databaseService.getConnection().prepareStatement(sql)) {
+            ps.setInt(1, deviceId);
+            ps.setInt(2, schemeId);
+            ResultSet rs = ps.executeQuery();
+            return rs.next() && rs.getInt(1) > 0;
+        } catch (SQLException e) {
+            LOGGER.error("Ошибка проверки локации: {}", e.getMessage(), e);
+            return false;
+        }
+    }
 }

@@ -25,6 +25,9 @@ public class ShapeData {
     private double startY; // для линии
     private double endX;   // для линии
     private double endY;   // для линии
+    private double fontSize;      // размер шрифта
+    private String fontFamily;    // семейство шрифта
+    private String fontStyle;     // стиль (Regular, Bold, Italic, Bold Italic)
 
     // Конструкторы
     public ShapeData() {}
@@ -71,6 +74,15 @@ public class ShapeData {
 
     public double getEndY() { return endY; }
     public void setEndY(double endY) { this.endY = endY; }
+
+    public double getFontSize() { return fontSize; }
+    public void setFontSize(double fontSize) { this.fontSize = fontSize; }
+
+    public String getFontFamily() { return fontFamily; }
+    public void setFontFamily(String fontFamily) { this.fontFamily = fontFamily; }
+
+    public String getFontStyle() { return fontStyle; }
+    public void setFontStyle(String fontStyle) { this.fontStyle = fontStyle; }
 
     // Хелперы для цветов
     public static String colorToString(Color color) {

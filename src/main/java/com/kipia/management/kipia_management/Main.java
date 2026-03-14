@@ -2,6 +2,7 @@ package com.kipia.management.kipia_management;
 
 import com.kipia.management.kipia_management.controllers.MainController;
 import com.kipia.management.kipia_management.managers.PhotoManager;
+import com.kipia.management.kipia_management.managers.SyncManager;
 import com.kipia.management.kipia_management.services.*;
 import com.kipia.management.kipia_management.utils.CustomAlert;
 import com.kipia.management.kipia_management.utils.LoggingConfig;
@@ -23,6 +24,7 @@ public class Main extends Application {
     private DeviceDAO deviceDAO;
     private SchemeDAO schemeDAO;
     private DeviceLocationDAO deviceLocationDAO;
+    private SyncManager syncManager;
     private static final Logger LOGGER = LogManager.getLogger(Main.class);
     private MainController mainController;
     private Stage primaryStage;
@@ -73,6 +75,7 @@ public class Main extends Application {
                 mainController.setDeviceDAO(deviceDAO);
                 mainController.setSchemeDAO(schemeDAO);
                 mainController.setDeviceLocationDAO(deviceLocationDAO);
+                mainController.setSyncManager(syncManager);
 
                 LOGGER.info("Все сервисы переданы в MainController");
             } else {
@@ -149,6 +152,13 @@ public class Main extends Application {
             PhotoManager photoManager = PhotoManager.getInstance();
             photoManager.setDeviceDAO(deviceDAO); // Для автосохранения в БД
             LOGGER.info("✅ PhotoManager инициализирован");
+
+            this.syncManager = new SyncManager(
+                    databaseService, deviceDAO, schemeDAO,
+                    deviceLocationDAO,
+                    photoManager.getBasePhotosPath()
+            );
+            LOGGER.info("✅ SyncManager инициализирован");
 
             LOGGER.info("🎉 Все сервисы успешно инициализированы");
 
