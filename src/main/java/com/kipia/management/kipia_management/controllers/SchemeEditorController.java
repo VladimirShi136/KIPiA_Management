@@ -212,6 +212,8 @@ public class SchemeEditorController {
         shapeManager.setOnShapeDeselected(this::handleShapeDeselection);
 
         this.schemeSaver = new SchemeSaver(schemeDAO, deviceLocationDAO, shapeService, schemePane, deviceDAO);
+        // Любая мутация фигур → помечаем схему как изменённую
+        shapeManager.setOnChangeCallback(schemeSaver::markDirty);
 
         // Устанавливаем размеры канваса из схемы (если есть)
         if (currentScheme != null) {
@@ -914,11 +916,14 @@ public class SchemeEditorController {
     private void loadScheme(Scheme scheme) {
         // СОХРАНЯЕМ текущую схему перед загрузкой новой
         if (currentScheme != null && !currentScheme.equals(scheme)) {
+            boolean hadChanges = schemeSaver.isDirty();
             if (!schemeSaver.saveBeforeSchemeChange(currentScheme)) {
                 CustomAlert.showError("Ошибка сохранения", "Не удалось сохранить текущую схему. Смена схемы отменена.");
                 return;
             }
-            CustomAlert.showAutoSaveNotification("Автосохранение", 1.3);
+            if (hadChanges) {
+                CustomAlert.showAutoSaveNotification("Автосохранение", 1.3);
+            }
         }
 
         try {
@@ -939,6 +944,7 @@ public class SchemeEditorController {
             resetView();
 
             refreshAvailableDevices();
+            schemeSaver.resetDirty(); // свежезагруженная схема — изменений нет
             statusLabel.setText("Загружена схема: " + scheme.getName() +
                     " (" + (int)canvasState.getWidth() + "x" + (int)canvasState.getHeight() + ")");
 
@@ -1546,6 +1552,7 @@ public class SchemeEditorController {
      */
     private void saveDeviceLocation(Node node, Device device) {
         schemeSaver.saveDeviceLocation(node, device, currentScheme);
+        schemeSaver.markDirty(); // прибор перемещён мышью
     }
 
     // ============================================================

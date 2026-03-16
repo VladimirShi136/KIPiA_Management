@@ -49,6 +49,7 @@ public class ShapeManager {
 
     private Runnable onShapeSelected;    // Callback при выделении фигуры
     private Runnable onShapeDeselected;  // Callback при снятии выделения
+    private Runnable onChangeCallback;   // Callback при любой мутации (markDirty)
 
     // Границы канваса
     private double canvasBoundsWidth = 2000.0;
@@ -80,6 +81,11 @@ public class ShapeManager {
                 base.removeResizeHandles();
             }
         }
+    }
+
+    /** Устанавливает колбэк для отслеживания изменений (markDirty) */
+    public void setOnChangeCallback(Runnable callback) {
+        this.onChangeCallback = callback;
     }
 
     // Команда удаления
@@ -357,7 +363,8 @@ public class ShapeManager {
      */
     public void addShape(Node shape) {
         AddShapeCommand cmd = new AddShapeCommand(pane, shape);
-        commandManager.execute(cmd);  // Используем CommandManager вместо прямого управления
+        commandManager.execute(cmd);
+        notifyChange();
     }
 
     /**
@@ -365,7 +372,8 @@ public class ShapeManager {
      */
     public void removeShape(Node shape) {
         RemoveShapeCommand cmd = new RemoveShapeCommand(pane, shape);
-        commandManager.execute(cmd);  // Используем CommandManager вместо прямого управления
+        commandManager.execute(cmd);
+        notifyChange();
     }
 
     /**
@@ -374,6 +382,7 @@ public class ShapeManager {
     public void registerRotation(ShapeBase shape, double oldAngle, double newAngle) {
         RotateShapeCommand cmd = new RotateShapeCommand(shape, oldAngle, newAngle);
         commandManager.execute(cmd);
+        notifyChange();
     }
 
     // -----------------------------------------------------------------
@@ -410,6 +419,7 @@ public class ShapeManager {
     public void registerMove(ShapeBase shape, double oldX, double oldY, double newX, double newY) {
         MoveShapeCommand cmd = new MoveShapeCommand(shape, oldX, oldY, newX, newY);
         commandManager.execute(cmd);
+        notifyChange();
     }
 
     /**
@@ -418,6 +428,7 @@ public class ShapeManager {
     public void registerColorChange(ShapeBase shape, Color oldStroke, Color oldFill, Color newStroke, Color newFill) {
         ChangeColorCommand cmd = new ChangeColorCommand(shape, oldStroke, oldFill, newStroke, newFill);
         commandManager.execute(cmd);
+        notifyChange();
     }
 
     /**
@@ -427,6 +438,7 @@ public class ShapeManager {
                                double newX, double newY, double newWidth, double newHeight) {
         ResizeShapeCommand cmd = new ResizeShapeCommand(shape, oldX, oldY, oldWidth, oldHeight, newX, newY, newWidth, newHeight);
         commandManager.execute(cmd);
+        notifyChange();
     }
 
     /**
@@ -435,6 +447,7 @@ public class ShapeManager {
     public void registerFontChange(TextShape textShape, Font oldFont, Font newFont) {
         ChangeFontCommand cmd = new ChangeFontCommand(textShape, oldFont, newFont);
         commandManager.execute(cmd);
+        notifyChange();
     }
 
     /**
@@ -447,6 +460,7 @@ public class ShapeManager {
                 oldStartX, oldStartY, oldEndX, oldEndY,
                 newStartX, newStartY, newEndX, newEndY);
         commandManager.execute(cmd);
+        notifyChange();
     }
 
     /**
@@ -810,6 +824,17 @@ public class ShapeManager {
         } catch (Exception e) {
             setStatus("Ошибка создания фигуры");
             System.err.println("ERROR creating shape: " + e.getMessage());
+        }
+    }
+
+    // -----------------------------------------------------------------
+    // CHANGE NOTIFICATION
+    // -----------------------------------------------------------------
+
+    /** Уведомляет о любой мутации — вызывает markDirty в SchemeSaver */
+    private void notifyChange() {
+        if (onChangeCallback != null) {
+            onChangeCallback.run();
         }
     }
 

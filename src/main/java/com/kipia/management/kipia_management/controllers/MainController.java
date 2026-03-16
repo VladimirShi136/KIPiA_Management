@@ -112,8 +112,16 @@ public class MainController {
         if (schemeEditorController == null) return;
 
         try {
-            schemeEditorController.getSchemeSaver().saveBeforeNavigation(schemeEditorController.getCurrentScheme());
-            CustomAlert.showAutoSaveNotification("Автосохранение", 1.3);
+            SchemeSaver saver = schemeEditorController.getSchemeSaver();
+            if (saver == null) return;
+
+            // Показываем уведомление только если действительно были изменения
+            boolean hadChanges = saver.isDirty();
+            saver.saveBeforeNavigation(schemeEditorController.getCurrentScheme());
+
+            if (hadChanges) {
+                CustomAlert.showAutoSaveNotification("Автосохранение", 1.3);
+            }
         } catch (Exception e) {
             LOGGER.error("Ошибка при сохранении схемы: {}", e.getMessage());
             CustomAlert.showError("Ошибка сохранения", "Не удалось сохранить схему: " + e.getMessage());
@@ -124,19 +132,23 @@ public class MainController {
      * Сохранение схемы при выходе из приложения.
      */
     private void saveSchemeOnExit() {
-        if (schemeEditorController != null) {
-            try {
-                SchemeSaver saver = schemeEditorController.getSchemeSaver();
-                Scheme currentScheme = schemeEditorController.getCurrentScheme();
-                if (saver != null && currentScheme != null) {
-                    saver.saveOnExit(currentScheme);
-                    CustomAlert.showAutoSaveNotification("Сохранение при выходе", 0.5);
-                }
-            } catch (Exception e) {
-                LOGGER.error("Ошибка при автосохранении схемы при выходе: {}", e.getMessage());
-                CustomAlert.showWarning("Предупреждение",
-                        "Не удалось сохранить схему при выходе. Последние изменения могут быть потеряны.");
+        if (schemeEditorController == null) return;
+
+        try {
+            SchemeSaver saver = schemeEditorController.getSchemeSaver();
+            Scheme currentScheme = schemeEditorController.getCurrentScheme();
+            if (saver == null || currentScheme == null) return;
+
+            boolean hadChanges = saver.isDirty();
+            saver.saveOnExit(currentScheme);
+
+            if (hadChanges) {
+                CustomAlert.showAutoSaveNotification("Сохранение при выходе", 0.5);
             }
+        } catch (Exception e) {
+            LOGGER.error("Ошибка при автосохранении схемы при выходе: {}", e.getMessage());
+            CustomAlert.showWarning("Предупреждение",
+                    "Не удалось сохранить схему при выходе. Последние изменения могут быть потеряны.");
         }
     }
 

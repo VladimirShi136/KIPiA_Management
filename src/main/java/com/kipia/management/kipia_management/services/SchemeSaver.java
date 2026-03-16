@@ -25,6 +25,9 @@ public class SchemeSaver {
     private final ShapeService shapeService;
     private final AnchorPane schemePane;
 
+    // Флаг несохранённых изменений
+    private boolean isDirty = false;
+
     public SchemeSaver(
             SchemeDAO schemeDAO,
             DeviceLocationDAO deviceLocationDAO,
@@ -38,6 +41,24 @@ public class SchemeSaver {
         this.deviceDAO = deviceDAO;
     }
 
+    // ─────────────────────────────────────────────
+    // УПРАВЛЕНИЕ ФЛАГОМ ИЗМЕНЕНИЙ
+    // ─────────────────────────────────────────────
+
+    /** Помечает схему как изменённую — вызывается при любой мутации */
+    public void markDirty() {
+        isDirty = true;
+    }
+
+    /** Сбрасывает флаг после успешного сохранения или загрузки новой схемы */
+    public void resetDirty() {
+        isDirty = false;
+    }
+
+    public boolean isDirty() {
+        return isDirty;
+    }
+
     /**
      * Сохраняет текущую схему: данные фигур и позиции устройств.
      */
@@ -46,11 +67,15 @@ public class SchemeSaver {
             LOGGER.warn("Попытка сохранить null-схему");
             return false;
         }
+        if (!isDirty) {
+            LOGGER.debug("Схема '{}' не изменена, сохранение пропущено", scheme.getName());
+            return true;
+        }
         try {
             scheme.updateTimestamp();
             saveSchemeData(scheme);
             saveDeviceLocations(scheme);
-
+            resetDirty();
             LOGGER.info("Схема сохранена: {}, ID={}", scheme.getName(), scheme.getId());
             return true;
         } catch (Exception e) {
@@ -63,7 +88,10 @@ public class SchemeSaver {
      * Автосохранение перед сменой схемы.
      */
     public boolean saveBeforeSchemeChange(Scheme currentScheme) {
-        if (currentScheme == null) return true;
+        if (currentScheme == null || !isDirty) {
+            LOGGER.debug("saveBeforeSchemeChange: нечего сохранять");
+            return true;
+        }
         boolean saved = saveScheme(currentScheme);
         if (!saved) {
             LOGGER.warn("Не удалось сохранить схему перед сменой: {}", currentScheme.getName());
@@ -75,11 +103,13 @@ public class SchemeSaver {
      * Сохранение при закрытии приложения.
      */
     public void saveOnExit(Scheme currentScheme) {
-        if (currentScheme != null) {
-            boolean saved = saveScheme(currentScheme);
-            if (!saved) {
-                LOGGER.error("Не удалось сохранить схему при выходе: {}", currentScheme.getName());
-            }
+        if (currentScheme == null || !isDirty) {
+            LOGGER.debug("saveOnExit: нечего сохранять");
+            return;
+        }
+        boolean saved = saveScheme(currentScheme);
+        if (!saved) {
+            LOGGER.error("Не удалось сохранить схему при выходе: {}", currentScheme.getName());
         }
     }
 
@@ -87,7 +117,10 @@ public class SchemeSaver {
      * Сохранение перед переходом в другой контроллер.
      */
     public void saveBeforeNavigation(Scheme currentScheme) {
-        if (currentScheme == null) return;
+        if (currentScheme == null || !isDirty) {
+            LOGGER.debug("saveBeforeNavigation: нечего сохранять");
+            return;
+        }
         boolean saved = saveScheme(currentScheme);
         if (!saved) {
             LOGGER.warn("Сохранение перед навигацией не удалось: {}", currentScheme.getName());
@@ -98,6 +131,8 @@ public class SchemeSaver {
      * Сохранение схемы через кнопку сохранить.
      */
     public void selectButtonSaveScheme(Scheme scheme) {
+        // Кнопка "Сохранить" работает всегда — принудительно помечаем dirty
+        markDirty();
         saveScheme(scheme);
         CustomAlert.showAutoSaveNotification("Сохранение", 1.5);
     }
