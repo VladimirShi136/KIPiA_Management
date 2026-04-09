@@ -121,6 +121,8 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         this.resizeHandles = null;
         this.wasResizedInSession = false;
         this.isDragging = false;
+        this.dragStartX = -1.0; // Инициализируем невалидным значением
+        this.dragStartY = -1.0;
     }
 
     // ============================================================
@@ -456,6 +458,23 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
                 handleDragReleased(event);
             }
         });
+
+        // Обработчик движения мыши для изменения курсора
+        setOnMouseMoved(event -> {
+            Point2D mousePos = pane.sceneToLocal(event.getSceneX(), event.getSceneY());
+            if (containsWorldPoint(mousePos.getX(), mousePos.getY())) {
+                setCursor(Cursor.HAND);
+            } else {
+                setCursor(Cursor.DEFAULT);
+            }
+        });
+
+        // Обработчик выхода мыши за пределы фигуры
+        setOnMouseExited(event -> {
+            if (!isDragging) {
+                setCursor(Cursor.DEFAULT);
+            }
+        });
     }
 
     /**
@@ -465,8 +484,12 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         setOnMouseClicked(event -> {
             if (event.getButton() == MouseButton.PRIMARY) {
                 if (event.getClickCount() == 2) {
-                    // Двойной клик - выделяем фигуру и показываем handles
-                    handleDoubleClickSelection();
+                    // Проверяем, попал ли клик на фигуру (с учетом переопределенного containsLocalPoint)
+                    Point2D mousePos = pane.sceneToLocal(event.getSceneX(), event.getSceneY());
+                    if (containsWorldPoint(mousePos.getX(), mousePos.getY())) {
+                        // Двойной клик - выделяем фигуру и показываем handles
+                        handleDoubleClickSelection();
+                    }
                     event.consume();
                 }
                 // Одинарный клик НЕ выделяет - позволяет перетаскивать без выделения
@@ -548,6 +571,14 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      */
     private void handleDragPressed(MouseEvent event) {
         Point2D mousePos = pane.sceneToLocal(event.getSceneX(), event.getSceneY());
+        
+        // Проверяем, попал ли клик на фигуру (с учетом переопределенного containsLocalPoint)
+        if (!containsWorldPoint(mousePos.getX(), mousePos.getY())) {
+            // Клик не попал на фигуру - полностью игнорируем событие
+            event.consume(); // Останавливаем распространение
+            return;
+        }
+        
         initializeDrag(mousePos);
 
         // ВАЖНО: Для линии выделение происходит при ЛЮБОМ клике
@@ -580,6 +611,12 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      */
     private void handleDragDragged(MouseEvent event) {
         if (!isDragging) {
+            // Проверяем, было ли начало перетаскивания в handleDragPressed
+            // Если нет - игнорируем
+            if (dragStartX < 0 || dragStartY < 0) {
+                event.consume();
+                return;
+            }
             isDragging = true;
         }
 
@@ -589,12 +626,13 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         // Вычисляем новую позицию в мировых координатах
         double newWorldX = panePos.getX() - dragOffsetX;
         double newWorldY = panePos.getY() - dragOffsetY;
-        double shapeW = getCurrentWidth();
-        double shapeH = getCurrentHeight();
-        newWorldX = Math.max(0, Math.min(newWorldX, canvasBoundsWidth - shapeW));
-        newWorldY = Math.max(0, Math.min(newWorldY, canvasBoundsHeight - shapeH));
-
+        
+        // ВАЖНО: Применяем позицию БЕЗ ограничений
         setWorldPosition(newWorldX, newWorldY);
+        
+        // ВАЖНО: Проверяем границы ПОСЛЕ установки позиции с учетом поворота
+        clampToCanvasBounds(canvasBoundsWidth, canvasBoundsHeight);
+        
         updateResizeHandles();
         event.consume();
     }
@@ -619,6 +657,8 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
             }
         }
         isDragging = false;
+        dragStartX = -1.0; // Сбрасываем для следующего цикла
+        dragStartY = -1.0;
         updateResizeHandles();
         event.consume();
     }
@@ -1325,6 +1365,10 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         javafx.scene.control.ColorPicker colorPicker = new javafx.scene.control.ColorPicker(strokeColor);
 
         Dialog<Color> dialog = new Dialog<>();
+        
+        // Применяем единый стиль СРАЗУ после создания (ДО любых других операций)
+        com.kipia.management.kipia_management.utils.DialogStyler.applyStyle(dialog);
+        
         dialog.setTitle("Изменение цвета контура");
         dialog.setHeaderText("Выберите цвет контура");
 
@@ -1364,6 +1408,10 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         javafx.scene.control.ColorPicker colorPicker = new javafx.scene.control.ColorPicker(fillColor);
 
         Dialog<Color> dialog = new Dialog<>();
+        
+        // Применяем единый стиль СРАЗУ после создания (ДО любых других операций)
+        com.kipia.management.kipia_management.utils.DialogStyler.applyStyle(dialog);
+        
         dialog.setTitle("Изменение цвета заливки");
         dialog.setHeaderText("Выберите цвет заливки");
 
@@ -1479,11 +1527,13 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
             return;
         }
 
+        // ВАЖНО: Сохраняем старый угол ДО изменения
+        double oldAngle = rotationAngle;
         double newAngle = (rotationAngle + 45) % 360;
         setRotation(newAngle);
 
         if (shapeManager != null) {
-            shapeManager.registerRotation(this, rotationAngle, newAngle);
+            shapeManager.registerRotation(this, oldAngle, newAngle);
         }
 
         if (statusSetter != null) {

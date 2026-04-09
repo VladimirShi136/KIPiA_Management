@@ -1,6 +1,6 @@
 package com.kipia.management.kipia_management.controllers.cell.table_cell;
 
-import com.kipia.management.kipia_management.utils.CustomAlert;
+import com.kipia.management.kipia_management.utils.CustomAlertDialog;
 
 /**
  * Класс для валидации чисел с плавающей точкой.
@@ -21,14 +21,14 @@ public class ValidatingDoubleCell extends AbstractValidatingCell<Double> {
             double val = Double.parseDouble(input);
             if (val < 0) {
                 // Замена: используем CustomAlert вместо старого showAlert
-                CustomAlert.showError("Ошибка валидации", "Значение должно быть неотрицательным.");
+                CustomAlertDialog.showError("Ошибка валидации", "Значение должно быть неотрицательным.");
                 cancelEdit();
                 return;
             }
             commitEdit(val);
         } catch (NumberFormatException e) {
             // Замена: используем CustomAlert вместо старого showAlert
-            CustomAlert.showError("Ошибка валидации", "Введите число с точкой.");
+            CustomAlertDialog.showError("Ошибка валидации", "Введите число с точкой.");
             cancelEdit();
         }
     }

@@ -4,13 +4,20 @@ import com.kipia.management.kipia_management.models.Device;
 import com.kipia.management.kipia_management.services.DeviceDAO;
 import com.kipia.management.kipia_management.services.DeviceReportService;
 import com.kipia.management.kipia_management.services.ExcelExportReportsService;
-import com.kipia.management.kipia_management.utils.CustomAlert;
+import com.kipia.management.kipia_management.utils.CustomAlertDialog;
+import com.kipia.management.kipia_management.utils.LoadingIndicator;
 import com.kipia.management.kipia_management.utils.StyleUtils;
+import javafx.application.Platform;
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jfree.chart.fx.ChartViewer;
 
 import java.io.File;
@@ -19,6 +26,10 @@ import java.util.Map;
 
 public class ReportsController {
 
+    private static final Logger LOGGER = LogManager.getLogger(ReportsController.class);
+
+    @FXML private StackPane rootPane;  // Корневой контейнер для индикатора загрузки
+    @FXML private VBox contentBox;  // Контейнер с контентом
     @FXML private ToggleGroup reportTypeGroup;
     @FXML private RadioButton statusReportBtn;
     @FXML private RadioButton typeReportBtn;
@@ -34,20 +45,111 @@ public class ReportsController {
     private Stage primaryStage;
     private List<Device> allDevices;
     private ChartViewer currentChartViewer;
+    
+    // Индикатор загрузки
+    private LoadingIndicator loadingIndicator;
 
     public void init(DeviceDAO deviceDAO, Stage primaryStage) {
         this.primaryStage = primaryStage;
         this.reportService = new DeviceReportService();
         this.excelService = new ExcelExportReportsService();
         this.allDevices = deviceDAO.getAllDevices();
-
+        
+        // Инициализация индикатора загрузки
+        loadingIndicator = new LoadingIndicator("Генерация отчёта...");
+        if (rootPane != null) {
+            rootPane.getChildren().add(loadingIndicator.getOverlay());
+        }
+        
+        // Скрываем контент до загрузки
+        hideContentBeforeLoad();
+        
+        // Запускаем асинхронную загрузку
+        loadDataAsync();
+    }
+    
+    /**
+     * Скрывает контент до загрузки данных
+     */
+    private void hideContentBeforeLoad() {
+        if (contentBox != null) {
+            contentBox.setVisible(false);
+            contentBox.setManaged(false);
+        }
+    }
+    
+    /**
+     * Показывает контент после загрузки данных
+     */
+    private void showContentAfterLoad() {
+        if (contentBox != null) {
+            contentBox.setVisible(true);
+            contentBox.setManaged(true);
+        }
+    }
+    
+    /**
+     * Асинхронная загрузка данных с индикатором загрузки
+     */
+    private void loadDataAsync() {
+        Platform.runLater(() -> loadingIndicator.show());
+        
+        Task<Void> loadTask = new Task<>() {
+            @Override
+            protected Void call() throws Exception {
+                long startTime = System.currentTimeMillis();
+                
+                // Загрузка данных и генерация отчёта
+                Platform.runLater(() -> {
+                    setupRadioButtons();
+                    setupExportButton();
+                    generateReport();
+                });
+                
+                // Умная задержка (минимум 300 мс для отчётов)
+                long elapsedTime = System.currentTimeMillis() - startTime;
+                long minDisplayTime = 300;
+                
+                if (elapsedTime < minDisplayTime) {
+                    Thread.sleep(minDisplayTime - elapsedTime);
+                }
+                
+                return null;
+            }
+        };
+        
+        loadTask.setOnSucceeded(_ -> {
+            showContentAfterLoad();
+            loadingIndicator.hide();
+        });
+        
+        loadTask.setOnFailed(_ -> {
+            LOGGER.error("Ошибка генерации отчёта: {}", loadTask.getException().getMessage());
+            CustomAlertDialog.showError("Ошибка", "Не удалось сгенерировать отчёт");
+            showContentAfterLoad();
+            loadingIndicator.hide();
+        });
+        
+        new Thread(loadTask).start();
+    }
+    
+    /**
+     * Настройка стилей радио-кнопок
+     */
+    private void setupRadioButtons() {
         if (statusReportBtn != null) StyleUtils.applyStyleToRadioButton(statusReportBtn);
         if (typeReportBtn != null) StyleUtils.applyStyleToRadioButton(typeReportBtn);
         if (manufacturerReportBtn != null) StyleUtils.applyStyleToRadioButton(manufacturerReportBtn);
         if (locationReportBtn != null) StyleUtils.applyStyleToRadioButton(locationReportBtn);
         if (yearReportBtn != null) StyleUtils.applyStyleToRadioButton(yearReportBtn);
-
+        
         reportTypeGroup.selectedToggleProperty().addListener((_, _, _) -> updateReport());
+    }
+    
+    /**
+     * Настройка кнопки экспорта
+     */
+    private void setupExportButton() {
         exportReportButton.setOnAction(_ -> {
             String reportKey = getCurrentReportKey();
             if (reportKey.isEmpty()) return;
@@ -60,17 +162,21 @@ public class ReportsController {
 
             boolean success = excelService.exportReport(allDevices, reportKey, file);
             if (success) {
-                CustomAlert.showSuccess("Экспорт", "Отчёт " + reportKey + " экспортирован: " + file.getAbsolutePath());
+                CustomAlertDialog.showSuccess("Экспорт", "Отчёт " + reportKey + " экспортирован: " + file.getAbsolutePath());
             } else {
-                CustomAlert.showError("Экспорт", "Ошибка при экспорте отчёта " + reportKey);
+                CustomAlertDialog.showError("Экспорт", "Ошибка при экспорте отчёта " + reportKey);
             }
         });
 
         if (exportReportButton != null) {
             exportReportButton.getStyleClass().add("report-export-button");
-            StyleUtils.applyHoverAndAnimation(exportReportButton, "report-export-button", "report-export-button-hover");
         }
-
+    }
+    
+    /**
+     * Генерация отчёта
+     */
+    private void generateReport() {
         updateReport();
     }
 

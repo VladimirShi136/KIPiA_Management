@@ -1,6 +1,6 @@
 package com.kipia.management.kipia_management.controllers.cell.table_cell;
 
-import com.kipia.management.kipia_management.utils.CustomAlert;
+import com.kipia.management.kipia_management.utils.CustomAlertDialog;
 
 /**
  * Класс для валидации целых чисел.
@@ -22,14 +22,14 @@ public class ValidatingIntegerCell extends AbstractValidatingCell<Integer> {
             // Проверка диапазона (по желанию)
             if (val < 1900 || val > 2100) {
                 // Замена: используем CustomAlert вместо старого showAlert
-                CustomAlert.showError("Ошибка валидации", "Год должен быть в диапазоне 1900–2100.");
+                CustomAlertDialog.showError("Ошибка валидации", "Год должен быть в диапазоне 1900–2100.");
                 cancelEdit();
                 return;
             }
             commitEdit(val);
         } catch (NumberFormatException e) {
             // Замена: используем CustomAlert вместо старого showAlert
-            CustomAlert.showError("Ошибка валидации", "Введите целое число.");
+            CustomAlertDialog.showError("Ошибка валидации", "Введите целое число.");
             cancelEdit();
         }
     }

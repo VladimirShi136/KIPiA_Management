@@ -3,13 +3,11 @@ package com.kipia.management.kipia_management.services;
 import com.kipia.management.kipia_management.models.Device;
 import com.kipia.management.kipia_management.models.DeviceLocation;
 import com.kipia.management.kipia_management.models.Scheme;
-import com.kipia.management.kipia_management.utils.CustomAlert;
+import com.kipia.management.kipia_management.utils.CustomAlertDialog;
 import javafx.scene.Node;
 import javafx.scene.layout.AnchorPane;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import java.util.List;
 
 /**
  * Сервис для сохранения схемы, включая фигуры и позиции устройств.
@@ -134,7 +132,7 @@ public class SchemeSaver {
         // Кнопка "Сохранить" работает всегда — принудительно помечаем dirty
         markDirty();
         saveScheme(scheme);
-        CustomAlert.showAutoSaveNotification("Сохранение", 1.5);
+        CustomAlertDialog.showAutoSaveNotification("Сохранение", 1.5);
     }
 
     // --- Вспомогательные методы ---

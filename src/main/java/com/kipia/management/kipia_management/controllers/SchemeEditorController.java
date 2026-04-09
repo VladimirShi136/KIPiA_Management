@@ -7,10 +7,13 @@ import com.kipia.management.kipia_management.managers.ShapeManager;
 import com.kipia.management.kipia_management.models.*;
 import com.kipia.management.kipia_management.services.*;
 import com.kipia.management.kipia_management.shapes.*;
-import com.kipia.management.kipia_management.utils.CustomAlert;
+import com.kipia.management.kipia_management.utils.CustomAlertDialog;
+import com.kipia.management.kipia_management.utils.LoadingIndicator;
 import com.kipia.management.kipia_management.utils.StyleUtils;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.geometry.Point2D;
 import javafx.scene.control.*;
@@ -19,6 +22,8 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.Node;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.*;
 import javafx.util.StringConverter;
@@ -43,11 +48,15 @@ public class SchemeEditorController {
     // ============================================================
 
     @FXML
+    private StackPane rootPane;  // Корневой контейнер для индикатора загрузки
+    @FXML
+    private BorderPane contentBox;  // Контейнер с контентом
+    @FXML
     private ComboBox<Scheme> schemeComboBox;
     @FXML
     private Button saveSchemeBtn, lineToolBtn, rectToolBtn, textToolBtn, rhombusToolBtn;
     @FXML
-    private Button undoBtn, redoBtn, ellipseToolBtn, clearSchemeBtn;
+    private Button undoBtn, redoBtn, ellipseToolBtn, clearSchemeBtn, deleteSchemeBtn, resetViewBtn;
     @FXML
     private AnchorPane schemePane;
     @FXML
@@ -74,6 +83,9 @@ public class SchemeEditorController {
     private ShapeService shapeService;
     private DeviceIconService deviceIconService;
     private SchemeSaver schemeSaver;
+    
+    // Индикатор загрузки
+    private LoadingIndicator loadingIndicator;
 
     // ============================================================
     // DATA MODELS
@@ -141,7 +153,6 @@ public class SchemeEditorController {
             setupCanvasTransforms();
         } catch (Exception e) {
             LOGGER.error("Ошибка в initialize(): {}", e.getMessage(), e);
-            e.printStackTrace();
         }
     }
 
@@ -151,18 +162,87 @@ public class SchemeEditorController {
     public void init() {
         try {
             validateDAODependencies();
-            initializeServices();
-            loadInitialData();
-            setupInitialScheme();
-            // Обновляем статус
-            statusLabel.setText("Готов - выберите инструмент или работайте с фигурами");
-            // Обновляем информацию о доступных приборах
-            refreshAvailableDevices();
+            
+            // Инициализация индикатора загрузки
+            loadingIndicator = new LoadingIndicator("Загрузка схемы...");
+            if (rootPane != null) {
+                rootPane.getChildren().add(loadingIndicator.getOverlay());
+            }
+            
+            // Скрываем контент до загрузки
+            hideContentBeforeLoad();
+            
+            // Запускаем асинхронную загрузку
+            loadDataAsync();
         } catch (Exception e) {
             LOGGER.error("Ошибка в init(): {}", e.getMessage(), e);
-            e.printStackTrace();
             if (statusLabel != null) statusLabel.setText("Ошибка запуска: " + e.getMessage());
         }
+    }
+    
+    /**
+     * Скрывает контент до загрузки данных
+     */
+    private void hideContentBeforeLoad() {
+        if (contentBox != null) {
+            contentBox.setOpacity(0);
+        }
+    }
+    
+    /**
+     * Показывает контент после загрузки данных
+     */
+    private void showContentAfterLoad() {
+        if (contentBox != null) {
+            contentBox.setOpacity(1);
+        }
+    }
+    
+    /**
+     * Асинхронная загрузка данных с индикатором загрузки
+     */
+    private void loadDataAsync() {
+        Platform.runLater(() -> loadingIndicator.show());
+        
+        Task<Void> loadTask = new Task<>() {
+            @Override
+            protected Void call() throws Exception {
+                long startTime = System.currentTimeMillis();
+                
+                // Инициализация сервисов и загрузка данных
+                Platform.runLater(() -> {
+                    initializeServices();
+                    loadInitialData();
+                    setupInitialScheme();
+                    statusLabel.setText("Готов - выберите инструмент или работайте с фигурами");
+                    refreshAvailableDevices();
+                });
+                
+                // Умная задержка
+                long elapsedTime = System.currentTimeMillis() - startTime;
+                long minDisplayTime = 500;
+                
+                if (elapsedTime < minDisplayTime) {
+                    Thread.sleep(minDisplayTime - elapsedTime);
+                }
+                
+                return null;
+            }
+        };
+        
+        loadTask.setOnSucceeded(_ -> {
+            showContentAfterLoad();
+            loadingIndicator.hide();
+        });
+        
+        loadTask.setOnFailed(_ -> {
+            LOGGER.error("Ошибка загрузки схемы: {}", loadTask.getException().getMessage());
+            CustomAlertDialog.showError("Ошибка", "Не удалось загрузить схему");
+            showContentAfterLoad();
+            loadingIndicator.hide();
+        });
+        
+        new Thread(loadTask).start();
     }
 
     /**
@@ -306,6 +386,8 @@ public class SchemeEditorController {
     private void setupWindowCloseHandler() {
         schemePane.sceneProperty().addListener((_, _, newScene) -> {
             if (newScene != null) {
+                updateButtonIcons();
+                newScene.getStylesheets().addListener((javafx.collections.ListChangeListener<String>) _ -> updateButtonIcons());
                 newScene.windowProperty().addListener((_, _, newWindow) -> {
                     if (newWindow != null) {
                         newWindow.setOnCloseRequest(_ -> schemeSaver.saveOnExit(currentScheme));
@@ -409,6 +491,7 @@ public class SchemeEditorController {
             updateSchemeTimestamp(currentScheme);
         });
         clearSchemeBtn.setOnAction(_ -> clearScheme());
+        deleteSchemeBtn.setOnAction(_ -> deleteScheme());  // ⭐⭐ НОВОЕ ⭐⭐
     }
 
     /**
@@ -436,9 +519,11 @@ public class SchemeEditorController {
      * Применение стилей к кнопкам действий
      */
     private void applyActionButtonStyles() {
-        StyleUtils.applyHoverAndAnimation(undoBtn, "tool-button", "tool-button-hover");
-        StyleUtils.applyHoverAndAnimation(redoBtn, "tool-button", "tool-button-hover");
-        StyleUtils.applyHoverAndAnimation(saveSchemeBtn, "tool-button", "tool-button-hover");
+        undoBtn.getStyleClass().add("tool-button");
+        redoBtn.getStyleClass().add("tool-button");
+        saveSchemeBtn.getStyleClass().add("tool-button");
+        clearSchemeBtn.getStyleClass().add("tool-button");
+        deleteSchemeBtn.getStyleClass().add("tool-button");
     }
 
     // ============================================================
@@ -570,14 +655,17 @@ public class SchemeEditorController {
      */
     private void loadSchemes() {
         List<String> locations = deviceDAO.getDistinctLocations();
-        List<Scheme> schemes = createOrLoadSchemes(locations);
-        updateSchemeComboBox(schemes);
+        createOrLoadSchemes(locations);
+        
+        // ⭐⭐ НОВОЕ: Загружаем ВСЕ схемы из БД (включая без приборов) ⭐⭐
+        List<Scheme> allSchemes = schemeDAO.getAllSchemes();
+        updateSchemeComboBox(allSchemes);
     }
 
     /**
      * Создание или загрузка схем для указанных расположений
      */
-    private List<Scheme> createOrLoadSchemes(List<String> locations) {
+    private void createOrLoadSchemes(List<String> locations) {
         List<Scheme> schemes = new ArrayList<>();
         for (String location : locations) {
             Scheme scheme = findOrCreateScheme(location);
@@ -585,7 +673,6 @@ public class SchemeEditorController {
                 schemes.add(scheme);
             }
         }
-        return schemes;
     }
 
     /**
@@ -630,7 +717,7 @@ public class SchemeEditorController {
      */
     private void handleNoSchemesFound() {
         LOGGER.warn("Список схем пуст");
-        CustomAlert.showWarning("Загрузка схем",
+        CustomAlertDialog.showWarning("Загрузка схем",
                 "Не удалось загрузить или создать схемы. Возможно, отсутствуют устройства с расположениями.");
     }
 
@@ -918,11 +1005,11 @@ public class SchemeEditorController {
         if (currentScheme != null && !currentScheme.equals(scheme)) {
             boolean hadChanges = schemeSaver.isDirty();
             if (!schemeSaver.saveBeforeSchemeChange(currentScheme)) {
-                CustomAlert.showError("Ошибка сохранения", "Не удалось сохранить текущую схему. Смена схемы отменена.");
+                CustomAlertDialog.showError("Ошибка сохранения", "Не удалось сохранить текущую схему. Смена схемы отменена.");
                 return;
             }
             if (hadChanges) {
-                CustomAlert.showAutoSaveNotification("Автосохранение", 1.3);
+                CustomAlertDialog.showAutoSaveNotification("Автосохранение", 1.3);
             }
         }
 
@@ -949,6 +1036,7 @@ public class SchemeEditorController {
                     " (" + (int)canvasState.getWidth() + "x" + (int)canvasState.getHeight() + ")");
 
             updateSchemeTimestamp(currentScheme);
+            updateDeleteButtonState();
         } catch (Exception e) {
             handleSchemeLoadError(scheme, e);
         }
@@ -976,7 +1064,7 @@ public class SchemeEditorController {
      * Очистка схемы (полная: pane, undo, статус)
      */
     private void clearScheme() {
-        boolean confirm = CustomAlert.showConfirmation("Очистка схемы",
+        boolean confirm = CustomAlertDialog.showConfirmation("Очистка схемы",
                 "Это действие удалит ВСЕ фигуры и приборы с панели. Продолжить?");
         if (!confirm) return;
 
@@ -1009,7 +1097,63 @@ public class SchemeEditorController {
 
         } catch (Exception e) {
             LOGGER.error("Ошибка при очистке схемы: {}", e.getMessage(), e);
-            CustomAlert.showError("Ошибка", "Не удалось полностью очистить схему: " + e.getMessage());
+            CustomAlertDialog.showError("Ошибка", "Не удалось полностью очистить схему: " + e.getMessage());
+        }
+    }
+
+    /**
+     * ⭐⭐ Удаление схемы из БД ⭐⭐
+     */
+    private void deleteScheme() {
+        if (currentScheme == null) {
+            CustomAlertDialog.showWarning("Удаление схемы", "Не выбрана схема для удаления");
+            return;
+        }
+        boolean hasDevices = schemeDAO.hasDevicesOnScheme(currentScheme.getId());
+        if (hasDevices) {
+            CustomAlertDialog.showWarning("Удаление схемы",
+                    "Невозможно удалить схему \"" + currentScheme.getName() + "\".\n\nК схеме привязаны приборы (поле 'Местоположение').\nСначала измените местоположение всех приборов или удалите их.");
+            return;
+        }
+        boolean confirm = CustomAlertDialog.showConfirmation("Удаление схемы",
+                "Удалить схему \"" + currentScheme.getName() + "\"?\n\nСхема будет полностью удалена из базы данных.\nЭто действие необратимо!");
+        if (!confirm) return;
+        try {
+            int schemeId = currentScheme.getId();
+            String schemeName = currentScheme.getName();
+            if (deviceLocationDAO != null) {
+                deviceLocationDAO.deleteAllLocationsForScheme(schemeId);
+            }
+            boolean deleted = schemeDAO.deleteScheme(schemeId);
+            if (deleted) {
+                LOGGER.info("✅ Схема удалена: {} (ID={})", schemeName, schemeId);
+                clearSchemePane();
+                currentScheme = null;
+                loadSchemes();
+                if (!schemeComboBox.getItems().isEmpty()) {
+                    schemeComboBox.getSelectionModel().selectFirst();
+                }
+                CustomAlertDialog.showSuccess("Удаление схемы", "Схема \"" + schemeName + "\" успешно удалена");
+            } else {
+                CustomAlertDialog.showError("Ошибка", "Не удалось удалить схему");
+            }
+        } catch (Exception e) {
+            LOGGER.error("❌ Ошибка при удалении схемы: {}", e.getMessage(), e);
+            CustomAlertDialog.showError("Ошибка", "Произошла ошибка при удалении схемы");
+        }
+    }
+
+    private void updateDeleteButtonState() {
+        if (deleteSchemeBtn == null || currentScheme == null) {
+            if (deleteSchemeBtn != null) deleteSchemeBtn.setDisable(true);
+            return;
+        }
+        boolean hasDevices = schemeDAO.hasDevicesOnScheme(currentScheme.getId());
+        deleteSchemeBtn.setDisable(hasDevices);
+        if (hasDevices) {
+            deleteSchemeBtn.setTooltip(new javafx.scene.control.Tooltip("Удаление заблокировано: к схеме привязаны приборы"));
+        } else {
+            deleteSchemeBtn.setTooltip(new javafx.scene.control.Tooltip("Удалить схему"));
         }
     }
 
@@ -1071,7 +1215,7 @@ public class SchemeEditorController {
      */
     private void handleSchemeLoadError(Scheme scheme, Exception e) {
         LOGGER.error("Ошибка при загрузке схемы '{}': {}", scheme.getName(), e.getMessage());
-        CustomAlert.showError("Ошибка загрузки", "Не удалось загрузить схему: " + e.getMessage());
+        CustomAlertDialog.showError("Ошибка загрузки", "Не удалось загрузить схему: " + e.getMessage());
         statusLabel.setText("Ошибка загрузки схемы");
     }
 
@@ -1346,7 +1490,6 @@ public class SchemeEditorController {
             LOGGER.error("Ошибка при вставке фигуры: {}", e.getMessage(), e);
             statusLabel.setText("Ошибка вставки фигуры");
             System.err.println("ERROR in pasteShapeAtPosition: " + e.getMessage());
-            e.printStackTrace();
         }
     }
 
@@ -1360,7 +1503,7 @@ public class SchemeEditorController {
         }
         if (currentTool == ShapeManager.Tool.TEXT) {
             // Текст создается по клику (отдельный диалог)
-            Optional<String> result = CustomAlert.showTextInputDialog("Добавление текста", "Введите текст для добавления на схему:", "Новый текст");
+            Optional<String> result = CustomAlertDialog.showTextInputDialog("Добавление текста", "Введите текст для добавления на схему:", "Новый текст");
             if (result.isPresent()) {
                 String newText = result.get().trim();
                 if (!newText.isEmpty()) {
@@ -1374,7 +1517,7 @@ public class SchemeEditorController {
                         }
                     } catch (Exception e) {
                         LOGGER.error("ERROR adding TEXT: {}", e.getMessage(), e);
-                        CustomAlert.showError("Ошибка добавления текста", "Не удалось добавить текст: " + e.getMessage());
+                        CustomAlertDialog.showError("Ошибка добавления текста", "Не удалось добавить текст: " + e.getMessage());
                     }
                 } else {
                     statusLabel.setText("Текст не добавлен (пустой ввод)");
@@ -1406,7 +1549,7 @@ public class SchemeEditorController {
     private void addDeviceAtPosition(double x, double y) {
         // Проверяем, есть ли доступные приборы
         if (deviceList == null || deviceList.isEmpty()) {
-            CustomAlert.showWarning("Добавление прибора", "Нет доступных приборов для добавления!");
+            CustomAlertDialog.showWarning("Добавление прибора", "Нет доступных приборов для добавления!");
             return;
         }
 
@@ -1421,7 +1564,7 @@ public class SchemeEditorController {
                 // Проверяем, что точка внутри канваса
                 if (x < 0 || x > canvasState.getWidth() ||
                         y < 0 || y > canvasState.getHeight()) {
-                    CustomAlert.showWarning("Добавление прибора",
+                    CustomAlertDialog.showWarning("Добавление прибора",
                             "Нельзя добавить прибор за пределами схемы!");
                     return;
                 }
@@ -1439,19 +1582,19 @@ public class SchemeEditorController {
                         deviceDAO.updateDevice(selectedDevice);
                     }
                     if (!added) {
-                        CustomAlert.showError("Ошибка", "Не удалось сохранить прибор в базу данных");
+                        CustomAlertDialog.showError("Ошибка", "Не удалось сохранить прибор в базу данных");
                     }
                 }
 
                 refreshAvailableDevices();
                 statusLabel.setText("Прибор добавлен: " + selectedDevice.getName());
 
-                CustomAlert.showSuccess("Добавление прибора",
+                CustomAlertDialog.showSuccess("Добавление прибора",
                         "Прибор '" + selectedDevice.getName() + "' успешно добавлен на схему");
             }
         } catch (Exception e) {
             LOGGER.error("Ошибка добавления устройства: {}", e.getMessage(), e);
-            CustomAlert.showError("Ошибка", "Не удалось добавить прибор: " + e.getMessage());
+            CustomAlertDialog.showError("Ошибка", "Не удалось добавить прибор: " + e.getMessage());
         }
     }
 
@@ -1463,7 +1606,7 @@ public class SchemeEditorController {
         List<Device> availableDevices = getAvailableDevicesForCurrentScheme();
 
         if (availableDevices.isEmpty()) {
-            CustomAlert.showWarning("Выбор прибора", "Нет доступных приборов для текущей схемы!");
+            CustomAlertDialog.showWarning("Выбор прибора", "Нет доступных приборов для текущей схемы!");
             return null;
         }
 
@@ -1507,7 +1650,7 @@ public class SchemeEditorController {
                 if (selectedDevice != null) {
                     return selectedDevice;
                 } else {
-                    CustomAlert.showWarning("Выбор прибора", "Пожалуйста, выберите прибор из таблицы!");
+                    CustomAlertDialog.showWarning("Выбор прибора", "Пожалуйста, выберите прибор из таблицы!");
                 }
             }
             return null;
@@ -1590,5 +1733,51 @@ public class SchemeEditorController {
         loadDevices();
         refreshAvailableDevices();
         LOGGER.info("Списки схем и устройств обновлены");
+    }
+
+    // ============================================================
+    // THEME SUPPORT
+    // ============================================================
+
+    /**
+     * Обновление иконок кнопок в зависимости от темы
+     */
+    private void updateButtonIcons() {
+        if (schemePane.getScene() == null) return;
+
+        boolean isDarkTheme = schemePane.getScene().getStylesheets().stream()
+                .anyMatch(s -> s.contains("dark-theme.css"));
+
+        String suffix = isDarkTheme ? "-dark.png" : "-white.png";
+
+        setButtonIcon(undoBtn, "/images/scheme-editor/undo" + suffix);
+        setButtonIcon(redoBtn, "/images/scheme-editor/redo" + suffix);
+        setButtonIcon(resetViewBtn, "/images/scheme-editor/reset" + suffix);
+        setButtonIcon(lineToolBtn, "/images/scheme-editor/line" + suffix);
+        setButtonIcon(rectToolBtn, "/images/scheme-editor/rectangle" + suffix);
+        setButtonIcon(ellipseToolBtn, "/images/scheme-editor/circle" + suffix);
+        setButtonIcon(rhombusToolBtn, "/images/scheme-editor/valve" + suffix);
+        setButtonIcon(textToolBtn, "/images/scheme-editor/text" + suffix);
+        setButtonIcon(saveSchemeBtn, "/images/scheme-editor/save" + suffix);
+        setButtonIcon(clearSchemeBtn, "/images/scheme-editor/clear" + suffix);
+    }
+
+    /**
+     * Установка иконки для кнопки
+     */
+    private void setButtonIcon(Button button, String iconPath) {
+        if (button != null) {
+            try {
+                javafx.scene.image.ImageView imageView = new javafx.scene.image.ImageView(
+                        new javafx.scene.image.Image(Objects.requireNonNull(getClass().getResourceAsStream(iconPath)))
+                );
+                imageView.setFitWidth(24);
+                imageView.setFitHeight(24);
+                imageView.setPreserveRatio(true);
+                button.setGraphic(imageView);
+            } catch (Exception e) {
+                LOGGER.warn("Не удалось загрузить иконку: {}", iconPath);
+            }
+        }
     }
 }

@@ -1,33 +1,155 @@
-/* |ОСНОВНОЙ ФОН| */
+/* ============================================================
+   LIGHT THEME - COMPLETE VERSION (JavaFX CSS Standard)
+   ============================================================ */
+
+/* ==================== ROOT ==================== */
 .root {
+    -fx-background-color: #f0f0f0;
+    -fx-font-family: "Segoe UI", "Arial", sans-serif;
+}
+
+/* Фон BorderPane для устранения белого фона при анимации */
+.border-pane {
     -fx-background-color: #f0f0f0;
 }
 
-/* |ОБЩИЕ СТИЛИ ДЛЯ КНОПОК| */
-.button {
+/* ==================== WINDOW CONTROLS ==================== */
+.window-controls {
+    -fx-spacing: 0;
+    -fx-padding: 0;
+}
+
+.window-control-button {
+    -fx-background-color: transparent;
     -fx-text-fill: white;
-    -fx-padding: 5 10;
+    -fx-font-size: 18px;
+    -fx-font-weight: normal;
+    -fx-font-family: "Segoe UI", "Arial", sans-serif;
+    -fx-min-width: 45px;
+    -fx-max-width: 45px;
+    -fx-pref-width: 45px;
+    -fx-min-height: 40px;
+    -fx-max-height: 40px;
+    -fx-pref-height: 40px;
+    -fx-cursor: hand;
+    -fx-border-width: 0;
+    -fx-border-color: transparent;
+    -fx-background-radius: 0;
+    -fx-padding: 0;
+    -fx-effect: none;
+}
+
+.window-control-button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-scale-x: 1.0;
+    -fx-scale-y: 1.0;
+    -fx-effect: none;
+}
+
+.window-control-button:pressed {
+    -fx-background-color: rgba(255, 255, 255, 0.3);
+    -fx-scale-x: 1.0;
+    -fx-scale-y: 1.0;
+    -fx-effect: none;
+}
+
+.window-controls .window-close-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: white;
+}
+
+.window-controls .window-close-button:hover {
+    -fx-background-color: #e74c3c;
+    -fx-text-fill: white;
+    -fx-scale-x: 1.0;
+    -fx-scale-y: 1.0;
+    -fx-effect: none;
+}
+
+.window-controls .window-close-button:pressed {
+    -fx-background-color: #c0392b;
+    -fx-text-fill: white;
+    -fx-scale-x: 1.0;
+    -fx-scale-y: 1.0;
+    -fx-effect: none;
+}
+
+/* ==================== WINDOW CONTROLS OVERRIDE (HIGHEST PRIORITY) ==================== */
+#minimizeBtn,
+#maximizeBtn,
+#closeBtn {
+    -fx-background-color: transparent;
+    -fx-text-fill: white;
+    -fx-font-size: 18px;
+    -fx-font-weight: normal;
+    -fx-padding: 0;
+    -fx-effect: none;
+    -fx-background-radius: 0;
+    -fx-border-width: 0;
+    -fx-min-width: 45px;
+    -fx-max-width: 45px;
+    -fx-pref-width: 45px;
+    -fx-min-height: 40px;
+    -fx-max-height: 40px;
+    -fx-pref-height: 40px;
+}
+
+#minimizeBtn:hover,
+#maximizeBtn:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-scale-x: 1.0;
+    -fx-scale-y: 1.0;
+    -fx-effect: none;
+}
+
+#closeBtn:hover {
+    -fx-background-color: #e74c3c;
+    -fx-text-fill: white;
+    -fx-scale-x: 1.0;
+    -fx-scale-y: 1.0;
+    -fx-effect: none;
+}
+
+#closeBtn:pressed {
+    -fx-background-color: #c0392b;
+    -fx-scale-x: 1.0;
+    -fx-scale-y: 1.0;
+    -fx-effect: none;
+}
+
+/* ==================== ОБЩИЕ СТИЛИ КНОПОК ==================== */
+.button {
+    -fx-text-fill: #000000;
+    -fx-padding: 8 16;
     -fx-background-radius: 5px;
     -fx-border-radius: 5px;
     -fx-font-size: 14px;
     -fx-font-weight: bold;
     -fx-cursor: hand;
-    -fx-min-width: 40px;
-    -fx-pref-width: 40px;
-    -fx-transition: background-color 0.3s ease, effect 0.3s ease;
     -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
 }
 
-/* |ЦВЕТ И НЕПРОЗРАЧНОСТЬ ДЛЯ НЕАКТИВНЫХ КНОПОК| */
-.button:disabled {
-    -fx-opacity: 1.0; /* Полная непрозрачность */
-    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1); /* Сохраняем тень */
+.button:hover {
+    -fx-scale-x: 1.02;
+    -fx-scale-y: 1.02;
 }
 
-/* |ВЕРХНЯЯ ПАНЕЛЬ (ШАПКА)| */
+.button:pressed {
+    -fx-scale-x: 0.98;
+    -fx-scale-y: 0.98;
+}
+
+.button:disabled {
+    -fx-opacity: 0.7;
+}
+
+/* ==================== MAIN.FXML - ВЕРХНЯЯ ПАНЕЛЬ ==================== */
 .top {
-    -fx-background-color: #456381;
+    -fx-background-color: #465261;
     -fx-padding: 10px;
+    -fx-min-height: 50px;
+    -fx-pref-height: 50px;
+    -fx-max-height: 50px;
 }
 
 .header-label {
@@ -35,11 +157,11 @@
     -fx-font-size: 16px;
     -fx-font-weight: bold;
     -fx-padding: 1px 10px;
-    -fx-border-color: rgba(255, 255, 255, 0.8);
+    -fx-border-color: white;
     -fx-border-width: 2px;
     -fx-border-radius: 25px;
     -fx-background-radius: 25px;
-    -fx-background-color: rgba(255, 255, 255, 0.1);
+    -fx-background-color: #465261;
     -fx-effect: dropshadow(three-pass-box, rgba(255, 255, 255, 0.3), 8, 0, 0, 2);
 }
 
@@ -47,513 +169,160 @@
     -fx-text-fill: #bdc3c7;
     -fx-font-size: 12px;
     -fx-font-style: italic;
-    -fx-padding: 0 15px 0 0;
 }
 
-/* |ЛЕВАЯ НАВИГАЦИЯ (МЕНЮ)| */
+/* ==================== MAIN.FXML - ЛЕВАЯ НАВИГАЦИЯ ==================== */
 .left {
-    -fx-background-color: #527091;
+    -fx-background-color: #6c7884;
     -fx-padding: 10px;
     -fx-min-width: 200px;
     -fx-pref-width: 160px;
 }
 
-.button-devices {
-    -fx-background-color: #3498db;
+.left .button {
     -fx-padding: 10 20;
     -fx-min-width: 160px;
     -fx-pref-width: 160px;
+    -fx-border-color: white;
+    -fx-border-width: 2px;
     -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
+    -fx-text-fill: #000000;
 }
 
-.button-devices-hover {
-    -fx-background-color: #5dade2;
-    -fx-padding: 10 20;
-    -fx-min-width: 160px;
-    -fx-pref-width: 160px;
-}
+.button-devices { -fx-background-color: #f58352; -fx-text-fill: #000000; }
+.button-devices:hover { -fx-background-color: #fb5302; -fx-text-fill: #000000; -fx-border-color: black !important; }
+.button-devices-active { -fx-background-color: #fb5302; -fx-text-fill: #000000; -fx-border-color: black !important; }
 
-.button-photo-gallery {
-    -fx-background-color: #14b1b1;
-    -fx-padding: 10 20;
-    -fx-min-width: 160px;
-    -fx-pref-width: 160px;
-    -fx-wrap-text: true;
-    -fx-text-alignment: center;
-    -fx-font-weight: bold;
-    -fx-alignment: center;
-    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
-}
+.button-photo-gallery { -fx-background-color: #e2a58c; -fx-text-fill: #000000; }
+.button-photo-gallery:hover { -fx-background-color: #e67d51; -fx-text-fill: #000000; -fx-border-color: black !important; }
+.button-photo-gallery-active { -fx-background-color: #e67d51; -fx-text-fill: #000000; -fx-border-color: black !important; }
 
-.button-photo-gallery-hover {
-    -fx-background-color: #18c8c8;
-    -fx-padding: 10 20;
-    -fx-min-width: 160px;
-    -fx-pref-width: 160px;
-    -fx-wrap-text: true;
-    -fx-text-alignment: center;
-    -fx-font-weight: bold;
-    -fx-alignment: center;
-}
+.button-schemes { -fx-background-color: #dbecf0; -fx-text-fill: #000000; }
+.button-schemes:hover { -fx-background-color: #9ce6f6; -fx-text-fill: #000000; -fx-border-color: black !important; }
+.button-schemes-active { -fx-background-color: #9ce6f6; -fx-text-fill: #000000; -fx-border-color: black !important; }
 
-.button-schemes {
-    -fx-background-color: #620f8c;
-    -fx-padding: 10 20;
-    -fx-wrap-text: true;
-    -fx-text-alignment: center;
-    -fx-font-weight: bold;
-    -fx-min-width: 160px;
-    -fx-pref-width: 160px;
-    -fx-alignment: center;
-    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
-}
+.button-reports { -fx-background-color: #b6c0c9; -fx-text-fill: #000000; }
+.button-reports:hover { -fx-background-color: #79a4cc; -fx-text-fill: #000000; -fx-border-color: black !important; }
+.button-reports-active { -fx-background-color: #79a4cc; -fx-text-fill: #000000; -fx-border-color: black !important; }
 
-.button-schemes-hover {
-    -fx-background-color: #6f129f;
-    -fx-padding: 10 20;
-    -fx-wrap-text: true;
-    -fx-text-alignment: center;
-    -fx-font-weight: bold;
-    -fx-min-width: 160px;
-    -fx-pref-width: 160px;
-    -fx-alignment: center;
-}
-
-.button-reports {
-    -fx-background-color: #e67e22;
-    -fx-padding: 10 20;
-    -fx-min-width: 160px;
-    -fx-pref-width: 160px;
-    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
-}
-
-.button-reports-hover {
-    -fx-background-color: #f5a13d;
-    -fx-padding: 10 20;
-    -fx-min-width: 160px;
-    -fx-pref-width: 160px;
-}
-
-.button-theme-toggle {
-    -fx-min-width: 160px; /* фиксированная ширина как у других кнопок */
-    -fx-pref-width: 160px;
-    -fx-padding: 10 20; /* отступы совпадают с другими */
-    -fx-background-color: #192a35; /* тёмный насыщенный фон */
-    -fx-text-fill: white; /* белый текст */
-    -fx-font-size: 14px;
-    -fx-font-weight: bold;
-    -fx-background-radius: 5px;
-    -fx-border-radius: 5px;
+.left .button-settings,
+.left .button-theme-toggle,
+.left .button-exit {
+    -fx-background-color: transparent !important;
+    -fx-background-radius: 50% !important;
+    -fx-padding: 0 !important;
     -fx-cursor: hand;
-    -fx-transition: background-color 0.3s ease, effect 0.3s ease;
-    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
+    -fx-border-width: 0 !important;
+    -fx-border-color: transparent !important;
+    -fx-effect: none !important;
+    -fx-min-width: 40px !important;
+    -fx-min-height: 40px !important;
+    -fx-pref-width: 40px !important;
+    -fx-pref-height: 40px !important;
+    -fx-text-fill: transparent !important;
+    -fx-font-size: 0 !important;
 }
 
-.button-theme-toggle-hover {
-    -fx-background-color: #203443;
-    -fx-padding: 10 20;
-    -fx-min-width: 160px;
-    -fx-pref-width: 160px;
+.left .button-settings:hover,
+.left .button-theme-toggle:hover,
+.left .button-exit:hover {
+    -fx-scale-x: 1.10;
+    -fx-scale-y: 1.10;
+    -fx-background-color: transparent !important;
+    -fx-border-color: transparent !important;
 }
 
-.button-exit {
-    -fx-background-color: #e74c3c;
-    -fx-padding: 10 20;
-    -fx-min-width: 160px;
-    -fx-pref-width: 160px;
-    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
+.button-settings-active {
+    -fx-scale-x: 1.15;
+    -fx-scale-y: 1.15;
 }
 
-.button-exit-hover {
-    -fx-background-color: #ec7063;
-    -fx-padding: 10 20;
-    -fx-min-width: 160px;
-    -fx-pref-width: 160px;
+/* ==================== SETTINGS.FXML ==================== */
+.settings-root {
+    -fx-background-color: #f0f0f0;
 }
 
-/* | ПЛАВАЮЩАЯ КНОПКА "ДОБАВИТЬ ПРИБОР" НА ЭКРАНЕ ПРИБОРОВ | */
-
-.fab {
-    -fx-background-color: #2E7D32;
-    -fx-text-fill: white;
-    -fx-font-size: 26px;
+.settings-header {
+    -fx-font-size: 24px;
     -fx-font-weight: bold;
-    -fx-min-width: 56px;
-    -fx-min-height: 56px;
-    -fx-max-width: 56px;
-    -fx-max-height: 56px;
-    -fx-background-radius: 28px;
-    -fx-cursor: hand;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.35), 8, 0, 0, 3);
-    -fx-padding: 0 0 3px 0;
-    -fx-alignment: center;
+    -fx-text-fill: #2c3e50;
 }
 
-.fab:hover {
-    -fx-background-color: #388E3C;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.5), 14, 0, 0, 5);
-    -fx-scale-x: 1.05;
-    -fx-scale-y: 1.05;
-}
-
-.fab:pressed {
-    -fx-background-color: #1B5E20;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 4, 0, 0, 1);
-    -fx-scale-x: 0.97;
-    -fx-scale-y: 0.97;
-}
-
-/* |1. ЦЕНТРАЛЬНАЯ ОБЛАСТЬ (СОДЕРЖИМОЕ)| */
-#contentArea {
-    -fx-padding: 10px;
-    -fx-spacing: 15px;
-}
-
-/* 1.1 Поиск */
-.search-delete-pane {
-    -fx-spacing: 10px;
-}
-
-.search-label {
-    -fx-font-weight: bold;
-}
-
-.search-field {
-    -fx-pref-width: 300px;
-    -fx-background-color: #ecf0f1;
-    -fx-border-color: #bdc3c7;
-}
-
-/* 1.2 Кнопка удаление */
-.button-delete {
-    -fx-background-color: #d85548;
-    -fx-text-fill: white;
-    -fx-font-weight: bold;
-    -fx-background-radius: 5px;
-    -fx-border-radius: 5px;
-    -fx-padding: 5px 10px;
-    -fx-cursor: hand;
-    -fx-min-width: 40px;
-    -fx-pref-width: 40px;
-    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
-}
-
-.button-delete-hover {
-    -fx-background-color: #fd6454;
-    -fx-padding: 5px 10px;
-    -fx-min-width: 40px;
-    -fx-pref-width: 40px;
-}
-
-/* 1.3 Кнопки экспорт и импорт */
-.button-export {
-    -fx-background-color: #4CAF50;
-}
-
-.button-export-hover {
-    -fx-background-color: #58d68d;
-    -fx-padding: 5 10;
-    -fx-min-width: 40px;
-    -fx-pref-width: 40px;
-}
-
-.button-import {
-    -fx-background-color: #2196F3;
-}
-
-.button-import-hover {
-    -fx-background-color: #5dade2;
-    -fx-padding: 5 10;
-    -fx-min-width: 40px;
-    -fx-pref-width: 40px;
-}
-
-/* 1.4 Статистика */
-.statistics-pane {
-    -fx-background-color: #f8f9fa;
-    -fx-padding: 20px;
-    -fx-border-color: #ddd;
-    -fx-border-radius: 5px;
-    -fx-spacing: 10px;
-}
-
-.statistics-header {
-    -fx-font-weight: bold;
+.settings-section-title {
     -fx-font-size: 16px;
-    -fx-padding-bottom: 10px;
-    -fx-text-fill: #333;
-}
-
-.statistics-data {
-    -fx-spacing: 20px;
-}
-
-.stat-total {
-    -fx-text-fill: #1e74e4;
-    -fx-font-size: 24px;
     -fx-font-weight: bold;
+    -fx-text-fill: #34495e;
 }
 
-.stat-working {
-    -fx-text-fill: #2ecc71;
-    -fx-font-size: 24px;
+.settings-section-description {
+    -fx-font-size: 13px;
+    -fx-text-fill: #7f8c8d;
+}
+
+.settings-button-export-db {
+    -fx-background-color: #3498db;
+    -fx-text-fill: white;
     -fx-font-weight: bold;
+    -fx-background-radius: 5px;
+    -fx-cursor: hand;
 }
 
-.stat-storage {
-    -fx-text-fill: #e74c3c;
-    -fx-font-size: 24px;
+.settings-button-export-db:hover {
+    -fx-background-color: #2980b9;
+}
+
+.settings-button-import-db {
+    -fx-background-color: #9b59b6;
+    -fx-text-fill: white;
     -fx-font-weight: bold;
+    -fx-background-radius: 5px;
+    -fx-cursor: hand;
 }
 
-.stat-lost {
-    -fx-text-fill: #706b69;
-    -fx-font-size: 24px;
+.settings-button-import-db:hover {
+    -fx-background-color: #8e44ad;
+}
+
+.settings-button-export-excel {
+    -fx-background-color: #27ae60;
+    -fx-text-fill: white;
     -fx-font-weight: bold;
+    -fx-background-radius: 5px;
+    -fx-cursor: hand;
 }
 
-.stat-broken {
-    -fx-text-fill: #ef8a06;
-    -fx-font-size: 24px;
+.settings-button-export-excel:hover {
+    -fx-background-color: #229954;
+}
+
+.settings-button-import-excel {
+    -fx-background-color: #e67e22;
+    -fx-text-fill: white;
     -fx-font-weight: bold;
+    -fx-background-radius: 5px;
+    -fx-cursor: hand;
 }
 
-.stat-label {
+.settings-button-import-excel:hover {
+    -fx-background-color: #d35400;
+}
+
+.settings-info-title {
     -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #16a085;
+}
+
+.settings-info-text {
+    -fx-font-size: 12px;
     -fx-text-fill: #555;
 }
 
-/* |КНОПКИ ФОТО В ТАБЛИЦЕ - ДОБАВЛЕНИЕ и ПРОСМОТР| */
-.table-button-add {
-    -fx-background-color: #4CAF50;
+.button-label {
     -fx-text-fill: white;
-    -fx-background-radius: 4px;
-    -fx-border-radius: 4px;
-    -fx-border-color: #388E3C;
-    -fx-border-width: 1;
-    -fx-cursor: hand;
-    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
 }
 
-.table-button-add-hover {
-    -fx-background-color: #66BB6A;
-}
-
-.table-button-view {
-    -fx-background-color: #2196F3;
-    -fx-text-fill: white;
-    -fx-background-radius: 4px;
-    -fx-border-radius: 4px;
-    -fx-border-color: #1976D2;
-    -fx-border-width: 1;
-    -fx-cursor: hand;
-    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
-}
-
-.table-button-view-hover {
-    -fx-background-color: #64B5F6;
-}
-
-/* |2. СТИЛИ ДЛЯ ПРОСМОТРЩИКА ФОТОГРАФИЙ| */
-/* 2.1 Полностью черный фон при зуме */
-.photo-viewer-container.zoomed {
-    -fx-background-color: #000000 !important;
-}
-
-/* 2.2 Верхняя панель при зуме - полностью черная */
-.photo-viewer-top-panel.zoomed {
-    -fx-background-color: #000000 !important;
-    -fx-border-color: #333333 !important;
-    -fx-effect: dropshadow(three-pass-box, rgba(255, 255, 255, 0.1), 5, 0, 0, 1) !important;
-}
-
-/* 2.3 Текст и элементы верхней панели при зуме */
-.photo-viewer-top-panel.zoomed .photo-viewer-device-info {
-    -fx-border-color: #444444 !important;
-    -fx-background-color: rgba(30, 30, 30, 0.8) !important;
-}
-
-.photo-viewer-top-panel.zoomed .photo-viewer-device-text {
-    -fx-text-fill: #888888 !important; /* Серый текст */
-}
-
-.photo-viewer-top-panel.zoomed .photo-viewer-counter {
-    -fx-background-color: rgba(50, 50, 50, 0.8) !important;
-    -fx-text-fill: #888888 !important;
-    -fx-border-color: #444444 !important;
-}
-
-.photo-viewer-top-panel.zoomed .photo-viewer-nav-button {
-    -fx-background-color: #1a331a !important; /* Очень темно-зеленый */
-    -fx-text-fill: #666666 !important;
-    -fx-border-color: #2d4d2d !important;
-}
-
-.photo-viewer-top-panel.zoomed .photo-viewer-nav-button:hover {
-    -fx-background-color: #2d4d2d !important;
-    -fx-text-fill: #888888 !important;
-}
-
-.photo-viewer-top-panel.zoomed .photo-viewer-system-button {
-    -fx-background-color: #331408 !important; /* Очень темно-оранжевый */
-    -fx-text-fill: #666666 !important;
-    -fx-border-color: #4d260f !important;
-}
-
-.photo-viewer-top-panel.zoomed .photo-viewer-system-button:hover {
-    -fx-background-color: #4d260f !important;
-    -fx-text-fill: #888888 !important;
-}
-
-.photo-viewer-top-panel.zoomed .photo-viewer-delete-button {
-    -fx-background-color: #4d140f !important; /* Тёмный красно-коричневый */
-    -fx-text-fill: #666666 !important;
-    -fx-border-color: #801c12 !important;
-}
-
-.photo-viewer-top-panel.zoomed .photo-viewer-delete-button:hover {
-    -fx-background-color: #801c12 !important;
-    -fx-text-fill: #888888 !important;
-}
-
-
-/* 2.4 Оверлей для затемнения - полностью черный */
-.zoom-overlay {
-    -fx-background-color: #000000; /* Полностью черный */
-}
-
-/* 2.5 Контейнер для фото при зуме */
-.photo-viewer-image-pane.zoomed {
-    -fx-background-color: #000000;
-    -fx-cursor: move;
-}
-
-/* 2.6 Стиль для ImageView при зуме */
-.photo-viewer-image.zoomed {
-    -fx-cursor: move;
-}
-
-/* 2.7 Остальные стили */
-.photo-viewer-device-info {
-    -fx-background-color: transparent;
-    -fx-padding: 6px 10px;
-    -fx-border-color: white;
-    -fx-border-width: 1px;
-    -fx-border-radius: 6px;
-    -fx-background-radius: 6px;
-    -fx-max-width: 320px;
-    -fx-pref-width: 320px;
-}
-
-.photo-viewer-device-text {
-    -fx-font-size: 11px !important;
-    -fx-text-fill: white !important;
-    -fx-font-weight: bold;
-    -fx-wrap-text: true;
-}
-
-.photo-viewer-top-panel {
-    -fx-background-color: #456381;
-    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 8, 0, 0, 2);
-    -fx-padding: 15px;
-    -fx-border-color: #3a546d;
-    -fx-border-width: 0 0 2px 0;
-    -fx-spacing: 20px;
-}
-
-.photo-viewer-center-container {
-    -fx-alignment: center;
-    -fx-spacing: 15px;
-}
-
-.photo-viewer-nav-container {
-    -fx-alignment: center;
-    -fx-spacing: 10px;
-}
-
-.photo-viewer-nav-button {
-    -fx-background-color: #2e7d32;
-    -fx-text-fill: white;
-    -fx-font-weight: bold;
-    -fx-border-radius: 6px;
-    -fx-background-radius: 6px;
-    -fx-cursor: hand;
-    -fx-pref-width: 90px;
-    -fx-pref-height: 32px;
-    -fx-font-size: 13px;
-    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 3, 0, 0, 1);
-}
-
-.photo-viewer-nav-button:hover {
-    -fx-background-color: #4caf50;
-}
-
-.photo-viewer-counter {
-    -fx-background-color: rgba(255, 255, 255, 0.2);
-    -fx-font-weight: bold;
-    -fx-font-size: 14px;
-    -fx-text-fill: white !important;
-    -fx-padding: 6px 12px;
-    -fx-border-color: white;
-    -fx-border-radius: 12px;
-    -fx-background-radius: 12px;
-    -fx-border-width: 1px;
-    -fx-min-width: 120px;
-    -fx-alignment: center;
-}
-
-.photo-viewer-container {
-    -fx-background-color: #f8f9fa;
-}
-
-.photo-viewer-image-pane {
-    -fx-alignment: center;
-    -fx-background-color: #ecf0f1;
-}
-
-.photo-viewer-image {
-    -fx-alignment: center;
-}
-
-/* 2.8 Кнопка системного просмотра фото */
-.photo-viewer-system-button {
-    -fx-background-color: #d84315;
-    -fx-text-fill: white;
-    -fx-font-weight: bold;
-    -fx-border-radius: 6px;
-    -fx-background-radius: 6px;
-    -fx-padding: 8px 16px;
-    -fx-cursor: hand;
-    -fx-font-size: 13px;
-    -fx-min-width: 280px;
-    -fx-pref-width: 280px;
-    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 3, 0, 0, 1);
-}
-
-.photo-viewer-system-button:hover {
-    -fx-background-color: #ff5722;
-}
-
-/* 2.9 Кнопка удаления фото */
-.photo-viewer-delete-button {
-    -fx-background-color: #c62828; /* Тёмно-красный (цвет удаления/опасности) */
-    -fx-text-fill: white;
-    -fx-font-weight: bold;
-    -fx-border-radius: 6px;
-    -fx-background-radius: 6px;
-    -fx-padding: 8px 16px;
-    -fx-cursor: hand;
-    -fx-font-size: 13px;
-    -fx-min-width: 180px;
-    -fx-pref-width: 180px;
-    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 3, 0, 0, 1);
-}
-
-.photo-viewer-delete-button:hover {
-    -fx-background-color: #e53935; /* Более яркий красный при наведении */
-}
-
-/* |НИЖНЯЯ ПАНЕЛЬ| */
+/* ==================== MAIN.FXML - НИЖНЯЯ ПАНЕЛЬ ==================== */
 .bottom {
     -fx-background-color: #ecf0f1;
     -fx-padding: 5px;
@@ -565,234 +334,687 @@
     -fx-font-size: 12px;
 }
 
-/* |REPORTS.FXML| */
-.report-buttons {
-    -fx-spacing: 20px;
+/* ==================== MAIN.FXML - ЦЕНТРАЛЬНАЯ ОБЛАСТЬ ==================== */
+.content-area {
+    -fx-background-color: #f0f0f0;
 }
 
-.report-radio {
-    -fx-font-size: 14px;
-    -fx-font-weight: bold;
-    -fx-text-fill: #333;
+/* Убираем лишние отступы у корневых элементов view,
+   чтобы они не создавали двойные отступы */
+.devices-root, .photo-gallery-root, .scheme-editor-root, .reports-root {
+    -fx-padding: 0;
+    -fx-background-color: transparent;
 }
 
-.report-title {
-    -fx-font-size: 18px;
-    -fx-font-weight: bold;
+/* Для StackPane в devices.fxml */
+.devices-stack-pane {
+    -fx-padding: 0;
 }
 
-.chart-pane {
+/* ==================== MAIN.FXML - ПОИСК ==================== */
+.search-toggle-button {
+    -fx-background-color: transparent;
+    -fx-background-radius: 50%;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+    -fx-min-width: 30px;
+    -fx-min-height: 30px;
+    -fx-pref-width: 30px;
+    -fx-pref-height: 30px;
+}
+
+.search-toggle-button:hover {
+    -fx-scale-x: 1.10;
+    -fx-scale-y: 1.10;
+}
+
+.search-toggle-button:pressed {
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+}
+
+.search-field-animated {
+    -fx-pref-width: 350px;
+    -fx-pref-height: 30px;
+    -fx-max-height: 30px;
+    -fx-background-color: white;
+    -fx-border-width: 2px;
+    -fx-border-radius: 15px;
+    -fx-background-radius: 15px;
+    -fx-padding: 0px 12px;
+    -fx-font-size: 13px;
+    -fx-effect: dropshadow(three-pass-box, rgba(52, 152, 219, 0.2), 4, 0, 0, 2);
+}
+
+.search-field-animated:focused {
+    -fx-border-color: #3498db;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.filter-combo {
+    -fx-pref-width: 250px;
+    -fx-pref-height: 30px;
+    -fx-max-height: 30px;
+    -fx-background-color: white;
+    -fx-border-width: 2px;
+    -fx-border-color: #bdc3c7;
+    -fx-border-radius: 15px;
+    -fx-background-radius: 15px;
+    -fx-font-size: 11px;
+}
+
+/* ComboBox внутренние элементы */
+.filter-combo .list-cell {
+    -fx-background-color: white;
+    -fx-text-fill: #000000;
+    -fx-background-radius: 15px 0 0 15px;
+}
+
+.filter-combo .list-cell:hover {
+    -fx-background-color: #f0f0f0;
+}
+
+.filter-combo .arrow-button {
+    -fx-background-color: white;
+    -fx-border-color: #bdc3c7;
+    -fx-border-width: 0 0 0 2px;
+    -fx-background-radius: 0 15px 15px 0;
+    -fx-padding: 0 8px 0 8px;
+}
+
+.filter-combo .arrow {
+    -fx-background-color: #000000;
+}
+
+/* ComboBox button cell (отображаемый текст) */
+.filter-combo .button-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #000000;
+    -fx-padding: 0 0 0 12px;
+}
+
+/* Выпадающий список ComboBox */
+.filter-combo .combo-box-popup .list-view {
+    -fx-background-color: white;
+    -fx-border-color: #bdc3c7;
+    -fx-border-width: 2px;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+}
+
+.filter-combo .combo-box-popup .list-view .list-cell {
+    -fx-background-color: white;
+    -fx-text-fill: #000000;
+    -fx-padding: 8px 12px;
+    -fx-background-radius: 0;
+}
+
+.filter-combo .combo-box-popup .list-view .list-cell:filled:hover {
+    -fx-background-color: #f0f0f0;
+}
+
+.filter-combo .combo-box-popup .list-view .list-cell:filled:selected {
+    -fx-background-color: #3498db;
+    -fx-text-fill: #ffffff;
+}
+
+/* Скроллбар в выпадающем списке ComboBox */
+.filter-combo .combo-box-popup .list-view .scroll-bar:vertical {
+    -fx-background-color: #f0f0f0;
+    -fx-pref-width: 10px;
+}
+
+.filter-combo .combo-box-popup .list-view .scroll-bar:vertical .track {
+    -fx-background-color: #f0f0f0;
+    -fx-background-radius: 5px;
+}
+
+.filter-combo .combo-box-popup .list-view .scroll-bar:vertical .thumb {
+    -fx-background-color: #c0c0c0;
+    -fx-background-radius: 5px;
+}
+
+.filter-combo .combo-box-popup .list-view .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #a0a0a0;
+}
+
+.filter-combo .combo-box-popup .list-view .scroll-bar:vertical .thumb:pressed {
+    -fx-background-color: #808080;
+}
+
+.filter-combo .combo-box-popup .list-view .scroll-bar:vertical .increment-button,
+.filter-combo .combo-box-popup .list-view .scroll-bar:vertical .decrement-button {
     -fx-background-color: transparent;
     -fx-padding: 0;
-    -fx-min-width: 0;
-    -fx-min-height: 0;
-    -fx-max-width: Infinity;
-    -fx-max-height: Infinity;
-    -fx-alignment: center;
+    -fx-pref-height: 0;
 }
 
-.report-export-button {
-    -fx-background-color: #429846;
-    -fx-text-fill: white;
-    -fx-padding: 5 10;
-    -fx-background-radius: 5px;
-    -fx-border-radius: 5px;
+.filter-checkbox {
+    -fx-font-size: 12px;
     -fx-font-weight: bold;
-    -fx-font-size: 14px;
-    -fx-cursor: hand;
-    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
-    -fx-transition: background-color 0.3s ease, effect 0.3s ease;
+    -fx-text-fill: #ffffff;
 }
 
-.report-export-button-hover {
-    -fx-background-color: #51bc56; /* чуть темнее при наведении */
-    -fx-padding: 5 10;
+/* CheckBox - галочка и фон */
+.filter-checkbox .box {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #bdc3c7;
+    -fx-border-width: 2px;
+    -fx-border-radius: 3px;
+    -fx-background-radius: 3px;
 }
 
-/* |3. PHOTO-GALLERY.FXML| */
-/* 3.1 Галерея фото */
-.photo-gallery-root {
+.filter-checkbox:hover .box {
+    -fx-border-color: #3498db;
+}
+
+.filter-checkbox:selected .box {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #3498db;
+}
+
+/* Скрываем галочку по умолчанию */
+.filter-checkbox .mark {
     -fx-background-color: transparent;
-    -fx-max-height: Infinity;
 }
 
-/* 3.2 Статистика (обновленная) */
-.statistics-panel {
-    -fx-background-color: white;
-    -fx-background-radius: 6;
-    -fx-border-radius: 6;
-    -fx-border-color: #e0e0e0;
-    -fx-padding: 20px;
-    -fx-spacing: 8;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.05), 4, 0, 0, 1);
+/* Показываем галочку только при выделении */
+.filter-checkbox:selected .mark {
+    -fx-background-color: #3498db;
 }
 
-.statistics-grid {
-    -fx-alignment: center;
+.clear-search-button {
+    -fx-background-color: transparent;
+    -fx-background-radius: 50%;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+    -fx-min-width: 30px;
+    -fx-min-height: 30px;
+    -fx-pref-width: 30px;
+    -fx-pref-height: 30px;
 }
 
-.statistics-title {
-    -fx-font-size: 14px;
-    -fx-font-weight: bold;
-    -fx-text-fill: #2c3e50;
+.clear-search-button:hover {
+    -fx-scale-x: 1.1;
+    -fx-scale-y: 1.1;
 }
 
-.statistics-numbers {
-    -fx-spacing: 30;
-    -fx-alignment: center-right;
-    -fx-padding: 0 10 0 0;
+.clear-search-button:pressed {
+    -fx-scale-x: 0.9;
+    -fx-scale-y: 0.9;
 }
 
-.stat-item {
-    -fx-spacing: 3;
-    -fx-alignment: center;
-}
-
-.stat-big-number {
-    -fx-font-size: 24px;
-    -fx-font-weight: bold;
-}
-
-.stat-label {
-    -fx-font-size: 12px;
-    -fx-text-fill: #666;
-    -fx-font-weight: normal;
-}
-
-/* 3.2.1 Вертикальный разделитель */
-.vertical-divider {
-    -fx-pref-width: 1;
-    -fx-min-width: 1;
-    -fx-max-width: 1;
-    -fx-pref-height: 35;
-    -fx-background-color: #d0d0d0;
-    -fx-margin: 0 10;
-}
-
-/* 3.2.2 Информационная панель (обновленная) */
-.filtered-stats-title {
-    -fx-font-size: 14px;
-    -fx-font-weight: bold;
-    -fx-text-fill: #2c3e50;
-}
-
-.filtered-stats-container {
-    -fx-spacing: 20;
-    -fx-alignment: center-left;
-}
-
-.filtered-stat-item {
-    -fx-spacing: 3;
-    -fx-alignment: center;
-}
-
-.filtered-stat-label {
-    -fx-font-size: 12px;
-    -fx-text-fill: #666;
-    -fx-font-weight: normal;
-}
-
-/* 3.2.3 Цвета для ОБЩЕЙ статистики (через ID) */
-#locationsCountLabel {
-    -fx-text-fill: #3498db !important;
-}
-
-#devicesCountLabel {
-    -fx-text-fill: #27ae60 !important;
-}
-
-#photosCountLabel {
-    -fx-text-fill: #e67e22 !important;
-}
-
-/* 3.2.4 Цвета для ОТФИЛЬТРОВАННОЙ статистики (через ID) */
-#filteredLocationsLabel {
-    -fx-font-size: 24px;
-    -fx-font-weight: bold;
-    -fx-text-fill: #3498db !important;
-}
-
-#filteredDevicesLabel {
-    -fx-font-size: 24px;
-    -fx-font-weight: bold;
-    -fx-text-fill: #27ae60 !important;
-}
-
-#filteredPhotosLabel {
-    -fx-font-size: 24px;
-    -fx-font-weight: bold;
-    -fx-text-fill: #e67e22 !important;
-}
-
-#filteredWithPhotosLabel {
-    -fx-font-size: 24px;
-    -fx-font-weight: bold;
-    -fx-text-fill: #9b59b6 !important;
-}
-
-/* 3.3 Панель поиска и фильтров */
-.search-filter-panel {
-    -fx-padding: 0 0 10 0;
-    -fx-spacing: 0;
-    -fx-border-color: #e0e0e0;
-    -fx-border-width: 0 0 0 0;
-}
-
-.search-row {
+/* Контейнер элементов поиска */
+.search-field-container {
     -fx-spacing: 10;
     -fx-alignment: center-left;
 }
 
-.search-field {
-    -fx-pref-height: 34;
-    -fx-pref-width: 300;
-    -fx-background-radius: 5;
-    -fx-border-radius: 5;
-    -fx-border-color: #ddd;
-    -fx-border-width: 1;
-    -fx-padding: 4 10;
-    -fx-background-color: white;
-    -fx-font-size: 13px;
+/* ==================== DEVICES.FXML - FAB ==================== */
+.fab {
+    -fx-background-color: #f5d1c2;
+    -fx-text-fill: #d2693b;
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-min-width: 36px;
+    -fx-min-height: 36px;
+    -fx-max-width: 36px;
+    -fx-max-height: 36px;
+    -fx-background-radius: 10px;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.35), 8, 0, 0, 3);
+    -fx-padding: 0 0 3px 0;
+    -fx-alignment: center;
 }
 
-.search-field:focused {
+.fab:hover {
+    -fx-background-color: #f4a584;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.5), 14, 0, 0, 5);
+    -fx-scale-x: 1.05;
+    -fx-scale-y: 1.05;
+}
+
+.fab:pressed {
+    -fx-background-color: #fb9266;
+    -fx-scale-x: 0.97;
+    -fx-scale-y: 0.97;
+}
+
+/* ==================== DEVICES.FXML - СТАТИСТИКА ==================== */
+/* Фон карточки - surfaceVariant с прозрачностью 50% (#B6C0C9) */
+.statistics-pane {
+    -fx-background-color: rgba(182, 192, 201, 0.5);
+    -fx-padding: 12px 15px;
+    -fx-border-radius: 10px;
+    -fx-background-radius: 10px;
+}
+
+.statistics-data {
+    -fx-spacing: 10;
+    -fx-alignment: center;
+}
+
+/* Цвета цифр из DeviceStatusColors */
+.stat-total {
+    -fx-text-fill: #1D5A73;
+    -fx-font-size: 30px;
+    -fx-font-weight: bold;
+}
+
+.stat-working {
+    -fx-text-fill: #4CAF50;
+    -fx-font-size: 30px;
+    -fx-font-weight: bold;
+}
+
+.stat-storage {
+    -fx-text-fill: #F58352;
+    -fx-font-size: 30px;
+    -fx-font-weight: bold;
+}
+
+.stat-lost {
+    -fx-text-fill: #848C9B;
+    -fx-font-size: 30px;
+    -fx-font-weight: bold;
+}
+
+.stat-broken {
+    -fx-text-fill: #F44336;
+    -fx-font-size: 30px;
+    -fx-font-weight: bold;
+}
+
+.stat-with-photos {
+    -fx-text-fill: #A8C8D0;
+    -fx-font-size: 30px;
+    -fx-font-weight: bold;
+}
+
+/* Текст подписей - onSurfaceVariant (#6C7884) */
+.stat-label {
+    -fx-font-size: 13px;
+    -fx-text-fill: #6C7884;
+}
+
+/* ==================== DEVICES.FXML - ТАБЛИЦА ==================== */
+.table-view {
+    -fx-font-size: 13px;
+    -fx-border-color: #e0e0e0;
+    -fx-border-radius: 10px;
+    -fx-background-radius: 10px;
+    -fx-background-color: white;
+}
+
+/* Шапка таблицы - surfaceVariant с прозрачностью 20% (#B6C0C9) */
+.table-view .column-header {
+    -fx-background-color: rgba(182, 192, 201, 0.2);
+    -fx-text-fill: #000000;
+    -fx-font-weight: bold;
+    -fx-min-height: 60px;
+    -fx-pref-height: 60px;
+}
+
+.table-view .column-header-background {
+    -fx-background-color: rgba(182, 192, 201, 0.2);
+}
+
+.table-view .column-header .label {
+    -fx-text-fill: #000000;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-alignment: center;
+    -fx-wrap-text: true;
+}
+
+/* Стрелки сортировки */
+.table-view .column-header .arrow {
+    -fx-background-color: #f58352;
+    -fx-shape: "M 4 0 L 8 4 L 5 4 L 5 8 L 3 8 L 3 4 L 0 4 Z";
+    -fx-scale-x: 1.0;
+    -fx-scale-y: 1.0;
+    -fx-padding: 4px;
+}
+
+.table-view .column-header .arrow:hover {
+    -fx-background-color: #fb5302;
+}
+
+/* Чётные строки - surface (#FFFFFF) */
+.table-view .table-row-cell:even {
+    -fx-background-color: #FFFFFF;
+}
+
+/* Нечётные строки - surfaceVariant с прозрачностью 10% (#B6C0C9) */
+.table-view .table-row-cell:odd {
+    -fx-background-color: rgba(182, 192, 201, 0.1);
+}
+
+/* Выделение - primary с прозрачностью 30% (#F58352) */
+.table-view .table-row-cell:selected {
+    -fx-background-color: rgba(245, 131, 82, 0.3);
+}
+
+.table-view .table-row-cell:filled:hover {
+    -fx-background-color: rgba(245, 131, 82, 0.15);
+}
+
+.table-view .table-cell {
+    -fx-border-color: #f0f0f0;
+    -fx-padding: 8px;
+    -fx-alignment: center-left;
+}
+
+/* Угол между скроллбарами */
+.table-view .corner {
+    -fx-background-color: #FFFFFF;
+}
+
+/* Область над вертикальным скроллбаром в шапке */
+.table-view .filler {
+    -fx-background-color: rgba(182, 192, 201, 0.2);
+}
+
+/* Скроллбары */
+.table-view .scroll-bar:vertical, .table-view .scroll-bar:horizontal {
+    -fx-background-color: #f0f0f0;
+}
+
+.table-view .scroll-bar .thumb {
+    -fx-background-color: #c0c0c0;
+    -fx-background-radius: 4px;
+}
+
+.table-view .scroll-bar .thumb:hover {
+    -fx-background-color: #a0a0a0;
+}
+
+/* Кнопки в таблице */
+.table-button-add {
+    -fx-background-color: #4CAF50;
+    -fx-text-fill: white;
+    -fx-font-size: 8px;
+    -fx-background-radius: 4px;
+    -fx-padding: 3px 6px;
+    -fx-cursor: hand;
+}
+
+.table-button-add:hover {
+    -fx-background-color: #66BB6A;
+}
+
+.table-button-view {
+    -fx-background-color: #2196F3;
+    -fx-text-fill: white;
+    -fx-font-size: 8px;
+    -fx-background-radius: 4px;
+    -fx-padding: 3px 6px;
+    -fx-cursor: hand;
+}
+
+.table-button-view:hover {
+    -fx-background-color: #64B5F6;
+}
+
+/* ==================== ADD-DEVICE-FORM.FXML ==================== */
+.add-device-root {
+    -fx-background-color: #f0f0f0;
+    -fx-padding: 0;
+}
+
+.form-header {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2c3e50;
+    -fx-padding: 0 0 10px 0;
+}
+
+.form-grid {
+    -fx-hgap: 15px;
+    -fx-vgap: 12px;
+    -fx-alignment: center;
+}
+
+.form-label {
+    -fx-alignment: center-right;
+    -fx-pref-width: 180px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2c3e50;
+    -fx-padding: 5px 0;
+}
+
+.form-input, .form-textarea {
+    -fx-pref-width: 280px;
+    -fx-background-color: white;
+    -fx-border-color: #bdc3c7;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+    -fx-padding: 8px;
+}
+
+.form-input:focused, .form-textarea:focused {
     -fx-border-color: #3498db;
 }
 
-.filter-combo {
-    -fx-pref-height: 34;
-    -fx-pref-width: 180;
-    -fx-background-radius: 5;
-    -fx-border-radius: 5;
+.photo-counter {
+    -fx-font-size: 13px;
+    -fx-text-fill: #000000;
+    -fx-font-weight: 500;
+    -fx-background-color: #f8f9fa;
+    -fx-background-radius: 12px;
+    -fx-padding: 6px 12px;
+    -fx-border-color: #e8eaed;
+    -fx-border-radius: 12px;
+    -fx-border-width: 1px;
+}
+
+.photo-list {
+    -fx-pref-width: 280px;
+    -fx-pref-height: 80px;
     -fx-background-color: white;
-    -fx-border-color: #ddd;
-    -fx-border-width: 1;
-    -fx-font-size: 13px;
+    -fx-border-color: #bdc3c7;
+    -fx-border-radius: 4px;
 }
 
-.filter-combo .list-cell {
-    -fx-padding: 6 10;
-    -fx-font-size: 13px;
+/* Кнопки формы */
+.photo-icon-btn {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+    -fx-effect: none;
+    -fx-background-radius: 0;
 }
 
-.filter-checkbox {
-    -fx-font-size: 13px;
-    -fx-text-fill: #555;
+.photo-icon-btn:hover {
+    -fx-background-color: transparent;
+    -fx-scale-x: 1.15;
+    -fx-scale-y: 1.15;
 }
 
-.filter-checkbox .box {
-    -fx-background-color: white;
-    -fx-border-color: #ddd;
-    -fx-border-radius: 3;
-    -fx-padding: 2;
+.photo-icon-btn-with-margin {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+    -fx-effect: none;
+    -fx-background-radius: 0;
+    -fx-margin: 0 0 0 15px;
 }
 
-.filter-checkbox:selected .box {
-    -fx-background-color: #3498db;
-    -fx-border-color: #2980b9;
+.photo-icon-btn-with-margin:hover {
+    -fx-background-color: transparent;
+    -fx-scale-x: 1.15;
+    -fx-scale-y: 1.15;
 }
 
-/* 3.4 Карточка места установки */
+.button-remove {
+    -fx-background-color: #bf1e0d;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-padding: 5px 10px;
+    -fx-background-radius: 5px;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
+}
+
+.button-remove:hover {
+    -fx-background-color: #dd230f;
+}
+
+.button-icon {
+    -fx-background-color: transparent;
+    -fx-text-fill: transparent;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+    -fx-effect: none;
+    -fx-background-radius: 0;
+}
+
+.button-icon:hover {
+    -fx-background-color: transparent;
+    -fx-scale-x: 1.15;
+    -fx-scale-y: 1.15;
+}
+
+.button-cancel {
+    -fx-background-color: #932014;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-padding: 5px 10px;
+    -fx-background-radius: 5px;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
+}
+
+.button-cancel:hover {
+    -fx-background-color: #f43420;
+}
+
+.button-add {
+    -fx-background-color: #1eb15e;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-padding: 5px 10px;
+    -fx-background-radius: 5px;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
+}
+
+.button-add:hover {
+    -fx-background-color: #1bd568;
+}
+
+.button-delete {
+    -fx-background-color: transparent;
+    -fx-text-fill: transparent;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+    -fx-effect: none;
+    -fx-background-radius: 0;
+}
+
+.button-delete:hover {
+    -fx-background-color: transparent;
+    -fx-scale-x: 1.15;
+    -fx-scale-y: 1.15;
+}
+
+/* ==================== PHOTO-GALLERY.FXML ==================== */
+.photo-gallery-root {
+    -fx-background-color: transparent;
+}
+
+.photo-gallery-listview {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.photo-gallery-listview .list-cell {
+    -fx-background-color: transparent;
+    -fx-padding: 6px 0;
+}
+
+/* Скроллбар для галереи фотографий */
+.photo-gallery-listview .scroll-bar:vertical {
+    -fx-background-color: #f0f0f0;
+    -fx-pref-width: 12px;
+    -fx-background-radius: 6px;
+}
+
+.photo-gallery-listview .scroll-bar:vertical .track {
+    -fx-background-color: #f0f0f0;
+    -fx-background-radius: 6px;
+    -fx-border-color: #e0e0e0;
+    -fx-border-width: 1px;
+    -fx-border-radius: 6px;
+}
+
+.photo-gallery-listview .scroll-bar:vertical .thumb {
+    -fx-background-color: #c0c0c0;
+    -fx-background-radius: 5px;
+    -fx-border-color: #b0b0b0;
+    -fx-border-width: 1px;
+    -fx-border-radius: 5px;
+}
+
+.photo-gallery-listview .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #a0a0a0;
+    -fx-border-color: #909090;
+}
+
+.photo-gallery-listview .scroll-bar:vertical .thumb:pressed {
+    -fx-background-color: #808080;
+    -fx-border-color: #707070;
+}
+
+/* Кнопки скроллбара (стрелки вверх/вниз) */
+.photo-gallery-listview .scroll-bar:vertical .increment-button,
+.photo-gallery-listview .scroll-bar:vertical .decrement-button {
+    -fx-background-color: #e0e0e0;
+    -fx-background-radius: 6px;
+    -fx-border-color: #d0d0d0;
+    -fx-border-width: 1px;
+    -fx-border-radius: 6px;
+    -fx-pref-height: 16px;
+}
+
+.photo-gallery-listview .scroll-bar:vertical .increment-button:hover,
+.photo-gallery-listview .scroll-bar:vertical .decrement-button:hover {
+    -fx-background-color: #d0d0d0;
+    -fx-border-color: #c0c0c0;
+}
+
+.photo-gallery-listview .scroll-bar:vertical .increment-button:pressed,
+.photo-gallery-listview .scroll-bar:vertical .decrement-button:pressed {
+    -fx-background-color: #c0c0c0;
+    -fx-border-color: #b0b0b0;
+}
+
+/* Стрелки внутри кнопок */
+.photo-gallery-listview .scroll-bar:vertical .increment-arrow,
+.photo-gallery-listview .scroll-bar:vertical .decrement-arrow {
+    -fx-background-color: #666666;
+    -fx-shape: "M 0 0 L 4 4 L 8 0 Z";
+    -fx-scale-x: 0.8;
+    -fx-scale-y: 0.8;
+}
+
+.photo-gallery-listview .scroll-bar:vertical .decrement-arrow {
+    -fx-shape: "M 0 4 L 4 0 L 8 4 Z";
+}
+
+/* Карточка */
 .location-card {
     -fx-background-color: white;
     -fx-background-radius: 6;
@@ -804,10 +1026,9 @@
     -fx-spacing: 10;
     -fx-min-width: 320;
     -fx-pref-width: 320;
-    -fx-min-height: 160;
 }
 
-.location-card-hover {
+.location-card:hover {
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.1), 6, 0, 0, 2);
     -fx-border-color: #3498db;
     -fx-background-color: #f8fafc;
@@ -818,10 +1039,8 @@
     -fx-font-weight: bold;
     -fx-text-fill: #2c3e50;
     -fx-wrap-text: true;
-    -fx-max-width: 280;
 }
 
-/* 3.5 Статистика в карточке */
 .card-stats-row {
     -fx-spacing: 20;
     -fx-alignment: center;
@@ -843,7 +1062,6 @@
     -fx-text-fill: #666;
 }
 
-/* 3.6 Кнопки в карточке */
 .card-buttons-row {
     -fx-spacing: 8;
     -fx-alignment: center;
@@ -864,74 +1082,6 @@
 
 .view-all-button:hover {
     -fx-background-color: #3097da;
-    -fx-effect: dropshadow(gaussian, rgba(52, 152, 219, 0.3), 8, 0, 0, 0);
-}
-
-.view-all-button:pressed {
-    -fx-background-color: #2471a3;
-}
-
-/* 3.7 Кнопка раскрытия списка приборов с SVG иконками */
-.toggle-devices-button {
-    -fx-background-color: transparent;
-    -fx-text-fill: #3498db;
-    -fx-font-size: 12px;
-    -fx-font-weight: 500;
-    -fx-border-width: 0;
-    -fx-padding: 4 0 4 0;
-    -fx-cursor: hand;
-    -fx-alignment: center-left;
-    -fx-graphic-text-gap: 8;
-    -fx-content-display: left;
-}
-
-/* иконка стрелки вправо (свернутое состояние) */
-.toggle-devices-button {
-    -fx-graphic: url('../images/expand.png');
-}
-
-/* иконка стрелки вниз (развернутое состояние) */
-.toggle-devices-button.expanded {
-    -fx-graphic: url('../images/collapse.png');
-}
-
-.toggle-devices-button:hover {
-    -fx-text-fill: #2980b9;
-}
-
-/* 3.8 Список приборов */
-.devices-list {
-    -fx-padding: 10;
-    -fx-background-color: #f8f9fa;
-    -fx-background-radius: 5;
-    -fx-border-radius: 5;
-    -fx-border-color: #e9ecef;
-    -fx-border-width: 1;
-    -fx-spacing: 5;
-}
-
-.device-row {
-    -fx-spacing: 8;
-    -fx-alignment: center-left;
-    -fx-padding: 6 4;
-}
-
-.device-row:hover {
-    -fx-background-color: rgba(52, 152, 219, 0.05);
-    -fx-background-radius: 3;
-}
-
-.device-name {
-    -fx-font-size: 13px;
-    -fx-font-weight: 500;
-    -fx-text-fill: #333;
-    -fx-max-width: 150;
-    -fx-wrap-text: true;
-}
-
-.device-photo-count {
-    -fx-font-size: 12px;
-    -fx-font-weight: bold;
 }
 
 .device-view-button {
@@ -943,71 +1093,17 @@
     -fx-padding: 6 12;
     -fx-cursor: hand;
     -fx-pref-width: 110;
-    -fx-min-width: 110;
 }
 
 .device-view-button:hover {
     -fx-background-color: #329bdf;
-    -fx-effect: dropshadow(gaussian, rgba(127, 140, 141, 0.3), 6, 0, 0, 0);
 }
 
 .device-view-button:disabled {
     -fx-background-color: #bdc3c7;
     -fx-text-fill: #95a5a6;
-    -fx-opacity: 0.7;
 }
 
-/* 3.9 Стили для ListView */
-.photo-gallery-listview {
-    -fx-background-color: transparent;
-    -fx-border-color: transparent;
-    -fx-padding: 0 0;
-    -fx-max-height: Infinity;
-}
-
-.photo-gallery-listview .list-cell {
-    -fx-background-color: transparent;
-    -fx-padding: 6px 0;
-    -fx-border-width: 0;
-    -fx-max-height: Infinity;
-}
-
-.photo-gallery-listview .list-cell:empty {
-    -fx-background-color: transparent;
-    -fx-border-color: transparent;
-    -fx-padding: 0;
-    -fx-pref-height: 0;
-}
-
-/* 3.10 Общие стили */
-.button {
-    -fx-cursor: hand;
-    -fx-font-family: "Segoe UI", "Arial", sans-serif;
-    -fx-transition: -fx-background-color 0.2s;
-}
-
-/* 3.11 Стили для скроллбара */
-.photo-gallery-listview .scroll-bar:vertical {
-    -fx-background-color: transparent;
-    -fx-background-insets: 0;
-    -fx-padding: 1;
-}
-
-.photo-gallery-listview .scroll-bar:vertical .track {
-    -fx-background-color: #f0f0f0;
-    -fx-background-radius: 3px;
-}
-
-.photo-gallery-listview .scroll-bar:vertical .thumb {
-    -fx-background-color: #c0c0c0;
-    -fx-background-radius: 3px;
-}
-
-.photo-gallery-listview .scroll-bar:vertical .thumb:hover {
-    -fx-background-color: #a0a0a0;
-}
-
-/* 3.12 Кнопки управления фото в строке прибора */
 .device-add-photo-button {
     -fx-background-color: #27ae60;
     -fx-text-fill: white;
@@ -1017,12 +1113,10 @@
     -fx-padding: 6 12;
     -fx-cursor: hand;
     -fx-pref-width: 110;
-    -fx-min-width: 110;
 }
 
 .device-add-photo-button:hover {
     -fx-background-color: #2ecc71;
-    -fx-effect: dropshadow(gaussian, rgba(46, 204, 113, 0.3), 6, 0, 0, 0);
 }
 
 .device-delete-photo-button {
@@ -1034,294 +1128,109 @@
     -fx-padding: 6 12;
     -fx-cursor: hand;
     -fx-pref-width: 110;
-    -fx-min-width: 110;
 }
 
 .device-delete-photo-button:hover {
     -fx-background-color: #c0392b;
-    -fx-effect: dropshadow(gaussian, rgba(231, 76, 60, 0.3), 6, 0, 0, 0);
 }
 
-.device-delete-photo-button:disabled {
-    -fx-background-color: #bdc3c7;
-    -fx-text-fill: #95a5a6;
-    -fx-opacity: 0.7;
-}
-
-/* 4. ADD-DEVICE-FORM.FXML */
-/* Центрирование всей формы */
-.add-device-root {
-    -fx-background-color: #f0f0f0;
-    -fx-padding: 0px;
-    -fx-spacing: 0px;
-}
-
-.scroll-pane {
-    -fx-background: transparent;
+.toggle-devices-button {
     -fx-background-color: transparent;
-    -fx-border-color: transparent;
-    -fx-padding: 0px;
+    -fx-text-fill: #3498db;
+    -fx-font-size: 12px;
+    -fx-font-weight: 500;
+    -fx-padding: 4 0;
+    -fx-cursor: hand;
 }
 
-.scroll-pane .viewport {
-    -fx-background-color: transparent;
+.devices-list {
+    -fx-padding: 10;
+    -fx-background-color: #f8f9fa;
+    -fx-background-radius: 5;
+    -fx-border-color: #e9ecef;
 }
 
-.scroll-pane .scroll-bar:vertical {
-    -fx-background-color: transparent;
+.device-row {
+    -fx-spacing: 8;
+    -fx-alignment: center-left;
+    -fx-padding: 6 4;
 }
 
-.scroll-pane .scroll-bar:vertical .thumb {
-    -fx-background-color: #c0c0c0;
-    -fx-background-radius: 4px;
+.device-row:hover {
+    -fx-background-color: rgba(52, 152, 219, 0.05);
 }
 
-.scroll-pane .scroll-bar:vertical .thumb:hover {
-    -fx-background-color: #a0a0a0;
+.device-name {
+    -fx-font-size: 13px;
+    -fx-font-weight: 500;
+    -fx-max-width: 150;
+    -fx-wrap-text: true;
 }
 
-/* Центрирование контейнера формы */
-.add-device-root > ScrollPane > VBox {
-    -fx-alignment: top-center;
-    -fx-background-color: white;
-    -fx-padding: 20px;
+.device-photo-count {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
 }
 
-.form-header {
+/* ==================== REPORTS.FXML ==================== */
+.report-buttons {
+    -fx-spacing: 20px;
+}
+
+.report-radio {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #333;
+}
+
+.report-title {
     -fx-font-size: 18px;
     -fx-font-weight: bold;
-    -fx-text-fill: #2c3e50;
-    -fx-padding: 0px 0px 10px 0px;
 }
 
-.form-grid {
-    -fx-hgap: 15px;
-    -fx-vgap: 12px;
+.chart-pane {
+    -fx-background-color: transparent;
     -fx-alignment: center;
 }
 
-/* ИЗМЕНЕНИЕ: метки должны выравниваться по центру вертикально */
-.form-label {
-    -fx-alignment: center-right;
-    -fx-text-alignment: right;
-    -fx-pref-width: 180px;
+.report-export-button {
+    -fx-background-color: #429846;
+    -fx-text-fill: white;
+    -fx-padding: 5 10;
+    -fx-background-radius: 5px;
     -fx-font-weight: bold;
-    -fx-text-fill: #2c3e50;
-    /* Добавить вертикальное выравнивание */
-    -fx-padding: 5px 0px; /* Увеличить вертикальный отступ */
+    -fx-cursor: hand;
 }
 
-/* ИЗМЕНЕНИЕ: для строк с кнопками и списком фото */
-.grid-pane .hbox {
-    -fx-alignment: center-left;
+.report-export-button:hover {
+    -fx-background-color: #51bc56;
 }
 
-.grid-pane .vbox {
-    -fx-alignment: top-left;
-}
-
-/* Дополнительно для фото строк */
-GridPane > HBox {
-    -fx-alignment: center-left;
-}
-
-GridPane > VBox {
-    -fx-alignment: top-left;
-}
-
-.photo-counter {
-    -fx-font-size: 13px;
-    -fx-text-fill: #000000;
-    -fx-font-weight: 500;
-    -fx-background-color: #f8f9fa;
-    -fx-background-radius: 12px;
-    -fx-padding: 6px 12px;
-    -fx-border-color: #e8eaed;
-    -fx-border-radius: 12px;
-    -fx-border-width: 1px;
-    -fx-alignment: center;
-}
-
-.form-input {
-    -fx-pref-width: 280px;
-    -fx-background-color: white;
-    -fx-border-color: #bdc3c7;
-    -fx-border-radius: 4px;
-    -fx-background-radius: 4px;
+/* ==================== SCHEME-EDITOR.FXML ==================== */
+/* Панель инструментов */
+.scheme-toolbar {
+    -fx-background-color: rgb(223, 203, 176); /* Белый с прозрачностью 95% */
+    -fx-border-color: #dfcbb0;
+    -fx-border-width: 0 0 1 0;
+    -fx-border-radius: 10px;
+    -fx-background-radius: 10px;
     -fx-padding: 8px;
 }
 
-.form-input:focused {
-    -fx-border-color: #3498db;
-}
-
-.form-textarea {
-    -fx-pref-width: 280px;
-    -fx-pref-height: 60px;
-    -fx-background-color: white;
-    -fx-border-color: #bdc3c7;
-    -fx-border-radius: 4px;
-    -fx-padding: 8px;
-}
-
-/* Центрирование кнопок под формой */
-.add-device-root .form-buttons {
-    -fx-alignment: CENTER !important; /* ⬅️ ЦЕНТРИРОВАТЬ КНОПКИ */
-    -fx-spacing: 20px;
-    -fx-padding: 20px 0px 0px 0px;
-}
-
-.photo-picker {
-    -fx-spacing: 5px;
-}
-
-.photo-choose-btn {
-    -fx-background-color: #105383;
-    -fx-text-fill: white;
-    -fx-min-width: 130px;
-    -fx-pref-width: 130px;
-    -fx-padding: 5px 10px;
-    -fx-background-radius: 5px;
-    -fx-border-radius: 5px;
-    -fx-font-weight: bold;
-    -fx-cursor: hand;
-    -fx-font-size: 14px;
-    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
-    -fx-transition: background-color 0.3s ease, effect 0.3s ease;
-}
-
-.photo-choose-btn-hover {
-    -fx-min-width: 130px;
-    -fx-pref-width: 130px;
-    -fx-background-color: #1080c8;
-    -fx-padding: 5px 10px;
-}
-
-.photo-list {
-    -fx-pref-width: 280px;
-    -fx-pref-height: 80px;
-    -fx-background-color: white;
-    -fx-border-color: #bdc3c7;
-    -fx-border-radius: 4px;
-    -fx-background-radius: 4px;
-}
-
-.form-buttons {
-    -fx-spacing: 10px;
-    -fx-alignment: center-right;
-}
-
-.button-cancel {
-    -fx-background-color: #932014;
-    -fx-text-fill: white;
-    -fx-pref-width: 120px;
-    -fx-pref-height: 35px;
-    -fx-padding: 5px 10px;
-    -fx-background-radius: 5px;
-    -fx-border-radius: 5px;
-    -fx-font-weight: bold;
-    -fx-cursor: hand;
-    -fx-font-size: 14px;
-    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
-    -fx-transition: background-color 0.3s ease, effect 0.3s ease;
-}
-
-.button-cancel-hover {
-    -fx-pref-width: 120px;
-    -fx-pref-height: 35px;
-    -fx-background-color: #f43420;
-    -fx-padding: 5px 10px;
-}
-
-.button-remove {
-    -fx-background-color: #bf1e0d;
-    -fx-text-fill: white;
-    -fx-min-width: 130px;
-    -fx-pref-width: 130px;
-    -fx-padding: 5px 10px;
-    -fx-background-radius: 5px;
-    -fx-border-radius: 5px;
-    -fx-font-weight: bold;
-    -fx-cursor: hand;
-    -fx-font-size: 14px;
-    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
-    -fx-transition: background-color 0.3s ease, effect 0.3s ease;
-}
-
-.button-remove-hover {
-    -fx-min-width: 130px;
-    -fx-pref-width: 130px;
-    -fx-background-color: #dd230f;
-    -fx-padding: 5px 10px;
-}
-
-.button-add {
-    -fx-background-color: #1eb15e;
-    -fx-text-fill: white;
-    -fx-pref-width: 120px;
-    -fx-pref-height: 35px;
-    -fx-padding: 5px 10px;
-    -fx-background-radius: 5px;
-    -fx-border-radius: 5px;
-    -fx-font-weight: bold;
-    -fx-cursor: hand;
-    -fx-font-size: 14px;
-    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
-    -fx-transition: background-color 0.3s ease, effect 0.3s ease;
-}
-
-.button-add-hover {
-    -fx-pref-width: 120px;
-    -fx-pref-height: 35px;
-    -fx-background-color: #1bd568;
-    -fx-padding: 5px 10px;
-}
-
-/* Контейнер кнопок */
-.add-device-root HBox {
-    -fx-alignment: center;
-    -fx-spacing: 20px;
-    -fx-padding: 20px 0px 0px 0px;
-}
-
-/* Scheme-editor.fxml */
-.new-scheme-button {
-    -fx-background-color: #93bc04;
-}
-
-.new-scheme-button-hover {
-    -fx-background-color: #b8ec04;
-    -fx-padding: 5 10;
-    -fx-min-width: 40px;
-    -fx-pref-width: 40px;
-}
-
-.save-scheme-button {
-    -fx-background-color: #04a68e;
-}
-
-.save-scheme-button-hover {
-    -fx-background-color: #05d3b4;
-    -fx-padding: 5 10;
-    -fx-min-width: 40px;
-    -fx-pref-width: 40px;
-}
-
-.delete-scheme-button {
-    -fx-background-color: #d63525;
-}
-
-.delete-scheme-button-hover {
-    -fx-background-color: #fa3b28;
-    -fx-padding: 5 10;
-    -fx-min-width: 40px;
-    -fx-pref-width: 40px;
+/* Сепараторы в панели инструментов */
+.scheme-toolbar .separator:vertical .line {
+    -fx-border-color: rgb(85, 76, 66); /* Цвет из светлой темы */
+    -fx-border-width: 1px 0 0 0;
+    -fx-background-color: rgb(85, 76, 66);
+    -fx-pref-width: 1px;
+    -fx-min-width: 1px;
+    -fx-max-width: 1px;
 }
 
 .tool-button {
     -fx-background-color: transparent;
     -fx-border-color: transparent;
-    -fx-text-fill: #2c3e50;
+    -fx-border-width: 1px;
     -fx-border-radius: 4px;
     -fx-background-radius: 4px;
     -fx-padding: 8px 12px;
@@ -1329,441 +1238,134 @@ GridPane > VBox {
 }
 
 .tool-button:hover {
-    -fx-background-color: #ecf0f1;
-    -fx-border-color: #bdc3c7;
-    -fx-border-width: 1px;
+    -fx-border-color: #e67e22;
+    -fx-scale-x: 1.0;
+    -fx-scale-y: 1.0;
+}
+
+.tool-button:pressed {
+    -fx-background-color: #F58352; /* Коралловый */
+    -fx-border-color: #e67e22;
+    -fx-scale-x: 1.0;
+    -fx-scale-y: 1.0;
 }
 
 .tool-button-active {
-    -fx-background-color: #E3F2FD;
-    -fx-border-color: #2196F3;
-    -fx-border-width: 2px;
-    -fx-text-fill: #1976D2;
-    -fx-border-radius: 4px;
-    -fx-background-radius: 4px;
+    -fx-background-color: #F58352; /* Коралловый */
+    -fx-border-color: #e67e22;
+    -fx-text-fill: #ffffff;
     -fx-font-weight: bold;
-    -fx-effect: dropshadow(three-pass-box, rgba(33, 150, 243, 0.3), 6, 0, 0, 1);
+    -fx-effect: dropshadow(three-pass-box, rgba(245, 131, 82, 0.3), 6, 0, 0, 1);
+    -fx-scale-x: 1.0;
+    -fx-scale-y: 1.0;
 }
 
-.scheme-label, .select-label {
+.scheme-label {
     -fx-font-weight: bold;
+    -fx-text-fill: #2c3e50;
+}
+
+.scheme-updated-label {
+    -fx-font-size: 10px;
+    -fx-text-fill: #554C42;
+    -fx-padding: 0 3;
+}
+
+.scheme-status-label {
+    -fx-text-fill: #666;
+    -fx-font-size: 12px;
+}
+
+.scheme-zoom-label {
+    -fx-text-fill: #666;
+    -fx-font-size: 12px;
+    -fx-padding: 0 5;
+}
+
+/* ComboBox в тулбаре редактора схем */
+.scheme-toolbar .filter-combo {
+    -fx-background-color: rgb(223, 203, 176);
+    -fx-border-color: #554C42;
+    -fx-border-width: 2px;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+}
+
+.scheme-toolbar .filter-combo .list-cell {
+    -fx-background-color: rgb(223, 203, 176);
+    -fx-text-fill: #554C42;
+}
+
+.scheme-toolbar .filter-combo .arrow-button {
+    -fx-background-color: rgb(223, 203, 176);
+    -fx-border-color: #554C42;
+    -fx-border-width: 0 0 0 2px;
+}
+
+.scheme-toolbar .filter-combo .arrow {
+    -fx-background-color: #554C42;
+}
+
+.scheme-toolbar .filter-combo .button-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: #554C42;
+}
+
+/* Выпадающий список ComboBox в тулбаре */
+.scheme-toolbar .filter-combo .combo-box-popup .list-view {
+    -fx-background-color: rgb(223, 203, 176);
+    -fx-border-color: #554C42;
+    -fx-border-width: 2px;
+    -fx-border-radius: 4px;
+    -fx-background-radius: 4px;
+}
+
+.scheme-toolbar .filter-combo .combo-box-popup .list-view .list-cell {
+    -fx-background-color: rgb(223, 203, 176);
+    -fx-text-fill: #554C42;
+}
+
+.scheme-toolbar .filter-combo .combo-box-popup .list-view .list-cell:filled:hover {
+    -fx-background-color: rgba(223, 203, 176, 0.7);
+}
+
+.scheme-toolbar .filter-combo .combo-box-popup .list-view .list-cell:filled:selected {
+    -fx-background-color: #F58352;
+    -fx-text-fill: #ffffff;
+}
+
+/* Скроллбар в выпадающем списке ComboBox тулбара */
+.scheme-toolbar .filter-combo .combo-box-popup .list-view .scroll-bar:vertical {
+    -fx-background-color: rgb(223, 203, 176);
+}
+
+.scheme-toolbar .filter-combo .combo-box-popup .list-view .scroll-bar:vertical .track {
+    -fx-background-color: rgb(223, 203, 176);
+}
+
+.scheme-toolbar .filter-combo .combo-box-popup .list-view .scroll-bar:vertical .thumb {
+    -fx-background-color: rgba(133, 119, 103, 0.7);
+    -fx-background-radius: 5px;
+}
+
+.scheme-toolbar .filter-combo .combo-box-popup .list-view .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: rgba(133, 119, 103, 0.9);
+}
+
+.scheme-toolbar .filter-combo .combo-box-popup .list-view .scroll-bar:vertical .thumb:pressed {
+    -fx-background-color: rgb(85, 76, 66);
 }
 
 .scheme-scroll .scroll-bar .thumb {
-    -fx-background-color: #c0c0c0; /* Серый цвет как в TableView */
-    -fx-background-radius: 4px; /* Закругление углов как в TableView */
+    -fx-background-color: #c0c0c0;
+    -fx-background-radius: 4px;
 }
 
 .scheme-scroll .scroll-bar .thumb:hover {
-    -fx-background-color: #a0a0a0; /* Темнее при наведении как в TableView */
-}
-
-/* Стили для обычной TableView в DevicesTableController */
-.table-view {
-    -fx-font-size: 13px;
-    -fx-font-family: 'Segoe UI';
-    -fx-border-color: #e0e0e0;
-    -fx-border-radius: 6px;
-    -fx-background-radius: 6px;
-    -fx-padding: 2px;
-    -fx-background-color: white;
-}
-
-.table-view .column-header {
-    -fx-background-color: #1d81e3;
-    -fx-text-fill: #ffffff;
-    -fx-font-weight: bold;
-    -fx-border-color: #1d81e3;
-    -fx-alignment: CENTER;
-    -fx-min-height: 60px;
-    -fx-pref-height: 60px;
-    -fx-max-height: 60px;
-    -fx-padding: 10px 8px;
-}
-
-.table-view .column-header .label {
-    -fx-text-fill: white;
-    -fx-font-size: 14px;
-    -fx-font-weight: bold;
-    -fx-pref-height: 60px;
-    -fx-min-height: 60px;
-    -fx-max-height: 60px;
-    -fx-alignment: CENTER;
-}
-
-.table-view .table-row-cell:even {
-    -fx-background-color: #f8f9fa;
-    -fx-border-color: #e9ecef;
-}
-
-.table-view .table-row-cell:odd {
-    -fx-background-color: #ffffff;
-    -fx-border-color: #e9ecef;
-}
-
-/* ВЫДЕЛЕНИЕ СТРОК - ОДИНАКОВЫЙ ЦВЕТ */
-.table-view .table-row-cell:selected {
-    -fx-background-color: #bbdefb;
-    -fx-text-fill: #598cd8;
-}
-
-.table-view .table-row-cell:filled:hover {
-    -fx-background-color: #e3f2fd;
-    -fx-cursor: hand;
-    -fx-border-color: #bbdefb;
-    -fx-border-width: 1px;
-}
-
-.table-view .table-cell {
-    -fx-border-color: #f0f0f0;
-    -fx-padding: 8px;
-    -fx-alignment: CENTER_LEFT;
-}
-
-/* Специфические стили для скроллбара */
-.table-view .scroll-bar:vertical {
-    -fx-background-color: #f0f0f0;
-}
-
-.table-view .scroll-bar:vertical .thumb {
-    -fx-background-color: #c0c0c0;
-    -fx-background-radius: 4px;
-}
-
-.table-view .scroll-bar:vertical .thumb:hover {
     -fx-background-color: #a0a0a0;
 }
 
-.table-view .scroll-bar:horizontal {
-    -fx-background-color: #f0f0f0; /* как у вертикального */
-}
-
-.table-view .scroll-bar:horizontal .thumb {
-    -fx-background-color: #c0c0c0;
-    -fx-background-radius: 4px;
-}
-
-.table-view .scroll-bar:horizontal .thumb:hover {
-    -fx-background-color: #a0a0a0;
-}
-
-/* Стили для выделенной строки */
-.table-view .table-row-cell:filled:selected {
-    -fx-background-color: #bbdefb; /* ТЕПЕРЬ ОДИНАКОВЫЙ ЦВЕТ */
-}
-
-/* Стили для обычных строк (приборы) */
-.tree-table-view .tree-table-row-cell:even {
-    -fx-background-color: #f8f9fa;
-    -fx-border-color: #e9ecef;
-}
-
-.tree-table-view .tree-table-row-cell:odd {
-    -fx-background-color: #ffffff;
-    -fx-border-color: #e9ecef;
-}
-
-/* Стили для групповых строк (заголовки) */
-.tree-table-view .tree-table-row-cell.group-row {
-    -fx-background-color: #e3f2fd;
-    -fx-font-weight: bold;
-    -fx-font-size: 14px;
-    -fx-text-fill: #1565C0;
-    -fx-border-color: #bbdefb;
-}
-
-/* ВЫДЕЛЕНИЕ СТРОК - ОДИНАКОВЫЙ ЦВЕТ */
-.tree-table-view .tree-table-row-cell:selected {
-    -fx-background-color: #bbdefb; /* ТЕПЕРЬ ОДИНАКОВЫЙ ЦВЕТ */
-}
-
-.tree-table-view .tree-table-row-cell:selected .tree-table-cell {
-    -fx-text-fill: black !important;
-}
-
-.tree-table-view .tree-table-row-cell:selected .text {
-    -fx-fill: black !important;
-}
-
-/* Выделение групповых строк */
-.tree-table-view .tree-table-row-cell.group-row:selected {
-    -fx-background-color: #a0c8ff; /* Более светлый синий для групп */
-}
-
-.tree-table-view .tree-table-row-cell.group-row:selected .tree-table-cell {
-    -fx-text-fill: #1565C0 !important;
-}
-
-.tree-table-view .tree-table-row-cell.group-row:selected .text {
-    -fx-fill: #1565C0 !important;
-}
-
-/* Ховер эффекты */
-.tree-table-view .tree-table-row-cell:filled:hover {
-    -fx-background-color: #e3f2fd;
-    -fx-cursor: hand;
-    -fx-border-color: #bbdefb;
-    -fx-border-width: 1px;
-}
-
-.tree-table-view .tree-table-row-cell.group-row:filled:hover {
-    -fx-background-color: #bbdefb;
-}
-
-/* Ячейки */
-.tree-table-view .tree-table-cell {
-    -fx-border-color: #f0f0f0;
-    -fx-padding: 8px;
-    -fx-alignment: CENTER_LEFT;
-    -fx-text-fill: black;
-}
-
-/* Специфические стили для скроллбара */
-.tree-table-view .scroll-bar:vertical {
-    -fx-background-color: #f0f0f0;
-}
-
-.tree-table-view .scroll-bar:vertical .thumb {
-    -fx-background-color: #c0c0c0;
-    -fx-background-radius: 4px;
-}
-
-.tree-table-view .scroll-bar:vertical .thumb:hover {
-    -fx-background-color: #a0a0a0;
-}
-
-.tree-table-view .scroll-bar:horizontal {
-    -fx-background-color: #f0f0f0;
-}
-
-.tree-table-view .scroll-bar:horizontal .thumb {
-    -fx-background-color: #c0c0c0;
-    -fx-background-radius: 4px;
-}
-
-.tree-table-view .scroll-bar:horizontal .thumb:hover {
-    -fx-background-color: #a0a0a0;
-}
-
-/* Стили для выделенной строки - ОДИНАКОВЫЕ */
-.tree-table-view .tree-table-row-cell:filled:selected {
-    -fx-background-color: #bbdefb; /* ТЕПЕРЬ ОДИНАКОВЫЙ ЦВЕТ */
-}
-
-.tree-table-view .tree-table-row-cell:filled:selected .tree-table-cell {
-    -fx-text-fill: black !important;
-}
-
-.tree-table-view .tree-table-row-cell.group-row:filled:selected {
-    -fx-background-color: #a0c8ff; /* Для групп оставляем другой оттенок */
-}
-
-.tree-table-view .tree-table-row-cell.group-row:filled:selected .tree-table-cell {
-    -fx-text-fill: #1565C0 !important;
-}
-
-/* Агрессивные стили для ComboBox в таблицах */
-.table-view .combo-box *,
-.tree-table-view .combo-box * {
-    -fx-text-fill: black !important;
-}
-
-.table-view .combo-box .text,
-.tree-table-view .combo-box .text {
-    -fx-fill: black !important;
-}
-
-/* Для выпадающего списка */
-.combo-box-popup .list-view .list-cell {
-    -fx-text-fill: black !important;
-}
-
-.combo-box-popup .list-view .list-cell:filled:hover {
-    -fx-text-fill: black !important;
-}
-
-.combo-box-popup .list-view .list-cell:filled:selected {
-    -fx-text-fill: black !important;
-}
-
-/* Принудительный перенос текста в шапках для обеих таблиц */
-.table-view .column-header .label,
-.tree-table-view .column-header .label {
-    -fx-wrap-text: true;
-    -fx-text-overrun: WORD_ELLIPSIS;
-    -fx-text-alignment: CENTER;
-}
-
-/* Кнопки в таблицах (общие для обоих контроллеров) */
-.table-button-add {
-    -fx-background-color: #4CAF50;
-    -fx-text-fill: white;
-    -fx-font-size: 8px;
-    -fx-background-radius: 4px;
-    -fx-border-radius: 4px;
-    -fx-border-color: #388E3C;
-    -fx-border-width: 1;
-    -fx-padding: 3px 6px;
-    -fx-cursor: hand;
-    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
-}
-
-.table-button-add-hover {
-    -fx-background-color: #66BB6A;
-}
-
-.table-button-view {
-    -fx-background-color: #2196F3;
-    -fx-text-fill: white;
-    -fx-font-size: 8px;
-    -fx-background-radius: 4px;
-    -fx-border-radius: 4px;
-    -fx-border-color: #1976D2;
-    -fx-border-width: 1;
-    -fx-padding: 3px 6px;
-    -fx-cursor: hand;
-    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
-}
-
-.table-button-view-hover {
-    -fx-background-color: #64B5F6;
-}
-
-/* CustomAlert */
-/* Общие стили для всех кастомных алертов */
-.custom-alert {
-    -fx-border-color: #ccc;
-    -fx-border-width: 2px;
-    -fx-border-radius: 8px;
-    -fx-background-radius: 8px;
-    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 10, 0, 0, 2);
-}
-
-/* Стили для информационного алерта (синие оттенки) */
-.info-alert {
-    -fx-background-color: linear-gradient(to bottom, #e3f2fd, #bbdefb);
-    -fx-border-color: #2196F3;
-}
-
-.info-alert .header-panel {
-    -fx-background-color: #2196F3;
-}
-
-.info-alert .content {
-    -fx-text-fill: #0d47a1;
-}
-
-/* Стили для предупреждения (оранжевые/желтые оттенки) */
-.warning-alert {
-    -fx-background-color: linear-gradient(to bottom, #fff3e0, #ffcc80);
-    -fx-border-color: #ff9800;
-}
-
-.warning-alert .header-panel {
-    -fx-background-color: #ff9800;
-}
-
-.warning-alert .content {
-    -fx-text-fill: #e65100;
-}
-
-/* Стили для ошибок (красные оттенки) */
-.error-alert {
-    -fx-background-color: linear-gradient(to bottom, #ffebee, #ffcdd2);
-    -fx-border-color: #f44336;
-}
-
-.error-alert .header-panel {
-    -fx-background-color: #f44336;
-}
-
-.error-alert .content {
-    -fx-text-fill: #b71c1c;
-}
-
-/* Стили для подтверждения (фиолетовые оттенки) */
-.confirm-alert {
-    -fx-background-color: linear-gradient(to bottom, #f3e5f5, #e1bee7);
-    -fx-border-color: #9c27b0;
-}
-
-.confirm-alert .header-panel {
-    -fx-background-color: #9c27b0;
-}
-
-.confirm-alert .content {
-    -fx-text-fill: #4a148c;
-}
-
-/* Стили для успешных операций (зеленые оттенки) */
-.success-alert {
-    -fx-background-color: linear-gradient(to bottom, #e8f5e8, #c8e6c9);
-    -fx-border-color: #4caf50;
-}
-
-.success-alert .header-panel {
-    -fx-background-color: #4caf50;
-}
-
-.success-alert .content {
-    -fx-text-fill: #1b5e20;
-}
-
-/* Стилизация кнопок */
-.custom-alert .button {
-    -fx-background-color: linear-gradient(to bottom, #ffffff, #f5f5f5);
-    -fx-border-color: #ddd;
-    -fx-border-radius: 4px;
-    -fx-background-radius: 4px;
-    -fx-text-fill: #333;
-
-}
-
-.custom-alert .button:hover {
-    -fx-background-color: linear-gradient(to bottom, #f5f5f5, #e0e0e0);
-}
-
-.custom-alert .button:pressed {
-    -fx-background-color: linear-gradient(to bottom, #e0e0e0, #d0d0d0);
-}
-
-/* Стилизация текстовых полей в диалогах ввода */
-.custom-alert .text-field {
-    -fx-border-color: #2196F3;
-    -fx-border-radius: 4px;
-    -fx-background-radius: 4px;
-    -fx-padding: 8px;
-}
-
-/* Стилизация области расширенного контента */
-.custom-alert .text-area {
-    -fx-border-color: #ccc;
-    -fx-border-radius: 4px;
-    -fx-background-radius: 4px;
-}
-
-.custom-alert .text-area .content {
-    -fx-background-color: #f9f9f9;
-}
-
-/* Стили для уведомлений автосохранения */
-.auto-save-notification {
-    -fx-text-fill: white;
-    -fx-font-size: 14px;
-    -fx-font-weight: bold;
-    -fx-background-color: #28a745;
-    -fx-background-radius: 12px;
-    -fx-padding: 10px 30px;
-    -fx-border-width: 0px;
-    -fx-border-color: transparent;
-}
-
-.auto-save-notification-container {
-    -fx-background-color: transparent;
-}
-
-/* ===== КАСТОМНЫЕ СТИЛИ ДЛЯ ДИАЛОГОВ ===== */
-/* Стили для диалогов */
+/* ==================== STYLED DIALOG ==================== */
 .styled-dialog {
     -fx-background-color: #ffffff;
     -fx-border-color: #456381;
@@ -1785,121 +1387,65 @@ GridPane > VBox {
     -fx-background-color: #1973ba;
     -fx-text-fill: white;
     -fx-min-width: 110px;
-    -fx-pref-width: 110px;
-    -fx-border-radius: 4px;
-    -fx-background-radius: 4px;
     -fx-padding: 8px 16px;
     -fx-cursor: hand;
-    -fx-font-weight: bold;
 }
 
 .styled-dialog .button:hover {
     -fx-background-color: #1b83ea;
 }
 
-.styled-dialog .button:cancel {
-    -fx-background-color: #ba3228;
+/* ==================== SCROLLPANE ==================== */
+.scroll-pane {
+    -fx-background: transparent;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
 }
 
-.styled-dialog .button:cancel:hover {
-    -fx-background-color: #ef3636;
+.scroll-pane .viewport {
+    -fx-background-color: transparent;
 }
 
-/* Стили для контента диалога */
-.dialog-content {
-    -fx-background-color: #ffffff;
-    -fx-padding: 20px;
+.scroll-pane .scroll-bar:vertical {
+    -fx-background-color: transparent;
 }
 
-.dialog-title {
-    -fx-font-size: 16px;
-    -fx-font-weight: bold;
-    -fx-text-fill: #2c3e50;
-}
-
-.dialog-info {
-    -fx-text-fill: #666;
-    -fx-font-size: 12px;
-    -fx-padding: 5px 0px 10px 0px;
-}
-
-/* Стили для TableView внутри диалога */
-.dialog-content .styled-table-view {
-    -fx-font-size: 13px;
-    -fx-font-family: 'Segoe UI';
-    -fx-border-color: #e0e0e0;
-    -fx-border-radius: 6px;
-    -fx-background-radius: 6px;
-    -fx-padding: 2px;
-    -fx-background-color: white;
-}
-
-.dialog-content .styled-table-view .column-header {
-    -fx-background-color: #1d81e3;
-    -fx-text-fill: white;
-    -fx-font-weight: bold;
-    -fx-border-color: #1d81e3;
-    -fx-alignment: CENTER;
-}
-
-.dialog-content .styled-table-view .column-header .label {
-    -fx-text-fill: white;
-}
-
-.dialog-content .styled-table-view .table-row-cell:even {
-    -fx-background-color: #f8f9fa;
-    -fx-border-color: #e9ecef;
-}
-
-.dialog-content .styled-table-view .table-row-cell:odd {
-    -fx-background-color: #ffffff;
-    -fx-border-color: #e9ecef;
-}
-
-.dialog-content .styled-table-view .table-row-cell:selected {
-    -fx-background-color: #bbdefb;
-    -fx-text-fill: #92b2e3;
-    -fx-font-weight: bold;
-}
-
-.dialog-content .styled-table-view .table-row-cell:filled:hover {
-    -fx-background-color: #e3f2fd;
-    -fx-cursor: hand;
-    -fx-border-color: #bbdefb;
-    -fx-border-width: 1px;
-}
-
-.dialog-content .styled-table-view .table-cell {
-    -fx-border-color: #f0f0f0;
-    -fx-padding: 8px;
-    -fx-alignment: CENTER_LEFT;
-}
-
-/* Специфические стили для колонок в диалоге */
-.dialog-content .styled-table-view .table-column {
-    -fx-alignment: CENTER_LEFT;
-}
-
-/* Стили для скроллбара таблицы в диалоге */
-.dialog-content .styled-table-view .scroll-bar:vertical {
-    -fx-background-color: #f0f0f0;
-}
-
-.dialog-content .styled-table-view .scroll-bar:vertical .thumb {
+.scroll-pane .scroll-bar:vertical .thumb {
     -fx-background-color: #c0c0c0;
     -fx-background-radius: 4px;
 }
 
-.dialog-content .styled-table-view .scroll-bar:vertical .thumb:hover {
+.scroll-pane .scroll-bar:vertical .thumb:hover {
     -fx-background-color: #a0a0a0;
 }
 
-/* Стили для выделенной строки в таблице диалога */
-.dialog-content .styled-table-view .table-row-cell:filled:selected {
-    -fx-background-color: #87bce6;
+/* ==================== TOOLTIP ==================== */
+/* Основной блок тултипа */
+.tooltip {
+    -fx-background-color: rgb(0, 0, 0);
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
     -fx-text-fill: white;
+    -fx-font-size: 12px;
+    -fx-padding: 6px 12px;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 8, 0, 0, 2);
+    -fx-background-insets: 0;
 }
 
-.dialog-content .styled-table-view .table-row-cell:filled:selected .text {
-    -fx-fill: white;
+/* Отключаем уголок */
+.tooltip .page-corner {
+    -fx-shape: " ";
+    -fx-background-color: transparent;
+}
+
+/* Убираем фон у внутренних элементов */
+.tooltip .box,
+.tooltip .label {
+    -fx-background-color: transparent;
+}
+
+/* Глобально делаем фон прозрачным для всех попапов */
+.popup,
+.popup > * {
+    -fx-background-color: transparent;
 }

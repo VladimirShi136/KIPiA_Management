@@ -121,10 +121,11 @@ public class DeviceDAO {
             stmt.setLong(13, device.getUpdatedAt()); // 13-й - updated_at
             stmt.setInt(14, device.getId()); // 14-й - id для WHERE
             stmt.executeUpdate();
+            return true;
         } catch (SQLException e) {
             LOGGER.error("Ошибка обновления прибора: {}", e.getMessage(), e);
+            return false;
         }
-        return false;
     }
 
     /**

@@ -4,7 +4,7 @@ import com.kipia.management.kipia_management.controllers.MainController;
 import com.kipia.management.kipia_management.managers.PhotoManager;
 import com.kipia.management.kipia_management.managers.SyncManager;
 import com.kipia.management.kipia_management.services.*;
-import com.kipia.management.kipia_management.utils.CustomAlert;
+import com.kipia.management.kipia_management.utils.CustomAlertDialog;
 import com.kipia.management.kipia_management.utils.LoggingConfig;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -14,11 +14,18 @@ import javafx.scene.Scene;
 import javafx.scene.control.ButtonType;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.Objects;
 
+/**
+ * Главный класс приложения
+ *
+ * @author vladimir_shi
+ * @since 28.08.2025
+ */
 public class Main extends Application {
     private DatabaseService databaseService;
     private DeviceDAO deviceDAO;
@@ -51,39 +58,31 @@ public class Main extends Application {
             this.primaryStage = primaryStage;
             LOGGER.info("Запуск приложения...");
 
-            // Инициализация сервисов базы данных
             initializeServices();
 
-            // Проверяем что критические сервисы инициализированы
             if (databaseService == null || deviceDAO == null) {
                 LOGGER.error("Критические сервисы не инициализированы");
                 showErrorAndExit("Критическая ошибка", "Не удалось инициализировать необходимые сервисы");
                 return;
             }
 
-            // Загружаем FXML файл
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/main.fxml"));
             Parent root = loader.load();
 
-            // Получаем контроллер и передаем ему сервисы
             mainController = loader.getController();
             if (mainController != null) {
-                // ⭐⭐ ИЗМЕНЕНИЕ: Теперь передаем DatabaseService вместо отдельных DAO ⭐⭐
-                mainController.setDatabaseService(databaseService);
-
-                // Но также передаем и отдельные DAO для совместимости
+                mainController.setDatabaseService();
                 mainController.setDeviceDAO(deviceDAO);
                 mainController.setSchemeDAO(schemeDAO);
                 mainController.setDeviceLocationDAO(deviceLocationDAO);
                 mainController.setSyncManager(syncManager);
-
                 LOGGER.info("Все сервисы переданы в MainController");
             } else {
                 LOGGER.warn("MainController не найден");
             }
 
-            // Настраиваем сцену
             Scene scene = new Scene(root, 1000, 700);
+            scene.setFill(javafx.scene.paint.Color.TRANSPARENT);
             scene.getStylesheets().add(Objects.requireNonNull(
                     getClass().getResource("/styles/light-theme.css")).toExternalForm());
 
@@ -91,25 +90,23 @@ public class Main extends Application {
                 mainController.setScene(scene);
             }
 
-            // Настраиваем главное окно
+            primaryStage.initStyle(StageStyle.TRANSPARENT);
             primaryStage.setTitle("Система учёта приборов КИПиА");
             primaryStage.setScene(scene);
             primaryStage.setMinWidth(800);
             primaryStage.setMinHeight(600);
 
-            // Добавляем иконку
             try {
                 Image icon = new Image(Objects.requireNonNull(
                         getClass().getResourceAsStream("/images/iconApp.png")));
                 primaryStage.getIcons().add(icon);
                 LOGGER.info("Иконка приложения загружена");
             } catch (Exception e) {
-                LOGGER.warn("Иконка не найдена, используется стандартная: {}", e.getMessage());
+                LOGGER.warn("Иконка не найдена: {}", e.getMessage());
             }
 
-            // Обработка закрытия окна
             primaryStage.setOnCloseRequest(_ -> {
-                LOGGER.info("Закрытие приложения - сохранение схемы");
+                LOGGER.info("Закрытие приложения");
                 if (mainController != null) {
                     mainController.saveSchemeBeforeNavigation();
                 }
@@ -119,8 +116,13 @@ public class Main extends Application {
                 }
             });
 
-            // Показываем окно
             primaryStage.show();
+
+            // Анимация появления окна при запуске
+            if (mainController != null) {
+                mainController.playLaunchAnimation(primaryStage);
+            }
+
             LOGGER.info("Приложение успешно запущено");
 
         } catch (Exception e) {
@@ -129,39 +131,21 @@ public class Main extends Application {
         }
     }
 
-    /**
-     * Инициализация сервисов базы данных - ОБНОВЛЕННЫЙ
-     */
     private void initializeServices() {
         try {
             LOGGER.info("🔄 Инициализация сервисов...");
-
             databaseService = new DatabaseService();
-            LOGGER.info("✅ DatabaseService инициализирован");
-
             deviceDAO = new DeviceDAO(databaseService);
-            LOGGER.info("✅ DeviceDAO инициализирован");
-
             schemeDAO = new SchemeDAO(databaseService);
-            LOGGER.info("✅ SchemeDAO инициализирован");
-
             deviceLocationDAO = new DeviceLocationDAO(databaseService);
-            LOGGER.info("✅ DeviceLocationDAO инициализирован");
-
-            // ⭐⭐ ИНИЦИАЛИЗИРУЕМ PhotoManager как синглтон ⭐⭐
             PhotoManager photoManager = PhotoManager.getInstance();
-            photoManager.setDeviceDAO(deviceDAO); // Для автосохранения в БД
-            LOGGER.info("✅ PhotoManager инициализирован");
-
+            photoManager.setDeviceDAO(deviceDAO);
             this.syncManager = new SyncManager(
                     databaseService, deviceDAO, schemeDAO,
                     deviceLocationDAO,
                     photoManager.getBasePhotosPath()
             );
-            LOGGER.info("✅ SyncManager инициализирован");
-
             LOGGER.info("🎉 Все сервисы успешно инициализированы");
-
         } catch (Exception e) {
             LOGGER.error("❌ Ошибка инициализации сервисов: {}", e.getMessage(), e);
             throw new RuntimeException("Не удалось инициализировать сервисы приложения", e);
@@ -170,11 +154,11 @@ public class Main extends Application {
 
     private void showErrorAndRetry(String message) {
         Platform.runLater(() -> {
-            ButtonType result = CustomAlert.showAdvancedError("Ошибка запуска приложения", message, new Exception(message));
-            if (result == CustomAlert.RETRY_BUTTON) {
+            ButtonType result = CustomAlertDialog.showAdvancedError("Ошибка запуска приложения", message, new Exception(message));
+            if (result == CustomAlertDialog.RETRY_BUTTON) {
                 LOGGER.info("Повторная попытка запуска...");
                 handleRetry();
-            } else if (result == CustomAlert.CANCEL_BUTTON) {
+            } else if (result == CustomAlertDialog.CANCEL_BUTTON) {
                 LOGGER.info("Отмена запуска приложения");
                 handleCancel();
             }
@@ -183,7 +167,7 @@ public class Main extends Application {
 
     private void showErrorAndExit(String title, String message) {
         Platform.runLater(() -> {
-            CustomAlert.showError(title, message);
+            CustomAlertDialog.showError(title, message);
             Platform.exit();
             System.exit(1);
         });
@@ -195,11 +179,9 @@ public class Main extends Application {
                 LOGGER.info("Перезапуск приложения...");
                 Main newApp = new Main();
                 newApp.start(new Stage());
-                if (primaryStage != null) {
-                    primaryStage.close();
-                }
+                if (primaryStage != null) primaryStage.close();
             } catch (Exception e) {
-                LOGGER.error("Ошибка перезапуска приложения: {}", e.getMessage(), e);
+                LOGGER.error("Ошибка перезапуска: {}", e.getMessage(), e);
                 showErrorAndExit("Ошибка перезапуска", "Не удалось перезапустить приложение: " + e.getMessage());
             }
         });
@@ -214,8 +196,6 @@ public class Main extends Application {
     @Override
     public void stop() {
         LOGGER.info("Приложение завершает работу");
-        if (databaseService != null) {
-            databaseService.closeConnection();
-        }
+        if (databaseService != null) databaseService.closeConnection();
     }
 }

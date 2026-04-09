@@ -2,7 +2,7 @@ package com.kipia.management.kipia_management.shapes;
 
 import com.kipia.management.kipia_management.managers.ClipboardManager;
 import com.kipia.management.kipia_management.managers.ShapeManager;
-import com.kipia.management.kipia_management.utils.CustomAlert;
+import com.kipia.management.kipia_management.utils.CustomAlertDialog;
 import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.VPos;
@@ -238,6 +238,9 @@ public class TextShape extends ShapeBase {
             return null;
         });
 
+        // Применяем единый стиль
+        com.kipia.management.kipia_management.utils.DialogStyler.applyStyle(dialog);
+
         Optional<Color> result = dialog.showAndWait();
         result.ifPresent(color -> {
             setStrokeColor(color); // Для текста используем strokeColor
@@ -309,11 +312,14 @@ public class TextShape extends ShapeBase {
 
                     return newFont;
                 } catch (NumberFormatException e) {
-                    CustomAlert.showError("Ошибка", "Введите корректный размер шрифта");
+                    CustomAlertDialog.showError("Ошибка", "Введите корректный размер шрифта");
                 }
             }
             return null;
         });
+
+        // Применяем единый стиль
+        com.kipia.management.kipia_management.utils.DialogStyler.applyStyle(dialog);
 
         Optional<Font> result = dialog.showAndWait();
         result.ifPresent(newFont -> {
@@ -426,7 +432,7 @@ public class TextShape extends ShapeBase {
     }
 
     private void openTextEditDialog() {
-        Optional<String> result = CustomAlert.showTextInputDialog("Редактирование текста", "Введите новый текст:", getText());
+        Optional<String> result = CustomAlertDialog.showTextInputDialog("Редактирование текста", "Введите новый текст:", getText());
         if (result.isPresent()) {
             String newText = result.get().trim();
             setText(newText);
@@ -448,5 +454,15 @@ public class TextShape extends ShapeBase {
     @Override
     public void resetHighlight() {
         applyDefaultStyle();
+    }
+
+    /**
+     * Проверка попадания точки на текст (весь ограничивающий прямоугольник)
+     */
+    @Override
+    protected boolean containsLocalPoint(double localX, double localY) {
+        // Для текста проверяем весь ограничивающий прямоугольник
+        return localX >= 0 && localX <= getCurrentWidth() &&
+               localY >= 0 && localY <= getCurrentHeight();
     }
 }

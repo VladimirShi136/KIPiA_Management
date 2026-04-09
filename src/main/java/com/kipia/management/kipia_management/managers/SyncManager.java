@@ -112,10 +112,13 @@ public class SyncManager {
                 throw new RuntimeException("В архиве не найден файл базы данных");
             }
 
-            // Выполняем merge
+            // Выполняем merge БД.
+            // mergeDatabase вызывается первым — он же удаляет устаревшие физические файлы
+            // (syncRemovedPhotos), до того как обновляет запись в БД.
             int[] result = mergeDatabase(importedDb.toString());
 
-            // Merge фотографий
+            // Merge фотографий — только аддитивно, копирует то чего ещё нет локально.
+            // Удаление устаревших файлов уже выполнено внутри mergeDatabase.
             Path importedPhotos = tempDir.resolve("device_photos");
             if (Files.exists(importedPhotos)) {
                 mergePhotos(importedPhotos.toString());
@@ -173,7 +176,10 @@ public class SyncManager {
                 deviceDAO.addDevice(imported);
                 result[0]++;
             } else if (imported.getUpdatedAt() > current.getUpdatedAt()) {
-                // Импортированная запись новее — обновляем
+                // Импортированная запись новее — сначала удаляем осиротевшие файлы фото,
+                // затем обновляем запись в БД.
+                syncRemovedPhotos(current, imported);
+
                 imported.setId(current.getId()); // сохраняем текущий id
                 deviceDAO.updateDevice(imported);
                 result[1]++;
@@ -252,7 +258,63 @@ public class SyncManager {
     }
 
     /**
-     * Копирует новые фото из импортированной папки (не перезаписывает существующие)
+     * Удаляет физические файлы фото, которые присутствуют у {@code localDevice},
+     * но отсутствуют у {@code importedDevice}.
+     *
+     * <p>Вызывается в {@link #mergeDatabase} перед {@code deviceDAO.updateDevice(imported)},
+     * только когда импортируемая версия новее. Это единственное место, где файлы фото
+     * могут быть удалены при импорте — все остальные операции только добавляют файлы.</p>
+     *
+     * <p>Пример: на Android удалили photo_2.jpg → в импортируемой БД его нет →
+     * здесь удаляем физический файл на JavaFX, иначе он остался бы мусором на диске.</p>
+     *
+     * @param localDevice    текущая запись устройства в локальной БД
+     * @param importedDevice запись устройства из импортируемой БД (более новая)
+     */
+    private void syncRemovedPhotos(Device localDevice, Device importedDevice) {
+        List<String> localPhotos    = localDevice.getPhotos();
+        List<String> importedPhotos = importedDevice.getPhotos();
+
+        if (localPhotos == null || localPhotos.isEmpty()) return;
+
+        Set<String> importedSet = importedPhotos != null
+                ? new HashSet<>(importedPhotos)
+                : Collections.emptySet();
+
+        // Файлы, которые были в локальной записи, но пропали в импортируемой
+        for (String fileName : localPhotos) {
+            if (importedSet.contains(fileName)) continue;
+
+            // Используем location локального устройства: файлы лежат именно там.
+            // Если location тоже изменился — старые файлы всё равно удалятся корректно.
+            String location = localDevice.getLocation();
+            if (location == null || location.isEmpty()) continue;
+
+            File file = new File(photosBasePath, location + File.separator + fileName);
+            if (file.exists()) {
+                boolean deleted = file.delete();
+                LOGGER.debug("🗑️ Удалён устаревший файл фото {} (deleted={})", fileName, deleted);
+            }
+        }
+
+        // Если папка локации опустела после удаления — убираем и её
+        if (localDevice.getLocation() != null && !localDevice.getLocation().isEmpty()) {
+            File locationDir = new File(photosBasePath, localDevice.getLocation());
+            if (locationDir.exists()) {
+                String[] remaining = locationDir.list();
+                if (remaining != null && remaining.length == 0) {
+                    locationDir.delete();
+                    LOGGER.debug("🗑️ Удалена пустая папка локации: {}", localDevice.getLocation());
+                }
+            }
+        }
+    }
+
+    /**
+     * Копирует новые фото из импортированной папки (не перезаписывает существующие).
+     *
+     * <p>Намеренно только аддитивна: удаление устаревших файлов выполняется
+     * в {@link #syncRemovedPhotos} до вызова этого метода.</p>
      */
     private void mergePhotos(String importedPhotosPath) {
         try {

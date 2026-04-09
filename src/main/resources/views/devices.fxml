@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.scene.image.ImageView?>
-<?import javafx.scene.image.Image?>
 <?import javafx.geometry.Insets?>
 
 <!--
@@ -11,103 +9,63 @@
   * Окно основной таблицы приборов *
 -->
 
-<!-- StackPane позволяет разместить FAB поверх таблицы -->
-<StackPane xmlns="http://javafx.com/javafx/23"
+<StackPane fx:id="rootPane"
+           xmlns="http://javafx.com/javafx/23"
            xmlns:fx="http://javafx.com/fxml/1"
            fx:controller="com.kipia.management.kipia_management.controllers.DevicesTableController"
+           styleClass="devices-stack-pane"
            VBox.vgrow="ALWAYS">
-
-<VBox spacing="10" VBox.vgrow="ALWAYS">
-
-    <!-- 1️⃣ ПАНЕЛЬ ПОИСКА И УДАЛЕНИЯ -->
-    <HBox spacing="10" alignment="CENTER_LEFT">
-        <Label text="Поиск:" styleClass="search-label"/>
-        <TextField fx:id="searchField"
-                   promptText="Введите текст для поиска"
-                   styleClass="search-field"/>
-
-        <!-- Кнопки импорта и экспорта -->
-        <Button fx:id="exportButton" styleClass="button-export">
-            <graphic>
-                <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
-                    <Image url="@../images/export.png"/>
-                </ImageView>
-            </graphic>
-            <tooltip>
-                <Tooltip text="Экспорт в Excel"/>
-            </tooltip>
-        </Button>
-        <Button fx:id="importButton" styleClass="button-import">
-            <graphic>
-                <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
-                    <Image url="@../images/import.png"/>
-                </ImageView>
-            </graphic>
-            <tooltip>
-                <Tooltip text="Импорт из Excel"/>
-            </tooltip>
-        </Button>
-    </HBox>
-
-    <!-- 2️⃣ СТАТИСТИКА -->
-    <VBox styleClass="statistics-pane" spacing="5">
-        <!-- Заголовок статистики -->
-        <Label text="Статистика:" styleClass="statistics-header"/>
-
-        <!-- Основные цифры -->
-        <HBox spacing="20" styleClass="statistics-data">
-            <VBox alignment="CENTER">
-                <Label fx:id="totalDevicesLabel"
-                       text="--"
-                       styleClass="stat-total"/>
-                <Label text="Всего приборов"
-                       styleClass="stat-label"/>
-            </VBox>
-
-            <VBox alignment="CENTER">
-                <Label fx:id="workingDevicesLabel"
-                       text="--"
-                       styleClass="stat-working"/>
-                <Label text="В работе"
-                       styleClass="stat-label"/>
-            </VBox>
-
-            <VBox alignment="CENTER">
-                <Label fx:id="storageDevicesLabel"
-                       text="--"
-                       styleClass="stat-storage"/>
-                <Label text="Хранение"
-                       styleClass="stat-label"/>
-            </VBox>
-
-            <VBox alignment="CENTER">
-                <Label fx:id="lostDevicesLabel"
-                       text="--"
-                       styleClass="stat-lost"/>
-                <Label text="Утерян"
-                       styleClass="stat-label"/>
-            </VBox>
-
-            <VBox alignment="CENTER">
-                <Label fx:id="brokenDevicesLabel"
-                       text="--"
-                       styleClass="stat-broken"/>
-                <Label text="Испорчен"
-                       styleClass="stat-label"/>
-            </VBox>
-        </HBox>
+    <VBox fx:id="contentBox" spacing="10" VBox.vgrow="ALWAYS">
+        <!-- 1️⃣ СТАТИСТИКА -->
+        <VBox styleClass="statistics-pane">
+            <!-- Основные цифры -->
+            <HBox spacing="10" styleClass="statistics-data" HBox.hgrow="ALWAYS">
+                <VBox alignment="CENTER" HBox.hgrow="ALWAYS">
+                    <Label fx:id="totalDevicesLabel"
+                           text="--"
+                           styleClass="stat-total"/>
+                    <Label text="Всего приборов"
+                           styleClass="stat-label"/>
+                </VBox>
+                <VBox alignment="CENTER" HBox.hgrow="ALWAYS">
+                    <Label fx:id="workingDevicesLabel"
+                           text="--"
+                           styleClass="stat-working"/>
+                    <Label text="В работе"
+                           styleClass="stat-label"/>
+                </VBox>
+                <VBox alignment="CENTER" HBox.hgrow="ALWAYS">
+                    <Label fx:id="storageDevicesLabel"
+                           text="--"
+                           styleClass="stat-storage"/>
+                    <Label text="Хранение"
+                           styleClass="stat-label"/>
+                </VBox>
+                <VBox alignment="CENTER" HBox.hgrow="ALWAYS">
+                    <Label fx:id="lostDevicesLabel"
+                           text="--"
+                           styleClass="stat-lost"/>
+                    <Label text="Утерян"
+                           styleClass="stat-label"/>
+                </VBox>
+                <VBox alignment="CENTER" HBox.hgrow="ALWAYS">
+                    <Label fx:id="brokenDevicesLabel"
+                           text="--"
+                           styleClass="stat-broken"/>
+                    <Label text="Испорчен"
+                           styleClass="stat-label"/>
+                </VBox>
+            </HBox>
+        </VBox>
+        <!-- 2️⃣ ТАБЛИЦА ПРИБОРОВ -->
+        <TableView fx:id="deviceTable"
+                   editable="true"
+                   VBox.vgrow="ALWAYS">
+            <placeholder>
+                <Label text="Таблица пуста"/>
+            </placeholder>
+        </TableView>
     </VBox>
-
-    <!-- 3️⃣ ТАБЛИЦА ПРИБОРОВ -->
-    <TableView fx:id="deviceTable"
-               editable="true"
-               VBox.vgrow="ALWAYS">
-        <placeholder>
-            <Label text="Таблица пуста" />
-        </placeholder>
-    </TableView>
-</VBox>
-
     <!-- FAB кнопка "+" — плавающая, нижний правый угол -->
     <Button fx:id="fabAddButton"
             text="+"
@@ -117,8 +75,7 @@
             <Insets bottom="24" right="24"/>
         </StackPane.margin>
         <tooltip>
-            <Tooltip text="Добавить прибор"/>
+            <Tooltip text="Добавить прибор" style="-fx-font-size: 12px;"/>
         </tooltip>
     </Button>
-
 </StackPane>

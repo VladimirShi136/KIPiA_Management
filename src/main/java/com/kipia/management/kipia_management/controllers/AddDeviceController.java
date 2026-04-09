@@ -1,9 +1,9 @@
 package com.kipia.management.kipia_management.controllers;
 
+import com.kipia.management.kipia_management.managers.PhotoManager;
 import com.kipia.management.kipia_management.models.Device;
 import com.kipia.management.kipia_management.services.DeviceDAO;
-import com.kipia.management.kipia_management.utils.CustomAlert;
-import com.kipia.management.kipia_management.utils.StyleUtils;
+import com.kipia.management.kipia_management.utils.CustomAlertDialog;
 import javafx.beans.binding.Bindings;
 import javafx.scene.control.Label;
 import javafx.collections.FXCollections;
@@ -17,6 +17,8 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Контроллер для формы добавления нового прибора.
@@ -44,7 +46,7 @@ public class AddDeviceController {
     @FXML
     private TextField accuracyClassField;
     @FXML
-    private TextField locationField;
+    private ComboBox<String> locationField;  // ⭐⭐ ИЗМЕНЕНО: ComboBox вместо TextField ⭐⭐
     @FXML
     private TextField valveNumberField;
     @FXML
@@ -70,6 +72,9 @@ public class AddDeviceController {
 
     // ---------- Список выбранных фото (имена файлов) ----------
     private final ObservableList<String> selectedPhotoFiles = FXCollections.observableArrayList();
+    
+    // ⭐⭐ НОВОЕ: Список выбранных файлов для копирования ⭐⭐
+    private final java.util.List<File> pendingPhotoFiles = new java.util.ArrayList<>();
 
     // ---------- Сервисы ----------
     private DeviceDAO deviceDAO;
@@ -77,9 +82,6 @@ public class AddDeviceController {
     // ---------- Режим редактирования ----------
     // null = режим добавления, non-null = режим редактирования
     private Device editingDevice = null;
-
-    // ---------- Контроллеры ----------
-    private SchemeEditorController schemeEditorController;
 
     // ---------- Колбэк после добавления (для обновления таблицы) ----------
     private Runnable onDeviceAdded;
@@ -103,7 +105,6 @@ public class AddDeviceController {
         if (deleteBtn != null) {
             deleteBtn.setVisible(true);
             deleteBtn.setManaged(true);
-            StyleUtils.applyHoverAndAnimation(deleteBtn, "button-delete", "button-delete-hover");
         }
 
         // Заполняем поля
@@ -114,7 +115,7 @@ public class AddDeviceController {
         yearField.setText(device.getYear() != null ? String.valueOf(device.getYear()) : "");
         measurementLimitField.setText(nvl(device.getMeasurementLimit()));
         accuracyClassField.setText(device.getAccuracyClass() != null ? String.valueOf(device.getAccuracyClass()) : "");
-        locationField.setText(nvl(device.getLocation()));
+        locationField.setValue(nvl(device.getLocation()));  // ⭐⭐ ИЗМЕНЕНО: setValue вместо setText ⭐⭐
         valveNumberField.setText(nvl(device.getValveNumber()));
         additionalInfoField.setText(nvl(device.getAdditionalInfo()));
 
@@ -141,15 +142,24 @@ public class AddDeviceController {
      */
     public void setDeviceDAO(DeviceDAO deviceDAO) {
         this.deviceDAO = deviceDAO;
+        
+        // ⭐⭐ НОВОЕ: Загружаем список локаций ⭐⭐
+        loadLocations();
     }
-
+    
     /**
-     * Инициализация контроллера редактирования схемы.
-     *
-     * @param controller - контроллер
+     * ⭐⭐ НОВОЕ: Загрузка списка уникальных локаций из БД ⭐⭐
      */
-    public void setSchemeEditorController(SchemeEditorController controller) {
-        this.schemeEditorController = controller;
+    private void loadLocations() {
+        if (deviceDAO != null && locationField != null) {
+            try {
+                List<String> locations = deviceDAO.getDistinctLocations();
+                locationField.setItems(FXCollections.observableArrayList(locations));
+                LOGGER.info("✅ Загружено {} уникальных локаций", locations.size());
+            } catch (Exception e) {
+                LOGGER.error("❌ Ошибка загрузки локаций: {}", e.getMessage(), e);
+            }
+        }
     }
 
     /**
@@ -161,19 +171,20 @@ public class AddDeviceController {
         statusComboBox.setItems(FXCollections.observableArrayList("Хранение", "В работе", "Утерян", "Испорчен"));
         statusComboBox.getSelectionModel().selectFirst();
 
+        // ⭐⭐ НОВОЕ: Инициализация ComboBox локаций (загрузка позже через setDeviceDAO) ⭐⭐
+        locationField.setEditable(true);
+
         // Применение стилей к кнопкам
-        if (addBtn != null) {
-            StyleUtils.applyHoverAndAnimation(addBtn, "button-add", "button-add-hover");
-        }
-        if (cancelBtn != null) {
-            StyleUtils.applyHoverAndAnimation(cancelBtn, "button-cancel", "button-cancel-hover");
-        }
-        if (photoChooseBtn != null) {
-            StyleUtils.applyHoverAndAnimation(photoChooseBtn, "photo-choose-btn", "photo-choose-btn-hover");
-        }
-        if (photoRemoveBtn != null) {
-            StyleUtils.applyHoverAndAnimation(photoRemoveBtn, "button-remove", "button-remove-hover");
-        }
+        // Стили для кнопок определены в FXML
+        
+        // Установка иконок в зависимости от темы (после добавления в сцену)
+        cancelBtn.sceneProperty().addListener((_, _, newScene) -> {
+            if (newScene != null) {
+                updateButtonIcons();
+                // Добавляем listener на изменение стилей сцены для автоматического обновления иконок
+                newScene.getStylesheets().addListener((javafx.collections.ListChangeListener<String>) _ -> updateButtonIcons());
+            }
+        });
 
         // Настройка ListView для отображения выбранных фото
         selectedPhotosListView.setItems(selectedPhotoFiles);
@@ -227,6 +238,8 @@ public class AddDeviceController {
                 String fileName = file.getName();
                 if (!selectedPhotoFiles.contains(fileName)) {
                     selectedPhotoFiles.add(fileName);
+                    // ⭐⭐ НОВОЕ: Сохраняем физический файл для последующего копирования ⭐⭐
+                    pendingPhotoFiles.add(file);
                 } else {
                     LOGGER.info("Файл уже в списке: {}", fileName);
                 }
@@ -258,7 +271,7 @@ public class AddDeviceController {
             try {
                 year = Integer.parseInt(yearStr);
             } catch (NumberFormatException e) {
-                CustomAlert.showWarning("Валидация", "Год должен быть числом");
+                CustomAlertDialog.showWarning("Валидация", "Год должен быть числом");
                 LOGGER.warn("Ошибка валидации: год должен быть числом");
                 return;
             }
@@ -272,44 +285,33 @@ public class AddDeviceController {
             try {
                 accuracyClass = Double.parseDouble(accuracyClassStr);
             } catch (NumberFormatException e) {
-                CustomAlert.showWarning("Валидация", "Класс точности должен быть числом");
+                CustomAlertDialog.showWarning("Валидация", "Класс точности должен быть числом");
                 LOGGER.warn("Ошибка валидации: класс точности должен быть числом");
                 return;
             }
         }
 
-        String location = locationField.getText().trim();
+        String location = locationField.getValue() != null ? locationField.getValue().trim() : "";  // ⭐⭐ ИЗМЕНЕНО ⭐⭐
         String valveNumber = valveNumberField.getText().trim();
         String status = statusComboBox.getValue();
 
         // Валидация обязательных полей
         if (name.isEmpty() || type.isEmpty() || inventoryNumber.isEmpty() || location.isEmpty() || status == null) {
-            CustomAlert.showWarning("Валидация", "Пожалуйста, заполните все обязательные поля");
+            CustomAlertDialog.showWarning("Валидация", "Пожалуйста, заполните все обязательные поля");
             LOGGER.warn("Ошибка валидации: не все поля заполнены");
             return;
         }
 
         // Проверка уникальности инвентарного номера
         if (deviceDAO.findDeviceByInventoryNumber(inventoryNumber) != null) {
-            CustomAlert.showError("Ошибка", "Прибор с таким инвентарным номером уже существует");
+            CustomAlertDialog.showError("Ошибка", "Прибор с таким инвентарным номером уже существует");
             LOGGER.warn("Инвентарный номер уже существует: {}", inventoryNumber);
             return;
         }
 
         // Создаём новый прибор
         Device device = new Device();
-        device.setType(type);
-        device.setName(name);
-        device.setManufacturer(manufacturer);
-        device.setInventoryNumber(inventoryNumber);
-        device.setMeasurementLimit(measurementLimit);
-        device.setAccuracyClass(accuracyClass);
-        device.setYear(year);
-        device.setLocation(location);
-        device.setValveNumber(valveNumber);
-        device.setStatus(status);
-        device.setAdditionalInfo(additionalInfoField.getText());
-        device.updateTimestamp();
+        createOrUpdateDevice(type, name, manufacturer, inventoryNumber, year, measurementLimit, accuracyClass, location, valveNumber, status, device);
 
         // Добавляем выбранные фото
         for (String photoFileName : selectedPhotoFiles) {
@@ -321,12 +323,8 @@ public class AddDeviceController {
         // Сохраняем в DAO
         boolean success = deviceDAO.addDevice(device);
         if (success) {
-            CustomAlert.showInfo("Добавление", "Прибор успешно добавлен!");
+            CustomAlertDialog.showInfo("Добавление", "Прибор успешно добавлен!");
             clearForm();
-
-            if (schemeEditorController != null) {
-                schemeEditorController.refreshSchemesAndDevices();
-            }
 
             // Уведомляем таблицу об обновлении и закрываем диалог
             if (onDeviceAdded != null) {
@@ -341,7 +339,7 @@ public class AddDeviceController {
 
             LOGGER.info("Прибор успешно добавлен: {}", name);
         } else {
-            CustomAlert.showError("Ошибка добавления", "Не удалось добавить прибор в базу данных");
+            CustomAlertDialog.showError("Ошибка добавления", "Не удалось добавить прибор в базу данных");
             LOGGER.error("Ошибка при добавлении прибора: {}", name);
         }
     }
@@ -361,7 +359,7 @@ public class AddDeviceController {
             try {
                 year = Integer.parseInt(yearStr);
             } catch (NumberFormatException e) {
-                CustomAlert.showWarning("Валидация", "Год должен быть числом");
+                CustomAlertDialog.showWarning("Валидация", "Год должен быть числом");
                 return;
             }
         }
@@ -374,46 +372,70 @@ public class AddDeviceController {
             try {
                 accuracyClass = Double.parseDouble(accuracyClassStr);
             } catch (NumberFormatException e) {
-                CustomAlert.showWarning("Валидация", "Класс точности должен быть числом");
+                CustomAlertDialog.showWarning("Валидация", "Класс точности должен быть числом");
                 return;
             }
         }
 
-        String location = locationField.getText().trim();
+        String location = locationField.getValue() != null ? locationField.getValue().trim() : "";  // ⭐⭐ ИЗМЕНЕНО ⭐⭐
         String valveNumber = valveNumberField.getText().trim();
         String status = statusComboBox.getValue();
 
         if (name.isEmpty() || type.isEmpty() || inventoryNumber.isEmpty() || location.isEmpty() || status == null) {
-            CustomAlert.showWarning("Валидация", "Пожалуйста, заполните все обязательные поля");
+            CustomAlertDialog.showWarning("Валидация", "Пожалуйста, заполните все обязательные поля");
             return;
         }
 
         // Проверка уникальности инвентарного номера (только если изменился)
         if (!inventoryNumber.equals(editingDevice.getInventoryNumber())) {
             if (deviceDAO.findDeviceByInventoryNumber(inventoryNumber) != null) {
-                CustomAlert.showError("Ошибка", "Прибор с таким инвентарным номером уже существует");
+                CustomAlertDialog.showError("Ошибка", "Прибор с таким инвентарным номером уже существует");
                 return;
             }
         }
 
+        // ⭐⭐ НОВОЕ: Сохраняем старую локацию ДО изменения ⭐⭐
+        String oldLocation = editingDevice.getLocation();
+
         // Обновляем поля существующего прибора
-        editingDevice.setType(type);
-        editingDevice.setName(name);
-        editingDevice.setManufacturer(manufacturer);
-        editingDevice.setInventoryNumber(inventoryNumber);
-        editingDevice.setMeasurementLimit(measurementLimit);
-        editingDevice.setAccuracyClass(accuracyClass);
-        editingDevice.setYear(year);
-        editingDevice.setLocation(location);
-        editingDevice.setValveNumber(valveNumber);
-        editingDevice.setStatus(status);
-        editingDevice.setAdditionalInfo(additionalInfoField.getText());
-        editingDevice.setPhotos(new java.util.ArrayList<>(selectedPhotoFiles));
-        editingDevice.updateTimestamp();
+        createOrUpdateDevice(type, name, manufacturer, inventoryNumber, year, measurementLimit, accuracyClass, location, valveNumber, status, editingDevice);
+
+        // ⭐⭐ НОВОЕ: Копируем новые фото через PhotoManager ⭐⭐
+        if (!pendingPhotoFiles.isEmpty()) {
+            LOGGER.info("📸 Копирование {} новых фото в локацию '{}'", pendingPhotoFiles.size(), location);
+            
+            for (File photoFile : pendingPhotoFiles) {
+                try {
+                    String storedFileName = PhotoManager.getInstance()
+                            .copyPhotoToStorageManual(photoFile, editingDevice);
+                    
+                    if (storedFileName != null) {
+                        editingDevice.addPhoto(storedFileName);
+                        LOGGER.info("✅ Фото скопировано: {}", storedFileName);
+                    } else {
+                        LOGGER.warn("⚠️ Не удалось скопировать фото: {}", photoFile.getName());
+                    }
+                } catch (Exception e) {
+                    LOGGER.error("❌ Ошибка копирования фото: {}", e.getMessage(), e);
+                }
+            }
+            
+            pendingPhotoFiles.clear();
+        }
+
+        // ⭐⭐ Мигрируем фото если локация изменилась ⭐⭐
+        if (!location.equals(oldLocation)) {
+            int migratedCount = PhotoManager.getInstance()
+                    .migratePhotosToNewLocation(editingDevice, oldLocation);
+
+            if (migratedCount > 0) {
+                LOGGER.info("📸 Перемещено {} фото в новую локацию '{}'", migratedCount, location);
+            }
+        }
 
         boolean success = deviceDAO.updateDevice(editingDevice);
         if (success) {
-            CustomAlert.showInfo("Сохранение", "Изменения успешно сохранены!");
+            CustomAlertDialog.showInfo("Сохранение", "Изменения успешно сохранены!");
 
             if (onDeviceAdded != null) onDeviceAdded.run();
 
@@ -422,7 +444,7 @@ public class AddDeviceController {
 
             LOGGER.info("Прибор успешно обновлён: {}", editingDevice.getName());
         } else {
-            CustomAlert.showError("Ошибка", "Не удалось сохранить изменения");
+            CustomAlertDialog.showError("Ошибка", "Не удалось сохранить изменения");
             LOGGER.error("Ошибка при сохранении прибора: {}", editingDevice.getName());
         }
     }
@@ -440,22 +462,22 @@ public class AddDeviceController {
                 "НЕТ - удалить только прибор.\n" +
                 "Отмена - отменить действие.";
 
-        java.util.Optional<javafx.scene.control.ButtonType> result =
-                CustomAlert.showConfirmationWithOptions(title, message,
-                        CustomAlert.YES_BUTTON, CustomAlert.NO_BUTTON, CustomAlert.CANCEL_BUTTON);
+        Optional<ButtonType> result =
+                CustomAlertDialog.showConfirmationWithOptions(title, message,
+                        CustomAlertDialog.YES_BUTTON, CustomAlertDialog.NO_BUTTON, CustomAlertDialog.CANCEL_BUTTON);
 
-        if (result.isEmpty() || result.get() == CustomAlert.CANCEL_BUTTON) return;
+        if (result.isEmpty() || result.get() == CustomAlertDialog.CANCEL_BUTTON) return;
 
-        boolean shouldDeletePhotos = result.get() == CustomAlert.YES_BUTTON;
+        boolean shouldDeletePhotos = result.get() == CustomAlertDialog.YES_BUTTON;
 
         if (shouldDeletePhotos) {
-            com.kipia.management.kipia_management.managers.PhotoManager.getInstance()
+            PhotoManager.getInstance()
                     .deleteAllDevicePhotos(editingDevice);
         }
 
         boolean ok = deviceDAO.deleteDevice(editingDevice.getId());
         if (ok) {
-            CustomAlert.showInfo("Удаление", "Прибор успешно удалён");
+            CustomAlertDialog.showInfo("Удаление", "Прибор успешно удалён");
 
             if (onDeviceAdded != null) onDeviceAdded.run();
 
@@ -464,7 +486,7 @@ public class AddDeviceController {
 
             LOGGER.info("Прибор удалён из формы редактирования: {}", editingDevice.getName());
         } else {
-            CustomAlert.showError("Ошибка", "Не удалось удалить прибор");
+            CustomAlertDialog.showError("Ошибка", "Не удалось удалить прибор");
         }
     }
 
@@ -474,11 +496,41 @@ public class AddDeviceController {
     @FXML
     private void onRemovePhoto() {
         int selectedIndex = selectedPhotosListView.getSelectionModel().getSelectedIndex();
-        if (selectedIndex >= 0 && selectedIndex < selectedPhotoFiles.size()) {
-            String removedPhoto = selectedPhotoFiles.remove(selectedIndex);
-            LOGGER.info("Удалено фото из списка: {}", removedPhoto);
+        if (selectedIndex < 0 || selectedIndex >= selectedPhotoFiles.size()) {
+            CustomAlertDialog.showInfo("Удаление фото", "Выберите фото для удаления из списка");
+            return;
+        }
+        
+        String removedPhoto = selectedPhotoFiles.get(selectedIndex);
+        
+        // ⭐⭐ НОВОЕ: Если в режиме редактирования - удаляем физический файл ⭐⭐
+        if (editingDevice != null) {
+            boolean confirm = CustomAlertDialog.showConfirmation(
+                "Удаление фото",
+                "Удалить фото \"" + removedPhoto + "\"?\n\nФайл будет удалён с диска."
+            );
+            
+            if (!confirm) {
+                return;
+            }
+            
+            // Удаляем физический файл через PhotoManager
+            boolean deleted = PhotoManager.getInstance()
+                    .deletePhoto(editingDevice, removedPhoto);
+            
+            if (deleted) {
+                selectedPhotoFiles.remove(selectedIndex);
+                LOGGER.info("✅ Фото удалено: {}", removedPhoto);
+                CustomAlertDialog.showSuccess("Удаление", "Фото успешно удалено");
+            } else {
+                CustomAlertDialog.showError("Ошибка", "Не удалось удалить фото");
+                LOGGER.error("❌ Не удалось удалить фото: {}", removedPhoto);
+            }
         } else {
-            CustomAlert.showInfo("Удаление фото", "Выберите фото для удаления из списка");
+            // Режим добавления - просто удаляем из списков
+            selectedPhotoFiles.remove(selectedIndex);
+            pendingPhotoFiles.removeIf(file -> file.getName().equals(removedPhoto));
+            LOGGER.info("Удалено фото из списка: {}", removedPhoto);
         }
     }
 
@@ -489,7 +541,7 @@ public class AddDeviceController {
         nameField.clear();
         typeField.clear();
         inventoryNumberField.clear();
-        locationField.clear();
+        locationField.setValue(null);  // ⭐⭐ ИЗМЕНЕНО ⭐⭐
         valveNumberField.clear();
         manufacturerField.clear();
         yearField.clear();
@@ -498,6 +550,7 @@ public class AddDeviceController {
         additionalInfoField.clear();
         statusComboBox.getSelectionModel().selectFirst();
         selectedPhotoFiles.clear();
+        pendingPhotoFiles.clear();  // ⭐⭐ НОВОЕ ⭐⭐
     }
 
     /**
@@ -505,7 +558,77 @@ public class AddDeviceController {
      */
     @FXML
     private void onCancel() {
-        clearForm();
-        LOGGER.info("Добавление прибора отменено, форма очищена");
+        // ⭐⭐ ИСПРАВЛЕНО: Просто закрываем форму без очистки ⭐⭐
+        Stage stage = (Stage) cancelBtn.getScene().getWindow();
+        stage.close();
+        LOGGER.info("Форма закрыта пользователем");
+    }
+    
+    /**
+     * Обновление иконок кнопок в зависимости от темы.
+     */
+    private void updateButtonIcons() {
+        if (cancelBtn.getScene() == null) return;
+        
+        // Определяем текущую тему - проверяем стили СЦЕНЫ, а не корневого элемента
+        boolean isDarkTheme = cancelBtn.getScene().getStylesheets().stream()
+                .anyMatch(s -> s.contains("dark-theme.css"));
+        
+        // Выбираем иконки в зависимости от темы
+        String stopIcon = isDarkTheme ? "/images/stop-white.png" : "/images/stop-dark.png";
+        String saveIcon = isDarkTheme ? "/images/save-white.png" : "/images/save-dark.png";
+        
+        LOGGER.debug("Обновление иконок: isDarkTheme={}, stopIcon={}, saveIcon={}", isDarkTheme, stopIcon, saveIcon);
+        
+        // Устанавливаем иконки
+        installSuitableIcon(stopIcon, cancelBtn);
+        installSuitableIcon(saveIcon, addBtn);
+    }
+
+    /**
+     * Вспомогательный метод для установки подходящей иконки
+     * @param icon - иконка
+     * @param button - кнопка
+     */
+    private void installSuitableIcon(String icon, Button button) {
+        if (button != null) {
+            javafx.scene.image.ImageView installIcon = new javafx.scene.image.ImageView(
+                new javafx.scene.image.Image(Objects.requireNonNull(getClass().getResourceAsStream(icon)))
+            );
+            installIcon.setFitWidth(35);
+            installIcon.setFitHeight(35);
+            installIcon.setPreserveRatio(true);
+            button.setGraphic(installIcon);
+        }
+    }
+
+    /**
+     * Вспомогательный метод для создания или обновления прибора.
+     *
+     * @param type - тип
+     * @param name - название
+     * @param manufacturer - производитель
+     * @param inventoryNumber - инв.№
+     * @param year - год выпуска
+     * @param measurementLimit - предел измерений
+     * @param accuracyClass - класс точности
+     * @param location - локация
+     * @param valveNumber - № крана
+     * @param status - статус
+     * @param device - устройство
+     */
+    private void createOrUpdateDevice(String type, String name, String manufacturer, String inventoryNumber, Integer year, String measurementLimit, Double accuracyClass, String location, String valveNumber, String status, Device device) {
+        device.setType(type);
+        device.setName(name);
+        device.setManufacturer(manufacturer);
+        device.setInventoryNumber(inventoryNumber);
+        device.setMeasurementLimit(measurementLimit);
+        device.setAccuracyClass(accuracyClass);
+        device.setYear(year);
+        device.setLocation(location);
+        device.setValveNumber(valveNumber);
+        device.setStatus(status);
+        device.setAdditionalInfo(additionalInfoField.getText());
+        device.updateTimestamp();
     }
 }

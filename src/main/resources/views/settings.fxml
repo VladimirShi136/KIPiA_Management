@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.control.Tooltip?>
+
+<!--
+  Author: vladimir_shi
+  Since: 15.01.2025
+  * Окно настроек *
+-->
+<?import javafx.scene.layout.StackPane?>
+<StackPane fx:id="rootPane"
+           xmlns="http://javafx.com/javafx/23"
+           xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.kipia.management.kipia_management.controllers.SettingsController"
+           VBox.vgrow="ALWAYS">
+
+<VBox fx:id="contentBox"
+      spacing="20"
+      styleClass="settings-root"
+      VBox.vgrow="ALWAYS">
+    
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <!-- Заголовок -->
+    <Label text="Настройки" styleClass="settings-header"/>
+    
+    <Separator/>
+    
+    <!-- Секция: Синхронизация базы данных -->
+    <VBox spacing="10">
+        <Label text="Синхронизация базы данных" styleClass="settings-section-title"/>
+        <Label text="Экспорт и импорт базы данных для синхронизации между устройствами" 
+               styleClass="settings-section-description" wrapText="true"/>
+        
+        <HBox spacing="15" alignment="CENTER_LEFT">
+            <Button fx:id="exportDbBtn" 
+                    onAction="#exportDatabase"
+                    styleClass="settings-button-export-db"
+                    prefWidth="200">
+                <graphic>
+                    <HBox spacing="8" alignment="CENTER">
+                        <ImageView fitWidth="20" fitHeight="20" preserveRatio="true">
+                            <Image url="@../images/export.png"/>
+                        </ImageView>
+                        <Label text="Экспорт БД" styleClass="button-label"/>
+                    </HBox>
+                </graphic>
+                <tooltip>
+                    <Tooltip text="Экспортировать базу данных в ZIP-архив"/>
+                </tooltip>
+            </Button>
+            
+            <Button fx:id="importDbBtn" 
+                    onAction="#importDatabase"
+                    styleClass="settings-button-import-db"
+                    prefWidth="200">
+                <graphic>
+                    <HBox spacing="8" alignment="CENTER">
+                        <ImageView fitWidth="20" fitHeight="20" preserveRatio="true">
+                            <Image url="@../images/import.png"/>
+                        </ImageView>
+                        <Label text="Импорт БД" styleClass="button-label"/>
+                    </HBox>
+                </graphic>
+                <tooltip>
+                    <Tooltip text="Импортировать базу данных из ZIP-архива"/>
+                </tooltip>
+            </Button>
+        </HBox>
+    </VBox>
+    
+    <Separator/>
+    
+    <!-- Секция: Импорт/Экспорт Excel -->
+    <VBox spacing="10">
+        <Label text="Работа с Excel таблицами" styleClass="settings-section-title"/>
+        <Label text="Экспорт и импорт данных приборов в формате Excel" 
+               styleClass="settings-section-description" wrapText="true"/>
+        
+        <HBox spacing="15" alignment="CENTER_LEFT">
+            <Button fx:id="exportExcelBtn" 
+                    onAction="#exportToExcel"
+                    styleClass="settings-button-export-excel"
+                    prefWidth="200">
+                <graphic>
+                    <HBox spacing="8" alignment="CENTER">
+                        <ImageView fitWidth="20" fitHeight="20" preserveRatio="true">
+                            <Image url="@../images/export.png"/>
+                        </ImageView>
+                        <Label text="Экспорт в Excel" styleClass="button-label"/>
+                    </HBox>
+                </graphic>
+                <tooltip>
+                    <Tooltip text="Экспортировать данные приборов в Excel файл"/>
+                </tooltip>
+            </Button>
+            
+            <Button fx:id="importExcelBtn" 
+                    onAction="#importFromExcel"
+                    styleClass="settings-button-import-excel"
+                    prefWidth="200">
+                <graphic>
+                    <HBox spacing="8" alignment="CENTER">
+                        <ImageView fitWidth="20" fitHeight="20" preserveRatio="true">
+                            <Image url="@../images/import.png"/>
+                        </ImageView>
+                        <Label text="Импорт из Excel" styleClass="button-label"/>
+                    </HBox>
+                </graphic>
+                <tooltip>
+                    <Tooltip text="Импортировать данные приборов из Excel файла"/>
+                </tooltip>
+            </Button>
+        </HBox>
+    </VBox>
+    
+    <Separator/>
+    
+    <!-- Информация -->
+    <VBox spacing="5">
+        <Label text="ℹ️ Информация" styleClass="settings-info-title"/>
+        <Label text="• Экспорт БД создаёт ZIP-архив с базой данных и фотографиями" 
+               styleClass="settings-info-text" wrapText="true"/>
+        <Label text="• Импорт БД объединяет данные, сохраняя записи с более поздней датой обновления" 
+               styleClass="settings-info-text" wrapText="true"/>
+        <Label text="• Excel файлы содержат только данные приборов без фотографий" 
+               styleClass="settings-info-text" wrapText="true"/>
+    </VBox>
+</VBox>
+
+</StackPane>

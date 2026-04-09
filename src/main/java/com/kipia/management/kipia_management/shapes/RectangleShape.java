@@ -146,6 +146,24 @@
             return rectangle;
         }
 
+        /**
+         * Проверка попадания точки на границы прямоугольника (только стороны, не внутренность)
+         */
+        @Override
+        protected boolean containsLocalPoint(double localX, double localY) {
+            double width = getCurrentWidth();
+            double height = getCurrentHeight();
+            double tolerance = DEFAULT_STROKE_WIDTH + 2.0; // Допуск для клика
+
+            // Проверяем, находится ли точка на одной из сторон
+            boolean onLeftEdge = Math.abs(localX) <= tolerance && localY >= 0 && localY <= height;
+            boolean onRightEdge = Math.abs(localX - width) <= tolerance && localY >= 0 && localY <= height;
+            boolean onTopEdge = Math.abs(localY) <= tolerance && localX >= 0 && localX <= width;
+            boolean onBottomEdge = Math.abs(localY - height) <= tolerance && localX >= 0 && localX <= width;
+
+            return onLeftEdge || onRightEdge || onTopEdge || onBottomEdge;
+        }
+
         // ============================================================
         // STYLE MANAGEMENT
         // ============================================================

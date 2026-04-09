@@ -107,6 +107,13 @@
             <version>2.18.0</version>
         </dependency>
 
+        <!-- Metadata Extractor для чтения EXIF -->
+        <dependency>
+            <groupId>com.drewnoakes</groupId>
+            <artifactId>metadata-extractor</artifactId>
+            <version>2.19.0</version>
+        </dependency>
+
         <!-- Maven Model
         <dependency>
             <groupId>org.apache.maven</groupId>

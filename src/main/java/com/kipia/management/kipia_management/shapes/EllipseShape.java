@@ -109,6 +109,27 @@ public class EllipseShape extends ShapeBase {
         return ellipse;
     }
 
+    /**
+     * Проверка попадания точки на границу эллипса (только контур, не внутренность)
+     */
+    @Override
+    protected boolean containsLocalPoint(double localX, double localY) {
+        double radiusX = getCurrentWidth() / 2;
+        double radiusY = getCurrentHeight() / 2;
+        double centerX = radiusX;
+        double centerY = radiusY;
+        double tolerance = DEFAULT_STROKE_WIDTH + 2.0;
+
+        // Расстояние от центра до точки в нормализованных координатах
+        double dx = (localX - centerX) / radiusX;
+        double dy = (localY - centerY) / radiusY;
+        double distance = Math.sqrt(dx * dx + dy * dy);
+
+        // Проверяем, находится ли точка на контуре эллипса (с допуском)
+        double toleranceNormalized = tolerance / Math.min(radiusX, radiusY);
+        return Math.abs(distance - 1.0) <= toleranceNormalized;
+    }
+
     private void applyStyle(Ellipse ellipse, Color fill, Color stroke, double strokeWidth) {
         ellipse.setFill(fill);
         ellipse.setStroke(stroke);

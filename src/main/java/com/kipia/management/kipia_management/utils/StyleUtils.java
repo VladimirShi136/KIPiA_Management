@@ -1,15 +1,10 @@
 package com.kipia.management.kipia_management.utils;
 
 import com.kipia.management.kipia_management.models.Device;
-import javafx.animation.Interpolator;
-import javafx.animation.KeyFrame;
-import javafx.animation.KeyValue;
 import javafx.animation.ScaleTransition;
-import javafx.animation.Timeline;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.effect.Glow;
 import javafx.scene.image.Image;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
@@ -19,54 +14,135 @@ import javafx.util.Duration;
 import java.util.Objects;
 
 /**
- * Класс с утилитами для работы со стилями CSS
+ * Утилиты для работы со стилями CSS в JavaFX.
+ * ВАЖНО: Все hover-эффекты теперь работают через CSS-псевдокласс :hover,
+ * поэтому ручное переключение классов *-hover больше не требуется.
  *
  * @author vladimir_shi
  * @since 08.09.2025
  */
 public class StyleUtils {
-    // Путь к файлу со стилями css
-    private static final String CSS_PATH = "/styles/light-theme.css";
-    // CSS классы для разных типов алертов
+
+    private static String currentThemePath = "/styles/light-theme.css";
+
+    // CSS классы для алертов
     private static final String INFO_ALERT = "info-alert";
     private static final String WARNING_ALERT = "warning-alert";
     private static final String ERROR_ALERT = "error-alert";
     private static final String CONFIRM_ALERT = "confirm-alert";
     private static final String SUCCESS_ALERT = "success-alert";
-    // CSS классы для компонентов
+
     private static final String STYLED_TABLE_VIEW = "styled-table-view";
+    private static final String STYLED_DIALOG = "styled-dialog";
 
     /**
-     * Метод для применения CSS классов с плавной сменой классов при наведении мыши.
-     *
-     * @param button          кнопка, к которой применяются стили
-     * @param defaultCssClass класс по умолчанию
-     * @param hoverCssClass   класс для состояния hover
+     * Устанавливает текущую тему для использования в алертах и диалогах
      */
-    public static void applyHoverAndAnimation(Button button, String defaultCssClass, String hoverCssClass) {
-        button.getStyleClass().removeIf(c -> c.equals(defaultCssClass) || c.equals(hoverCssClass));
-        button.getStyleClass().add(defaultCssClass);
+    public static void setCurrentTheme(String themePath) {
+        currentThemePath = themePath;
+    }
+
+    /**
+     * Получает путь к текущей теме
+     */
+    public static String getCurrentTheme() {
+        return currentThemePath;
+    }
+
+    // ============================================================
+    // УПРОЩЁННЫЕ МЕТОДЫ (без ручного переключения hover-классов)
+    // ============================================================
+
+    /**
+     * Просто добавляет CSS-класс кнопке.
+     * Все hover-эффекты теперь в CSS (:hover)
+     *
+     * @param button кнопка
+     * @param cssClass CSS класс
+     */
+    public static void addStyleClass(Button button, String cssClass) {
+        if (!button.getStyleClass().contains(cssClass)) {
+            button.getStyleClass().add(cssClass);
+        }
+    }
+
+    /**
+     * Добавляет анимацию масштабирования при наведении (опционально).
+     * Это чисто визуальный эффект, не связанный со сменой классов.
+     *
+     * @param button кнопка
+     * @param scaleFactor коэффициент увеличения (1.05 = +5%)
+     */
+    public static void addScaleHoverAnimation(Button button, double scaleFactor) {
         button.setOnMouseEntered(_ -> {
-            button.getStyleClass().remove(defaultCssClass);
-            if (!button.getStyleClass().contains(hoverCssClass)) {
-                button.getStyleClass().add(hoverCssClass);
-            }
+            ScaleTransition st = new ScaleTransition(Duration.millis(200), button);
+            st.setToX(scaleFactor);
+            st.setToY(scaleFactor);
+            st.setAutoReverse(true);
+            st.play();
         });
         button.setOnMouseExited(_ -> {
-            button.getStyleClass().remove(hoverCssClass);
-            if (!button.getStyleClass().contains(defaultCssClass)) {
-                button.getStyleClass().add(defaultCssClass);
-            }
+            ScaleTransition st = new ScaleTransition(Duration.millis(200), button);
+            st.setToX(1.0);
+            st.setToY(1.0);
+            st.play();
         });
     }
 
     /**
-     * Применение стиля и анимации для RadioButton
-     *
-     * @param button кнопка, к которой применяются стили
+     * Установка активного состояния для кнопки навигации.
+     * Работает через добавление/удаление *-active класса.
      */
+    public static void setNavigationButtonActive(Button button, boolean isActive,
+                                                 String defaultCssClass,
+                                                 String hoverCssClass,
+                                                 String activeCssClass) {
+        if (isActive) {
+            button.getStyleClass().remove(defaultCssClass);
+            button.getStyleClass().remove(hoverCssClass);
+            if (!button.getStyleClass().contains(activeCssClass)) {
+                button.getStyleClass().add(activeCssClass);
+            }
+        } else {
+            button.getStyleClass().remove(activeCssClass);
+            if (!button.getStyleClass().contains(defaultCssClass)) {
+                button.getStyleClass().add(defaultCssClass);
+            }
+        }
+    }
+
+    /**
+     * Установка активного состояния для кнопки инструмента.
+     */
+    public static void setToolButtonActive(Button button, boolean isActive, String activeCssClass) {
+        if (isActive) {
+            // НЕ удаляем базовый класс tool-button!
+            button.getStyleClass().remove("tool-button-hover");
+            if (!button.getStyleClass().contains(activeCssClass)) {
+                button.getStyleClass().add(activeCssClass);
+            }
+        } else {
+            button.getStyleClass().remove(activeCssClass);
+            if (!button.getStyleClass().contains("tool-button")) {
+                button.getStyleClass().add("tool-button");
+            }
+        }
+    }
+
+    /**
+     * Упрощённая инициализация кнопки инструмента.
+     */
+    public static void setupShapeToolButton(Button button) {
+        if (!button.getStyleClass().contains("tool-button")) {
+            button.getStyleClass().add("tool-button");
+        }
+    }
+
+    // ============================================================
+    // СТИЛИ ДЛЯ RADIOBUTTON (оставлено как есть)
+    // ============================================================
+
     public static void applyStyleToRadioButton(RadioButton button) {
-        // Начальный стиль
         button.setStyle(
                 "-fx-background-color: linear-gradient(to right, #6b5ce7, #a29bfe); " +
                         "-fx-text-fill: white; " +
@@ -75,95 +151,43 @@ public class StyleUtils {
                         "-fx-background-radius: 10; " +
                         "-fx-border-radius: 10; " +
                         "-fx-padding: 5 10 5 10; " +
-                        "-fx-effect: null; " +
                         "-fx-cursor: hand;"
         );
 
-        Glow glow = new Glow(0.0);
-        ScaleTransition scaleIn = new ScaleTransition(Duration.millis(300), button);
-        scaleIn.setFromX(1.0);
-        scaleIn.setFromY(1.0);
-        scaleIn.setToX(1.2);
-        scaleIn.setToY(1.2);
-        scaleIn.setInterpolator(Interpolator.EASE_OUT);
-
-        Timeline hoverIn = new Timeline();
-        hoverIn.getKeyFrames().add(new KeyFrame(Duration.millis(300),
-                        new KeyValue(glow.levelProperty(), 0.8, Interpolator.EASE_IN),
-                        new KeyValue(button.styleProperty(),
-                                "-fx-background-color: linear-gradient(to right, #ff6b6b, #4ecdc4); " +
-                                        "-fx-text-fill: white; " +
-                                        "-fx-font-size: 14px; " +
-                                        "-fx-font-weight: bold; " +
-                                        "-fx-background-radius: 10; " +
-                                        "-fx-border-radius: 10; " +
-                                        "-fx-padding: 5 10 5 10; " +
-                                        "-fx-effect: dropshadow(gaussian, rgba(255,107,107,0.5), 10, 0, 0, 0); " +
-                                        "-fx-cursor: hand;", Interpolator.EASE_IN)
-                )
-        );
-
+        // Анимация через ScaleTransition (не через смену классов)
         button.setOnMouseEntered(_ -> {
-            button.setEffect(glow);
-            hoverIn.playFromStart();
-            scaleIn.playFromStart();
+            ScaleTransition st = new ScaleTransition(Duration.millis(200), button);
+            st.setToX(1.1);
+            st.setToY(1.1);
+            st.play();
         });
-
         button.setOnMouseExited(_ -> {
-            button.setEffect(null);
-            hoverIn.stop();
-            button.setStyle(
-                    "-fx-background-color: linear-gradient(to right, #6b5ce7, #a29bfe); " +
-                            "-fx-text-fill: white; " +
-                            "-fx-font-size: 14px; " +
-                            "-fx-font-weight: bold; " +
-                            "-fx-background-radius: 10; " +
-                            "-fx-border-radius: 10; " +
-                            "-fx-padding: 5 10 5 10; " +
-                            "-fx-effect: null; " +
-                            "-fx-cursor: hand;"
-            );
-            ScaleTransition scaleOut = new ScaleTransition(Duration.millis(300), button);
-            scaleOut.setFromX(1.2);
-            scaleOut.setFromY(1.2);
-            scaleOut.setToX(1.0);
-            scaleOut.setToY(1.0);
-            scaleOut.setInterpolator(Interpolator.EASE_OUT);
-            scaleOut.play();
+            ScaleTransition st = new ScaleTransition(Duration.millis(200), button);
+            st.setToX(1.0);
+            st.setToY(1.0);
+            st.play();
         });
     }
 
-    /**
-     * Настройка стилей для Alert
-     *
-     * @param alert Alert для настройки
-     * @param title заголовок
-     * @param styleClass CSS класс для стилизации
-     */
+    // ============================================================
+    // ALERT STYLES
+    // ============================================================
+
     public static void setupAlertStyle(Alert alert, String title, String styleClass) {
         alert.initStyle(StageStyle.UTILITY);
         alert.setTitle(title);
-
-        // Добавляем CSS классы к DialogPane
         alert.getDialogPane().getStyleClass().add(styleClass);
         alert.getDialogPane().getStyleClass().add("custom-alert");
 
-        // Подключаем CSS файл
         try {
             alert.getDialogPane().getStylesheets().add(
-                    Objects.requireNonNull(StyleUtils.class.getResource(CSS_PATH)).toExternalForm()
+                    Objects.requireNonNull(StyleUtils.class.getResource(currentThemePath)).toExternalForm()
             );
         } catch (Exception e) {
-            System.err.println("Не удалось загрузить CSS файл для алертов: " + e.getMessage());
+            System.err.println("Не удалось загрузить CSS: " + e.getMessage());
         }
     }
 
-    /**
-     * Получить CSS класс для типа алерта
-     *
-     * @param alertType тип алерта
-     * @return CSS класс
-     */
     public static String getAlertStyleClass(String alertType) {
         return switch (alertType.toLowerCase()) {
             case "warning" -> WARNING_ALERT;
@@ -174,184 +198,60 @@ public class StyleUtils {
         };
     }
 
-    /**
-     * Специальный метод для кнопок инструментов фигур с активным состоянием
-     *
-     * @param button кнопка инструмента
-     * @param defaultCssClass класс по умолчанию
-     * @param hoverCssClass класс при наведении
-     * @param activeCssClass класс активного состояния
-     */
-    public static void applyToolButtonStyles(Button button, String defaultCssClass, String hoverCssClass, String activeCssClass) {
-        // Инициализация - устанавливаем обычный стиль
-        button.getStyleClass().removeIf(c -> c.equals(defaultCssClass) || c.equals(hoverCssClass) || c.equals(activeCssClass));
-        button.getStyleClass().add(defaultCssClass);
-
-        // Обработчик наведения мыши
-        button.setOnMouseEntered(_ -> {
-            // Не применяем hover, если кнопка уже активна
-            if (!button.getStyleClass().contains(activeCssClass)) {
-                button.getStyleClass().remove(defaultCssClass);
-                if (!button.getStyleClass().contains(hoverCssClass)) {
-                    button.getStyleClass().add(hoverCssClass);
-                }
-            }
-        });
-
-        // Обработчик ухода мыши
-        button.setOnMouseExited(_ -> {
-            // Не меняем обратно, если кнопка активна
-            if (!button.getStyleClass().contains(activeCssClass)) {
-                button.getStyleClass().remove(hoverCssClass);
-                if (!button.getStyleClass().contains(defaultCssClass)) {
-                    button.getStyleClass().add(defaultCssClass);
-                }
-            }
-        });
-    }
-
-    /**
-     * Устанавливает активное состояние для кнопки инструмента
-     *
-     * @param button кнопка инструмента
-     * @param isActive флаг активности
-     * @param activeCssClass CSS класс активного состояния
-     */
-    public static void setToolButtonActive(Button button, boolean isActive, String activeCssClass) {
-        if (isActive) {
-            // Активируем кнопку
-            button.getStyleClass().removeIf(cls -> cls.equals("tool-button") || cls.equals("tool-button-hover"));
-            if (!button.getStyleClass().contains(activeCssClass)) {
-                button.getStyleClass().add(activeCssClass);
-            }
-
-            // Легкая анимация активации
-            ScaleTransition scaleIn = new ScaleTransition(Duration.millis(150), button);
-            scaleIn.setFromX(1.0);
-            scaleIn.setFromY(1.0);
-            scaleIn.setToX(1.03);
-            scaleIn.setToY(1.03);
-            scaleIn.setInterpolator(Interpolator.EASE_OUT);
-            scaleIn.play();
-
-        } else {
-            // Деактивируем кнопку
-            button.getStyleClass().remove(activeCssClass);
-            if (!button.getStyleClass().contains("tool-button")) {
-                button.getStyleClass().add("tool-button");
-            }
-
-            // Анимация деактивации
-            ScaleTransition scaleOut = new ScaleTransition(Duration.millis(150), button);
-            scaleOut.setFromX(1.03);
-            scaleOut.setFromY(1.03);
-            scaleOut.setToX(1.0);
-            scaleOut.setToY(1.0);
-            scaleOut.setInterpolator(Interpolator.EASE_OUT);
-            scaleOut.play();
-        }
-    }
-
-    /**
-     * Упрощенный метод для кнопок инструментов (использует стандартные классы)
-     */
-    public static void setupShapeToolButton(Button button) {
-        applyToolButtonStyles(button, "tool-button", "tool-button-hover", "tool-button-active");
-    }
-
     // ============================================================
-    // НОВЫЕ МЕТОДЫ ДЛЯ ТАБЛИЦ И ДИАЛОГОВ
+    // DIALOG UTILITIES
     // ============================================================
-    /**
-     * Создание готового диалога выбора прибора
-     */
+
     public static Dialog<Device> createDeviceSelectionDialog(String title, String header) {
         Dialog<Device> dialog = new Dialog<>();
         dialog.setTitle(title);
         dialog.setHeaderText(header);
-
-        // Кнопки - используем стандартные ButtonType для корректной работы
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
 
-        // Переименовываем кнопку OK в "Выбрать"
         Button okButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
         if (okButton != null) {
             okButton.setText("Выбрать");
         }
 
-        // Настройка стилей
         setupDialogStyles(dialog);
-
         return dialog;
     }
 
-    /**
-     * Настройка стилей диалога
-     */
     public static void setupDialogStyles(Dialog<?> dialog) {
-        // Устанавливаем иконку окна
-        Stage dialogStage = (Stage) dialog.getDialogPane().getScene().getWindow();
-        try {
-            Image appIcon = new Image(Objects.requireNonNull(StyleUtils.class.getResourceAsStream("/images/iconApp.png")));
-            dialogStage.getIcons().add(appIcon);
-        } catch (Exception e) {
-            System.err.println("Не удалось загрузить иконку для диалога: " + e.getMessage());
-        }
+        // Применяем единый стиль через DialogStyler (без системного titlebar и иконки)
+        com.kipia.management.kipia_management.utils.DialogStyler.applyStyle(dialog);
 
-        // Применяем CSS стили
-        dialog.getDialogPane().getStyleClass().add("styled-dialog");
-        try {
-            dialog.getDialogPane().getStylesheets().addAll(
-                    Objects.requireNonNull(StyleUtils.class.getResource(CSS_PATH)).toExternalForm()
-            );
-        } catch (Exception e) {
-            System.err.println("Не удалось загрузить CSS для диалога: " + e.getMessage());
-        }
-
-        // Гарантируем минимальные размеры для диалога
         dialog.getDialogPane().setMinWidth(400);
         dialog.getDialogPane().setMinHeight(300);
     }
 
-    /**
-     * Настройка поведения TableView (двойной клик и hover)
-     */
     public static <T> void setupTableViewBehavior(TableView<T> tableView, Dialog<T> dialog) {
         tableView.setRowFactory(_ -> {
             TableRow<T> row = new TableRow<>();
             row.setOnMouseClicked(event -> {
-                if (event.getClickCount() == 2 && (!row.isEmpty())) {
-                    // При двойном клике сразу устанавливаем результат и закрываем
+                if (event.getClickCount() == 2 && !row.isEmpty()) {
                     dialog.setResult(row.getItem());
                 }
             });
             return row;
         });
 
-        // Дополнительная настройка: делаем так, чтобы кнопка "Выбрать" была активна только при выборе элемента
         Button okButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
         if (okButton != null) {
-            // Изначально кнопка неактивна
             okButton.setDisable(true);
-
-            // Активируем кнопку только когда выбран элемент
-            tableView.getSelectionModel().selectedItemProperty().addListener((_, _, newSelection) -> okButton.setDisable(newSelection == null));
+            tableView.getSelectionModel().selectedItemProperty().addListener(
+                    (_, _, newSelection) -> okButton.setDisable(newSelection == null));
         }
     }
 
-    /**
-     * Создание контента для диалога
-     */
     public static VBox createDialogContent(String title, String infoText, TableView<?> tableView) {
         VBox content = new VBox(10);
         content.getStyleClass().add("dialog-content");
         content.setPadding(new Insets(20));
 
-        // Заголовок
         Label titleLabel = new Label(title);
         titleLabel.getStyleClass().add("dialog-title");
 
-        // Информационная строка
         Label infoLabel = new Label(infoText);
         infoLabel.getStyleClass().add("dialog-info");
 
@@ -359,36 +259,26 @@ public class StyleUtils {
         return content;
     }
 
-    /**
-     * Создание стилизованного TableView
-     */
     public static <T> TableView<T> createStyledTableView() {
         TableView<T> tableView = new TableView<>();
         applyTableViewStyles(tableView);
         return tableView;
     }
 
-    /**
-     * Применение стилей к TableView
-     */
     public static void applyTableViewStyles(TableView<?> tableView) {
         tableView.getStyleClass().add(STYLED_TABLE_VIEW);
         tableView.setPrefHeight(400);
         tableView.setPrefWidth(800);
 
-        // Подключаем CSS
         try {
             tableView.getStylesheets().add(
-                    Objects.requireNonNull(StyleUtils.class.getResource(CSS_PATH)).toExternalForm()
+                    Objects.requireNonNull(StyleUtils.class.getResource(currentThemePath)).toExternalForm()
             );
         } catch (Exception e) {
-            System.err.println("Не удалось загрузить CSS для TableView: " + e.getMessage());
+            System.err.println("Не удалось загрузить CSS: " + e.getMessage());
         }
     }
 
-    /**
-     * Создание стилизованной колонки для TableView
-     */
     public static <T, S> TableColumn<T, S> createStyledColumn(String title, String property, double width) {
         TableColumn<T, S> column = new TableColumn<>(title);
         column.setCellValueFactory(new PropertyValueFactory<>(property));
@@ -396,5 +286,3 @@ public class StyleUtils {
         return column;
     }
 }
-
-

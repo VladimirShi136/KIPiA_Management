@@ -7,7 +7,8 @@
   Since: 30.08.2025
   * Окно добавления нового прибора *
 -->
-<VBox xmlns="http://javafx.com/javafx/17.0.2-ea"
+<?import javafx.scene.image.Image?>
+<VBox xmlns="http://javafx.com/javafx/23"
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.kipia.management.kipia_management.controllers.AddDeviceController"
       styleClass="add-device-root"
@@ -48,8 +49,8 @@
 
                     <!-- СТРОКА 3: Место установки -->
                     <Label text="Место установки:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
-                    <TextField fx:id="locationField" GridPane.rowIndex="3" GridPane.columnIndex="1" prefWidth="280"
-                               styleClass="form-input" promptText="Например, 88 км Губкин"/>
+                    <ComboBox fx:id="locationField" GridPane.rowIndex="3" GridPane.columnIndex="1" prefWidth="280"
+                               editable="true" styleClass="form-input" promptText="Например, 88 км Губкин"/>
 
                     <!-- СТРОКА 4: Кран № -->
                     <Label text="Кран № (опционально):" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
@@ -94,11 +95,23 @@
 
                     <!-- СТРОКА 11: Фото -->
                     <Label text="Фото (несколько):" GridPane.rowIndex="11" GridPane.columnIndex="0" styleClass="form-label"/>
-                    <HBox spacing="10" GridPane.rowIndex="11" GridPane.columnIndex="1" alignment="CENTER_LEFT">
-                        <Button fx:id="photoChooseBtn" text="Фото +" onAction="#onChooseFiles"
-                                styleClass="photo-choose-btn" prefWidth="120"/>
-                        <Button fx:id="photoRemoveBtn" text="Фото -" onAction="#onRemovePhoto"
-                                styleClass="button-remove" prefWidth="140"/>
+                    <HBox spacing="20" GridPane.rowIndex="11" GridPane.columnIndex="1" alignment="CENTER_LEFT">
+                        <Button fx:id="photoChooseBtn" onAction="#onChooseFiles"
+                                styleClass="photo-icon-btn" prefWidth="35" prefHeight="35">
+                            <graphic>
+                                <javafx.scene.image.ImageView fitWidth="35" fitHeight="35" preserveRatio="true">
+                                    <Image url="@../images/image-plus.png"/>
+                                </javafx.scene.image.ImageView>
+                            </graphic>
+                        </Button>
+                        <Button fx:id="photoRemoveBtn" onAction="#onRemovePhoto"
+                                styleClass="photo-icon-btn-with-margin" prefWidth="35" prefHeight="35">
+                            <graphic>
+                                <javafx.scene.image.ImageView fitWidth="35" fitHeight="35" preserveRatio="true">
+                                    <Image url="@../images/image-minus.png"/>
+                                </javafx.scene.image.ImageView>
+                            </graphic>
+                        </Button>
                     </HBox>
 
                     <!-- СТРОКА 12: Выбранные фото -->
@@ -115,15 +128,21 @@
                 </GridPane>
 
                 <!-- Кнопки - всегда видимы внизу -->
-                <HBox spacing="12" alignment="CENTER" style="-fx-padding: 20 0 0 0;">
+                <HBox spacing="40" alignment="CENTER" style="-fx-padding: 20 0 0 0;">
                     <!-- Кнопка удаления — видна только в режиме редактирования -->
-                    <Button fx:id="deleteBtn" text="Удалить" onAction="#onDeleteDevice"
-                            styleClass="button-delete" prefWidth="110" prefHeight="35"
-                            visible="false" managed="false"/>
-                    <Button fx:id="cancelBtn" text="Отмена" onAction="#onCancel"
-                            styleClass="button-cancel" prefWidth="110" prefHeight="35"/>
-                    <Button fx:id="addBtn" text="Добавить" onAction="#onAddDevice"
-                            styleClass="button-add" prefWidth="110" prefHeight="35"/>
+                    <Button fx:id="deleteBtn" onAction="#onDeleteDevice"
+                            styleClass="button-delete" prefWidth="35" prefHeight="35"
+                            visible="false" managed="false">
+                        <graphic>
+                            <javafx.scene.image.ImageView fitWidth="35" fitHeight="35" preserveRatio="true">
+                                <Image url="@../images/delete.png"/>
+                            </javafx.scene.image.ImageView>
+                        </graphic>
+                    </Button>
+                    <Button fx:id="cancelBtn" onAction="#onCancel"
+                            styleClass="button-icon" prefWidth="35" prefHeight="35"/>
+                    <Button fx:id="addBtn" onAction="#onAddDevice"
+                            styleClass="button-icon" prefWidth="35" prefHeight="35"/>
                 </HBox>
             </VBox>
         </VBox>

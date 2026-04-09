@@ -7,101 +7,82 @@
 -->
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<VBox xmlns="http://javafx.com/javafx/23"
-      xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="com.kipia.management.kipia_management.controllers.PhotoGalleryController"
-      styleClass="photo-gallery-root"
-      VBox.vgrow="ALWAYS">
-
-    <!-- ПАНЕЛЬ ПОИСКА И ФИЛЬТРОВ -->
-    <VBox styleClass="search-filter-panel">
-        <HBox styleClass="search-row" alignment="CENTER_LEFT">
-            <Label text="Поиск:" styleClass="search-label"/>
-            <TextField fx:id="searchField"
-                       promptText="Поиск по месту установки или прибору..."
-                       styleClass="search-field"/>
-
-            <ComboBox fx:id="locationFilter"
-                      promptText="Все места установки"
-                      styleClass="filter-combo"/>
-
-            <CheckBox fx:id="photosOnlyCheck"
-                      text="Только с фото"
-                      styleClass="filter-checkbox"/>
-        </HBox>
+<StackPane fx:id="rootPane"
+           xmlns="http://javafx.com/javafx/23"
+           xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.kipia.management.kipia_management.controllers.PhotoGalleryController"
+           VBox.vgrow="ALWAYS">
+    <VBox fx:id="contentBox"
+          styleClass="photo-gallery-root"
+          spacing="10"
+          VBox.vgrow="ALWAYS">
+        <!-- СТАТИСТИКА -->
+        <VBox styleClass="statistics-pane" spacing="8">
+            <!-- Основная статистика -->
+            <HBox spacing="10" styleClass="statistics-data" HBox.hgrow="ALWAYS">
+                <VBox alignment="CENTER" HBox.hgrow="ALWAYS">
+                    <Label fx:id="locationsCountLabel"
+                           text="0"
+                           styleClass="stat-total"/>
+                    <Label text="мест установки"
+                           styleClass="stat-label"/>
+                </VBox>
+                <VBox alignment="CENTER" HBox.hgrow="ALWAYS">
+                    <Label fx:id="devicesCountLabel"
+                           text="0"
+                           styleClass="stat-working"/>
+                    <Label text="приборов"
+                           styleClass="stat-label"/>
+                </VBox>
+                <VBox alignment="CENTER" HBox.hgrow="ALWAYS">
+                    <Label fx:id="photosCountLabel"
+                           text="0"
+                           styleClass="stat-storage"/>
+                    <Label text="фотографий"
+                           styleClass="stat-label"/>
+                </VBox>
+            </HBox>
+            <!-- Фильтрованная статистика (показывается при активных фильтрах) -->
+            <HBox fx:id="filteredStatsBox" spacing="10" styleClass="statistics-data"
+                  HBox.hgrow="ALWAYS" visible="false" managed="false">
+                <VBox alignment="CENTER" HBox.hgrow="ALWAYS">
+                    <Label fx:id="filteredLocationsLabel"
+                           text="0"
+                           styleClass="stat-total"/>
+                    <Label text="мест установки"
+                           styleClass="stat-label"/>
+                </VBox>
+                <VBox alignment="CENTER" HBox.hgrow="ALWAYS">
+                    <Label fx:id="filteredDevicesLabel"
+                           text="0"
+                           styleClass="stat-working"/>
+                    <Label text="приборов"
+                           styleClass="stat-label"/>
+                </VBox>
+                <VBox alignment="CENTER" HBox.hgrow="ALWAYS">
+                    <Label fx:id="filteredPhotosLabel"
+                           text="0"
+                           styleClass="stat-storage"/>
+                    <Label text="фотографий"
+                           styleClass="stat-label"/>
+                </VBox>
+                <VBox alignment="CENTER" HBox.hgrow="ALWAYS">
+                    <Label fx:id="devicesWithPhotosLabel"
+                           text="0"
+                           styleClass="stat-with-photos"/>
+                    <Label text="с фото"
+                           styleClass="stat-label"/>
+                </VBox>
+            </HBox>
+        </VBox>
+        <!-- КОНТЕЙНЕР КАРТОЧЕК -->
+        <ListView fx:id="cardsListView"
+                  VBox.vgrow="ALWAYS"
+                  prefWidth="2200"
+                  prefHeight="1800"
+                  minWidth="600"
+                  minHeight="200"
+                  maxHeight="Infinity"
+                  styleClass="photo-gallery-listview"/>
     </VBox>
-
-    <!-- СТАТИСТИКА -->
-    <VBox styleClass="statistics-panel" spacing="8">
-        <GridPane styleClass="statistics-grid" hgap="10">
-            <columnConstraints>
-                <!-- Колонка 1: Статистика (50%) -->
-                <ColumnConstraints hgrow="ALWAYS" percentWidth="50" halignment="RIGHT"/>
-                <!-- Колонка 2: Разделитель (фиксированная) -->
-                <ColumnConstraints hgrow="NEVER" prefWidth="1"/>
-                <!-- Колонка 3: Информация (50%) -->
-                <ColumnConstraints hgrow="ALWAYS" percentWidth="50" halignment="LEFT"/>
-            </columnConstraints>
-
-            <!-- Статистика в первой колонке -->
-            <VBox alignment="CENTER_RIGHT" spacing="5" GridPane.columnIndex="0">
-                <Label text="Общая статистика:" styleClass="statistics-title"/>
-                <HBox styleClass="statistics-numbers" spacing="30" alignment="CENTER_RIGHT">
-                    <VBox styleClass="stat-item" alignment="CENTER">
-                        <Label fx:id="locationsCountLabel" text="0" styleClass="stat-big-number"/>
-                        <Label text="мест установки" styleClass="stat-label"/>
-                    </VBox>
-
-                    <VBox styleClass="stat-item" alignment="CENTER">
-                        <Label fx:id="devicesCountLabel" text="0" styleClass="stat-big-number"/>
-                        <Label text="приборов" styleClass="stat-label"/>
-                    </VBox>
-
-                    <VBox styleClass="stat-item" alignment="CENTER">
-                        <Label fx:id="photosCountLabel" text="0" styleClass="stat-big-number"/>
-                        <Label text="фотографий" styleClass="stat-label"/>
-                    </VBox>
-                </HBox>
-            </VBox>
-
-            <!-- Разделитель во второй колонке -->
-            <Region styleClass="vertical-divider"
-                    GridPane.columnIndex="1" GridPane.halignment="CENTER" GridPane.valignment="CENTER"/>
-
-            <!-- Информация в третьей колонке -->
-            <VBox alignment="CENTER_LEFT" spacing="5" GridPane.columnIndex="2">
-                <Label fx:id="filteredStatsTitle" text="Показано:" styleClass="filtered-stats-title"/>
-                <HBox styleClass="filtered-stats-container" spacing="30" alignment="CENTER_LEFT">
-                    <VBox styleClass="filtered-stat-item" alignment="CENTER">
-                        <Label fx:id="filteredLocationsLabel" text="0"/>
-                        <Label text="мест установки" styleClass="filtered-stat-label"/>
-                    </VBox>
-
-                    <VBox styleClass="filtered-stat-item" alignment="CENTER">
-                        <Label fx:id="filteredDevicesLabel" text="0"/>
-                        <Label text="приборов" styleClass="filtered-stat-label"/>
-                    </VBox>
-
-                    <VBox styleClass="filtered-stat-item" alignment="CENTER">
-                        <Label fx:id="filteredPhotosLabel" text="0"/>
-                        <Label text="фотографий" styleClass="filtered-stat-label"/>
-                    </VBox>
-
-                    <VBox styleClass="filtered-stat-item" alignment="CENTER">
-                        <Label fx:id="filteredWithPhotosLabel" text="0"/>
-                        <Label text="с фотографиями" styleClass="filtered-stat-label"/>
-                    </VBox>
-                </HBox>
-            </VBox>
-        </GridPane>
-    </VBox>
-    <!-- КОНТЕЙНЕР КАРТОЧЕК -->
-    <ListView fx:id="cardsListView"
-              VBox.vgrow="ALWAYS"
-              prefWidth="2200"
-              prefHeight="1800"
-              minWidth="600"
-              minHeight="200"
-              maxHeight="Infinity"
-              styleClass="photo-gallery-listview"/>
-</VBox>
+</StackPane>

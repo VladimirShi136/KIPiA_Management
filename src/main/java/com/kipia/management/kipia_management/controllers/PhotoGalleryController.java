@@ -3,11 +3,13 @@ package com.kipia.management.kipia_management.controllers;
 import com.kipia.management.kipia_management.managers.PhotoManager;
 import com.kipia.management.kipia_management.models.Device;
 import com.kipia.management.kipia_management.services.DeviceDAO;
-import com.kipia.management.kipia_management.utils.CustomAlert;
+import com.kipia.management.kipia_management.utils.CustomAlertDialog;
+import com.kipia.management.kipia_management.utils.LoadingIndicator;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -20,12 +22,12 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Контроллер для работы с галереей фотографий
+ * Контроллер для работы с галереей фотографий
  *
  * @author vladimir_shi
  * @since 01.12.2025
  */
-public class PhotoGalleryController {
+public class PhotoGalleryController implements SearchableController {
 
     private static final Logger LOGGER = LogManager.getLogger(PhotoGalleryController.class);
 
@@ -75,18 +77,25 @@ public class PhotoGalleryController {
     }
 
     // FXML элементы
-    @FXML private TextField searchField;
-    @FXML private ComboBox<String> locationFilter;
-    @FXML private CheckBox photosOnlyCheck;
+    @FXML private StackPane rootPane;
+    @FXML private VBox contentBox;
     @FXML private ListView<LocationCardData> cardsListView;
     @FXML private Label locationsCountLabel;
     @FXML private Label devicesCountLabel;
     @FXML private Label photosCountLabel;
+    @FXML private HBox filteredStatsBox;
     @FXML private Label filteredLocationsLabel;
     @FXML private Label filteredDevicesLabel;
     @FXML private Label filteredPhotosLabel;
-    @FXML private Label filteredWithPhotosLabel;
-    @FXML private Label filteredStatsTitle;
+    @FXML private Label devicesWithPhotosLabel;
+    
+    // Индикатор загрузки
+    private LoadingIndicator loadingIndicator;
+    
+    // Внешние элементы поиска (из верхней панели)
+    private TextField externalSearchField;
+    private ComboBox<String> externalLocationFilter;
+    private CheckBox externalPhotosOnlyCheck;
 
     public PhotoGalleryController() {
         photoManager = PhotoManager.getInstance();
@@ -98,21 +107,7 @@ public class PhotoGalleryController {
 
     @FXML
     public void initialize() {
-        setupListeners();
         setupListView();
-    }
-
-    private void setupListeners() {
-        // Поиск и фильтры
-        if (searchField != null) {
-            searchField.textProperty().addListener((_, _, _) -> applyFilters());
-        }
-        if (photosOnlyCheck != null) {
-            photosOnlyCheck.selectedProperty().addListener((_, _, _) -> applyFilters());
-        }
-        if (locationFilter != null) {
-            locationFilter.valueProperty().addListener((_, _, _) -> applyFilters());
-        }
     }
 
     private void setupListView() {
@@ -316,7 +311,7 @@ public class PhotoGalleryController {
 
                 deletePhotoBtn.setOnAction(_ -> {
                     Stage stage = (Stage) deletePhotoBtn.getScene().getWindow();
-                    showDeletePhotoDialog(device, stage);
+                    showDeletePhotoDialog(device);
                 });
 
                 // Контейнер для кнопок
@@ -333,10 +328,73 @@ public class PhotoGalleryController {
     public void init() {
         if (deviceDAO == null) {
             LOGGER.error("DeviceDAO не установлен!");
-            CustomAlert.showError("Ошибка", "Сервис базы данных не инициализирован");
+            CustomAlertDialog.showError("Ошибка", "Сервис базы данных не инициализирован");
             return;
         }
-        loadData();
+        
+        // Инициализация индикатора загрузки
+        loadingIndicator = new LoadingIndicator("Загрузка галереи...");
+        if (rootPane != null) {
+            rootPane.getChildren().add(loadingIndicator.getOverlay());
+        }
+        
+        // Скрываем контент до загрузки
+        hideContentBeforeLoad();
+        
+        // Запускаем загрузку
+        loadDataAsync();
+    }
+    
+    private void hideContentBeforeLoad() {
+        if (contentBox != null) {
+            contentBox.setVisible(false);
+            contentBox.setManaged(false);
+        }
+    }
+    
+    private void showContentAfterLoad() {
+        if (contentBox != null) {
+            contentBox.setVisible(true);
+            contentBox.setManaged(true);
+        }
+    }
+    
+    private void loadDataAsync() {
+        Platform.runLater(() -> loadingIndicator.show());
+        
+        Task<Void> loadTask = new Task<>() {
+            @Override
+            protected Void call() throws Exception {
+                long startTime = System.currentTimeMillis();
+                
+                // Загрузка данных
+                loadData();
+                
+                // Умная задержка
+                long elapsedTime = System.currentTimeMillis() - startTime;
+                long minDisplayTime = 500;
+                
+                if (elapsedTime < minDisplayTime) {
+                    Thread.sleep(minDisplayTime - elapsedTime);
+                }
+                
+                return null;
+            }
+        };
+        
+        loadTask.setOnSucceeded(_ -> {
+            showContentAfterLoad();
+            loadingIndicator.hide();
+        });
+        
+        loadTask.setOnFailed(_ -> {
+            LOGGER.error("Ошибка загрузки данных: {}", loadTask.getException().getMessage());
+            CustomAlertDialog.showError("Ошибка", "Не удалось загрузить данные");
+            showContentAfterLoad();
+            loadingIndicator.hide();
+        });
+        
+        new Thread(loadTask).start();
     }
 
     private void loadData() {
@@ -376,7 +434,7 @@ public class PhotoGalleryController {
 
         } catch (Exception e) {
             LOGGER.error("❌ Ошибка загрузки данных: {}", e.getMessage(), e);
-            CustomAlert.showError("Ошибка", "Не удалось загрузить данные приборов");
+            CustomAlertDialog.showError("Ошибка", "Не удалось загрузить данные приборов");
         }
     }
 
@@ -452,24 +510,31 @@ public class PhotoGalleryController {
     }
 
     private void updateLocationFilter() {
-        if (locationFilter == null) return;
+        if (externalLocationFilter == null || devicesByLocation == null) return;
 
         List<String> locations = new ArrayList<>(devicesByLocation.keySet());
         Collections.sort(locations);
 
-        locationFilter.getItems().clear();
-        locationFilter.getItems().add("Все места");
-        locationFilter.getItems().addAll(locations);
-        locationFilter.setValue("Все места");
+        Platform.runLater(() -> {
+            externalLocationFilter.getItems().clear();
+            externalLocationFilter.getItems().add("Все места");
+            externalLocationFilter.getItems().addAll(locations);
+            externalLocationFilter.setValue("Все места");
+        });
     }
 
     private void applyFilters() {
         if (filteredCards == null) return;
 
-        String searchText = searchField != null ? searchField.getText().toLowerCase().trim() : "";
-        boolean photosOnly = photosOnlyCheck != null && photosOnlyCheck.isSelected();
-        String selectedLocation = locationFilter != null && locationFilter.getValue() != null ?
-                locationFilter.getValue() : "Все места";
+        String searchText = externalSearchField != null ? externalSearchField.getText().toLowerCase().trim() : "";
+        boolean photosOnly = externalPhotosOnlyCheck != null && externalPhotosOnlyCheck.isSelected();
+        String selectedLocation = externalLocationFilter != null && externalLocationFilter.getValue() != null ?
+                externalLocationFilter.getValue() : "Все места";
+
+        // Проверяем, активны ли фильтры
+        boolean hasActiveFilters = !searchText.isEmpty() || 
+                                   photosOnly || 
+                                   !"Все места".equals(selectedLocation);
 
         filteredCards.setPredicate(data -> {
             // Фильтрация по выбранному месту
@@ -495,6 +560,30 @@ public class PhotoGalleryController {
             return !photosOnly || data.hasPhotos();
         });
 
+        // Показываем/скрываем фильтрованную статистику с анимацией
+        if (filteredStatsBox != null) {
+            if (hasActiveFilters && !filteredStatsBox.isVisible()) {
+                filteredStatsBox.setVisible(true);
+                filteredStatsBox.setManaged(true);
+                
+                javafx.animation.FadeTransition fadeIn = new javafx.animation.FadeTransition(
+                    javafx.util.Duration.millis(300), filteredStatsBox);
+                fadeIn.setFromValue(0.0);
+                fadeIn.setToValue(1.0);
+                fadeIn.play();
+            } else if (!hasActiveFilters && filteredStatsBox.isVisible()) {
+                javafx.animation.FadeTransition fadeOut = new javafx.animation.FadeTransition(
+                    javafx.util.Duration.millis(300), filteredStatsBox);
+                fadeOut.setFromValue(1.0);
+                fadeOut.setToValue(0.0);
+                fadeOut.setOnFinished(_ -> {
+                    filteredStatsBox.setVisible(false);
+                    filteredStatsBox.setManaged(false);
+                });
+                fadeOut.play();
+            }
+        }
+
         updateStatistics(); // Обновляем статистику после применения фильтров
     }
 
@@ -506,7 +595,7 @@ public class PhotoGalleryController {
                 .toList();
 
         if (devicesWithPhotos.isEmpty()) {
-            CustomAlert.showInfo("Просмотр фото",
+            CustomAlertDialog.showInfo("Просмотр фото",
                     String.format("В месте '%s' нет фотографий", location));
             return;
         }
@@ -519,7 +608,7 @@ public class PhotoGalleryController {
                 .sum();
 
         if (devicesWithPhotos.size() > 1) {
-            CustomAlert.showInfo("Информация",
+            CustomAlertDialog.showInfo("Информация",
                     String.format("""
                                     Всего фото в месте '%s': %d (в %d приборах)
                                     
@@ -563,7 +652,7 @@ public class PhotoGalleryController {
     }
 
     /**
-     * Обновление только отфильтрованной статистики ("Показано:")
+     * Обновление только отфильтрованной статистики
      */
     private void updateFilteredStatistics() {
         if (filteredCards == null) return;
@@ -571,56 +660,63 @@ public class PhotoGalleryController {
         int filteredLocations = 0;
         int filteredDevices = 0;
         int filteredPhotos = 0;
-        int filteredDevicesWithPhotos = 0;
+        int devicesWithPhotos = 0;
 
         // Пересчитываем статистику для отфильтрованных карточек
         for (LocationCardData card : filteredCards) {
             filteredLocations++;
             filteredDevices += card.getDeviceCount();
             filteredPhotos += card.getPhotoCount();
-            filteredDevicesWithPhotos += card.getDevicesWithPhotos();
+            devicesWithPhotos += card.getDevicesWithPhotos();
         }
 
-        // Обновляем UI через отдельный метод
-        updateFilteredStatsUI(filteredLocations, filteredDevices, filteredPhotos, filteredDevicesWithPhotos);
+        // Обновляем UI
+        updateFilteredStatsUI(filteredLocations, filteredDevices, filteredPhotos, devicesWithPhotos);
     }
 
     /**
-     * Обновление UI статистики "Показано:"
+     * Обновление UI отфильтрованной статистики
      */
-    private void updateFilteredStatsUI(int locations, int devices, int photos, int devicesWithPhotos) {
+    private void updateFilteredStatsUI(int locations, int devices, int photos, int withPhotos) {
         Platform.runLater(() -> {
-            filteredLocationsLabel.setText(String.valueOf(locations));
-            filteredDevicesLabel.setText(String.valueOf(devices));
-            filteredPhotosLabel.setText(String.valueOf(photos));
-            filteredWithPhotosLabel.setText(String.valueOf(devicesWithPhotos));
+            if (filteredLocationsLabel != null) {
+                filteredLocationsLabel.setText(String.valueOf(locations));
+            }
+            if (filteredDevicesLabel != null) {
+                filteredDevicesLabel.setText(String.valueOf(devices));
+            }
+            if (filteredPhotosLabel != null) {
+                filteredPhotosLabel.setText(String.valueOf(photos));
+            }
+            if (devicesWithPhotosLabel != null) {
+                devicesWithPhotosLabel.setText(String.valueOf(withPhotos));
+            }
         });
     }
 
     /**
      * Диалог для удаления фото
      */
-    private void showDeletePhotoDialog(Device device, Stage ownerStage) {
+    private void showDeletePhotoDialog(Device device) {
         List<String> photos = device.getPhotos();
         if (photos == null || photos.isEmpty()) {
-            CustomAlert.showInfo("Удаление фото", "У прибора нет фотографий для удаления");
+            CustomAlertDialog.showInfo("Удаление фото", "У прибора нет фотографий для удаления");
             return;
         }
 
         // Сохраняем состояние раскрытия карточек
         Map<String, Boolean> previousState = new HashMap<>(cardExpansionState);
 
-        ChoiceDialog<String> dialog = new ChoiceDialog<>(photos.getFirst(), photos);
-        dialog.setTitle("Удаление фото");
-        dialog.setHeaderText("Выберите фото для удаления из прибора: " + device.getName());
-        dialog.setContentText("Фото:");
+        // Используем кастомный диалог вместо ChoiceDialog
+        Optional<String> result = CustomAlertDialog.showChoiceDialog(
+                "Удаление фото",
+                "Выберите фото для удаления из прибора: " + device.getName(),
+                photos,
+                photos.getFirst()
+        );
 
-        Stage dialogStage = (Stage) dialog.getDialogPane().getScene().getWindow();
-        dialogStage.getIcons().addAll(ownerStage.getIcons());
-
-        Optional<String> result = dialog.showAndWait();
         result.ifPresent(photoPath -> {
-            boolean confirm = CustomAlert.showConfirmation(
+            boolean confirm = CustomAlertDialog.showConfirmation(
                     "Подтверждение удаления",
                     "Вы уверены, что хотите удалить фото?\n\n" +
                             "Файл: " + photoPath + "\n" +
@@ -630,57 +726,39 @@ public class PhotoGalleryController {
             if (confirm) {
                 boolean deleted = photoManager.deletePhoto(device, photoPath);
                 if (deleted) {
-                    CustomAlert.showInfo("Удаление фото", "Фото успешно удалено");
-
+                    CustomAlertDialog.showSuccess("Удаление фото", "Фото успешно удалено");
 
                     new Thread(() -> {
                         try {
-                            Thread.sleep(500); // Задержка для завершения операций с ФС/БД
-
-
+                            Thread.sleep(500);
                             Platform.runLater(() -> {
                                 try {
-                                    // 1. Получаем актуальное устройство из БД
                                     Device updatedDevice = deviceDAO.getDeviceById(device.getId());
                                     if (updatedDevice == null) {
-                                        CustomAlert.showError("Ошибка", "Не удалось обновить данные прибора");
+                                        CustomAlertDialog.showError("Ошибка", "Не удалось обновить данные прибора");
                                         return;
                                     }
 
-                                    // 2. Обновляем локальный объект
                                     device.setPhotos(new ArrayList<>(updatedDevice.getPhotos()));
-
-
-                                    // 3. Обновляем хранилище устройств по локациям
                                     updateDevicesByLocation(updatedDevice);
 
-
-                                    // 4. Пересоздаём карточку местоположения
                                     String location = updatedDevice.getLocation();
                                     if (location != null && !location.trim().isEmpty()) {
                                         updateLocationCardData(location);
                                     }
 
-                                    // 5. Обновляем общую статистику
                                     updateStatistics();
 
-
-                                    // 6. Восстанавливаем состояние раскрытия
                                     cardExpansionState.clear();
                                     cardExpansionState.putAll(previousState);
 
-
-                                    // 7. Принудительно обновляем фильтр и ListView
                                     filteredCards.setPredicate(filteredCards.getPredicate());
                                     cardsListView.refresh();
 
-
                                     LOGGER.info("✅ Карточка обновлена после удаления фото для прибора: {}", device.getName());
-
-
                                 } catch (Exception e) {
                                     LOGGER.error("❌ Ошибка обновления после удаления фото: {}", e.getMessage(), e);
-                                    CustomAlert.showError("Ошибка", "Не удалось обновить интерфейс");
+                                    CustomAlertDialog.showError("Ошибка", "Не удалось обновить интерфейс");
                                 }
                             });
                         } catch (InterruptedException e) {
@@ -690,7 +768,7 @@ public class PhotoGalleryController {
                     }).start();
 
                 } else {
-                    CustomAlert.showError("Ошибка", "Не удалось удалить фото. Проверьте подключение.");
+                    CustomAlertDialog.showError("Ошибка", "Не удалось удалить фото. Проверьте подключение.");
                     LOGGER.error("❌ Не удалось удалить фото: {} для прибора {}", photoPath, device.getName());
                 }
             }
@@ -712,43 +790,85 @@ public class PhotoGalleryController {
             }
         }
 
-        // Обновление общей статистики
-        locationsCountLabel.setText(String.valueOf(totalLocations));
-        devicesCountLabel.setText(String.valueOf(totalDevices));
-        photosCountLabel.setText(String.valueOf(totalPhotos));
+        // Создаем final копии для использования в лямбда-выражении
+        final int finalTotalLocations = totalLocations;
+        final int finalTotalDevices = totalDevices;
+        final int finalTotalPhotos = totalPhotos;
+
+        // Обновление общей статистики в UI потоке
+        Platform.runLater(() -> {
+            if (locationsCountLabel != null) {
+                locationsCountLabel.setText(String.valueOf(finalTotalLocations));
+            }
+            if (devicesCountLabel != null) {
+                devicesCountLabel.setText(String.valueOf(finalTotalDevices));
+            }
+            if (photosCountLabel != null) {
+                photosCountLabel.setText(String.valueOf(finalTotalPhotos));
+            }
+        });
 
         // Фильтрованная статистика (для отфильтрованных карточек)
         int filteredLocations = filteredCards != null ? filteredCards.size() : 0;
         int filteredDevices = 0;
         int filteredPhotos = 0;
-        int filteredDevicesWithPhotos = 0;
+        int devicesWithPhotos = 0;
 
         if (filteredCards != null) {
             for (LocationCardData card : filteredCards) {
                 filteredDevices += card.getDeviceCount();
                 filteredPhotos += card.getPhotoCount();
-                filteredDevicesWithPhotos += card.getDevicesWithPhotos();
+                devicesWithPhotos += card.getDevicesWithPhotos();
             }
         }
 
-        // ⭐⭐ ИСПРАВЛЕНИЕ: Вызываем метод с финальными параметрами ⭐⭐
-        updateFilteredStatsUI(filteredLocations, filteredDevices, filteredPhotos, filteredDevicesWithPhotos);
-
-        // Обновление заголовка отфильтрованной статистики
-        String selectedLocation = locationFilter != null && locationFilter.getValue() != null
-                ? locationFilter.getValue() : "Все места";
-        boolean photosOnly = photosOnlyCheck != null && photosOnlyCheck.isSelected();
-
-        StringBuilder title = new StringBuilder("Показано:");
-
-        if (!"Все места".equals(selectedLocation)) {
-            title.append(" место '").append(selectedLocation).append("'");
-        } else if (photosOnly) {
-            title.append(" только с фото");
-        } else if (filteredCards != null && filteredCards.size() < totalLocations) {
-            title.append(" (отфильтровано)");
+        // Обновляем отфильтрованную статистику
+        updateFilteredStatsUI(filteredLocations, filteredDevices, filteredPhotos, devicesWithPhotos);
+    }
+    
+    @Override
+    public void bindSearchField(TextField externalSearchField) {
+        this.externalSearchField = externalSearchField;
+        if (externalSearchField != null) {
+            externalSearchField.textProperty().addListener((_, _, _) -> applyFilters());
         }
-
-        filteredStatsTitle.setText(title.toString());
+    }
+    
+    @Override
+    public void bindLocationFilter(ComboBox<String> locationFilter) {
+        this.externalLocationFilter = locationFilter;
+        if (locationFilter != null) {
+            locationFilter.valueProperty().addListener((_, _, _) -> applyFilters());
+            // Заполняем фильтр локациями после привязки (если данные уже загружены)
+            if (devicesByLocation != null) {
+                updateLocationFilter();
+            }
+        }
+    }
+    
+    @Override
+    public void bindPhotosOnlyCheck(CheckBox photosOnlyCheck) {
+        this.externalPhotosOnlyCheck = photosOnlyCheck;
+        if (photosOnlyCheck != null) {
+            photosOnlyCheck.selectedProperty().addListener((_, _, _) -> applyFilters());
+        }
+    }
+    
+    @Override
+    public void clearFilters() {
+        if (externalSearchField != null) {
+            externalSearchField.clear();
+        }
+        if (externalLocationFilter != null) {
+            externalLocationFilter.setValue("Все места");
+        }
+        if (externalPhotosOnlyCheck != null) {
+            externalPhotosOnlyCheck.setSelected(false);
+        }
+    }
+    
+    @Override
+    public boolean hasExtendedFilters() {
+        return true;
     }
 }

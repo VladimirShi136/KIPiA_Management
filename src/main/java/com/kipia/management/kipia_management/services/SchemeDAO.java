@@ -233,6 +233,68 @@ public class SchemeDAO {
     }
 
     /**
+     * ⭐⭐ НОВОЕ: Получение всех схем из БД ⭐⭐
+     */
+    public List<Scheme> getAllSchemes() {
+        List<Scheme> schemes = new ArrayList<>();
+        String sql = "SELECT * FROM schemes ORDER BY name";
+        try (Statement stmt = databaseService.getConnection().createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                schemes.add(createSchemeFromResultSet(rs));
+            }
+        } catch (SQLException e) {
+            LOGGER.error("Ошибка получения всех схем: {}", e.getMessage(), e);
+        }
+        return schemes;
+    }
+
+    /**
+     * ⭐⭐ НОВОЕ: Удаление схемы по ID ⭐⭐
+     */
+    public boolean deleteScheme(int schemeId) {
+        String sql = "DELETE FROM schemes WHERE id = ?";
+        try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
+            stmt.setInt(1, schemeId);
+            int rows = stmt.executeUpdate();
+            if (rows > 0) {
+                LOGGER.info("✅ Схема удалена: ID={}", schemeId);
+                return true;
+            }
+            return false;
+        } catch (SQLException e) {
+            LOGGER.error("❌ Ошибка удаления схемы: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * ⭐⭐ НОВОЕ: Проверка, есть ли приборы привязанные к схеме ⭐⭐
+     * Проверяет наличие приборов с location равным названию схемы
+     */
+    public boolean hasDevicesOnScheme(int schemeId) {
+        // Сначала получаем название схемы
+        Scheme scheme = getSchemeById(schemeId);
+        if (scheme == null) {
+            return false;
+        }
+        
+        // Проверяем, есть ли приборы с location равным названию схемы
+        String sql = "SELECT COUNT(*) FROM devices WHERE location = ?";
+        try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
+            stmt.setString(1, scheme.getName());
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                int count = rs.getInt(1);
+                return count > 0;
+            }
+        } catch (SQLException e) {
+            LOGGER.error("Ошибка проверки приборов на схеме: {}", e.getMessage(), e);
+        }
+        return false;
+    }
+
+    /**
      * Вспомогательный метод для создания объекта Scheme из ResultSet
      * @param rs ResultSet из запроса
      * @return объект Scheme

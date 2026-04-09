@@ -5,13 +5,13 @@ import com.kipia.management.kipia_management.controllers.cell.table_cell.Validat
 import com.kipia.management.kipia_management.managers.PhotoManager;
 import com.kipia.management.kipia_management.models.Device;
 import com.kipia.management.kipia_management.services.DeviceDAO;
-import com.kipia.management.kipia_management.utils.CustomAlert;
-import com.kipia.management.kipia_management.utils.ExcelImportExportUtil;
-import com.kipia.management.kipia_management.utils.StyleUtils;
+import com.kipia.management.kipia_management.utils.CustomAlertDialog;
+import com.kipia.management.kipia_management.utils.LoadingIndicator;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.*;
@@ -20,10 +20,11 @@ import javafx.geometry.Insets;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 
 import java.util.*;
-import java.util.function.BiConsumer;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -34,19 +35,15 @@ import org.apache.logging.log4j.Logger;
  * @author vladimir_shi
  * @since 11.09.2025
  */
-public class DevicesTableController {
+public class DevicesTableController implements SearchableController {
 
     // ---------- FXML‑элементы ----------
     @FXML
+    private StackPane rootPane;
+    @FXML
+    private VBox contentBox;
+    @FXML
     private TableView<Device> deviceTable;
-    @FXML
-    private TextField searchField;
-    @FXML
-    private Button deleteButton;
-    @FXML
-    private Button exportButton;
-    @FXML
-    private Button importButton;
     @FXML
     private Button fabAddButton;
     @FXML
@@ -74,6 +71,9 @@ public class DevicesTableController {
 
     // Инвентарный номер — колонка, которой будем пользоваться как «default sort»
     private TableColumn<Device, String> inventoryCol;
+    
+    // Индикатор загрузки
+    private LoadingIndicator loadingIndicator;
 
     // Пропорции ширины колонок (в процентах) - под ваши 12 колонок
     // 11 колонок: тип, модель, завод, инв.№, год, предел, класс, место, кран, статус, доп.инфо
@@ -103,19 +103,29 @@ public class DevicesTableController {
      * Метод, вызываемый после загрузки FXML.
      */
     public void init() {
-        // ДОБАВЬТЕ ЭТУ ПРОВЕРКУ
         if (deviceDAO == null) {
             LOGGER.error("DeviceDAO не установлен! Вызовите setDeviceDAO() перед init()");
-            CustomAlert.showError("Ошибка", "Сервис базы данных не инициализирован");
+            CustomAlertDialog.showError("Ошибка", "Сервис базы данных не инициализирован");
             return;
         }
+        
+        // Инициализация индикатора загрузки
+        loadingIndicator = new LoadingIndicator("Загрузка данных...");
+        if (rootPane != null) {
+            rootPane.getChildren().add(loadingIndicator.getOverlay());
+        }
+        
+        // Скрываем таблицу и статистику до загрузки данных
+        hideContentBeforeLoad();
+        
         createTableColumns();
-        loadDataFromDao();
-        configureSearch();
         configureButtons();
         configureRowStyle();
-        updateStatistics();
         setupSmartColumnResizing();
+        
+        // Запускаем загрузку данных
+        loadDataFromDaoAsync();
+        
         LOGGER.info("DevicesTableController инициализирован успешно");
     }
 
@@ -132,42 +142,42 @@ public class DevicesTableController {
 
         //  Текстовые колонки
         TableColumn<Device, String> typeCol = createEditableStringColumn(
-                "Тип прибора", "type", 100,
-                Device::setType);
+                "Тип прибора", "type"
+        );
 
         TableColumn<Device, String> nameCol = createEditableStringColumn(
-                "Модель", "name", 75,
-                Device::setName);
+                "Модель", "name"
+        );
 
         TableColumn<Device, String> manufacturerCol = createEditableStringColumn(
-                "Завод изготовитель", "manufacturer", 115,
-                Device::setManufacturer);
+                "Завод изготовитель", "manufacturer"
+        );
 
         inventoryCol = createEditableStringColumn(
-                "Инв. №", "inventoryNumber", 70,
-                Device::setInventoryNumber);
+                "Инв. №", "inventoryNumber"
+        );
 
         TableColumn<Device, String> measurementLimitCol = createEditableStringColumn(
-                "Предел измерений", "measurementLimit", 100,
-                Device::setMeasurementLimit);
+                "Предел измерений", "measurementLimit"
+        );
 
         TableColumn<Device, String> locationCol = createEditableStringColumn(
-                "Место установки", "location", 120,
-                Device::setLocation);
+                "Место установки", "location"
+        );
 
         TableColumn<Device, String> valveNumberCol = createEditableStringColumn(
-                "Кран №", "valveNumber", 70,
-                Device::setValveNumber);
+                "Кран №", "valveNumber"
+        );
 
         TableColumn<Device, String> additionalInfoCol = createEditableStringColumn(
-                "Доп. информация", "additionalInfo", 150,
-                Device::setAdditionalInfo);
+                "Доп. информация", "additionalInfo"
+        );
 
         //  Числовые колонки
         TableColumn<Device, Integer> yearCol = createYearColumn();
         TableColumn<Device, Double> accuracyClassCol = createAccuracyClassColumn();
 
-        // Статус – ComboBox
+        // Статус — ComboBox
         TableColumn<Device, String> statusCol = new TableColumn<>("Статус");
         statusCol.setCellValueFactory(new PropertyValueFactory<>("status"));
         statusCol.setCellFactory(ComboBoxTableCell.forTableColumn(
@@ -181,7 +191,7 @@ public class DevicesTableController {
         });
 
         // -----------------------------------------------------------------
-        //   Добавляем все колонки в таблицу (колонка Фото убрана)
+        //   Добавляем все колонки в таблицу
         // -----------------------------------------------------------------
         deviceTable.getColumns().addAll(
                 typeCol, nameCol, manufacturerCol, inventoryCol,
@@ -238,9 +248,7 @@ public class DevicesTableController {
      */
     private TableColumn<Device, String> createEditableStringColumn(
             String title,
-            String propertyName,
-            double prefWidth,
-            BiConsumer<Device, String> onCommit) {
+            String propertyName) {
 
         TableColumn<Device, String> col = new TableColumn<>(title);
         col.setCellValueFactory(new PropertyValueFactory<>(propertyName));
@@ -251,6 +259,93 @@ public class DevicesTableController {
     // -----------------------------------------------------------------
     //   Загрузка данных и настройка фильтрации
     // -----------------------------------------------------------------
+    
+    /**
+     * Скрывает контент до загрузки данных
+     */
+    private void hideContentBeforeLoad() {
+        // Скрываем весь контейнер с таблицей и статистикой
+        if (contentBox != null) {
+            contentBox.setVisible(false);
+            contentBox.setManaged(false);
+        }
+        // Скрываем FAB кнопку
+        if (fabAddButton != null) {
+            fabAddButton.setVisible(false);
+            fabAddButton.setManaged(false);
+        }
+    }
+    
+    /**
+     * Показывает контент после загрузки данных
+     */
+    private void showContentAfterLoad() {
+        // Показываем весь контейнер с таблицей и статистикой
+        if (contentBox != null) {
+            contentBox.setVisible(true);
+            contentBox.setManaged(true);
+        }
+        // Показываем FAB кнопку
+        if (fabAddButton != null) {
+            fabAddButton.setVisible(true);
+            fabAddButton.setManaged(true);
+        }
+    }
+    
+    /**
+     * Асинхронная загрузка данных с индикатором загрузки
+     */
+    private void loadDataFromDaoAsync() {
+        // Показываем индикатор сразу
+        Platform.runLater(() -> loadingIndicator.show());
+        
+        Task<List<Device>> loadTask = new Task<>() {
+            @Override
+            protected List<Device> call() throws Exception {
+                long startTime = System.currentTimeMillis();
+                
+                // Загрузка данных
+                List<Device> devices = deviceDAO.getAllDevices();
+                
+                // Умная задержка: показываем индикатор минимум 0.5 сек
+                long elapsedTime = System.currentTimeMillis() - startTime;
+                long minDisplayTime = 500; // минимальное время показа индикатора (мс)
+                
+                if (elapsedTime < minDisplayTime) {
+                    Thread.sleep(minDisplayTime - elapsedTime);
+                }
+                
+                return devices;
+            }
+        };
+        
+        loadTask.setOnSucceeded(_ -> {
+            List<Device> devices = loadTask.getValue();
+            filteredList = new FilteredList<>(FXCollections.observableArrayList(devices), _ -> true);
+            SortedList<Device> sorted = createSortedList(filteredList, deviceTable);
+            deviceTable.setItems(sorted);
+            deviceTable.getSortOrder().add(inventoryCol);
+            deviceTable.sort();
+            updateStatistics();
+            
+            // Показываем контент после загрузки
+            showContentAfterLoad();
+            loadingIndicator.hide();
+        });
+        
+        loadTask.setOnFailed(_ -> {
+            LOGGER.error("Ошибка загрузки данных: {}", loadTask.getException().getMessage());
+            CustomAlertDialog.showError("Ошибка", "Не удалось загрузить данные из базы");
+            showContentAfterLoad(); // Показываем контент даже при ошибке
+            loadingIndicator.hide();
+        });
+        
+        new Thread(loadTask).start();
+    }
+    
+    /**
+     * Синхронная загрузка данных (для обновления после изменений)
+     */
     private void loadDataFromDao() {
         List<Device> all = deviceDAO.getAllDevices();
         filteredList = new FilteredList<>(FXCollections.observableArrayList(all), _ -> true);
@@ -260,43 +355,10 @@ public class DevicesTableController {
         deviceTable.sort();
     }
 
-    private void configureSearch() {
-        searchField.textProperty().addListener((_, _, newV) -> {
-            String lower = newV.toLowerCase().trim();
-            filteredList.setPredicate(dev -> {
-                if (lower.isEmpty()) return true;
-                return (dev.getName() != null && dev.getName().toLowerCase().contains(lower))
-                        || (dev.getType() != null && dev.getType().toLowerCase().contains(lower))
-                        || (dev.getManufacturer() != null && dev.getManufacturer().toLowerCase().contains(lower))
-                        || (dev.getLocation() != null && dev.getLocation().toLowerCase().contains(lower))
-                        || (dev.getInventoryNumber() != null && dev.getInventoryNumber().toLowerCase().contains(lower))
-                        || (dev.getYear() != null && String.valueOf(dev.getYear()).contains(lower))
-                        || (dev.getMeasurementLimit() != null && dev.getMeasurementLimit().toLowerCase().contains(lower))
-                        || (dev.getAccuracyClass() != null && String.valueOf(dev.getAccuracyClass()).contains(lower))
-                        || (dev.getValveNumber() != null && dev.getValveNumber().toLowerCase().contains(lower))
-                        || (dev.getStatus() != null && dev.getStatus().toLowerCase().contains(lower))
-                        || (dev.getAdditionalInfo() != null && dev.getAdditionalInfo().toLowerCase().contains(lower));
-
-            });
-            updateStatistics();
-        });
-    }
-
-    // -----------------------------------------------------------------
-    //   Кнопки (удалить, экспорт, импорт)
-    // -----------------------------------------------------------------
+    /**
+     * Н
+     */
     private void configureButtons() {
-        exportButton.setOnAction(_ -> exportToExcel());
-        importButton.setOnAction(_ -> importFromExcel());
-
-        exportButton.getStyleClass().add("button-export");
-        importButton.getStyleClass().add("button-import");
-
-        StyleUtils.applyHoverAndAnimation(exportButton,
-                "button-export", "button-export-hover");
-        StyleUtils.applyHoverAndAnimation(importButton,
-                "button-import", "button-import-hover");
-
         // FAB — выравниваем по правому нижнему углу StackPane
         if (fabAddButton != null) {
             StackPane.setAlignment(fabAddButton, javafx.geometry.Pos.BOTTOM_RIGHT);
@@ -326,6 +388,7 @@ public class DevicesTableController {
             }
 
             Stage dialog = new Stage();
+            dialog.initStyle(javafx.stage.StageStyle.UTILITY); // Убираем системный titlebar
             dialog.setTitle("Добавление нового прибора");
             dialog.setScene(new Scene(view, 560, 680));
             dialog.setResizable(false);
@@ -333,8 +396,7 @@ public class DevicesTableController {
             // Копируем иконку и стили из главного окна
             Stage ownerStage = (Stage) deviceTable.getScene().getWindow();
             dialog.initOwner(ownerStage);
-            dialog.initModality(javafx.stage.Modality.APPLICATION_MODAL);
-            CustomAlert.applyIcon(dialog);
+            dialog.initModality(Modality.APPLICATION_MODAL);
             // Переносим CSS из родительской сцены
             dialog.getScene().getStylesheets().addAll(
                     ownerStage.getScene().getStylesheets());
@@ -344,7 +406,7 @@ public class DevicesTableController {
             LOGGER.info("Диалог добавления прибора закрыт");
         } catch (Exception e) {
             LOGGER.error("Ошибка открытия формы добавления: {}", e.getMessage(), e);
-            CustomAlert.showError("Ошибка", "Не удалось открыть форму добавления прибора");
+            CustomAlertDialog.showError("Ошибка", "Не удалось открыть форму добавления прибора");
         }
     }
 
@@ -360,16 +422,16 @@ public class DevicesTableController {
                 "НЕТ - удалить только прибор.\n" +
                 "Отмена - отменить действие.\n";
 
-        Optional<ButtonType> result = CustomAlert.showConfirmationWithOptions(
+        Optional<ButtonType> result = CustomAlertDialog.showConfirmationWithOptions(
                 title, message,
-                CustomAlert.YES_BUTTON, CustomAlert.NO_BUTTON, CustomAlert.CANCEL_BUTTON);
+                CustomAlertDialog.YES_BUTTON, CustomAlertDialog.NO_BUTTON, CustomAlertDialog.CANCEL_BUTTON);
 
-        if (result.isEmpty() || result.get() == CustomAlert.CANCEL_BUTTON) {
+        if (result.isEmpty() || result.get() == CustomAlertDialog.CANCEL_BUTTON) {
             LOGGER.info("Удаление отменено пользователем для прибора: {}", selected.getName());
             return;
         }
 
-        boolean shouldDeletePhotos = result.get() == CustomAlert.YES_BUTTON;
+        boolean shouldDeletePhotos = result.get() == CustomAlertDialog.YES_BUTTON;
         LOGGER.info("Начато удаление прибора: {} (удалять фото: {})", selected.getName(), shouldDeletePhotos);
 
         // Удаление фото (если выбрано)
@@ -389,47 +451,15 @@ public class DevicesTableController {
                         schemeEditorController.refreshSchemesAndDevices();
                     }
                     LOGGER.info("Прибор успешно удалён: {}", selected.getName());
-                    CustomAlert.showSuccess("Удаление", "Прибор успешно удалён");
+                    CustomAlertDialog.showSuccess("Удаление", "Прибор успешно удалён");
                 } catch (Exception e) {
                     LOGGER.error("Ошибка при обновлении UI после удаления прибора: {}", e.getMessage(), e);
-                    CustomAlert.showError("Ошибка", "Не удалось обновить интерфейс после удаления");
+                    CustomAlertDialog.showError("Ошибка", "Не удалось обновить интерфейс после удаления");
                 }
             });
         } else {
-            CustomAlert.showError("Удаление", "Не удалось удалить запись из БД");
+            CustomAlertDialog.showError("Удаление", "Не удалось удалить запись из БД");
             LOGGER.error("Не удалось удалить прибор: {}", selected.getName());
-        }
-    }
-
-
-    // -----------------------------------------------------------------
-    //   Экспорт / импорт Excel (используем Apache POI)
-    // -----------------------------------------------------------------
-
-    private void exportToExcel() {
-        boolean success = ExcelImportExportUtil.exportDevicesToExcel(deviceTable.getScene().getWindow(), deviceTable.getItems());
-        if (success) {
-            CustomAlert.showInfo("Экспорт", "Экспорт завершён успешно");
-            LOGGER.info("Экспорт устройств в Excel завершён успешно");
-        }
-    }
-
-    private void importFromExcel() {
-        String result = ExcelImportExportUtil.importDevicesFromExcel(deviceTable.getScene().getWindow(), deviceDAO,
-                () -> {
-                    loadDataFromDao();
-                    updateStatistics();
-                    if (schemeEditorController != null) {
-                        schemeEditorController.refreshSchemesAndDevices();
-                    }
-                    LOGGER.info("Импорт устройств завершён успешно");
-                }, () -> {
-                    CustomAlert.showError("Импорт", "Ошибка импорта данных из Excel");
-                    LOGGER.error("Ошибка импорта устройств");
-                });
-        if (result != null) {
-            CustomAlert.showInfo("Импорт", result);
-            LOGGER.info("Импорт завершён: {}", result);
         }
     }
 
@@ -549,20 +579,22 @@ public class DevicesTableController {
             }
 
             Stage dialog = new Stage();
+            dialog.initStyle(javafx.stage.StageStyle.UTILITY); // Убираем системный titlebar
             dialog.setTitle("Редактирование прибора: " + device.getName());
             dialog.setScene(new Scene(view, 560, 680));
             dialog.setResizable(false);
 
             Stage ownerStage = (Stage) deviceTable.getScene().getWindow();
             dialog.initOwner(ownerStage);
-            dialog.initModality(javafx.stage.Modality.APPLICATION_MODAL);
-            CustomAlert.applyIcon(dialog);
+            dialog.initModality(Modality.APPLICATION_MODAL);
+            
+            // Применяем стили (без иконки, так как кастомный titlebar)
             dialog.getScene().getStylesheets().addAll(ownerStage.getScene().getStylesheets());
 
             dialog.showAndWait();
         } catch (Exception e) {
             LOGGER.error("Ошибка открытия формы редактирования: {}", e.getMessage(), e);
-            CustomAlert.showError("Ошибка", "Не удалось открыть форму редактирования");
+            CustomAlertDialog.showError("Ошибка", "Не удалось открыть форму редактирования");
         }
     }
 
@@ -636,6 +668,41 @@ public class DevicesTableController {
             }
         } catch (Exception e) {
             LOGGER.error("Ошибка при обновлении ширины колонок: {}", e.getMessage());
+        }
+    }
+    
+    // -----------------------------------------------------------------
+    //   Поиск
+    // -----------------------------------------------------------------
+    
+    public void bindSearchField(TextField externalSearchField) {
+        if (externalSearchField == null) return;
+        
+        externalSearchField.textProperty().addListener((_, _, newV) -> {
+            String lower = newV.toLowerCase().trim();
+            filteredList.setPredicate(dev -> {
+                if (lower.isEmpty()) return true;
+                return (dev.getName() != null && dev.getName().toLowerCase().contains(lower))
+                        || (dev.getType() != null && dev.getType().toLowerCase().contains(lower))
+                        || (dev.getManufacturer() != null && dev.getManufacturer().toLowerCase().contains(lower))
+                        || (dev.getLocation() != null && dev.getLocation().toLowerCase().contains(lower))
+                        || (dev.getInventoryNumber() != null && dev.getInventoryNumber().toLowerCase().contains(lower))
+                        || (dev.getYear() != null && String.valueOf(dev.getYear()).contains(lower))
+                        || (dev.getMeasurementLimit() != null && dev.getMeasurementLimit().toLowerCase().contains(lower))
+                        || (dev.getAccuracyClass() != null && String.valueOf(dev.getAccuracyClass()).contains(lower))
+                        || (dev.getValveNumber() != null && dev.getValveNumber().toLowerCase().contains(lower))
+                        || (dev.getStatus() != null && dev.getStatus().toLowerCase().contains(lower))
+                        || (dev.getAdditionalInfo() != null && dev.getAdditionalInfo().toLowerCase().contains(lower));
+            });
+            updateStatistics();
+        });
+    }
+    
+    @Override
+    public void clearFilters() {
+        if (filteredList != null) {
+            filteredList.setPredicate(_ -> true);
+            updateStatistics();
         }
     }
 }

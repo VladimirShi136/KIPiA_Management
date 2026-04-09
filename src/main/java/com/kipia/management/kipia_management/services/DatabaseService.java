@@ -1,10 +1,9 @@
 package com.kipia.management.kipia_management.services;
 
-import com.kipia.management.kipia_management.models.Device;
-
 import java.io.File;
 import java.sql.*;
 import java.util.Objects;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -72,11 +71,6 @@ public class DatabaseService {
 
                 // Создаем таблицы после успешного подключения
                 createTables();
-
-                // Добавляем тестовые данные если таблицы пустые
-                if (!hasData()) {
-                    addTestData();
-                }
             }
         } catch (SQLException e) {
             LOGGER.error("Ошибка подключения к базе данных: {}", e.getMessage(), e);
@@ -244,78 +238,6 @@ public class DatabaseService {
             }
         } catch (SQLException e) {
             LOGGER.error("Ошибка закрытия подключения: {}", e.getMessage(), e);
-        }
-    }
-
-    /**
-     * Метод для добавления тестовых данных в базу данных.
-     */
-    public void addTestData() {
-        if (hasData()) {
-            LOGGER.info("Тестовые данные уже существуют");
-            return;
-        }
-
-        DeviceDAO deviceDAO = new DeviceDAO(this);
-
-        // Существующие тестовые приборы (без изменений)
-        Device device1 = new Device();
-        device1.setType("Измерительный");
-        device1.setName("Термометр ТР-1");
-        device1.setManufacturer("ТехноСервис");
-        device1.setInventoryNumber("INV-001");
-        device1.setYear(2020);
-        device1.setMeasurementLimit("0-100°C");
-        device1.setAccuracyClass(0.5);
-        device1.setLocation("Лаборатория 1");
-        device1.setValveNumber("№ 2Б");
-        device1.setStatus("В работе");
-        device1.setAdditionalInfo("Термометр для измерения температуры");
-
-        Device device2 = new Device();
-        device2.setType("Контрольный");
-        device2.setName("Манометр МП-2");
-        device2.setManufacturer("ИнжСервис");
-        device2.setInventoryNumber("INV-002");
-        device2.setYear(2018);
-        device2.setMeasurementLimit("0-10 MPa");
-        device2.setAccuracyClass(0.1);
-        device2.setLocation("Цех 2");
-        device2.setValveNumber("№ 165");
-        device2.setStatus("Хранение");
-        device2.setAdditionalInfo("Манометр для давления");
-
-        Device device3 = new Device();
-        device3.setType("Контрольный");
-        device3.setName("Уровнемер УР-3");
-        device3.setManufacturer("ПриборСум");
-        device3.setInventoryNumber("INV-003");
-        device3.setYear(2022);
-        device3.setMeasurementLimit("0-5 м");
-        device3.setAccuracyClass(0.05);
-        device3.setLocation("Станция 3");
-        device3.setValveNumber("№ 2Б-ф");
-        device3.setStatus("Испорчен");
-        device3.setAdditionalInfo("Уровнемер жидкости");
-
-        try {
-            deviceDAO.addDevice(device1);
-            deviceDAO.addDevice(device2);
-            deviceDAO.addDevice(device3);
-            LOGGER.info("Тестовые устройства добавлены");
-        } catch (Exception e) {
-            LOGGER.error("Ошибка добавления тестовых устройств: {}", e.getMessage(), e);
-        }
-        LOGGER.info("Тестовые данные добавлены успешно");
-    }
-
-    private boolean hasData() {
-        try (Statement stmt = getConnection().createStatement()) {
-            ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM devices");
-            return rs.getInt(1) > 0;
-        } catch (SQLException e) {
-            LOGGER.error("Ошибка проверки наличия данных: {}", e.getMessage(), e);
-            return false;
         }
     }
 }

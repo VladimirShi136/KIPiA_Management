@@ -12,27 +12,99 @@
   Since: 24.08.2025
   * Главное окно *
 -->
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.Tooltip?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.image.Image?>
 <BorderPane xmlns="http://javafx.com/javafx/23"
             xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="com.kipia.management.kipia_management.controllers.MainController">
-
+            fx:controller="com.kipia.management.kipia_management.controllers.MainController"
+            styleClass="border-pane">
     <!-- 1️⃣ ── Верхняя панель ──  -->
     <top>
-        <HBox alignment="CENTER_LEFT" styleClass="top">
+        <HBox fx:id="topBar" alignment="CENTER_LEFT" styleClass="top" spacing="15">
             <Label text="Учёт приборов КИПиА" styleClass="header-label">
                 <padding>
                     <Insets left="25"/>
                 </padding>
             </Label>
+            <!-- Панель поиска (динамически показывается/скрывается) -->
+            <HBox fx:id="topSearchPanel" spacing="10" alignment="CENTER_LEFT"
+                  visible="false" managed="false">
+                <!-- Кнопка-иконка поиска -->
+                <Button fx:id="topSearchToggleButton" styleClass="search-toggle-button">
+                    <graphic>
+                        <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
+                            <Image url="@../images/search.png"/>
+                        </ImageView>
+                    </graphic>
+                    <tooltip>
+                        <Tooltip text="Поиск"/>
+                    </tooltip>
+                </Button>
+                <!-- Контейнер для элементов поиска (изначально скрыт) -->
+                <HBox fx:id="topSearchFieldContainer" spacing="10" alignment="CENTER_LEFT"
+                      styleClass="search-field-container" visible="false" managed="false">
+                    <!-- Поле поиска -->
+                    <TextField fx:id="topSearchField"
+                               promptText="Поиск..."
+                               styleClass="search-field-animated"
+                               prefWidth="300"/>
+
+                    <!-- Фильтр по месту (только для галереи) -->
+                    <ComboBox fx:id="topLocationFilter"
+                              promptText="Все места установки"
+                              styleClass="filter-combo"
+                              visible="false"
+                              managed="false"/>
+
+                    <!-- Чекбокс "Только с фото" (только для галереи) -->
+                    <CheckBox fx:id="topPhotosOnlyCheck"
+                              text="Только с фото"
+                              styleClass="filter-checkbox"
+                              visible="false"
+                              managed="false"/>
+                    <!-- Кнопка сброса -->
+                    <Button fx:id="topClearSearchButton" styleClass="clear-search-button" visible="false">
+                        <graphic>
+                            <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
+                                <Image url="@../images/reset.png"/>
+                            </ImageView>
+                        </graphic>
+                        <tooltip>
+                            <Tooltip text="Очистить фильтры"/>
+                        </tooltip>
+                    </Button>
+                </HBox>
+            </HBox>
             <Region HBox.hgrow="ALWAYS"/>
             <Label text="ver 1.0.3" styleClass="version-label">
                 <padding>
                     <Insets right="15"/>
                 </padding>
             </Label>
+            <!-- Кнопки управления окном -->
+            <HBox alignment="CENTER_RIGHT" styleClass="window-controls">
+                <Button fx:id="minimizeBtn" styleClass="window-control-button" text="_">
+                    <tooltip>
+                        <Tooltip text="Свернуть"/>
+                    </tooltip>
+                </Button>
+                <Button fx:id="maximizeBtn" styleClass="window-control-button" text="□">
+                    <tooltip>
+                        <Tooltip text="Развернуть"/>
+                    </tooltip>
+                </Button>
+                <Button fx:id="closeBtn" styleClass="window-control-button" text="×">
+                    <tooltip>
+                        <Tooltip text="Закрыть"/>
+                    </tooltip>
+                </Button>
+            </HBox>
         </HBox>
     </top>
-
     <!-- 2️⃣ ── Левая панель (меню) ──  -->
     <left>
         <VBox spacing="10" styleClass="left">
@@ -44,51 +116,71 @@
             <Button fx:id="photoGalleryBtn"
                     maxWidth="Infinity"
                     onAction="#showPhotoGallery"
-                    text="Фото по местам установки"
+                    text="Галерея"
                     styleClass="button-photo-gallery"/>
             <Button fx:id="schemesBtn"
                     maxWidth="Infinity"
                     onAction="#showSchemesEditor"
-                    text="Схемы локаций установки"
+                    text="Схемы"
                     styleClass="button-schemes"/>
-
             <Button fx:id="reportsBtn"
                     maxWidth="Infinity"
                     onAction="#showReports"
                     styleClass="button-reports"
-                    text="Отчёты"/>
+                    text="Отчеты"/>
             <Region VBox.vgrow="ALWAYS"/>
-            <!-- Кнопки синхронизации БД -->
-            <Button fx:id="exportDbBtn"
-                    maxWidth="Infinity"
-                    onAction="#exportDatabase"
-                    styleClass="button-export-db"
-                    text="📤 Экспорт БД"/>
-            <Button fx:id="importDbBtn"
-                    maxWidth="Infinity"
-                    onAction="#importDatabase"
-                    styleClass="button-import-db"
-                    text="📥 Импорт БД"/>
-            <Button fx:id="themeToggleBtn"
-                    maxWidth="Infinity"
-                    onAction="#toggleTheme"
-                    styleClass="button-theme-toggle"
-                    text="Тёмная тема"/>
-            <Button fx:id="exitBtn"
-                    maxWidth="Infinity"
-                    onAction="#exitApp"
-                    styleClass="button-exit"
-                    text="Выход"/>
+            <!-- Кнопки-иконки внизу на одной линии -->
+            <HBox spacing="10" alignment="CENTER">
+                <Button fx:id="settingsBtn"
+                        onAction="#showSettings"
+                        styleClass="button-settings">
+                    <graphic>
+                        <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
+                            <Image url="@../images/settings-white.png"/>
+                        </ImageView>
+                    </graphic>
+                    <tooltip>
+                        <Tooltip text="Настройки"/>
+                    </tooltip>
+                </Button>
+                <Button fx:id="themeToggleBtn"
+                        onAction="#toggleTheme"
+                        styleClass="button-theme-toggle">
+                    <graphic>
+                        <ImageView fx:id="themeToggleIcon" fitWidth="24" fitHeight="24" pickOnBounds="true"
+                                   preserveRatio="true">
+                            <Image url="@../images/theme-white.png"/>
+                        </ImageView>
+                    </graphic>
+                    <tooltip>
+                        <Tooltip text="Сменить тему"/>
+                    </tooltip>
+                </Button>
+                <Button fx:id="exitBtn"
+                        onAction="#exitApp"
+                        styleClass="button-exit">
+                    <graphic>
+                        <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
+                            <Image url="@../images/exit-red.png"/>
+                        </ImageView>
+                    </graphic>
+                    <tooltip>
+                        <Tooltip text="Выход"/>
+                    </tooltip>
+                </Button>
+            </HBox>
         </VBox>
     </left>
-
     <!-- 3️⃣ ── Центральная часть ──  -->
     <!--  Здесь динамически подставляется view‑контент,
           например, таблица приборов, форма добавления, отчёты и т.п.  -->
     <center>
-        <VBox fx:id="contentArea" spacing="15"/>
+        <VBox fx:id="contentArea" spacing="15" styleClass="content-area">
+            <padding>
+                <Insets top="15" right="15" bottom="15" left="15"/>
+            </padding>
+        </VBox>
     </center>
-
     <!-- 4️⃣ ── Нижняя панель (статус) ──  -->
     <bottom>
         <HBox alignment="CENTER_LEFT" styleClass="bottom">

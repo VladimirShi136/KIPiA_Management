@@ -3,7 +3,7 @@ package com.kipia.management.kipia_management.services;
 import com.kipia.management.kipia_management.models.Device;
 import com.kipia.management.kipia_management.models.DeviceLocation;
 import com.kipia.management.kipia_management.models.Scheme;
-import com.kipia.management.kipia_management.utils.CustomAlert;
+import com.kipia.management.kipia_management.utils.CustomAlertDialog;
 import javafx.scene.Node;
 import javafx.scene.control.Menu;
 import javafx.scene.image.Image;
@@ -91,7 +91,7 @@ public class DeviceIconService {
      * Создание резервной иконки (круг)
      */
     private Node createFallbackIcon(double x, double y, Device device, Scheme currentScheme) {
-        CustomAlert.showWarning("Загрузка иконки",
+        CustomAlertDialog.showWarning("Загрузка иконки",
                 "Не удалось загрузить изображение для '" + device.getName() +
                         "'. Используется резервная круглая иконка.");
 
@@ -274,7 +274,7 @@ public class DeviceIconService {
         // Получаем устройство из UserData
         Device deviceToDelete = extractDeviceFromUserData(node);
         assert deviceToDelete != null;
-        boolean confirmed = CustomAlert.showConfirmation(
+        boolean confirmed = CustomAlertDialog.showConfirmation(
                 "Подтверждение удаления",
                 "Вы уверены, что хотите удалить прибор '" + deviceToDelete.getName() + "'?"
         );
@@ -319,11 +319,11 @@ public class DeviceIconService {
 
             schemePane.getChildren().remove(node);
             LOGGER.info("Прибор '{}' удален со схемы", device.getName());
-            CustomAlert.showInfo("Удаление", "Прибор '" + device.getName() + "' удалён со схемы");
+            CustomAlertDialog.showInfo("Удаление", "Прибор '" + device.getName() + "' удалён со схемы");
 
         } catch (Exception e) {
             LOGGER.error("Ошибка при удалении прибора '{}': {}", device.getName(), e.getMessage());
-            CustomAlert.showError("Ошибка удаления", "Не удалось удалить прибор: " + e.getMessage());
+            CustomAlertDialog.showError("Ошибка удаления", "Не удалось удалить прибор: " + e.getMessage());
         }
     }
 
@@ -343,7 +343,7 @@ public class DeviceIconService {
         Device deviceToShow = extractDeviceFromUserData(node);
         assert deviceToShow != null;
         String infoText = buildDeviceInfoText(deviceToShow);
-        CustomAlert.showInfo(
+        CustomAlertDialog.showInfo(
                 "Информация о приборе",
                 "'" + deviceToShow.getName() + "' (" + deviceToShow.getInventoryNumber() + ")\n" + infoText
         );

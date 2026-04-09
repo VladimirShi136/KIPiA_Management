@@ -289,6 +289,46 @@ public class RhombusShape extends ShapeBase {
         return rhombusPath;
     }
 
+    /**
+     * Проверка попадания точки на границы ромба (только линии, не внутренность)
+     */
+    @Override
+    protected boolean containsLocalPoint(double localX, double localY) {
+        double width = getCurrentWidth();
+        double height = getCurrentHeight();
+        double centerX = width / 2;
+        double centerY = height / 2;
+        double tolerance = DEFAULT_STROKE_WIDTH + 2.0;
+
+        // Ромб состоит из 4 линий:
+        // 1. Левый верхний угол (0,0) -> центр
+        // 2. Центр -> левый нижний угол (0, height)
+        // 3. Правый верхний угол (width, 0) -> центр
+        // 4. Центр -> правый нижний угол (width, height)
+
+        return isPointNearLine(localX, localY, 0, 0, centerX, centerY, tolerance) ||
+               isPointNearLine(localX, localY, centerX, centerY, 0, height, tolerance) ||
+               isPointNearLine(localX, localY, width, 0, centerX, centerY, tolerance) ||
+               isPointNearLine(localX, localY, centerX, centerY, width, height, tolerance);
+    }
+
+    /**
+     * Проверяет, находится ли точка рядом с линией
+     */
+    private boolean isPointNearLine(double px, double py, double x1, double y1, double x2, double y2, double tolerance) {
+        double lineLength = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+        if (lineLength == 0) return false;
+
+        // Расстояние от точки до линии
+        double distance = Math.abs((y2 - y1) * px - (x2 - x1) * py + x2 * y1 - y2 * x1) / lineLength;
+
+        // Проверяем, находится ли точка в пределах отрезка
+        double dotProduct = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / (lineLength * lineLength);
+        if (dotProduct < 0 || dotProduct > 1) return false;
+
+        return distance <= tolerance;
+    }
+
     // ============================================================
     // OVERRIDE METHODS FOR CORRECT DIMENSIONS
     // ============================================================

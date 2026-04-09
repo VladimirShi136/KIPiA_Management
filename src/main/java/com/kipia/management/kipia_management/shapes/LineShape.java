@@ -31,7 +31,7 @@ public class LineShape extends ShapeBase {
     private static final double SNAP_THRESHOLD = 10.0;
 
     // Константы для точного определения попадания
-    private static final double HIT_THRESHOLD = 20.0; // Порог захвата в пикселях
+    private static final double HIT_THRESHOLD = 5.0; // Порог захвата в пикселях (уменьшен для точности)
 
     // Границы красного квадрата
 
@@ -70,6 +70,20 @@ public class LineShape extends ShapeBase {
     @Override
     public boolean contains(Point2D localPoint) {
         return containsPoint(localPoint.getX(), localPoint.getY());
+    }
+
+    /**
+     * Переопределяем containsLocalPoint для использования в ShapeBase
+     * Проверяет попадание точки на линию в локальных координатах группы
+     */
+    @Override
+    protected boolean containsLocalPoint(double localX, double localY) {
+        // Преобразуем локальные координаты группы в абсолютные координаты панели
+        double worldX = getLayoutX() + localX;
+        double worldY = getLayoutY() + localY;
+        
+        // Используем существующий метод containsPoint
+        return containsPoint(worldX, worldY);
     }
 
     /**
@@ -293,6 +307,10 @@ public class LineShape extends ShapeBase {
                         double paneX = panePoint.getX();
                         double paneY = panePoint.getY();
 
+                        // ВАЖНО: Ограничиваем координаты границами канваса
+                        paneX = Math.max(0, Math.min(paneX, canvasBoundsWidth));
+                        paneY = Math.max(0, Math.min(paneY, canvasBoundsHeight));
+
                         double[] currentCoords = getAbsoluteCoordinates();
                         double otherX, otherY;
 
@@ -308,6 +326,10 @@ public class LineShape extends ShapeBase {
                         double[] snappedCoords = applyLineSnapWithShapes(paneX, paneY, otherX, otherY);
                         double snappedX = snappedCoords[0];
                         double snappedY = snappedCoords[1];
+
+                        // ВАЖНО: Еще раз проверяем границы после привязки
+                        snappedX = Math.max(0, Math.min(snappedX, canvasBoundsWidth));
+                        snappedY = Math.max(0, Math.min(snappedY, canvasBoundsHeight));
 
                         if (handle == startHandle) {
                             setLinePoints(snappedX, snappedY, otherX, otherY);
@@ -737,6 +759,9 @@ public class LineShape extends ShapeBase {
             return null;
         });
 
+        // Применяем единый стиль
+        com.kipia.management.kipia_management.utils.DialogStyler.applyStyle(dialog);
+
         Optional<Color> result = dialog.showAndWait();
         result.ifPresent(color -> {
             setStrokeColor(color);
@@ -891,5 +916,24 @@ public class LineShape extends ShapeBase {
      */
     public Line getLine() {
         return line;
+    }
+
+    /**
+     * Переопределяем getWorldBounds для линии - возвращаем границы на основе координат концов
+     */
+    @Override
+    public javafx.geometry.Rectangle2D getWorldBounds() {
+        double[] coords = getAbsoluteCoordinates();
+        double startX = coords[0];
+        double startY = coords[1];
+        double endX = coords[2];
+        double endY = coords[3];
+
+        double minX = Math.min(startX, endX);
+        double minY = Math.min(startY, endY);
+        double maxX = Math.max(startX, endX);
+        double maxY = Math.max(startY, endY);
+
+        return new javafx.geometry.Rectangle2D(minX, minY, maxX - minX, maxY - minY);
     }
 }
