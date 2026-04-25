@@ -8,7 +8,6 @@
   Since: 29.08.2025
   * Окно основной таблицы приборов *
 -->
-
 <StackPane fx:id="rootPane"
            xmlns="http://javafx.com/javafx/23"
            xmlns:fx="http://javafx.com/fxml/1"

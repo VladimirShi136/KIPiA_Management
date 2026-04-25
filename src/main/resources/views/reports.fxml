@@ -9,13 +9,13 @@
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.control.Tooltip?>
+<?import javafx.scene.layout.StackPane?>
 
 <!--
   Author: vladimir_shi
   Since: 04.09.2025
   * Окно отчетов *
 -->
-<?import javafx.scene.layout.StackPane?>
 <StackPane fx:id="rootPane"
            xmlns="http://javafx.com/javafx/23"
            xmlns:fx="http://javafx.com/fxml/1"

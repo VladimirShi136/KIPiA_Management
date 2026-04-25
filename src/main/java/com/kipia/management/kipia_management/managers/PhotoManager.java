@@ -33,6 +33,7 @@ public class PhotoManager {
     private static final Logger LOGGER = LogManager.getLogger(PhotoManager.class);
     private static final String LAST_PHOTO_DIR_KEY = "last_photo_directory";
     private static final String PHOTOS_DIR_NAME = "device_photos";
+    public static final int MAX_PHOTOS_PER_DEVICE = 10;
 
     // ⭐⭐ Статический экземпляр  ⭐⭐
     private static final PhotoManager INSTANCE = new PhotoManager();
@@ -119,6 +120,17 @@ public class PhotoManager {
                     LOGGER.error("❌ Скопированный файл не найден: {}", storedFileName);
                     errorCount++;
                     continue;
+                }
+
+                // Проверка лимита фотографий
+                if (device.getPhotos().size() >= MAX_PHOTOS_PER_DEVICE) {
+                    String oldestPhoto = device.getPhotos().getFirst();
+                    boolean deleted = deletePhoto(device, oldestPhoto);
+                    if (deleted) {
+                        LOGGER.info("🗑️ Удалено старое фото для соблюдения лимита: {}", oldestPhoto);
+                    } else {
+                        LOGGER.warn("⚠️ Не удалось удалить старое фото: {}", oldestPhoto);
+                    }
                 }
 
                 device.addPhoto(storedFileName);
@@ -386,11 +398,14 @@ public class PhotoManager {
         return path.toString();
     }
 
-
     /**
-     * Просмотр фотографий (упрощенный метод, делегирует PhotoViewer)
+     * Метод для просмотра фотографий конкретного устройства
+     *
+     * @param device - устройство
+     * @param ownerStage - стейдж
+     * @param onDeletedCallback - колбэк удаления
      */
-    public void viewDevicePhotos(Device device, Stage ownerStage) {
+    public void viewDevicePhotos(Device device, Stage ownerStage, PhotoViewer.OnPhotoDeletedCallback onDeletedCallback) {
         LOGGER.info("👁️ Просмотр фото для устройства ID={}, Name={}", device.getId(), device.getName());
 
         List<String> photos = device.getPhotos();
@@ -398,8 +413,32 @@ public class PhotoManager {
             CustomAlertDialog.showInfo("Просмотр фото", "Фотографии не добавлены");
             return;
         }
+        PhotoViewer viewer = new PhotoViewer(this, device, photos, ownerStage);
+        viewer.setOnPhotoDeletedCallback(onDeletedCallback);
+        viewer.show();
+    }
 
-        new PhotoViewer(this, device, photos, ownerStage).show();
+    /**
+     * Просмотр всех фото локации (несколько приборов).
+     * Принимает список PhotoEntry, что позволяет удалять фото и обновлять инфоблок.
+     *
+     * @param locationTitle   заголовок окна (напр. "Локация: Цех №1")
+     * @param entries         список записей {@link PhotoViewer.PhotoEntry}
+     * @param ownerStage      родительское окно
+     * @param onDeletedCallback callback, вызываемый после каждого удаления фото
+     *                          (можно передать null если обновление не нужно)
+     */
+    public void viewLocationPhotos(String locationTitle,
+                                   List<PhotoViewer.PhotoEntry> entries,
+                                   Stage ownerStage,
+                                   PhotoViewer.OnPhotoDeletedCallback onDeletedCallback) {
+        if (entries == null || entries.isEmpty()) {
+            CustomAlertDialog.showInfo("Просмотр фото", "В этой локации нет фотографий");
+            return;
+        }
+        PhotoViewer viewer = new PhotoViewer(this, locationTitle, entries, ownerStage);
+        viewer.setOnPhotoDeletedCallback(onDeletedCallback);
+        viewer.show();
     }
 
     // ========== PRIVATE METHODS ==========

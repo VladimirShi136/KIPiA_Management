@@ -1,6 +1,7 @@
 package com.kipia.management.kipia_management.controllers;
 
 import com.kipia.management.kipia_management.managers.PhotoManager;
+import com.kipia.management.kipia_management.managers.PhotoViewer;
 import com.kipia.management.kipia_management.models.Device;
 import com.kipia.management.kipia_management.services.DeviceDAO;
 import com.kipia.management.kipia_management.utils.CustomAlertDialog;
@@ -88,10 +89,10 @@ public class PhotoGalleryController implements SearchableController {
     @FXML private Label filteredDevicesLabel;
     @FXML private Label filteredPhotosLabel;
     @FXML private Label devicesWithPhotosLabel;
-    
+
     // Индикатор загрузки
     private LoadingIndicator loadingIndicator;
-    
+
     // Внешние элементы поиска (из верхней панели)
     private TextField externalSearchField;
     private ComboBox<String> externalLocationFilter;
@@ -110,6 +111,9 @@ public class PhotoGalleryController implements SearchableController {
         setupListView();
     }
 
+    /**
+     * Просмотр карточек с фотографиями
+     */
     private void setupListView() {
         cardsListView.setCellFactory(_ -> new ListCell<>() {
             private final VBox card = new VBox();
@@ -119,8 +123,9 @@ public class PhotoGalleryController implements SearchableController {
             private final Button viewAllBtn = new Button("Просмотреть все фото");
             private final VBox devicesList = new VBox();
             private final Button toggleBtn = new Button();
-            private String currentLocation = null; // ⭐⭐ Храним текущее местоположение
+            private String currentLocation = null;
             private boolean isExpanded = false;
+            private Runnable updateToggleIcon; // объявляем полем — нужен и в init-блоке, и в updateItem
 
             {
                 // Инициализация и настройка один раз
@@ -152,26 +157,50 @@ public class PhotoGalleryController implements SearchableController {
 
                 // Кнопка раскрытия/скрытия с иконкой
                 toggleBtn.getStyleClass().add("toggle-devices-button");
-                toggleBtn.setText("Приборы");
+                toggleBtn.setText(null);
+
+                // Вспомогательный метод установки иконки — сохраняем как final поле
+                // чтобы вызывать и из onAction, и из updateItem при восстановлении состояния
+                updateToggleIcon = () -> {
+                    if (toggleBtn.getScene() == null) return;
+                    boolean dark = toggleBtn.getScene().getStylesheets().stream()
+                            .anyMatch(s -> s.contains("dark-theme.css"));
+                    String iconPath = isExpanded
+                            ? (dark ? "/images/arrow-up-dark.png"   : "/images/arrow-up-white.png")
+                            : (dark ? "/images/arrow-down-dark.png" : "/images/arrow-down-white.png");
+                    javafx.scene.image.ImageView iv = new javafx.scene.image.ImageView(
+                            new javafx.scene.image.Image(
+                                    getClass().getResourceAsStream(iconPath)
+                            )
+                    );
+                    iv.setFitWidth(24);
+                    iv.setFitHeight(24);
+                    iv.setPreserveRatio(true);
+                    toggleBtn.setGraphic(iv);
+                };
+
+                // Вешаем listener один раз когда кнопка попадёт в сцену
+                toggleBtn.sceneProperty().addListener((_, _, newScene) -> {
+                    if (newScene != null) {
+                        updateToggleIcon.run();
+                        newScene.getStylesheets().addListener(
+                                (javafx.collections.ListChangeListener<String>) _ -> updateToggleIcon.run()
+                        );
+                    }
+                });
+
                 toggleBtn.setOnAction(_ -> {
                     isExpanded = !isExpanded;
                     devicesList.setVisible(isExpanded);
                     devicesList.setManaged(isExpanded);
+                    updateToggleIcon.run();   // обновляем иконку при клике
 
                     if (isExpanded) {
-                        toggleBtn.setText("Скрыть");
                         toggleBtn.getStyleClass().add("expanded");
-                        // ⭐⭐ СОХРАНЯЕМ СОСТОЯНИЕ ⭐⭐
-                        if (currentLocation != null) {
-                            cardExpansionState.put(currentLocation, true);
-                        }
+                        if (currentLocation != null) cardExpansionState.put(currentLocation, true);
                     } else {
-                        toggleBtn.setText("Приборы");
                         toggleBtn.getStyleClass().remove("expanded");
-                        // ⭐⭐ СОХРАНЯЕМ СОСТОЯНИЕ ⭐⭐
-                        if (currentLocation != null) {
-                            cardExpansionState.put(currentLocation, false);
-                        }
+                        if (currentLocation != null) cardExpansionState.put(currentLocation, false);
                     }
                 });
 
@@ -227,12 +256,12 @@ public class PhotoGalleryController implements SearchableController {
                 devicesList.setManaged(isExpanded);
 
                 if (isExpanded) {
-                    toggleBtn.setText("Скрыть");
                     toggleBtn.getStyleClass().add("expanded");
                 } else {
-                    toggleBtn.setText("Приборы");
                     toggleBtn.getStyleClass().remove("expanded");
                 }
+                // Восстанавливаем иконку по актуальному состоянию и теме
+                if (updateToggleIcon != null) updateToggleIcon.run();
 
                 setGraphic(card);
                 setText(null);
@@ -260,20 +289,17 @@ public class PhotoGalleryController implements SearchableController {
                 row.setAlignment(Pos.CENTER_LEFT);
                 row.setPadding(new Insets(6, 4, 6, 4));
 
-                String deviceName = device.getName() != null && !device.getName().trim().isEmpty()
-                        ? device.getName()
-                        : "Без имени";
-                Label nameLabel = new Label(deviceName);
+                Label nameLabel = getNameLabel(device);
                 nameLabel.getStyleClass().add("device-name");
                 nameLabel.setMaxWidth(150);
                 nameLabel.setWrapText(true);
 
                 int photoCount = device.getPhotos() != null ? device.getPhotos().size() : 0;
-                Label photoLabel = new Label(photoCount + " фото");
+                Label photoLabel = new Label(photoCount + "/" + PhotoManager.MAX_PHOTOS_PER_DEVICE + " фото");
                 photoLabel.getStyleClass().add("device-photo-count");
                 photoLabel.setStyle(photoCount > 0 ?
-                        "-fx-font-weight: bold;" :
-                        "-fx-text-fill: #7f8c8d;");
+                        "-fx-font-weight: bold; -fx-text-fill: #3498db !important;" :
+                        "-fx-text-fill: #95a5a6 !important;");
 
                 Region spacer = new Region();
                 HBox.setHgrow(spacer, Priority.ALWAYS);
@@ -300,7 +326,28 @@ public class PhotoGalleryController implements SearchableController {
                 // Обработчики событий с улучшенным обновлением
                 viewBtn.setOnAction(_ -> {
                     Stage stage = (Stage) viewBtn.getScene().getWindow();
-                    photoManager.viewDevicePhotos(device, stage);
+                    PhotoViewer.OnPhotoDeletedCallback onDevicePhotoDeleted = (deletedDevice, deletedPhotoName) ->
+                            Platform.runLater(() -> {
+                                try {
+                                    // Обновляем объект прибора в нашей структуре
+                                    Device updatedDevice = deviceDAO.getDeviceById(deletedDevice.getId());
+                                    if (updatedDevice != null) {
+                                        deletedDevice.setPhotos(new ArrayList<>(updatedDevice.getPhotos()));
+                                        updateDevicesByLocation(updatedDevice);
+                                    }
+                                    // Обновляем карточку локации (счётчик фото)
+                                    updateLocationCardData(deletedDevice.getLocation());
+                                    updateStatistics();
+                                    cardsListView.refresh();
+
+                                    LOGGER.info("✅ Карточка локации '{}' обновлена после удаления фото прибора '{}'",
+                                            deletedDevice.getLocation(), deletedDevice.getInventoryNumber());
+                                } catch (Exception e) {
+                                    LOGGER.error("❌ Ошибка обновления карточки после удаления: {}", e.getMessage(), e);
+                                }
+                            });
+
+                    photoManager.viewDevicePhotos(device, stage, onDevicePhotoDeleted);
                 });
 
                 addPhotoBtn.setOnAction(_ -> {
@@ -322,6 +369,24 @@ public class PhotoGalleryController implements SearchableController {
                 row.getChildren().addAll(nameLabel, photoLabel, spacer, buttonsContainer);
                 return row;
             }
+
+            /**
+             * Вспомогаьельный метод для получения комбинированного названия прибора
+             * @param device - передаваемое устройство
+             * @return - текстовая метка с названием прибора
+             */
+            private static Label getNameLabel(Device device) {
+                String deviceName = device.getName() != null && !device.getName().trim().isEmpty()
+                        ? device.getName()
+                        : "Без имени";
+                String inventoryNumber = device.getInventoryNumber() != null && !device.getInventoryNumber().trim().isEmpty()
+                        ? device.getInventoryNumber()
+                        : "";
+
+                String displayName = inventoryNumber.isEmpty() ? deviceName : deviceName + " (" + inventoryNumber + ")";
+
+                return new Label(displayName);
+            }
         });
     }
 
@@ -331,69 +396,69 @@ public class PhotoGalleryController implements SearchableController {
             CustomAlertDialog.showError("Ошибка", "Сервис базы данных не инициализирован");
             return;
         }
-        
+
         // Инициализация индикатора загрузки
         loadingIndicator = new LoadingIndicator("Загрузка галереи...");
         if (rootPane != null) {
             rootPane.getChildren().add(loadingIndicator.getOverlay());
         }
-        
+
         // Скрываем контент до загрузки
         hideContentBeforeLoad();
-        
+
         // Запускаем загрузку
         loadDataAsync();
     }
-    
+
     private void hideContentBeforeLoad() {
         if (contentBox != null) {
             contentBox.setVisible(false);
             contentBox.setManaged(false);
         }
     }
-    
+
     private void showContentAfterLoad() {
         if (contentBox != null) {
             contentBox.setVisible(true);
             contentBox.setManaged(true);
         }
     }
-    
+
     private void loadDataAsync() {
         Platform.runLater(() -> loadingIndicator.show());
-        
+
         Task<Void> loadTask = new Task<>() {
             @Override
             protected Void call() throws Exception {
                 long startTime = System.currentTimeMillis();
-                
+
                 // Загрузка данных
                 loadData();
-                
+
                 // Умная задержка
                 long elapsedTime = System.currentTimeMillis() - startTime;
                 long minDisplayTime = 500;
-                
+
                 if (elapsedTime < minDisplayTime) {
                     Thread.sleep(minDisplayTime - elapsedTime);
                 }
-                
+
                 return null;
             }
         };
-        
+
         loadTask.setOnSucceeded(_ -> {
             showContentAfterLoad();
             loadingIndicator.hide();
         });
-        
+
         loadTask.setOnFailed(_ -> {
             LOGGER.error("Ошибка загрузки данных: {}", loadTask.getException().getMessage());
             CustomAlertDialog.showError("Ошибка", "Не удалось загрузить данные");
             showContentAfterLoad();
             loadingIndicator.hide();
         });
-        
+
         new Thread(loadTask).start();
     }
 
@@ -532,9 +597,9 @@ public class PhotoGalleryController implements SearchableController {
                 externalLocationFilter.getValue() : "Все места";
 
         // Проверяем, активны ли фильтры
-        boolean hasActiveFilters = !searchText.isEmpty() || 
-                                   photosOnly || 
-                                   !"Все места".equals(selectedLocation);
+        boolean hasActiveFilters = !searchText.isEmpty() ||
+                photosOnly ||
+                !"Все места".equals(selectedLocation);
 
         filteredCards.setPredicate(data -> {
             // Фильтрация по выбранному месту
@@ -565,15 +630,15 @@ public class PhotoGalleryController implements SearchableController {
             if (hasActiveFilters && !filteredStatsBox.isVisible()) {
                 filteredStatsBox.setVisible(true);
                 filteredStatsBox.setManaged(true);
-                
+
                 javafx.animation.FadeTransition fadeIn = new javafx.animation.FadeTransition(
-                    javafx.util.Duration.millis(300), filteredStatsBox);
+                        javafx.util.Duration.millis(300), filteredStatsBox);
                 fadeIn.setFromValue(0.0);
                 fadeIn.setToValue(1.0);
                 fadeIn.play();
             } else if (!hasActiveFilters && filteredStatsBox.isVisible()) {
                 javafx.animation.FadeTransition fadeOut = new javafx.animation.FadeTransition(
-                    javafx.util.Duration.millis(300), filteredStatsBox);
+                        javafx.util.Duration.millis(300), filteredStatsBox);
                 fadeOut.setFromValue(1.0);
                 fadeOut.setToValue(0.0);
                 fadeOut.setOnFinished(_ -> {
@@ -590,31 +655,50 @@ public class PhotoGalleryController implements SearchableController {
     private void viewAllPhotosAtLocation(String location, List<Device> devices) {
         LOGGER.info("👁️ Просмотр всех фото в месте: {}", location);
 
-        List<Device> devicesWithPhotos = devices.stream()
-                .filter(d -> d.getPhotos() != null && !d.getPhotos().isEmpty())
-                .toList();
+        // Собираем PhotoEntry для каждого фото каждого прибора локации
+        List<PhotoViewer.PhotoEntry> entries = new ArrayList<>();
+        for (Device device : devices) {
+            List<String> devicePhotos = device.getPhotos();
+            if (devicePhotos == null || devicePhotos.isEmpty()) continue;
+            for (String photoName : devicePhotos) {
+                String fullPath = photoManager.getFullPhotoPath(device, photoName);
+                if (fullPath != null) {
+                    entries.add(new PhotoViewer.PhotoEntry(device, photoName, fullPath));
+                }
+            }
+        }
 
-        if (devicesWithPhotos.isEmpty()) {
+        if (entries.isEmpty()) {
             CustomAlertDialog.showInfo("Просмотр фото",
                     String.format("В месте '%s' нет фотографий", location));
             return;
         }
 
         Stage stage = (Stage) cardsListView.getScene().getWindow();
-        photoManager.viewDevicePhotos(devicesWithPhotos.getFirst(), stage);
 
-        int totalPhotos = devicesWithPhotos.stream()
-                .mapToInt(d -> d.getPhotos().size())
-                .sum();
+        // Callback: после удаления фото обновляем карточку локации в галерее
+        PhotoViewer.OnPhotoDeletedCallback onDeleted = (deletedDevice, deletedPhotoName) ->
+                Platform.runLater(() -> {
+                    try {
+                        // Обновляем объект прибора в нашей структуре
+                        Device updatedDevice = deviceDAO.getDeviceById(deletedDevice.getId());
+                        if (updatedDevice != null) {
+                            deletedDevice.setPhotos(new ArrayList<>(updatedDevice.getPhotos()));
+                            updateDevicesByLocation(updatedDevice);
+                        }
+                        // Обновляем карточку локации (счётчик фото)
+                        updateLocationCardData(location);
+                        updateStatistics();
+                        cardsListView.refresh();
 
-        if (devicesWithPhotos.size() > 1) {
-            CustomAlertDialog.showInfo("Информация",
-                    String.format("""
-                                    Всего фото в месте '%s': %d (в %d приборах)
-                                    
-                                    Показаны фото первого прибора.""",
-                            location, totalPhotos, devicesWithPhotos.size()));
-        }
+                        LOGGER.info("✅ Карточка локации '{}' обновлена после удаления фото прибора '{}'",
+                                location, deletedDevice.getInventoryNumber());
+                    } catch (Exception e) {
+                        LOGGER.error("❌ Ошибка обновления карточки после удаления: {}", e.getMessage(), e);
+                    }
+                });
+
+        photoManager.viewLocationPhotos("Локация: " + location, entries, stage, onDeleted);
     }
 
     /**
@@ -710,7 +794,7 @@ public class PhotoGalleryController implements SearchableController {
         // Используем кастомный диалог вместо ChoiceDialog
         Optional<String> result = CustomAlertDialog.showChoiceDialog(
                 "Удаление фото",
-                "Выберите фото для удаления из прибора: " + device.getName(),
+                "Выберите фото для удаления из прибора: " + device.getInventoryNumber(),
                 photos,
                 photos.getFirst()
         );
@@ -825,7 +909,7 @@ public class PhotoGalleryController implements SearchableController {
         // Обновляем отфильтрованную статистику
         updateFilteredStatsUI(filteredLocations, filteredDevices, filteredPhotos, devicesWithPhotos);
     }
-    
+
     @Override
     public void bindSearchField(TextField externalSearchField) {
         this.externalSearchField = externalSearchField;
@@ -833,7 +917,7 @@ public class PhotoGalleryController implements SearchableController {
             externalSearchField.textProperty().addListener((_, _, _) -> applyFilters());
         }
     }
-    
+
     @Override
     public void bindLocationFilter(ComboBox<String> locationFilter) {
         this.externalLocationFilter = locationFilter;
@@ -845,7 +929,7 @@ public class PhotoGalleryController implements SearchableController {
             }
         }
     }
-    
+
     @Override
     public void bindPhotosOnlyCheck(CheckBox photosOnlyCheck) {
         this.externalPhotosOnlyCheck = photosOnlyCheck;
@@ -853,7 +937,7 @@ public class PhotoGalleryController implements SearchableController {
             photosOnlyCheck.selectedProperty().addListener((_, _, _) -> applyFilters());
         }
     }
-    
+
     @Override
     public void clearFilters() {
         if (externalSearchField != null) {
@@ -866,7 +950,7 @@ public class PhotoGalleryController implements SearchableController {
             externalPhotosOnlyCheck.setSelected(false);
         }
     }
-    
+
     @Override
     public boolean hasExtendedFilters() {
         return true;

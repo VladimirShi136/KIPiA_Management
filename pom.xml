@@ -131,6 +131,16 @@
 
     <build>
         <plugins>
+            <!-- JavaFX Maven Plugin для запуска JavaFX приложений -->
+            <plugin>
+                <groupId>org.openjfx</groupId>
+                <artifactId>javafx-maven-plugin</artifactId>
+                <version>0.0.8</version>
+                <configuration>
+                    <mainClass>com.kipia.management.kipia_management.Main</mainClass>
+                </configuration>
+            </plugin>
+
             <!-- Компилятор без модулей -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

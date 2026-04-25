@@ -21,7 +21,6 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.Node;
-import javafx.scene.layout.VBox;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
@@ -40,7 +39,6 @@ import java.util.stream.Collectors;
  * @author vladimir_shi
  * @since 30.09.2025
  */
-@SuppressWarnings("unchecked")
 public class SchemeEditorController {
 
     // ============================================================
@@ -986,6 +984,9 @@ public class SchemeEditorController {
         statusLabel.setText("Вид сброшен");
     }
 
+    /**
+     * Обновление текстовой метки масштаба
+     */
     private void updateZoomLabel() {
         if (zoomLabel != null) {
             zoomLabel.setText(String.format("Масштаб: %d%%  |  Ctrl+колесо мыши",
@@ -1009,7 +1010,7 @@ public class SchemeEditorController {
                 return;
             }
             if (hadChanges) {
-                CustomAlertDialog.showAutoSaveNotification("Автосохранение", 1.3);
+                CustomAlertDialog.showSaveNotification("Автосохранение", 1.5);
             }
         }
 
@@ -1065,7 +1066,7 @@ public class SchemeEditorController {
      */
     private void clearScheme() {
         boolean confirm = CustomAlertDialog.showConfirmation("Очистка схемы",
-                "Это действие удалит ВСЕ фигуры и приборы с панели. Продолжить?");
+                "Это действие удалит ВСЕ фигуры и приборы с панели, без возможности восстановления. Продолжить?");
         if (!confirm) return;
 
         try {
@@ -1580,6 +1581,12 @@ public class SchemeEditorController {
                     if (added) {
                         selectedDevice.updateTimestamp();
                         deviceDAO.updateDevice(selectedDevice);
+                        if (schemeSaver != null) {
+                            schemeSaver.markDirty();
+                            // Обновляем индикатор в UI
+                            updateSchemeTimestamp(currentScheme);
+                            statusLabel.setText("Прибор добавлен: " + selectedDevice.getName());
+                        }
                     }
                     if (!added) {
                         CustomAlertDialog.showError("Ошибка", "Не удалось сохранить прибор в базу данных");
@@ -1603,72 +1610,12 @@ public class SchemeEditorController {
      */
     private Device showDeviceSelectionDialog() {
         // Получаем доступные приборы для текущей схемы
-        List<Device> availableDevices = getAvailableDevicesForCurrentScheme();
-
-        if (availableDevices.isEmpty()) {
+        List<Device> available = getAvailableDevicesForCurrentScheme();
+        if (available.isEmpty()) {
             CustomAlertDialog.showWarning("Выбор прибора", "Нет доступных приборов для текущей схемы!");
             return null;
         }
-
-        // Создаем диалог с помощью StyleUtils
-        Dialog<Device> dialog = StyleUtils.createDeviceSelectionDialog(
-                "Выбор прибора",
-                "Выберите прибор для добавления на схему"
-        );
-
-        // Создаем TableView для отображения приборов
-        TableView<Device> tableView = StyleUtils.createStyledTableView();
-
-        // Создаем колонки
-        TableColumn<Device, String> modelColumn = StyleUtils.createStyledColumn("Модель", "name", 250);
-        TableColumn<Device, String> inventoryColumn = StyleUtils.createStyledColumn("Инвентарный номер", "inventoryNumber", 200);
-        TableColumn<Device, String> valveColumn = StyleUtils.createStyledColumn("Кран", "valveNumber", 132);
-        TableColumn<Device, String> locationColumn = StyleUtils.createStyledColumn("Местоположение", "location", 210);
-
-        tableView.getColumns().addAll(modelColumn, inventoryColumn, valveColumn, locationColumn);
-
-        // Загружаем данные
-        ObservableList<Device> availableDevicesList = FXCollections.observableArrayList(availableDevices);
-        tableView.setItems(availableDevicesList);
-
-        // Настраиваем поведение - ВАЖНО: двойной клик и активация кнопки
-        StyleUtils.setupTableViewBehavior(tableView, dialog);
-
-        // Создаем контент
-        VBox content = StyleUtils.createDialogContent(
-                "Доступные приборы:",
-                "Доступно приборов: " + availableDevices.size(),
-                tableView
-        );
-
-        dialog.getDialogPane().setContent(content);
-
-        // Преобразуем результат - ВАЖНО: проверяем что прибор выбран
-        dialog.setResultConverter(dialogButton -> {
-            if (dialogButton == ButtonType.OK) {
-                Device selectedDevice = tableView.getSelectionModel().getSelectedItem();
-                if (selectedDevice != null) {
-                    return selectedDevice;
-                } else {
-                    CustomAlertDialog.showWarning("Выбор прибора", "Пожалуйста, выберите прибор из таблицы!");
-                }
-            }
-            return null;
-        });
-
-        // Делаем кнопку "Выбрать" активной только при выборе элемента - ВАЖНО
-        Button okButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
-        if (okButton != null) {
-            okButton.setDisable(true);
-            tableView.getSelectionModel().selectedItemProperty().addListener((_, _, newSelection) -> okButton.setDisable(newSelection == null));
-        }
-        // Фокус на первую строку
-        if (!availableDevicesList.isEmpty()) {
-            tableView.getSelectionModel().selectFirst();
-        }
-        // Показываем диалог и возвращаем результат
-        Optional<Device> result = dialog.showAndWait();
-        return result.orElse(null);
+        return CustomAlertDialog.showDeviceSelection(available);
     }
 
     /**

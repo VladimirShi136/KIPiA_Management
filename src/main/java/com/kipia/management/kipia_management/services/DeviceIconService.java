@@ -1,9 +1,12 @@
 package com.kipia.management.kipia_management.services;
 
+import com.kipia.management.kipia_management.managers.PhotoManager;
+import com.kipia.management.kipia_management.managers.PhotoViewer;
 import com.kipia.management.kipia_management.models.Device;
 import com.kipia.management.kipia_management.models.DeviceLocation;
 import com.kipia.management.kipia_management.models.Scheme;
 import com.kipia.management.kipia_management.utils.CustomAlertDialog;
+import javafx.application.Platform;
 import javafx.scene.Node;
 import javafx.scene.control.Menu;
 import javafx.scene.image.Image;
@@ -14,6 +17,7 @@ import javafx.scene.shape.Circle;
 import javafx.scene.Cursor;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
+import javafx.stage.Stage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -215,13 +219,46 @@ public class DeviceIconService {
         ContextMenu contextMenu = new ContextMenu();
 
         MenuItem deleteItem = createDeleteMenuItem(node, currentScheme);
-        MenuItem infoItem = createInfoMenuItem(node);  // Передайте node
+        MenuItem infoItem = createInfoMenuItem(node);
+        MenuItem photosItem = createPhotosMenuItem(node);  // ⭐ НОВЫЙ ПУНКТ
 
         // Добавляем пункты поворота
         Menu rotateMenu = createRotateMenu(node, device);
 
-        contextMenu.getItems().addAll(deleteItem, infoItem, rotateMenu);
+        contextMenu.getItems().addAll(deleteItem, infoItem, photosItem, rotateMenu);
         return contextMenu;
+    }
+
+    /**
+     * Создание пункта меню "Фотографии"
+     */
+    private MenuItem createPhotosMenuItem(Node node) {
+        Device device = extractDeviceFromUserData(node);
+        int photoCount = device.getPhotos() != null ? device.getPhotos().size() : 0;
+
+        MenuItem photosItem = new MenuItem("📸 Фотографии (" + photoCount + "/" + PhotoManager.MAX_PHOTOS_PER_DEVICE + ")");
+
+        // Отключаем пункт если нет фото
+        if (photoCount == 0) {
+            photosItem.setDisable(true);
+            photosItem.setText("📸 Нет фотографий");
+        }
+
+        photosItem.setOnAction(_ -> {
+            Stage stage = (Stage) node.getScene().getWindow();
+
+            // Callback для обновления информации о фото после удаления
+            PhotoViewer.OnPhotoDeletedCallback onDeleted = (deletedDevice, deletedPhotoName) -> {
+                Platform.runLater(() -> {
+                    // Обновляем пункт меню при следующем открытии
+                    LOGGER.info("✅ Фото удалено, обновляем информацию");
+                });
+            };
+
+            PhotoManager.getInstance().viewDevicePhotos(device, stage, onDeleted);
+        });
+
+        return photosItem;
     }
 
     /**
@@ -339,7 +376,8 @@ public class DeviceIconService {
     /**
      * Показ информации об устройстве
      */
-    private void showDeviceInfo(Node node) {  // Добавьте параметр Node
+    private void
+    showDeviceInfo(Node node) {  // Добавьте параметр Node
         Device deviceToShow = extractDeviceFromUserData(node);
         assert deviceToShow != null;
         String infoText = buildDeviceInfoText(deviceToShow);

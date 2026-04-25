@@ -132,7 +132,7 @@ public class SchemeSaver {
         // Кнопка "Сохранить" работает всегда — принудительно помечаем dirty
         markDirty();
         saveScheme(scheme);
-        CustomAlertDialog.showAutoSaveNotification("Сохранение", 1.5);
+        CustomAlertDialog.showSaveNotification("Сохранение", 1.8);
     }
 
     // --- Вспомогательные методы ---

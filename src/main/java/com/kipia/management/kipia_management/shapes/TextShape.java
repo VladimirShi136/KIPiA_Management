@@ -20,6 +20,8 @@ import java.util.Optional;
 import java.util.function.Consumer;
 
 /**
+ * Реализация фигуры "Текст"
+ *
  * @author vladimir_shi
  * @since 24.10.2025
  */
@@ -212,38 +214,9 @@ public class TextShape extends ShapeBase {
      * Диалог изменения цвета текста
      */
     private void changeTextColor() {
-        javafx.scene.control.ColorPicker colorPicker = new javafx.scene.control.ColorPicker(strokeColor);
-
-        Dialog<Color> dialog = new Dialog<>();
-        dialog.setTitle("Изменение цвета текста");
-        dialog.setHeaderText("Выберите цвет текста");
-
-        ButtonType applyButton = new ButtonType("Применить", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(applyButton, ButtonType.CANCEL);
-
-        GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(10);
-        grid.setPadding(new Insets(20, 150, 10, 10));
-
-        grid.add(new Label("Цвет текста:"), 0, 0);
-        grid.add(colorPicker, 1, 0);
-
-        dialog.getDialogPane().setContent(grid);
-
-        dialog.setResultConverter(dialogButton -> {
-            if (dialogButton == applyButton) {
-                return colorPicker.getValue();
-            }
-            return null;
-        });
-
-        // Применяем единый стиль
-        com.kipia.management.kipia_management.utils.DialogStyler.applyStyle(dialog);
-
-        Optional<Color> result = dialog.showAndWait();
+        Optional<Color> result = CustomAlertDialog.showColorPickerDialog("Изменение цвета текста", strokeColor);
         result.ifPresent(color -> {
-            setStrokeColor(color); // Для текста используем strokeColor
+            setStrokeColor(color);
             if (statusSetter != null) {
                 statusSetter.accept("Цвет текста изменен");
             }
@@ -257,71 +230,7 @@ public class TextShape extends ShapeBase {
         // СОХРАНЯЕМ СТАРЫЙ ШРИФТ ДЛЯ UNDO
         Font oldFont = text.getFont();
 
-        // СОЗДАЕМ диалог для выбора размера, жирности и курсива
-        Dialog<Font> dialog = new Dialog<>();
-        dialog.setTitle("Изменение шрифта");
-        dialog.setHeaderText("Выберите параметры шрифта");
-
-        // КНОПКИ
-        ButtonType applyButton = new ButtonType("Применить", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(applyButton, ButtonType.CANCEL);
-
-        // СЕТКА с настройками
-        GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(10);
-        grid.setPadding(new Insets(20, 150, 10, 10));
-
-        // ВЫБОР размера шрифта
-        TextField fontSizeField = new TextField();
-        fontSizeField.setText(String.valueOf((int)text.getFont().getSize()));
-        fontSizeField.setPromptText("Размер шрифта");
-
-        // ВЫБОР жирности
-        CheckBox boldCheckBox = new CheckBox("Жирный");
-        boldCheckBox.setSelected(text.getFont().getStyle().contains("Bold"));
-
-        // ВЫБОР начертания
-        CheckBox italicCheckBox = new CheckBox("Курсив");
-        italicCheckBox.setSelected(text.getFont().getStyle().contains("Italic"));
-
-        grid.add(new Label("Размер:"), 0, 0);
-        grid.add(fontSizeField, 1, 0);
-        grid.add(boldCheckBox, 0, 1);
-        grid.add(italicCheckBox, 1, 1);
-
-        dialog.getDialogPane().setContent(grid);
-
-        // ОБРАБОТКА результата
-        dialog.setResultConverter(dialogButton -> {
-            if (dialogButton == applyButton) {
-                try {
-                    int fontSize = Integer.parseInt(fontSizeField.getText());
-                    fontSize = Math.max(8, Math.min(72, fontSize)); // Ограничение 8-72px
-
-                    // СОЗДАЕМ новый шрифт
-                    String fontFamily = "Arial"; // Всегда используем Arial
-                    FontWeight weight = boldCheckBox.isSelected() ? FontWeight.BOLD : FontWeight.NORMAL;
-                    FontPosture posture = italicCheckBox.isSelected() ? FontPosture.ITALIC : FontPosture.REGULAR;
-
-                    Font newFont = Font.font(fontFamily, weight, posture, fontSize);
-
-                    // Для отладки
-                    LOGGER.info("New font created: size={}, bold={}, italic={}, style={}",
-                            fontSize, boldCheckBox.isSelected(), italicCheckBox.isSelected(), newFont.getStyle());
-
-                    return newFont;
-                } catch (NumberFormatException e) {
-                    CustomAlertDialog.showError("Ошибка", "Введите корректный размер шрифта");
-                }
-            }
-            return null;
-        });
-
-        // Применяем единый стиль
-        com.kipia.management.kipia_management.utils.DialogStyler.applyStyle(dialog);
-
-        Optional<Font> result = dialog.showAndWait();
+        Optional<Font> result = CustomAlertDialog.showFontDialog(oldFont);
         result.ifPresent(newFont -> {
             text.setFont(newFont);
             calculateTextSize();
@@ -332,9 +241,6 @@ public class TextShape extends ShapeBase {
             }
 
             statusSetter.accept("Шрифт изменен: " + newFont.getStyle() + " " + (int)newFont.getSize() + "px");
-
-            // Дополнительная отладка после применения
-            LOGGER.info("Font applied: size={}, style={}", newFont.getSize(), newFont.getStyle());
         });
     }
 

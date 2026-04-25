@@ -1,17 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.image.Image?>
 
 <!--
   Author: vladimir_shi
   Since: 30.08.2025
   * Окно добавления нового прибора *
 -->
-<?import javafx.scene.image.Image?>
 <VBox xmlns="http://javafx.com/javafx/23"
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.kipia.management.kipia_management.controllers.AddDeviceController"
       styleClass="add-device-root"
+      style="-fx-background-color: transparent;"
       VBox.vgrow="ALWAYS">
 
     <!-- ScrollPane для всей формы -->
@@ -33,32 +34,32 @@
                     </columnConstraints>
 
                     <!-- СТРОКА 0: Тип прибора -->
-                    <Label text="Тип прибора:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
+                    <Label text="* Тип прибора:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
                     <TextField fx:id="typeField" GridPane.rowIndex="0" GridPane.columnIndex="1" prefWidth="280"
                                styleClass="form-input" promptText="Например, Манометр"/>
 
                     <!-- СТРОКА 1: Модель -->
-                    <Label text="Модель:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
+                    <Label text="* Модель:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
                     <TextField fx:id="nameField" GridPane.rowIndex="1" GridPane.columnIndex="1" prefWidth="280"
                                styleClass="form-input" promptText="Например, МП4-УУ2"/>
 
                     <!-- СТРОКА 2: Инвентарный номер -->
-                    <Label text="Инвентарный номер:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
+                    <Label text="* Инвентарный номер:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
                     <TextField fx:id="inventoryNumberField" GridPane.rowIndex="2" GridPane.columnIndex="1" prefWidth="280"
                                styleClass="form-input" promptText="Например, ТМ-001"/>
 
                     <!-- СТРОКА 3: Место установки -->
-                    <Label text="Место установки:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
+                    <Label text="* Место установки:" GridPane.rowIndex="3" GridPane.columnIndex="0" styleClass="form-label"/>
                     <ComboBox fx:id="locationField" GridPane.rowIndex="3" GridPane.columnIndex="1" prefWidth="280"
-                               editable="true" styleClass="form-input" promptText="Например, 88 км Губкин"/>
+                              editable="true" styleClass="form-input" promptText="Например, 88 км Губкин"/>
 
                     <!-- СТРОКА 4: Кран № -->
-                    <Label text="Кран № (опционально):" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
+                    <Label text="Кран №:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
                     <TextField fx:id="valveNumberField" GridPane.rowIndex="4" GridPane.columnIndex="1" prefWidth="280"
                                styleClass="form-input" promptText="Например, Р1-333"/>
 
                     <!-- СТРОКА 5: Статус -->
-                    <Label text="Статус:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
+                    <Label text="* Статус:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
                     <ComboBox fx:id="statusComboBox" GridPane.rowIndex="5" GridPane.columnIndex="1" prefWidth="280"
                               styleClass="form-input" promptText="Выберите статус прибора"/>
 
@@ -97,17 +98,17 @@
                     <Label text="Фото (несколько):" GridPane.rowIndex="11" GridPane.columnIndex="0" styleClass="form-label"/>
                     <HBox spacing="20" GridPane.rowIndex="11" GridPane.columnIndex="1" alignment="CENTER_LEFT">
                         <Button fx:id="photoChooseBtn" onAction="#onChooseFiles"
-                                styleClass="photo-icon-btn" prefWidth="35" prefHeight="35">
+                                styleClass="photo-icon-btn" prefWidth="24" prefHeight="24">
                             <graphic>
-                                <javafx.scene.image.ImageView fitWidth="35" fitHeight="35" preserveRatio="true">
+                                <javafx.scene.image.ImageView fitWidth="24" fitHeight="24" preserveRatio="true">
                                     <Image url="@../images/image-plus.png"/>
                                 </javafx.scene.image.ImageView>
                             </graphic>
                         </Button>
                         <Button fx:id="photoRemoveBtn" onAction="#onRemovePhoto"
-                                styleClass="photo-icon-btn-with-margin" prefWidth="35" prefHeight="35">
+                                styleClass="photo-icon-btn-with-margin" prefWidth="24" prefHeight="24">
                             <graphic>
-                                <javafx.scene.image.ImageView fitWidth="35" fitHeight="35" preserveRatio="true">
+                                <javafx.scene.image.ImageView fitWidth="24" fitHeight="24" preserveRatio="true">
                                     <Image url="@../images/image-minus.png"/>
                                 </javafx.scene.image.ImageView>
                             </graphic>
@@ -125,24 +126,32 @@
                                    styleClass="photo-counter"/>
                         </VBox>
                     </HBox>
+
+                    <!-- СТРОКА 13: Последнее обновление -->
+                    <Label text="Последнее обновление:" GridPane.rowIndex="13" GridPane.columnIndex="0" styleClass="form-label"/>
+                    <Label fx:id="updatedAtLabel" GridPane.rowIndex="13" GridPane.columnIndex="1"/>
                 </GridPane>
+
+                <Label text="* — обязательные поля"
+                       style="-fx-font-size: 11px; -fx-text-fill: #e74c3c; -fx-font-style: italic;"
+                       alignment="CENTER"/>
 
                 <!-- Кнопки - всегда видимы внизу -->
                 <HBox spacing="40" alignment="CENTER" style="-fx-padding: 20 0 0 0;">
                     <!-- Кнопка удаления — видна только в режиме редактирования -->
                     <Button fx:id="deleteBtn" onAction="#onDeleteDevice"
-                            styleClass="button-delete" prefWidth="35" prefHeight="35"
+                            styleClass="button-delete" prefWidth="24" prefHeight="24"
                             visible="false" managed="false">
                         <graphic>
-                            <javafx.scene.image.ImageView fitWidth="35" fitHeight="35" preserveRatio="true">
+                            <javafx.scene.image.ImageView fitWidth="24" fitHeight="24" preserveRatio="true">
                                 <Image url="@../images/delete.png"/>
                             </javafx.scene.image.ImageView>
                         </graphic>
                     </Button>
                     <Button fx:id="cancelBtn" onAction="#onCancel"
-                            styleClass="button-icon" prefWidth="35" prefHeight="35"/>
+                            styleClass="button-icon" prefWidth="24" prefHeight="24"/>
                     <Button fx:id="addBtn" onAction="#onAddDevice"
-                            styleClass="button-icon" prefWidth="35" prefHeight="35"/>
+                            styleClass="button-icon" prefWidth="24" prefHeight="24"/>
                 </HBox>
             </VBox>
         </VBox>

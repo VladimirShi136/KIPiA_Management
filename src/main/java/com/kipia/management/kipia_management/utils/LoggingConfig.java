@@ -152,8 +152,9 @@ public class LoggingConfig {
 
     /**
      * Проверяет, запущено ли приложение в режиме разработки
+     * @return true если режим разработки, false если продакшен
      */
-    private static boolean isDevelopmentMode() {
+    public static boolean isDevelopmentMode() {
         // ПРИОРИТЕТ 1: Принудительный продакшен режим через VM option
         if ("true".equals(System.getProperty("production"))) {
             return false;

@@ -6,18 +6,18 @@
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.geometry.Insets?>
-
-<!--
-  Author: vladimir_shi
-  Since: 24.08.2025
-  * Главное окно *
--->
 <?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.ComboBox?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.image.Image?>
+
+<!--
+  Author: vladimir_shi
+  Since: 24.08.2025
+  * Главное окно *
+-->
 <BorderPane xmlns="http://javafx.com/javafx/23"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.kipia.management.kipia_management.controllers.MainController"
@@ -85,6 +85,17 @@
                     <Insets right="15"/>
                 </padding>
             </Label>
+            <!-- Кнопка справки -->
+            <Button fx:id="helpBtn" styleClass="help-button" onAction="#showHelp">
+                <graphic>
+                    <ImageView fitWidth="20" fitHeight="20" pickOnBounds="true" preserveRatio="true">
+                        <Image url="@../images/help.png"/>
+                    </ImageView>
+                </graphic>
+                <tooltip>
+                    <Tooltip text="Справка"/>
+                </tooltip>
+            </Button>
             <!-- Кнопки управления окном -->
             <HBox alignment="CENTER_RIGHT" styleClass="window-controls">
                 <Button fx:id="minimizeBtn" styleClass="window-control-button" text="_">
@@ -128,6 +139,11 @@
                     onAction="#showReports"
                     styleClass="button-reports"
                     text="Отчеты"/>
+            <Button fx:id="testDialogsBtn"
+                    maxWidth="Infinity"
+                    onAction="#showTestDialogs"
+                    styleClass="button-devices"
+                    text="Тест диалогов"/>
             <Region VBox.vgrow="ALWAYS"/>
             <!-- Кнопки-иконки внизу на одной линии -->
             <HBox spacing="10" alignment="CENTER">

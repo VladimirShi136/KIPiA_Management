@@ -3,6 +3,7 @@ package com.kipia.management.kipia_management.shapes;
 import com.kipia.management.kipia_management.managers.ClipboardManager;
 import com.kipia.management.kipia_management.managers.ShapeManager;
 import com.kipia.management.kipia_management.services.ShapeService;
+import com.kipia.management.kipia_management.utils.CustomAlertDialog;
 import javafx.geometry.Insets;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
@@ -733,36 +734,7 @@ public class LineShape extends ShapeBase {
      * Собственный метод для изменения цвета линии
      */
     private void changeLineColor() {
-        javafx.scene.control.ColorPicker colorPicker = new javafx.scene.control.ColorPicker(strokeColor);
-
-        Dialog<Color> dialog = new Dialog<>();
-        dialog.setTitle("Изменение цвета линии");
-        dialog.setHeaderText("Выберите цвет линии");
-
-        ButtonType applyButton = new ButtonType("Применить", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(applyButton, ButtonType.CANCEL);
-
-        GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(10);
-        grid.setPadding(new Insets(20, 150, 10, 10));
-
-        grid.add(new Label("Цвет линии:"), 0, 0);
-        grid.add(colorPicker, 1, 0);
-
-        dialog.getDialogPane().setContent(grid);
-
-        dialog.setResultConverter(dialogButton -> {
-            if (dialogButton == applyButton) {
-                return colorPicker.getValue();
-            }
-            return null;
-        });
-
-        // Применяем единый стиль
-        com.kipia.management.kipia_management.utils.DialogStyler.applyStyle(dialog);
-
-        Optional<Color> result = dialog.showAndWait();
+        Optional<Color> result = CustomAlertDialog.showColorPickerDialog("Изменение цвета линии", strokeColor);
         result.ifPresent(color -> {
             setStrokeColor(color);
             if (statusSetter != null) {

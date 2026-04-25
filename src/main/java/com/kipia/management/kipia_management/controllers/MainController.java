@@ -4,6 +4,7 @@ import com.kipia.management.kipia_management.managers.SyncManager;
 import com.kipia.management.kipia_management.models.Scheme;
 import com.kipia.management.kipia_management.services.*;
 import com.kipia.management.kipia_management.utils.CustomAlertDialog;
+import com.kipia.management.kipia_management.utils.DevTools;
 import com.kipia.management.kipia_management.utils.StyleUtils;
 import javafx.animation.*;
 import javafx.application.Platform;
@@ -16,6 +17,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.Scene;
+import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
@@ -46,6 +48,7 @@ public class MainController {
     public Button photoGalleryBtn;
     public Button schemesBtn;
     public Button reportsBtn;
+    public Button testDialogsBtn;
     public Button settingsBtn;
     public Button exitBtn;
 
@@ -66,6 +69,7 @@ public class MainController {
     @FXML private ComboBox<String> topLocationFilter;
     @FXML private CheckBox topPhotosOnlyCheck;
     @FXML private Button topClearSearchButton;
+    @FXML private Button helpBtn;
 
     // Сервисы
     private DeviceDAO deviceDAO;
@@ -78,6 +82,7 @@ public class MainController {
     private Scene scene;
     private boolean isDarkTheme = false;
     private ReportsController reportsController;
+    private SettingsController settingsController;
     private String currentActiveSection = null;
     private SearchableController currentSearchableController = null;
     private boolean isTopSearchExpanded = false;
@@ -129,18 +134,33 @@ public class MainController {
     //  Сохранение схемы
     // =============================================================
 
-    public void saveSchemeBeforeNavigation() {
-        if (schemeEditorController == null) return;
+    public void saveSchemeBeforeNavigation(Runnable onFinished) {
+        if (schemeEditorController == null) {
+            if (onFinished != null) onFinished.run();
+            return;
+        }
         try {
             SchemeSaver saver = schemeEditorController.getSchemeSaver();
-            if (saver == null) return;
+            if (saver == null) {
+                if (onFinished != null) onFinished.run();
+                return;
+            }
             boolean hadChanges = saver.isDirty();
             saver.saveBeforeNavigation(schemeEditorController.getCurrentScheme());
-            if (hadChanges) CustomAlertDialog.showAutoSaveNotification("Автосохранение", 1.3);
+            if (hadChanges) {
+                CustomAlertDialog.showSaveNotificationAndWait("Автосохранение", 1.0, onFinished);
+            } else {
+                if (onFinished != null) onFinished.run();
+            }
         } catch (Exception e) {
             LOGGER.error("Ошибка сохранения схемы: {}", e.getMessage());
             CustomAlertDialog.showError("Ошибка сохранения", "Не удалось сохранить схему: " + e.getMessage());
+            if (onFinished != null) onFinished.run();
         }
+    }
+
+    public void saveSchemeBeforeNavigation() {
+        saveSchemeBeforeNavigation(null);
     }
 
     private void saveSchemeOnExit() {
@@ -151,7 +171,7 @@ public class MainController {
             if (saver == null || currentScheme == null) return;
             boolean hadChanges = saver.isDirty();
             saver.saveOnExit(currentScheme);
-            if (hadChanges) CustomAlertDialog.showAutoSaveNotification("Сохранение при выходе", 0.5);
+            if (hadChanges) CustomAlertDialog.showSaveNotification("Сохранение при выходе", 1.0);
         } catch (Exception e) {
             LOGGER.error("Ошибка автосохранения при выходе: {}", e.getMessage());
             CustomAlertDialog.showWarning("Предупреждение",
@@ -174,6 +194,12 @@ public class MainController {
         settingsBtn.getStyleClass().add("button-settings");
         themeToggleBtn.getStyleClass().add("button-theme-toggle");
         exitBtn.getStyleClass().add("button-exit");
+
+        // Скрываем кнопку теста в продакшн-режиме
+        if (!DevTools.isDevelopmentMode() && testDialogsBtn != null) {
+            testDialogsBtn.setVisible(false);
+            testDialogsBtn.setManaged(false);
+        }
 
         if (scene != null) {
             try {
@@ -580,6 +606,13 @@ public class MainController {
 
     @FXML
     private void exitApp() {
+        // Проверка на активные операции в SettingsController
+        if (settingsController != null && settingsController.isOperationInProgress()) {
+            CustomAlertDialog.showWarning("Операция в процессе",
+                    "Идет операция экспорта или импорта. Дождитесь завершения перед закрытием приложения.");
+            return;
+        }
+
         String message = schemeEditorController == null
                 ? "Вы уверены, что хотите выйти?"
                 : "Вы уверены, что хотите выйти? Текущая схема будет автоматически сохранена.";
@@ -591,6 +624,21 @@ public class MainController {
 
         Timeline timeline = new Timeline(new KeyFrame(Duration.millis(1500), _ -> Platform.exit()));
         timeline.play();
+    }
+
+    /**
+     * Блокирует / разблокирует кнопки навигации.
+     * Используется для предотвращения переключения вкладок во время длительных операций.
+     */
+    public void setNavigationDisabled(boolean disabled) {
+        Platform.runLater(() -> {
+            devicesBtn.setDisable(disabled);
+            photoGalleryBtn.setDisable(disabled);
+            schemesBtn.setDisable(disabled);
+            reportsBtn.setDisable(disabled);
+            settingsBtn.setDisable(disabled);
+            exitBtn.setDisable(disabled);
+        });
     }
 
     private void refreshCurrentView() {
@@ -608,27 +656,36 @@ public class MainController {
         if ("devices".equals(currentActiveSection)) return;
         resetSearchOnNavigation();
         currentActiveSection = "devices";
-        if (schemeEditorController != null) { saveSchemeBeforeNavigation(); schemeEditorView = null; schemeEditorController = null; }
-        statusLabel.setText("Просмотр списка приборов");
-        contentArea.getChildren().clear();
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/devices.fxml"));
-            Parent view = loader.load();
-            DevicesTableController ctrl = loader.getController();
-            if (ctrl != null) {
-                ctrl.setDeviceDAO(deviceDAO);
-                if (schemeEditorController != null) ctrl.setSchemeEditorController(schemeEditorController);
-                ctrl.init();
-                currentSearchableController = ctrl;
-                if (topSearchField != null) ctrl.bindSearchField(topSearchField);
-                showTopSearchPanel(true, false);
+
+        Runnable loadDevices = () -> {
+            schemeEditorView = null;
+            schemeEditorController = null;
+            statusLabel.setText("Просмотр списка приборов");
+            contentArea.getChildren().clear();
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/devices.fxml"));
+                Parent view = loader.load();
+                DevicesTableController ctrl = loader.getController();
+                if (ctrl != null) {
+                    ctrl.setDeviceDAO(deviceDAO);
+                    ctrl.init();
+                    currentSearchableController = ctrl;
+                    if (topSearchField != null) ctrl.bindSearchField(topSearchField);
+                    showTopSearchPanel(true, false);
+                }
+                contentArea.getChildren().add(view);
+                updateNavigationButtonsState();
+            } catch (IOException e) {
+                statusLabel.setText("Ошибка загрузки списка приборов: " + e.getMessage());
+                CustomAlertDialog.showError("Ошибка загрузки", "Не удалось загрузить список приборов");
+                LOGGER.error("Ошибка загрузки списка приборов: {}", e.getMessage(), e);
             }
-            contentArea.getChildren().add(view);
-            updateNavigationButtonsState();
-        } catch (IOException e) {
-            statusLabel.setText("Ошибка загрузки списка приборов: " + e.getMessage());
-            CustomAlertDialog.showError("Ошибка загрузки", "Не удалось загрузить список приборов");
-            LOGGER.error("Ошибка загрузки списка приборов: {}", e.getMessage(), e);
+        };
+
+        if (schemeEditorController != null) {
+            saveSchemeBeforeNavigation(loadDevices);
+        } else {
+            loadDevices.run();
         }
     }
 
@@ -637,29 +694,39 @@ public class MainController {
         if ("photoGallery".equals(currentActiveSection)) return;
         resetSearchOnNavigation();
         currentActiveSection = "photoGallery";
-        if (schemeEditorController != null) { saveSchemeBeforeNavigation(); schemeEditorView = null; schemeEditorController = null; }
-        schemesBtn.setDisable(false);
-        statusLabel.setText("Просмотр фотографий приборов по местам установки");
-        contentArea.getChildren().clear();
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/photo-gallery.fxml"));
-            Parent view = loader.load();
-            PhotoGalleryController ctrl = loader.getController();
-            if (ctrl != null) {
-                ctrl.setDeviceDAO(deviceDAO);
-                ctrl.init();
-                currentSearchableController = ctrl;
-                if (topSearchField     != null) ctrl.bindSearchField(topSearchField);
-                if (topLocationFilter  != null) ctrl.bindLocationFilter(topLocationFilter);
-                if (topPhotosOnlyCheck != null) ctrl.bindPhotosOnlyCheck(topPhotosOnlyCheck);
-                showTopSearchPanel(true, true);
+
+        Runnable loadPhotoGallery = () -> {
+            schemeEditorView = null;
+            schemeEditorController = null;
+            schemesBtn.setDisable(false);
+            statusLabel.setText("Просмотр фотографий приборов по местам установки");
+            contentArea.getChildren().clear();
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/photo-gallery.fxml"));
+                Parent view = loader.load();
+                PhotoGalleryController ctrl = loader.getController();
+                if (ctrl != null) {
+                    ctrl.setDeviceDAO(deviceDAO);
+                    ctrl.init();
+                    currentSearchableController = ctrl;
+                    if (topSearchField     != null) ctrl.bindSearchField(topSearchField);
+                    if (topLocationFilter  != null) ctrl.bindLocationFilter(topLocationFilter);
+                    if (topPhotosOnlyCheck != null) ctrl.bindPhotosOnlyCheck(topPhotosOnlyCheck);
+                    showTopSearchPanel(true, true);
+                }
+                contentArea.getChildren().add(view);
+                updateNavigationButtonsState();
+            } catch (IOException e) {
+                statusLabel.setText("Ошибка загрузки галереи фото: " + e.getMessage());
+                CustomAlertDialog.showError("Ошибка загрузки", "Не удалось загрузить галерею фото");
+                LOGGER.error("Ошибка загрузки галереи фото: {}", e.getMessage(), e);
             }
-            contentArea.getChildren().add(view);
-            updateNavigationButtonsState();
-        } catch (IOException e) {
-            statusLabel.setText("Ошибка загрузки галереи фото: " + e.getMessage());
-            CustomAlertDialog.showError("Ошибка загрузки", "Не удалось загрузить галерею фото");
-            LOGGER.error("Ошибка загрузки галереи фото: {}", e.getMessage(), e);
+        };
+
+        if (schemeEditorController != null) {
+            saveSchemeBeforeNavigation(loadPhotoGallery);
+        } else {
+            loadPhotoGallery.run();
         }
     }
 
@@ -669,30 +736,41 @@ public class MainController {
         resetSearchOnNavigation();
         currentActiveSection = "schemes";
         statusLabel.setText("Редактор схем");
+
         if (schemeEditorView != null && schemeEditorController != null) {
-            saveSchemeBeforeNavigation(); schemeEditorView = null; schemeEditorController = null;
-            updateNavigationButtonsState(); return;
+            Runnable clearAndReturn = () -> {
+                schemeEditorView = null;
+                schemeEditorController = null;
+                updateNavigationButtonsState();
+            };
+            saveSchemeBeforeNavigation(clearAndReturn);
+            return;
         }
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/scheme-editor.fxml"));
-            schemeEditorView = loader.load();
-            schemeEditorController = loader.getController();
-            if (schemeEditorController != null) {
-                schemeEditorController.setDeviceDAO(deviceDAO);
-                schemeEditorController.setSchemeDAO(schemeDAO);
-                schemeEditorController.setDeviceLocationDAO(deviceLocationDAO);
-                schemeEditorController.init();
+
+        Runnable loadSchemesEditor = () -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/scheme-editor.fxml"));
+                schemeEditorView = loader.load();
+                schemeEditorController = loader.getController();
+                if (schemeEditorController != null) {
+                    schemeEditorController.setDeviceDAO(deviceDAO);
+                    schemeEditorController.setSchemeDAO(schemeDAO);
+                    schemeEditorController.setDeviceLocationDAO(deviceLocationDAO);
+                    schemeEditorController.init();
+                }
+                contentArea.getChildren().clear();
+                contentArea.getChildren().add(schemeEditorView);
+                currentSearchableController = null;
+                showTopSearchPanel(false, false);
+                updateNavigationButtonsState();
+            } catch (IOException e) {
+                statusLabel.setText("Ошибка загрузки редактора схем: " + e.getMessage());
+                CustomAlertDialog.showError("Ошибка загрузки", "Не удалось загрузить редактор схем");
+                LOGGER.error("Ошибка загрузки редактора схем: {}", e.getMessage(), e);
             }
-            contentArea.getChildren().clear();
-            contentArea.getChildren().add(schemeEditorView);
-            currentSearchableController = null;
-            showTopSearchPanel(false, false);
-            updateNavigationButtonsState();
-        } catch (IOException e) {
-            statusLabel.setText("Ошибка загрузки редактора схем: " + e.getMessage());
-            CustomAlertDialog.showError("Ошибка загрузки", "Не удалось загрузить редактор схем");
-            LOGGER.error("Ошибка загрузки редактора схем: {}", e.getMessage(), e);
-        }
+        };
+
+        loadSchemesEditor.run();
     }
 
     @FXML
@@ -700,26 +778,34 @@ public class MainController {
         if ("reports".equals(currentActiveSection)) return;
         resetSearchOnNavigation();
         currentActiveSection = "reports";
-        if (schemeEditorController != null) { saveSchemeBeforeNavigation(); schemeEditorView = null; schemeEditorController = null; }
-        schemesBtn.setDisable(false);
-        statusLabel.setText("Просмотр отчётов");
-        contentArea.getChildren().clear();
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/reports.fxml"));
-            Parent view = loader.load();
-            ReportsController ctrl = loader.getController();
-            if (ctrl != null) {
-                ctrl.init(deviceDAO, (Stage) contentArea.getScene().getWindow());
-                this.reportsController = ctrl;
+
+        Runnable loadReports = () -> {
+            schemeEditorView = null;
+            schemeEditorController = null;
+            schemesBtn.setDisable(false);
+            statusLabel.setText("Просмотр отчётов");
+            contentArea.getChildren().clear();
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/reports.fxml"));
+                Parent view = loader.load();
+                ReportsController ctrl = loader.getController();
+                if (ctrl != null) {
+                    ctrl.init(deviceDAO, (Stage) contentArea.getScene().getWindow());
+                    this.reportsController = ctrl;
+                }
+                contentArea.getChildren().add(view);
+                updateNavigationButtonsState();
+            } catch (IOException e) {
+                statusLabel.setText("Ошибка загрузки отчётов: " + e.getMessage());
+                CustomAlertDialog.showError("Ошибка загрузки", "Не удалось загрузить отчёты");
+                LOGGER.error("Ошибка загрузки отчётов: {}", e.getMessage(), e);
             }
-            contentArea.getChildren().add(view);
-            currentSearchableController = null;
-            showTopSearchPanel(false, false);
-            updateNavigationButtonsState();
-        } catch (IOException e) {
-            statusLabel.setText("Ошибка загрузки отчётов: " + e.getMessage());
-            CustomAlertDialog.showError("Ошибка загрузки", "Не удалось загрузить отчёты");
-            LOGGER.error("Ошибка загрузки отчётов: {}", e.getMessage(), e);
+        };
+
+        if (schemeEditorController != null) {
+            saveSchemeBeforeNavigation(loadReports);
+        } else {
+            loadReports.run();
         }
     }
 
@@ -728,27 +814,120 @@ public class MainController {
         if ("settings".equals(currentActiveSection)) return;
         resetSearchOnNavigation();
         currentActiveSection = "settings";
-        if (schemeEditorController != null) { saveSchemeBeforeNavigation(); schemeEditorView = null; schemeEditorController = null; }
-        statusLabel.setText("Настройки");
-        contentArea.getChildren().clear();
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/settings.fxml"));
-            Parent view = loader.load();
-            SettingsController ctrl = loader.getController();
-            if (ctrl != null) {
-                ctrl.setSyncManager(syncManager);
-                ctrl.setDeviceDAO(deviceDAO);
-                ctrl.setOnDataChanged(this::refreshCurrentView);
-                ctrl.init();
+
+        Runnable loadSettings = () -> {
+            schemeEditorView = null;
+            schemeEditorController = null;
+            statusLabel.setText("Настройки");
+            contentArea.getChildren().clear();
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/settings.fxml"));
+                Parent view = loader.load();
+                SettingsController ctrl = loader.getController();
+                if (ctrl != null) {
+                    ctrl.setSyncManager(syncManager);
+                    ctrl.setDeviceDAO(deviceDAO);
+                    ctrl.setMainController(this);
+                    ctrl.setOnDataChanged(this::refreshCurrentView);
+                    ctrl.init();
+                    settingsController = ctrl;
+                }
+                contentArea.getChildren().add(view);
+                currentSearchableController = null;
+                showTopSearchPanel(false, false);
+                updateNavigationButtonsState();
+            } catch (IOException e) {
+                statusLabel.setText("Ошибка загрузки настроек: " + e.getMessage());
+                CustomAlertDialog.showError("Ошибка загрузки", "Не удалось загрузить настройки");
+                LOGGER.error("Ошибка загрузки настроек: {}", e.getMessage(), e);
             }
-            contentArea.getChildren().add(view);
-            currentSearchableController = null;
-            showTopSearchPanel(false, false);
-            updateNavigationButtonsState();
-        } catch (IOException e) {
-            statusLabel.setText("Ошибка загрузки настроек: " + e.getMessage());
-            CustomAlertDialog.showError("Ошибка загрузки", "Не удалось загрузить настройки");
-            LOGGER.error("Ошибка загрузки настроек: {}", e.getMessage(), e);
+        };
+
+        if (schemeEditorController != null) {
+            saveSchemeBeforeNavigation(loadSettings);
+        } else {
+            loadSettings.run();
         }
+    }
+
+    @FXML
+    private void showTestDialogs() {
+        statusLabel.setText("Тестирование диалогов");
+        contentArea.getChildren().clear();
+
+        VBox testPanel = DevTools.createDialogTestPanel(result -> statusLabel.setText(result));
+
+        contentArea.getChildren().add(testPanel);
+        currentSearchableController = null;
+        showTopSearchPanel(false, false);
+    }
+
+    @FXML
+    private void showHelp() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/help-dialog.fxml"));
+            VBox root = loader.load();
+            HelpController controller = loader.getController();
+
+            Stage helpStage = new Stage();
+            helpStage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+            helpStage.initStyle(javafx.stage.StageStyle.TRANSPARENT);
+            helpStage.setTitle("Справка");
+
+            // Прозрачный фон сцены
+            Scene scene = new Scene(root);
+            scene.setFill(javafx.scene.paint.Color.TRANSPARENT);
+            
+            // Применяем текущую тему
+            String currentTheme = StyleUtils.getCurrentTheme();
+            scene.getStylesheets().add(
+                    Objects.requireNonNull(getClass().getResource(currentTheme)).toExternalForm()
+            );
+
+            helpStage.setScene(scene);
+            helpStage.setResizable(true);
+            helpStage.setMinWidth(550);
+            helpStage.setMinHeight(300);
+
+            // Скругление углов через clip
+            Rectangle clip = new Rectangle();
+            clip.setArcWidth(24);
+            clip.setArcHeight(24);
+            clip.widthProperty().bind(root.widthProperty());
+            clip.heightProperty().bind(root.heightProperty());
+            root.setClip(clip);
+
+            controller.setStage(helpStage);
+
+            // Определяем текущий раздел для контекстной справки
+            String section = currentActiveSection != null ? currentActiveSection : "main";
+            controller.loadHelpContent(section);
+
+            // Настройка перетаскивания окна
+            setupDragToMove(root, helpStage);
+
+            helpStage.showAndWait();
+        } catch (IOException e) {
+            LOGGER.error("Ошибка открытия окна справки: {}", e.getMessage(), e);
+            CustomAlertDialog.showError("Ошибка", "Не удалось открыть окно справки");
+        }
+    }
+
+    /**
+     * Настройка перетаскивания окна за шапку
+     */
+    private void setupDragToMove(VBox root, Stage stage) {
+        final double[] xOffset = {0};
+        final double[] yOffset = {0};
+
+        root.setOnMousePressed(event -> {
+            xOffset[0] = event.getSceneX();
+            yOffset[0] = event.getSceneY();
+        });
+
+        root.setOnMouseDragged(event -> {
+            stage.setX(event.getScreenX() - xOffset[0]);
+            stage.setY(event.getScreenY() - yOffset[0]);
+        });
     }
 }

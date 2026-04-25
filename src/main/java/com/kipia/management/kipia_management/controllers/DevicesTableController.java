@@ -19,8 +19,10 @@ import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
@@ -71,7 +73,7 @@ public class DevicesTableController implements SearchableController {
 
     // Инвентарный номер — колонка, которой будем пользоваться как «default sort»
     private TableColumn<Device, String> inventoryCol;
-    
+
     // Индикатор загрузки
     private LoadingIndicator loadingIndicator;
 
@@ -108,24 +110,24 @@ public class DevicesTableController implements SearchableController {
             CustomAlertDialog.showError("Ошибка", "Сервис базы данных не инициализирован");
             return;
         }
-        
+
         // Инициализация индикатора загрузки
         loadingIndicator = new LoadingIndicator("Загрузка данных...");
         if (rootPane != null) {
             rootPane.getChildren().add(loadingIndicator.getOverlay());
         }
-        
+
         // Скрываем таблицу и статистику до загрузки данных
         hideContentBeforeLoad();
-        
+
         createTableColumns();
         configureButtons();
         configureRowStyle();
         setupSmartColumnResizing();
-        
+
         // Запускаем загрузку данных
         loadDataFromDaoAsync();
-        
+
         LOGGER.info("DevicesTableController инициализирован успешно");
     }
 
@@ -259,7 +261,7 @@ public class DevicesTableController implements SearchableController {
     // -----------------------------------------------------------------
     //   Загрузка данных и настройка фильтрации
     // -----------------------------------------------------------------
-    
+
     /**
      * Скрывает контент до загрузки данных
      */
@@ -275,7 +277,7 @@ public class DevicesTableController implements SearchableController {
             fabAddButton.setManaged(false);
         }
     }
-    
+
     /**
      * Показывает контент после загрузки данных
      */
@@ -291,34 +293,34 @@ public class DevicesTableController implements SearchableController {
             fabAddButton.setManaged(true);
         }
     }
-    
+
     /**
      * Асинхронная загрузка данных с индикатором загрузки
      */
     private void loadDataFromDaoAsync() {
         // Показываем индикатор сразу
         Platform.runLater(() -> loadingIndicator.show());
-        
+
         Task<List<Device>> loadTask = new Task<>() {
             @Override
             protected List<Device> call() throws Exception {
                 long startTime = System.currentTimeMillis();
-                
+
                 // Загрузка данных
                 List<Device> devices = deviceDAO.getAllDevices();
-                
+
                 // Умная задержка: показываем индикатор минимум 0.5 сек
                 long elapsedTime = System.currentTimeMillis() - startTime;
                 long minDisplayTime = 500; // минимальное время показа индикатора (мс)
-                
+
                 if (elapsedTime < minDisplayTime) {
                     Thread.sleep(minDisplayTime - elapsedTime);
                 }
-                
+
                 return devices;
             }
         };
-        
+
         loadTask.setOnSucceeded(_ -> {
             List<Device> devices = loadTask.getValue();
             filteredList = new FilteredList<>(FXCollections.observableArrayList(devices), _ -> true);
@@ -327,22 +329,22 @@ public class DevicesTableController implements SearchableController {
             deviceTable.getSortOrder().add(inventoryCol);
             deviceTable.sort();
             updateStatistics();
-            
+
             // Показываем контент после загрузки
             showContentAfterLoad();
             loadingIndicator.hide();
         });
-        
+
         loadTask.setOnFailed(_ -> {
             LOGGER.error("Ошибка загрузки данных: {}", loadTask.getException().getMessage());
             CustomAlertDialog.showError("Ошибка", "Не удалось загрузить данные из базы");
             showContentAfterLoad(); // Показываем контент даже при ошибке
             loadingIndicator.hide();
         });
-        
+
         new Thread(loadTask).start();
     }
-    
+
     /**
      * Синхронная загрузка данных (для обновления после изменений)
      */
@@ -380,29 +382,13 @@ public class DevicesTableController implements SearchableController {
             AddDeviceController ctrl = loader.getController();
             if (ctrl != null) {
                 ctrl.setDeviceDAO(deviceDAO);
-                // После успешного добавления — обновляем таблицу
                 ctrl.setOnDeviceAdded(() -> Platform.runLater(() -> {
                     loadDataFromDao();
                     updateStatistics();
                 }));
             }
 
-            Stage dialog = new Stage();
-            dialog.initStyle(javafx.stage.StageStyle.UTILITY); // Убираем системный titlebar
-            dialog.setTitle("Добавление нового прибора");
-            dialog.setScene(new Scene(view, 560, 680));
-            dialog.setResizable(false);
-
-            // Копируем иконку и стили из главного окна
-            Stage ownerStage = (Stage) deviceTable.getScene().getWindow();
-            dialog.initOwner(ownerStage);
-            dialog.initModality(Modality.APPLICATION_MODAL);
-            // Переносим CSS из родительской сцены
-            dialog.getScene().getStylesheets().addAll(
-                    ownerStage.getScene().getStylesheets());
-
-            dialog.showAndWait();
-
+            openStyledDialog(view, "Добавление нового прибора");
             LOGGER.info("Диалог добавления прибора закрыт");
         } catch (Exception e) {
             LOGGER.error("Ошибка открытия формы добавления: {}", e.getMessage(), e);
@@ -571,31 +557,151 @@ public class DevicesTableController implements SearchableController {
             AddDeviceController ctrl = loader.getController();
             if (ctrl != null) {
                 ctrl.setDeviceDAO(deviceDAO);
-                ctrl.setEditMode(device); // заполняем форму данными прибора
+                ctrl.setEditMode(device);
                 ctrl.setOnDeviceAdded(() -> Platform.runLater(() -> {
                     loadDataFromDao();
                     updateStatistics();
                 }));
             }
 
-            Stage dialog = new Stage();
-            dialog.initStyle(javafx.stage.StageStyle.UTILITY); // Убираем системный titlebar
-            dialog.setTitle("Редактирование прибора: " + device.getName());
-            dialog.setScene(new Scene(view, 560, 680));
-            dialog.setResizable(false);
-
-            Stage ownerStage = (Stage) deviceTable.getScene().getWindow();
-            dialog.initOwner(ownerStage);
-            dialog.initModality(Modality.APPLICATION_MODAL);
-            
-            // Применяем стили (без иконки, так как кастомный titlebar)
-            dialog.getScene().getStylesheets().addAll(ownerStage.getScene().getStylesheets());
-
-            dialog.showAndWait();
+            openStyledDialog(view, "Редактирование: " + device.getName());
         } catch (Exception e) {
             LOGGER.error("Ошибка открытия формы редактирования: {}", e.getMessage(), e);
             CustomAlertDialog.showError("Ошибка", "Не удалось открыть форму редактирования");
         }
+    }
+
+    /**
+     * Открывает FXML-форму в кастомном диалоге без системного titlebar.
+     * Стиль соответствует CustomAlertDialog — скругление, тень, тема.
+     */
+    private void openStyledDialog(Parent formContent, String titleText) {
+        boolean dark = com.kipia.management.kipia_management.utils.StyleUtils
+                .getCurrentTheme().contains("dark");
+
+        Stage ownerStage = (Stage) deviceTable.getScene().getWindow();
+
+        // ===== TITLEBAR =====
+        javafx.scene.shape.SVGPath formIcon = new javafx.scene.shape.SVGPath();
+        formIcon.setContent(
+                // Внешний корпус (основной круг)
+                "M12,2 C6.48,2 2,6.48 2,12 s4.48,10 10,10 s10,-4.48 10,-10 S17.52,2 12,2 z " +
+
+                        // Внутренний круг (циферблат)
+                        "M12,3.5 C7.31,3.5 3.5,7.31 3.5,12 s3.81,8.5 8.5,8.5 s8.5,-3.81 8.5,-8.5 S16.69,3.5 12,3.5 z " +
+
+                        // Деления: длинные (0, 90, 180, 270 градусов)
+                        "M12,4.2 L12,5 M12,19 L12,19.8 M4.2,12 L5,12 M19,12 L19.8,12 " +
+
+                        // Деления: короткие (45, 135, 225, 315 градусов)
+                        "M17.66,6.34 L17.17,6.83 M6.83,17.17 L6.34,17.66 " +
+                        "M6.34,6.34 L6.83,6.83 M17.17,17.17 L17.66,17.66 " +
+
+                        // Центральная точка оси
+                        "M12,12 m-0.4,0 a0.4,0.4 0 1,0 0.8,0 a0.4,0.4 0 1,0 -0.8,0 " +
+
+                        // Стрелка (от центра вверх-влево, как в 10 часов)
+                        "M12,12 L9.2,8.8 " +
+
+                        // Треугольное острие стрелки
+                        "M9.2,8.8 L8.8,9.5 L9.6,9.2 Z"
+        );
+
+        formIcon.setFill(Color.TRANSPARENT);
+        formIcon.setStroke(Color.web(dark ? "#7090b0" : "#ecf0f1"));
+        formIcon.setStrokeWidth(1.5);
+        formIcon.setStrokeLineCap(javafx.scene.shape.StrokeLineCap.ROUND);
+        formIcon.setStrokeLineJoin(javafx.scene.shape.StrokeLineJoin.ROUND);
+
+        javafx.scene.layout.StackPane iconWrap = new javafx.scene.layout.StackPane(formIcon);
+        iconWrap.setPrefSize(40, 40);
+        iconWrap.setMinSize(40, 40);
+        iconWrap.setStyle("-fx-background-color: transparent;");
+
+        Label typeLabel = new Label("Управление приборами");
+        typeLabel.setStyle(
+                "-fx-font-size:10px;-fx-font-weight:bold;" +
+                        "-fx-text-fill:" + (dark ? "#5a6a7a" : "rgba(255,255,255,0.65)") + ";"
+        );
+        Label titleLabel = new Label(titleText);
+        titleLabel.setStyle(
+                "-fx-font-size:13px;-fx-font-weight:bold;" +
+                        "-fx-text-fill:" + (dark ? "#aec6de" : "#ffffff") + ";"
+        );
+
+        javafx.scene.layout.VBox titleBox = new javafx.scene.layout.VBox(1, typeLabel, titleLabel);
+        titleBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        javafx.scene.layout.HBox.setHgrow(titleBox, Priority.ALWAYS);
+
+        Button closeBtn = new Button("✕");
+        closeBtn.setStyle(
+                "-fx-background-color:transparent;-fx-text-fill:" +
+                        (dark ? "#aec6de" : "white") +
+                        ";-fx-font-size:15px;-fx-cursor:hand;-fx-padding:4 10;-fx-background-radius:4px;"
+        );
+        closeBtn.setOnMouseEntered(_ -> closeBtn.setStyle(
+                "-fx-background-color:#e74c3c;-fx-text-fill:white;" +
+                        "-fx-font-size:15px;-fx-cursor:hand;-fx-padding:4 10;-fx-background-radius:4px;"
+        ));
+        closeBtn.setOnMouseExited(_ -> closeBtn.setStyle(
+                "-fx-background-color:transparent;-fx-text-fill:" +
+                        (dark ? "#aec6de" : "white") +
+                        ";-fx-font-size:15px;-fx-cursor:hand;-fx-padding:4 10;-fx-background-radius:4px;"
+        ));
+
+        Stage dialog = new Stage();
+        closeBtn.setOnAction(_ -> dialog.close());
+
+        javafx.scene.layout.HBox titleBar = new javafx.scene.layout.HBox(12, iconWrap, titleBox, closeBtn);
+        titleBar.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        titleBar.setPadding(new javafx.geometry.Insets(10, 12, 10, 16));
+        titleBar.setStyle(
+                "-fx-background-color:" + (dark ? "#1a2330" : "#465261") + ";" +
+                        "-fx-background-radius:12px 12px 0 0;"
+        );
+
+        // Drag на titlebar
+        final double[] drag = new double[2];
+        titleBar.setOnMousePressed(e -> { drag[0] = e.getScreenX() - dialog.getX(); drag[1] = e.getScreenY() - dialog.getY(); });
+        titleBar.setOnMouseDragged(e -> { dialog.setX(e.getScreenX() - drag[0]); dialog.setY(e.getScreenY() - drag[1]); });
+
+        // ===== ROOT =====
+        javafx.scene.layout.VBox root = new javafx.scene.layout.VBox(titleBar, formContent);
+        javafx.scene.layout.VBox.setVgrow(formContent, Priority.ALWAYS);
+        root.setStyle(
+                "-fx-background-color:" + (dark ? "#252d38" : "#ffffff") + ";" +
+                        "-fx-background-radius:12px;" +
+                        "-fx-border-color:" + (dark ? "#2d3e50" : "#d0d4d8") + ";" +
+                        "-fx-border-width:1px;-fx-border-radius:12px;"
+        );
+        root.setEffect(new javafx.scene.effect.DropShadow(
+                20, 0, 5,
+                dark ? javafx.scene.paint.Color.rgb(0,0,0,0.6)
+                        : javafx.scene.paint.Color.rgb(0,0,0,0.22)
+        ));
+
+        // Clip для скругления
+        javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle();
+        clip.setArcWidth(24);
+        clip.setArcHeight(24);
+        clip.widthProperty().bind(root.widthProperty());
+        clip.heightProperty().bind(root.heightProperty());
+        root.setClip(clip);
+
+        // ===== SCENE =====
+        Scene scene = new Scene(root, 580, 720);
+        scene.setFill(javafx.scene.paint.Color.TRANSPARENT);
+        Scene ownerScene = ownerStage.getScene();
+        if (ownerScene != null) {
+            scene.getStylesheets().addAll(ownerScene.getStylesheets());
+        }
+
+        dialog.initStyle(javafx.stage.StageStyle.TRANSPARENT);
+        dialog.initOwner(ownerStage);
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.setResizable(false);
+        dialog.setScene(scene);
+        dialog.showAndWait();
     }
 
     /**
@@ -670,14 +776,14 @@ public class DevicesTableController implements SearchableController {
             LOGGER.error("Ошибка при обновлении ширины колонок: {}", e.getMessage());
         }
     }
-    
+
     // -----------------------------------------------------------------
     //   Поиск
     // -----------------------------------------------------------------
-    
+
     public void bindSearchField(TextField externalSearchField) {
         if (externalSearchField == null) return;
-        
+
         externalSearchField.textProperty().addListener((_, _, newV) -> {
             String lower = newV.toLowerCase().trim();
             filteredList.setPredicate(dev -> {
@@ -697,7 +803,7 @@ public class DevicesTableController implements SearchableController {
             updateStatistics();
         });
     }
-    
+
     @Override
     public void clearFilters() {
         if (filteredList != null) {

@@ -2,6 +2,7 @@ package com.kipia.management.kipia_management.shapes;
 
 import com.kipia.management.kipia_management.managers.ClipboardManager;
 import com.kipia.management.kipia_management.managers.ShapeManager;
+import com.kipia.management.kipia_management.utils.CustomAlertDialog;
 import javafx.geometry.Insets;
 import javafx.scene.Group;
 import javafx.scene.Node;
@@ -1362,37 +1363,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      * Диалог изменения цвета контура
      */
     private void changeStrokeColor() {
-        javafx.scene.control.ColorPicker colorPicker = new javafx.scene.control.ColorPicker(strokeColor);
-
-        Dialog<Color> dialog = new Dialog<>();
-        
-        // Применяем единый стиль СРАЗУ после создания (ДО любых других операций)
-        com.kipia.management.kipia_management.utils.DialogStyler.applyStyle(dialog);
-        
-        dialog.setTitle("Изменение цвета контура");
-        dialog.setHeaderText("Выберите цвет контура");
-
-        ButtonType applyButton = new ButtonType("Применить", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(applyButton, ButtonType.CANCEL);
-
-        GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(10);
-        grid.setPadding(new Insets(20, 150, 10, 10));
-
-        grid.add(new Label("Цвет контура:"), 0, 0);
-        grid.add(colorPicker, 1, 0);
-
-        dialog.getDialogPane().setContent(grid);
-
-        dialog.setResultConverter(dialogButton -> {
-            if (dialogButton == applyButton) {
-                return colorPicker.getValue();
-            }
-            return null;
-        });
-
-        Optional<Color> result = dialog.showAndWait();
+        Optional<Color> result = CustomAlertDialog.showColorPickerDialog("Изменение цвета контура", strokeColor);
         result.ifPresent(color -> {
             setStrokeColor(color);
             if (statusSetter != null) {
@@ -1405,37 +1376,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      * Диалог изменения цвета заливки
      */
     private void changeFillColor() {
-        javafx.scene.control.ColorPicker colorPicker = new javafx.scene.control.ColorPicker(fillColor);
-
-        Dialog<Color> dialog = new Dialog<>();
-        
-        // Применяем единый стиль СРАЗУ после создания (ДО любых других операций)
-        com.kipia.management.kipia_management.utils.DialogStyler.applyStyle(dialog);
-        
-        dialog.setTitle("Изменение цвета заливки");
-        dialog.setHeaderText("Выберите цвет заливки");
-
-        ButtonType applyButton = new ButtonType("Применить", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(applyButton, ButtonType.CANCEL);
-
-        GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(10);
-        grid.setPadding(new Insets(20, 150, 10, 10));
-
-        grid.add(new Label("Цвет заливки:"), 0, 0);
-        grid.add(colorPicker, 1, 0);
-
-        dialog.getDialogPane().setContent(grid);
-
-        dialog.setResultConverter(dialogButton -> {
-            if (dialogButton == applyButton) {
-                return colorPicker.getValue();
-            }
-            return null;
-        });
-
-        Optional<Color> result = dialog.showAndWait();
+        Optional<Color> result = CustomAlertDialog.showColorPickerDialog("Изменение цвета заливки", fillColor);
         result.ifPresent(color -> {
             setFillColor(color);
             if (statusSetter != null) {

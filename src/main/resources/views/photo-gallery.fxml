@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
 
 <!--
   Author: vladimir_shi
   Since: 02.12.2025
   * Окно фотогалереи *
 -->
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.*?>
 <StackPane fx:id="rootPane"
            xmlns="http://javafx.com/javafx/23"
            xmlns:fx="http://javafx.com/fxml/1"

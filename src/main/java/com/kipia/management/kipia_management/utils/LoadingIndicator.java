@@ -44,7 +44,7 @@ public class LoadingIndicator {
                         "-fx-padding: 30;");
         
         overlay = new StackPane(content);
-        overlay.setStyle("-fx-background-color: rgba(0, 0, 0, 0.3);");
+        overlay.setStyle("-fx-background-color: rgba(0, 0, 0, 0.3); -fx-background-radius: 10;");
         overlay.setVisible(false);
         overlay.setManaged(false);
     }

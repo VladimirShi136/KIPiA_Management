@@ -7,6 +7,7 @@ import com.kipia.management.kipia_management.services.DatabaseService;
 import com.kipia.management.kipia_management.services.DeviceDAO;
 import com.kipia.management.kipia_management.services.DeviceLocationDAO;
 import com.kipia.management.kipia_management.services.SchemeDAO;
+import com.kipia.management.kipia_management.utils.LoadingIndicator;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
 import org.apache.logging.log4j.LogManager;
@@ -23,6 +24,12 @@ import java.util.zip.*;
  * Менеджер синхронизации БД между устройствами.
  * Упаковывает БД + папку device_photos в ZIP,
  * при импорте выполняет merge с проверкой updated_at.
+ * <p>
+ * Поддерживает {@link LoadingIndicator} — передайте экземпляр в методы
+ * {@link #exportToZip(Window, LoadingIndicator)} и
+ * {@link #importFromZip(Window, LoadingIndicator)}, чтобы индикатор
+ * отображался во время длительных операций.
+ * Используйте перегрузки без индикатора для обратной совместимости.
  *
  * @author vladimir_shi
  * @since 09.03.2026
@@ -32,14 +39,14 @@ public class SyncManager {
     private static final Logger LOGGER = LogManager.getLogger(SyncManager.class);
 
     // Имена внутри ZIP
-    private static final String ZIP_DB_ENTRY    = "kipia_management.db";
-    private static final String ZIP_PHOTOS_DIR  = "device_photos/";
+    private static final String ZIP_DB_ENTRY   = "kipia_management.db";
+    private static final String ZIP_PHOTOS_DIR = "device_photos/";
 
-    private final DatabaseService databaseService;
-    private final DeviceDAO deviceDAO;
-    private final SchemeDAO schemeDAO;
-    private final DeviceLocationDAO deviceLocationDAO;
-    private final String photosBasePath; // путь к папке device_photos
+    private final DatabaseService     databaseService;
+    private final DeviceDAO           deviceDAO;
+    private final SchemeDAO           schemeDAO;
+    private final DeviceLocationDAO   deviceLocationDAO;
+    private final String              photosBasePath; // путь к папке device_photos
 
     public SyncManager(DatabaseService databaseService,
                        DeviceDAO deviceDAO,
@@ -54,25 +61,74 @@ public class SyncManager {
     }
 
     // ============================================================
-    // ЭКСПОРТ
+    // ПУБЛИЧНЫЕ МЕТОДЫ ДЛЯ КОНТРОЛЛЕРА
     // ============================================================
 
     /**
-     * Экспортирует БД + фото в ZIP файл, выбранный пользователем.
-     * @return путь к созданному ZIP или null при отмене/ошибке
+     * Создает и настраивает FileChooser для экспорта.
      */
-    public String exportToZip(Window ownerWindow) {
+    private FileChooser createExportFileChooser() {
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Экспорт базы данных");
         chooser.getExtensionFilters().add(
                 new FileChooser.ExtensionFilter("ZIP архив", "*.zip"));
-
         String timestamp = new SimpleDateFormat("yyyy-MM-dd_HH-mm").format(new Date());
         chooser.setInitialFileName("kipia_backup_" + timestamp + ".zip");
+        return chooser;
+    }
 
-        File file = chooser.showSaveDialog(ownerWindow);
-        if (file == null) return null;
+    /**
+     * Создает и настраивает FileChooser для импорта.
+     */
+    private FileChooser createImportFileChooser() {
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Импорт базы данных");
+        chooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("ZIP архив", "*.zip"));
+        return chooser;
+    }
 
+    /**
+     * Проверяет достаточно ли свободного места для экспорта.
+     */
+    private void checkFreeSpaceForExport() {
+        File tempDir = new File(System.getProperty("java.io.tmpdir"));
+        long freeSpace     = tempDir.getFreeSpace();
+        long estimatedSize = estimateExportSize();
+        if (freeSpace < estimatedSize * 1.5) {
+            throw new RuntimeException("Недостаточно места для экспорта. Нужно: " +
+                    (estimatedSize / 1024 / 1024) + "MB, доступно: " + (freeSpace / 1024 / 1024) + "MB");
+        }
+    }
+
+    /**
+     * Открывает диалог выбора файла для экспорта.
+     * Вызывать только из JavaFX-потока.
+     *
+     * @return выбранный файл или {@code null} если пользователь отменил
+     */
+    public File showExportDialog(Window ownerWindow) {
+        checkFreeSpaceForExport();
+        return createExportFileChooser().showSaveDialog(ownerWindow);
+    }
+
+    /**
+     * Открывает диалог выбора файла для импорта.
+     * Вызывать только из JavaFX-потока.
+     *
+     * @return выбранный файл или {@code null} если пользователь отменил
+     */
+    public File showImportDialog(Window ownerWindow) {
+        return createImportFileChooser().showOpenDialog(ownerWindow);
+    }
+
+    /**
+     * Создаёт ZIP из уже выбранного файла. Безопасно вызывать из фонового потока.
+     *
+     * @param file целевой файл (получен через {@link #showExportDialog})
+     * @return абсолютный путь к созданному ZIP или {@code null} при ошибке
+     */
+    public String exportToZipFile(File file) {
         try {
             String dbPath = getDatabaseFilePath();
             createZip(file.getAbsolutePath(), dbPath, photosBasePath);
@@ -84,23 +140,123 @@ public class SyncManager {
         }
     }
 
+    /**
+     * Выполняет merge из уже выбранного ZIP-файла. Безопасно вызывать из фонового потока.
+     *
+     * @param file исходный ZIP (получен через {@link #showImportDialog})
+     * @return результат: [добавлено устройств, обновлено устройств, добавлено схем, обновлено схем]
+     */
+    public int[] importFromZipFile(File file) {
+        long fileSize = file.length();
+        LOGGER.info("🔄 Начало импорта ZIP: {} ({} MB)", file.getName(), fileSize / 1024 / 1024);
+        try {
+            Path tempDir = Files.createTempDirectory("kipia_import_");
+            extractZip(file.getAbsolutePath(), tempDir.toString());
+
+            Path importedDb = tempDir.resolve(ZIP_DB_ENTRY);
+            if (!Files.exists(importedDb)) {
+                throw new RuntimeException("В архиве не найден файл базы данных");
+            }
+
+            int[] result = mergeDatabase(importedDb.toString());
+
+            Path importedPhotos = tempDir.resolve("device_photos");
+            if (Files.exists(importedPhotos)) {
+                mergePhotos(importedPhotos.toString());
+            }
+
+            deleteDirectory(tempDir);
+
+            LOGGER.info("✅ Импорт завершён: +{}dev, ~{}dev, +{}sch, ~{}sch",
+                    result[0], result[1], result[2], result[3]);
+            return result;
+        } catch (Exception e) {
+            LOGGER.error("❌ Ошибка импорта: {}", e.getMessage(), e);
+            throw new RuntimeException("Ошибка импорта: " + e.getMessage(), e);
+        }
+    }
+
+    // ============================================================
+    // ЭКСПОРТ
+    // ============================================================
+
+    /**
+     * Экспортирует БД + фото в ZIP файл, выбранный пользователем.
+     * Показывает {@code loadingIndicator} на время создания архива.
+     *
+     * @param ownerWindow      окно, вызвавшее экспорт
+     * @param loadingIndicator индикатор загрузки (может быть {@code null})
+     * @return путь к созданному ZIP или null при отмене/ошибке
+     */
+    public String exportToZip(Window ownerWindow, LoadingIndicator loadingIndicator) {
+        checkFreeSpaceForExport();
+        
+        File file = createExportFileChooser().showSaveDialog(ownerWindow);
+        if (file == null) return null;
+
+        showLoading(loadingIndicator, "Создание архива...");
+        try {
+            String dbPath = getDatabaseFilePath();
+            createZip(file.getAbsolutePath(), dbPath, photosBasePath);
+            LOGGER.info("✅ Экспорт завершён: {}", file.getAbsolutePath());
+            return file.getAbsolutePath();
+        } catch (Exception e) {
+            LOGGER.error("❌ Ошибка экспорта: {}", e.getMessage(), e);
+            throw new RuntimeException("Ошибка экспорта: " + e.getMessage(), e);
+        } finally {
+            hideLoading(loadingIndicator);
+        }
+    }
+
+    /**
+     * Вспомогательный метод для оценки общего размера экспорта.
+     *
+     * @return итоговый размер в байтах (БД + фото + 50MB запас)
+     */
+    private long estimateExportSize() {
+        long dbSize     = new File(getDatabaseFilePath()).length();
+        long photosSize = estimateDirectorySize(new File(photosBasePath));
+        return dbSize + photosSize + 50 * 1024 * 1024; // +50MB запас
+    }
+
+    /**
+     * Рекурсивно вычисляет размер директории со всеми файлами.
+     *
+     * @param dir директория для анализа
+     * @return общий размер в байтах
+     */
+    private long estimateDirectorySize(File dir) {
+        if (!dir.exists()) return 0;
+        long size  = 0;
+        File[] files = dir.listFiles();
+        if (files != null) {
+            for (File f : files) {
+                size += f.isDirectory() ? estimateDirectorySize(f) : f.length();
+            }
+        }
+        return size;
+    }
+
     // ============================================================
     // ИМПОРТ + MERGE
     // ============================================================
 
     /**
      * Импортирует ZIP и выполняет merge с текущей БД по updated_at.
+     * Показывает {@code loadingIndicator} на время распаковки и merge.
+     *
+     * @param ownerWindow      окно, вызвавшее импорт
+     * @param loadingIndicator индикатор загрузки (может быть {@code null})
      * @return результат: [добавлено устройств, обновлено устройств, добавлено схем, обновлено схем]
      */
-    public int[] importFromZip(Window ownerWindow) {
-        FileChooser chooser = new FileChooser();
-        chooser.setTitle("Импорт базы данных");
-        chooser.getExtensionFilters().add(
-                new FileChooser.ExtensionFilter("ZIP архив", "*.zip"));
-
-        File file = chooser.showOpenDialog(ownerWindow);
+    public int[] importFromZip(Window ownerWindow, LoadingIndicator loadingIndicator) {
+        File file = createImportFileChooser().showOpenDialog(ownerWindow);
         if (file == null) return null;
 
+        long fileSize = file.length();
+        LOGGER.info("🔄 Начало импорта ZIP: {} ({} MB)", file.getName(), fileSize / 1024 / 1024);
+
+        showLoading(loadingIndicator, "Распаковка архива...");
         try {
             // Распаковываем во временную директорию
             Path tempDir = Files.createTempDirectory("kipia_import_");
@@ -112,15 +268,15 @@ public class SyncManager {
                 throw new RuntimeException("В архиве не найден файл базы данных");
             }
 
-            // Выполняем merge БД.
-            // mergeDatabase вызывается первым — он же удаляет устаревшие физические файлы
-            // (syncRemovedPhotos), до того как обновляет запись в БД.
+            setLoadingMessage(loadingIndicator, "Объединение данных...");
+
+            // Выполняем merge БД
             int[] result = mergeDatabase(importedDb.toString());
 
-            // Merge фотографий — только аддитивно, копирует то чего ещё нет локально.
-            // Удаление устаревших файлов уже выполнено внутри mergeDatabase.
+            // Merge фотографий — только аддитивно
             Path importedPhotos = tempDir.resolve("device_photos");
             if (Files.exists(importedPhotos)) {
+                setLoadingMessage(loadingIndicator, "Синхронизация фотографий...");
                 mergePhotos(importedPhotos.toString());
             }
 
@@ -134,8 +290,11 @@ public class SyncManager {
         } catch (Exception e) {
             LOGGER.error("❌ Ошибка импорта: {}", e.getMessage(), e);
             throw new RuntimeException("Ошибка импорта: " + e.getMessage(), e);
+        } finally {
+            hideLoading(loadingIndicator);
         }
     }
+
 
     // ============================================================
     // MERGE ЛОГИКА
@@ -146,11 +305,17 @@ public class SyncManager {
      * Побеждает запись с большим updated_at.
      */
     private int[] mergeDatabase(String importedDbPath) {
+        // Проверка существования и размера БД
+        File importedDb = new File(importedDbPath);
+        if (!importedDb.exists() || importedDb.length() == 0) {
+            throw new RuntimeException("Импортированная БД пуста или не существует");
+        }
+
         // Подключаемся к импортированной БД
-        DatabaseService importedService = new DatabaseService(importedDbPath);
-        DeviceDAO importedDeviceDAO             = new DeviceDAO(importedService);
-        SchemeDAO importedSchemeDAO             = new SchemeDAO(importedService);
-        DeviceLocationDAO importedLocationDAO   = new DeviceLocationDAO(importedService);
+        DatabaseService importedService             = new DatabaseService(importedDbPath);
+        DeviceDAO importedDeviceDAO                 = new DeviceDAO(importedService);
+        SchemeDAO importedSchemeDAO                 = new SchemeDAO(importedService);
+        DeviceLocationDAO importedLocationDAO       = new DeviceLocationDAO(importedService);
 
         int[] result = {0, 0, 0, 0}; // [добавлено dev, обновлено dev, добавлено sch, обновлено sch]
 
@@ -179,8 +344,7 @@ public class SyncManager {
                 // Импортированная запись новее — сначала удаляем осиротевшие файлы фото,
                 // затем обновляем запись в БД.
                 syncRemovedPhotos(current, imported);
-
-                imported.setId(current.getId()); // сохраняем текущий id
+                imported.setId(current.getId());
                 deviceDAO.updateDevice(imported);
                 result[1]++;
             }
@@ -293,7 +457,11 @@ public class SyncManager {
             File file = new File(photosBasePath, location + File.separator + fileName);
             if (file.exists()) {
                 boolean deleted = file.delete();
-                LOGGER.debug("🗑️ Удалён устаревший файл фото {} (deleted={})", fileName, deleted);
+                if (deleted) {
+                    LOGGER.info("🗑️ Удалён устаревший файл фото: {}", fileName);
+                } else {
+                    LOGGER.warn("⚠️ Не удалось удалить устаревший файл фото: {}", fileName);
+                }
             }
         }
 
@@ -351,7 +519,9 @@ public class SyncManager {
 
             LOGGER.info("✅ Merge фотографий завершён");
         } catch (Exception e) {
-            LOGGER.warn("⚠️ Ошибка merge фотографий: {}", e.getMessage());
+            LOGGER.error("❌ Критическая ошибка merge фотографий: {}", e.getMessage(), e);
+            throw new RuntimeException(
+                    "Не удалось объединить фотографии. Проверьте права доступа и место на диске.", e);
         }
     }
 
@@ -360,14 +530,22 @@ public class SyncManager {
     // ============================================================
 
     /**
-     * Создаёт ZIP из файла БД и папки фото
+     * Создаёт ZIP из файла БД и папки фото.
      */
     private void createZip(String zipPath, String dbFilePath, String photosDirPath)
             throws IOException {
+        File targetFile = new File(zipPath);
+        File parentDir  = targetFile.getParentFile();
+        if (parentDir != null && parentDir.getFreeSpace() < estimateExportSize()) {
+            throw new IOException("Недостаточно места для создания ZIP файла. Нужно: " +
+                    (estimateExportSize() / 1024 / 1024) + "MB");
+        }
+
+        LOGGER.info("🔄 Начало создания ZIP архива...");
+
         try (ZipOutputStream zos = new ZipOutputStream(
                 new BufferedOutputStream(new FileOutputStream(zipPath)))) {
 
-            // Добавляем файл БД
             File dbFile = new File(dbFilePath);
             if (dbFile.exists()) {
                 addFileToZip(zos, dbFile, ZIP_DB_ENTRY);
@@ -376,7 +554,6 @@ public class SyncManager {
                 throw new FileNotFoundException("Файл БД не найден: " + dbFilePath);
             }
 
-            // Добавляем папку фото
             File photosDir = new File(photosDirPath);
             if (photosDir.exists() && photosDir.isDirectory()) {
                 addDirectoryToZip(zos, photosDir, ZIP_PHOTOS_DIR);
@@ -393,9 +570,7 @@ public class SyncManager {
         try (BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file))) {
             byte[] buffer = new byte[8192];
             int len;
-            while ((len = bis.read(buffer)) > 0) {
-                zos.write(buffer, 0, len);
-            }
+            while ((len = bis.read(buffer)) > 0) zos.write(buffer, 0, len);
         }
         zos.closeEntry();
     }
@@ -404,7 +579,6 @@ public class SyncManager {
             throws IOException {
         File[] files = dir.listFiles();
         if (files == null) return;
-
         for (File file : files) {
             String entryName = zipPrefix + file.getName();
             if (file.isDirectory()) {
@@ -416,20 +590,22 @@ public class SyncManager {
     }
 
     /**
-     * Распаковывает ZIP во временную директорию
+     * Распаковывает ZIP во временную директорию.
      */
     private void extractZip(String zipPath, String destDir) throws IOException {
+        File zipFile = getZipFile(zipPath);
+        if (!zipFile.canRead()) {
+            throw new IOException("Нет прав на чтение ZIP файла: " + zipPath);
+        }
+
         try (ZipInputStream zis = new ZipInputStream(
                 new BufferedInputStream(new FileInputStream(zipPath)))) {
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
                 Path outPath = Paths.get(destDir, entry.getName());
-
-                // Защита от zip slip
                 if (!outPath.normalize().startsWith(Paths.get(destDir).normalize())) {
                     throw new IOException("Небезопасный ZIP entry: " + entry.getName());
                 }
-
                 if (entry.isDirectory()) {
                     Files.createDirectories(outPath);
                 } else {
@@ -438,13 +614,47 @@ public class SyncManager {
                             new FileOutputStream(outPath.toFile()))) {
                         byte[] buffer = new byte[8192];
                         int len;
-                        while ((len = zis.read(buffer)) > 0) {
-                            bos.write(buffer, 0, len);
-                        }
+                        while ((len = zis.read(buffer)) > 0) bos.write(buffer, 0, len);
                     }
                 }
                 zis.closeEntry();
             }
+        }
+    }
+
+    private static File getZipFile(String zipPath) throws IOException {
+        File zipFile = new File(zipPath);
+        if (!zipFile.exists())
+            throw new IOException("ZIP файл не существует: " + zipPath);
+        if (zipFile.length() == 0)
+            throw new IOException("ZIP файл пуст: " + zipPath);
+        long maxSize = 10L * 1024L * 1024L * 1024L; // 10GB
+        if (zipFile.length() > maxSize)
+            throw new IOException("ZIP файл слишком большой: " +
+                    (zipFile.length() / 1024 / 1024) + "MB (максимум: 10GB)");
+        return zipFile;
+    }
+
+    // ============================================================
+    // МЕТОДЫ РАБОТЫ С LoadingIndicator
+    // ============================================================
+
+    private static void showLoading(LoadingIndicator indicator, String message) {
+        if (indicator != null) {
+            indicator.setMessage(message);
+            indicator.show();
+        }
+    }
+
+    private static void hideLoading(LoadingIndicator indicator) {
+        if (indicator != null) {
+            indicator.hide();
+        }
+    }
+
+    private static void setLoadingMessage(LoadingIndicator indicator, String message) {
+        if (indicator != null) {
+            indicator.setMessage(message);
         }
     }
 
@@ -453,14 +663,17 @@ public class SyncManager {
     // ============================================================
 
     /**
-     * Определяет путь к файлу БД — делегирует в DatabaseService,
-     * чтобы логика определения режима (dev/prod) была в одном месте.
+     * Определяет путь к файлу БД — делегирует в DatabaseService.
      */
     private String getDatabaseFilePath() {
         return databaseService.getDatabasePath();
     }
 
+    /**
+     * Удаляет temp директорию.
+     */
     private void deleteDirectory(Path dir) {
+        if (dir == null || !Files.exists(dir)) return;
         try {
             Files.walkFileTree(dir, new SimpleFileVisitor<>() {
                 @Override
@@ -477,8 +690,22 @@ public class SyncManager {
                     return FileVisitResult.CONTINUE;
                 }
             });
-        } catch (IOException e) {
-            LOGGER.warn("⚠️ Не удалось удалить temp директорию: {}", e.getMessage());
+
+            for (int i = 0; i < 3 && Files.exists(dir); i++) {
+                Thread.sleep(100);
+                try { Files.deleteIfExists(dir); }
+                catch (IOException e) {
+                    LOGGER.debug("Попытка {} удаления папки не удалась: {}", i + 1, e.getMessage());
+                }
+            }
+
+            if (Files.exists(dir)) {
+                dir.toFile().deleteOnExit();
+                LOGGER.warn("⚠️ Папка не удалена, поставлена в очередь на удаление при выходе: {}", dir);
+            }
+        } catch (IOException | InterruptedException e) {
+            LOGGER.error("❌ Не удалось удалить temp директорию: {}", e.getMessage(), e);
+            dir.toFile().deleteOnExit();
         }
     }
 }

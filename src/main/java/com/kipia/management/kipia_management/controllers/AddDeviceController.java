@@ -16,6 +16,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.File;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -59,6 +61,8 @@ public class AddDeviceController {
     private Button photoChooseBtn;
     @FXML
     private Label photoCounterLabel;
+    @FXML
+    private Label updatedAtLabel;
 
     @FXML
     private Label formTitleLabel;
@@ -128,6 +132,11 @@ public class AddDeviceController {
             selectedPhotoFiles.setAll(device.getPhotos());
         }
 
+        if (device.getUpdatedAt() > 0) {
+            updatedAtLabel.setText(new SimpleDateFormat("dd.MM.yyyy HH:mm:ss")
+                    .format(new Date(device.getUpdatedAt())));
+        }
+
         LOGGER.info("Форма переведена в режим редактирования: {}", device.getName());
     }
 
@@ -193,7 +202,7 @@ public class AddDeviceController {
         if (photoCounterLabel != null) {
             photoCounterLabel.textProperty().bind(
                     Bindings.createStringBinding(() ->
-                                    "Выбрано файлов: " + selectedPhotoFiles.size(),
+                                    "Выбрано файлов: " + selectedPhotoFiles.size() + "/" + PhotoManager.MAX_PHOTOS_PER_DEVICE,
                             selectedPhotoFiles
                     )
             );
@@ -595,8 +604,8 @@ public class AddDeviceController {
             javafx.scene.image.ImageView installIcon = new javafx.scene.image.ImageView(
                 new javafx.scene.image.Image(Objects.requireNonNull(getClass().getResourceAsStream(icon)))
             );
-            installIcon.setFitWidth(35);
-            installIcon.setFitHeight(35);
+            installIcon.setFitWidth(20);
+            installIcon.setFitHeight(20);
             installIcon.setPreserveRatio(true);
             button.setGraphic(installIcon);
         }
