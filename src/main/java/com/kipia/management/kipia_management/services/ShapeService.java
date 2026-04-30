@@ -41,15 +41,12 @@ public class ShapeService {
     public ShapeBase addShape(ShapeType type, double... coordinates) {
         try {
             ShapeBase shape = factory.createShape(type, coordinates);
-            if (shape != null) {
-                shape.addToPane();
-                shapes.add(shape);
-                LOGGER.info("Фигура добавлена в сервис, количество: {}", shapes.size());
-            }
+            shape.addToPane();
+            shapes.add(shape);
+            LOGGER.info("Фигура добавлена в сервис, количество: {}", shapes.size());
             return shape;
         } catch (Exception e) {
             LOGGER.error("ОШИБКА в ShapeService.addShape: {}", e.getMessage(), e);
-            e.printStackTrace();
             return null;
         }
     }
@@ -178,14 +175,10 @@ public class ShapeService {
             for (ShapeData shapeData : schemeData.getShapes()) {
                 try {
                     ShapeBase shape = convertDataToShape(shapeData);
-                    if (shape != null) {
-                        shapes.add(shape);
-                        shape.addToPane();
-                        shape.addContextMenu(shape::handleDelete);
-                        loaded++;
-                    } else {
-                        failed++;
-                    }
+                    shapes.add(shape);
+                    shape.addToPane();
+                    shape.addContextMenu(shape::handleDelete);
+                    loaded++;
                 } catch (Exception e) {
                     failed++;
                     LOGGER.error("Ошибка создания фигуры типа {}: {}", shapeData.getType(), e.getMessage());
@@ -239,54 +232,52 @@ public class ShapeService {
 
         ShapeBase shape = factory.createShape(data.getType(), coords);
 
-        if (shape != null) {
-            // Устанавливаем цвета
-            if (data.getStrokeColor() != null) {
-                shape.setStrokeColor(ShapeData.stringToColor(data.getStrokeColor()));
-            } else {
-                shape.setStrokeColor(Color.BLACK);
-            }
+        // Устанавливаем цвета
+        if (data.getStrokeColor() != null) {
+            shape.setStrokeColor(ShapeData.stringToColor(data.getStrokeColor()));
+        } else {
+            shape.setStrokeColor(Color.BLACK);
+        }
 
-            if (data.getFillColor() != null) {
-                shape.setFillColor(ShapeData.stringToColor(data.getFillColor()));
-            } else {
-                shape.setFillColor(Color.TRANSPARENT);
-            }
+        if (data.getFillColor() != null) {
+            shape.setFillColor(ShapeData.stringToColor(data.getFillColor()));
+        } else {
+            shape.setFillColor(Color.TRANSPARENT);
+        }
 
-            try {
-                shape.setStrokeWidth(data.getStrokeWidth());
-            } catch (Exception e) {
-                // Игнорируем
-            }
-            shape.setRotation(data.getRotation());
+        try {
+            shape.setStrokeWidth(data.getStrokeWidth());
+        } catch (Exception e) {
+            // Игнорируем
+        }
+        shape.setRotation(data.getRotation());
 
-            // Для текста - ВАЖНО: здесь должны быть данные о шрифте!
-            if (shape instanceof TextShape textShape && data.getText() != null) {
-                textShape.setText(data.getText());
+        // Для текста - ВАЖНО: здесь должны быть данные о шрифте!
+        if (shape instanceof TextShape textShape && data.getText() != null) {
+            textShape.setText(data.getText());
 
-                // Восстанавливаем шрифт, если есть данные
-                if (data.getFontSize() > 0 && data.getFontStyle() != null) {
-                    FontWeight weight = data.getFontStyle().contains("Bold") ?
-                            FontWeight.BOLD : FontWeight.NORMAL;
-                    FontPosture posture = data.getFontStyle().contains("Italic") ?
-                            FontPosture.ITALIC : FontPosture.REGULAR;
+            // Восстанавливаем шрифт, если есть данные
+            if (data.getFontSize() > 0 && data.getFontStyle() != null) {
+                FontWeight weight = data.getFontStyle().contains("Bold") ?
+                        FontWeight.BOLD : FontWeight.NORMAL;
+                FontPosture posture = data.getFontStyle().contains("Italic") ?
+                        FontPosture.ITALIC : FontPosture.REGULAR;
 
-                    String fontFamily = data.getFontFamily() != null ?
-                            data.getFontFamily() : "Arial";
+                String fontFamily = data.getFontFamily() != null ?
+                        data.getFontFamily() : "Arial";
 
-                    Font restoredFont = Font.font(
-                            fontFamily,
-                            weight,
-                            posture,
-                            data.getFontSize()
-                    );
+                Font restoredFont = Font.font(
+                        fontFamily,
+                        weight,
+                        posture,
+                        data.getFontSize()
+                );
 
-                    textShape.setFont(restoredFont);
-                    textShape.calculateTextSize();
+                textShape.setFont(restoredFont);
+                textShape.calculateTextSize();
 
-                    LOGGER.info("Restored Text font: size={}, style={}",
-                            data.getFontSize(), data.getFontStyle());
-                }
+                LOGGER.info("Restored Text font: size={}, style={}",
+                        data.getFontSize(), data.getFontStyle());
             }
         }
 

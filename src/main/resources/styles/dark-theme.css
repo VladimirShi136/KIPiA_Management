@@ -267,6 +267,22 @@
     -fx-background-radius: 10px;
 }
 
+.help-content .help-text-normal {
+    -fx-fill: #e2e8f0;
+}
+
+.help-content .help-text-header {
+    -fx-fill: #f7fafc;
+}
+
+.help-content .help-text-bullet {
+    -fx-fill: #a0aec0;
+}
+
+.help-content .help-text-empty {
+    -fx-fill: transparent;
+}
+
 .help-divider {
     -fx-background-color: #3d3d3d;
     -fx-pref-height: 1;
@@ -296,6 +312,227 @@
 
 .help-btn-bar .button:hover {
     -fx-opacity: 0.85;
+}
+
+/* ==================== CONFLICT DIALOG  ==================== */
+/* Стили содержимого ячеек (задаются через styleClass в Java) */
+.conflict-dialog .conflict-cell-box {
+    -fx-padding: 10;
+    -fx-border-color: #4a5568;
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
+    -fx-background-color: #2d3748;
+    -fx-background-radius: 6;
+}
+
+.conflict-dialog .conflict-cell-title {
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-text-fill: #e2e8f0;
+}
+
+.conflict-dialog .conflict-cell-details {
+    -fx-font-size: 12px;
+    -fx-text-fill: #a0aec0;
+    -fx-wrap-text: true;
+}
+
+.conflict-dialog .conflict-cell-radio {
+    -fx-font-size: 12px;
+    -fx-text-fill: #e2e8f0;
+}
+
+/* Скроллбар списка конфликтов */
+.conflict-dialog .conflict-list .scroll-bar:vertical {
+    -fx-background-color: #2d3748;
+    -fx-pref-width: 10px;
+}
+
+.conflict-dialog .conflict-list .scroll-bar:vertical .thumb {
+    -fx-background-color: #4a5568;
+    -fx-background-radius: 5px;
+}
+
+.conflict-dialog .conflict-list .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #718096;
+}
+
+.conflict-dialog {
+    -fx-pref-width: 900px !important;
+    -fx-min-width: 850px !important;
+    -fx-max-width: 1000px !important;
+    -fx-background-color: #2d2d2d;
+    -fx-background-radius: 12;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.4), 20, 0, 0, 5);
+}
+
+.conflict-dialog .top-box {
+    -fx-background-color: #8b0000 !important; /* Более темный красный */
+    -fx-background-radius: 12 12 0 0;
+    -fx-border-color: #6b0000 !important; /* Более темная граница */
+    -fx-border-width: 0 0 1 0;
+    -fx-cursor: hand !important;
+}
+
+.conflict-dialog .conflict-icon {
+    -fx-fill: #ffffff;
+}
+
+.conflict-dialog .type-label {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: rgba(255,255,255,0.65);
+    -fx-padding: 0 0 4 0;
+}
+
+.conflict-dialog .title-label {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #ffffff;
+    -fx-padding: 0 0 4 0;
+}
+
+.conflict-dialog .section-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: rgba(255,255,255,0.8);
+}
+
+.conflict-dialog .instruction-label {
+    -fx-font-size: 14px;
+    -fx-text-fill: #e2e8f0;
+    -fx-wrap-text: true;
+    -fx-padding: 0 0 10 0;
+}
+
+.conflict-dialog .conflict-list {
+    -fx-background-color: #2d3748;
+    -fx-border-color: #4a5568;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+}
+
+.conflict-dialog .conflict-list .list-cell {
+    -fx-background-color: transparent;
+    -fx-padding: 8;
+    -fx-border-color: transparent;
+}
+
+.conflict-dialog .conflict-list .list-cell:filled:selected {
+    -fx-background-color: #4a5568;
+    -fx-border-color: #2b6cb0;
+}
+
+.conflict-dialog .mass-action-box {
+    -fx-padding: 15 0 10 0;
+}
+
+.conflict-dialog .button {
+    -fx-effect: none;
+    -fx-text-fill: white;
+}
+
+.conflict-dialog .button-local {
+    -fx-background-color: #2b6cb0;
+    -fx-text-fill: white;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-cursor: hand;
+    -fx-padding: 8 16;
+    -fx-font-weight: bold;
+}
+
+.conflict-dialog .button-local:hover {
+    -fx-background-color: #2c5282;
+}
+
+.conflict-dialog .button-remote {
+    -fx-background-color: #c53030;
+    -fx-text-fill: white;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-cursor: hand;
+    -fx-padding: 8 16;
+    -fx-font-weight: bold;
+}
+
+.conflict-dialog .button-remote:hover {
+    -fx-background-color: #9b2c2c;
+}
+
+.conflict-dialog .conflict-divider {
+    -fx-background-color: #4a5568;
+    -fx-pref-height: 1;
+}
+
+.conflict-dialog .conflict-btn-bar {
+    -fx-background-color: transparent;
+}
+
+.conflict-dialog .button-primary {
+    -fx-background-color: #38a169;
+    -fx-text-fill: white;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-cursor: hand;
+    -fx-padding: 10 20;
+    -fx-font-weight: bold;
+}
+
+.conflict-dialog .button-primary:hover {
+    -fx-background-color: #2f855a;
+}
+
+.conflict-dialog .button-secondary {
+    -fx-background-color: #4a5568;
+    -fx-text-fill: white;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-cursor: hand;
+    -fx-padding: 10 20;
+    -fx-font-weight: bold;
+}
+
+.conflict-dialog .button-secondary:hover {
+    -fx-background-color: #718096;
+}
+
+.conflict-dialog .explanation-box {
+    -fx-background-color: #2d3748;
+    -fx-border-color: #4a5568;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-border-width: 1;
+    -fx-padding: 15;
+}
+
+.conflict-dialog .choice-title-local {
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-text-fill: #63b3ed;
+}
+
+.conflict-dialog .choice-title-remote {
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-text-fill: #fc8181;
+}
+
+.conflict-dialog .choice-title-skip {
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-text-fill: #a0aec0;
+}
+
+.conflict-dialog .choice-description {
+    -fx-font-size: 12px;
+    -fx-text-fill: #e2e8f0;
+    -fx-wrap-text: true;
+}
+
+.conflict-dialog .choice-hint {
+    -fx-font-size: 11px;
+    -fx-text-fill: #a0aec0;
+    -fx-font-style: italic;
 }
 
 /* ==================== MAIN.FXML - ЛЕВАЯ НАВИГАЦИЯ ==================== */
@@ -1105,6 +1342,10 @@
     -fx-background-color: transparent;
     -fx-scale-x: 1.15;
     -fx-scale-y: 1.15;
+}
+
+.form-value {
+    -fx-text-fill: #ffffff;
 }
 
 /* ==================== PHOTO-GALLERY.FXML ==================== */

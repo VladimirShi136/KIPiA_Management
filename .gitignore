@@ -54,3 +54,4 @@ build/
 # Ключи
 *.pem
 *.key
+/hs_err_pid6412.log

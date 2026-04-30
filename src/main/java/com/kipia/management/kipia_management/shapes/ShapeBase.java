@@ -3,14 +3,12 @@ package com.kipia.management.kipia_management.shapes;
 import com.kipia.management.kipia_management.managers.ClipboardManager;
 import com.kipia.management.kipia_management.managers.ShapeManager;
 import com.kipia.management.kipia_management.utils.CustomAlertDialog;
-import javafx.geometry.Insets;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
-import javafx.scene.layout.GridPane;
 import javafx.scene.shape.Circle;
 import javafx.scene.paint.Color;
 import javafx.scene.Cursor;
@@ -471,7 +469,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         });
 
         // Обработчик выхода мыши за пределы фигуры
-        setOnMouseExited(event -> {
+        setOnMouseExited(_ -> {
             if (!isDragging) {
                 setCursor(Cursor.DEFAULT);
             }
@@ -787,6 +785,8 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         setLayoutX(corrected.x);
         setLayoutY(corrected.y);
         resizeShape(corrected.width, corrected.height);
+        // Ограничиваем фигуру границами канваса при ресайзе
+        clampResizeToCanvasBounds(canvasBoundsWidth, canvasBoundsHeight);
     }
 
     /**
@@ -1076,7 +1076,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
 
         // Проверяем выход за левую границу
         if (bounds.getMinX() < 0) {
-            newX += -bounds.getMinX();
+            newX -= bounds.getMinX();
             changed = true;
         }
 
@@ -1088,7 +1088,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
 
         // Проверяем выход за верхнюю границу
         if (bounds.getMinY() < 0) {
-            newY += -bounds.getMinY();
+            newY -= bounds.getMinY();
             changed = true;
         }
 
@@ -1100,6 +1100,55 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
 
         if (changed) {
             setWorldPosition(newX, newY);
+        }
+
+        return changed;
+    }
+
+    /**
+     * Ограничить фигуру границами канваса при ресайзе (обрезает размер, а не сдвигает)
+     */
+    public boolean clampResizeToCanvasBounds(double canvasWidth, double canvasHeight) {
+        double newX = getLayoutX();
+        double newY = getLayoutY();
+        double newWidth = getCurrentWidth();
+        double newHeight = getCurrentHeight();
+        boolean changed = false;
+
+        // Проверяем выход за левую границу
+        if (newX < 0) {
+            newWidth += newX;
+            newX = 0;
+            changed = true;
+        }
+
+        // Проверяем выход за правую границу
+        if (newX + newWidth > canvasWidth) {
+            newWidth = canvasWidth - newX;
+            changed = true;
+        }
+
+        // Проверяем выход за верхнюю границу
+        if (newY < 0) {
+            newHeight += newY;
+            newY = 0;
+            changed = true;
+        }
+
+        // Проверяем выход за нижнюю границу
+        if (newY + newHeight > canvasHeight) {
+            newHeight = canvasHeight - newY;
+            changed = true;
+        }
+
+        // Минимальный размер
+        newWidth = Math.max(MIN_SHAPE_SIZE, newWidth);
+        newHeight = Math.max(MIN_SHAPE_SIZE, newHeight);
+
+        if (changed) {
+            setLayoutX(newX);
+            setLayoutY(newY);
+            resizeShape(newWidth, newHeight);
         }
 
         return changed;
@@ -1214,7 +1263,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
             }
             return shape;
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("Ошибка создания фигуры: {}", e.getMessage(), e);
             return null;
         }
     }
@@ -1281,7 +1330,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
             return textShape;
         } catch (Exception e) {
             LOGGER.error("Ошибка создания TextShape: {}", e.getMessage(), e);
-            e.printStackTrace();
             return null;
         }
     }
@@ -1553,18 +1601,14 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      */
     public double getStrokeWidth() {
         // ShapeBase не является Shape, нужно проверять конкретные типы
-        if (this instanceof RectangleShape) {
-            return ((RectangleShape) this).getRectangle().getStrokeWidth();
-        } else if (this instanceof EllipseShape) {
-            return ((EllipseShape) this).getEllipse().getStrokeWidth();
-        } else if (this instanceof LineShape) {
-            return ((LineShape) this).getLine().getStrokeWidth();
-        } else if (this instanceof RhombusShape) {
-            return ((RhombusShape) this).getPath().getStrokeWidth();
-        } else if (this instanceof TextShape) {
-            return 1.0; // Текст не имеет обводки
-        }
-        return 1.0;
+        return switch (this) {
+            case RectangleShape rectangleShape -> rectangleShape.getRectangle().getStrokeWidth();
+            case EllipseShape ellipseShape -> ellipseShape.getEllipse().getStrokeWidth();
+            case LineShape lineShape -> lineShape.getLine().getStrokeWidth();
+            case RhombusShape rhombusShape -> rhombusShape.getPath().getStrokeWidth();
+            case TextShape _ -> 1.0; // Текст не имеет обводки
+            default -> 1.0;
+        };
     }
 
     /**

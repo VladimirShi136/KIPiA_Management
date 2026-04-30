@@ -17,6 +17,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.image.Image;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.SVGPath;
@@ -443,6 +444,7 @@ public class CustomAlertDialog {
             stage.initModality(Modality.NONE);
             stage.setAlwaysOnTop(true);
             stage.setResizable(false);
+            setAppIcon(stage);
 
             // ProgressIndicator (крутилка)
             VBox content = getBox(message, dark);
@@ -889,6 +891,19 @@ public class CustomAlertDialog {
     //  HELPER МЕТОДЫ ДЛЯ СОЗДАНИЯ КОМПОНЕНТОВ
     // ════════════════════════════════════════════════════════════════════════
 
+    /**
+     * Устанавливает иконку приложения на Stage (для превью в панели задач Windows)
+     */
+    public static void setAppIcon(Stage stage) {
+        try {
+            Image icon = new Image(Objects.requireNonNull(
+                    CustomAlertDialog.class.getResourceAsStream("/images/iconApp.png")));
+            stage.getIcons().add(icon);
+        } catch (Exception e) {
+            LOGGER.warn("Иконка не найдена для диалога: {}", e.getMessage());
+        }
+    }
+
     private static Stage createStage() {
         Stage stage = new Stage();
         Stage.getWindows().stream()
@@ -896,6 +911,7 @@ public class CustomAlertDialog {
         stage.initStyle(StageStyle.TRANSPARENT);
         stage.initModality(Modality.APPLICATION_MODAL);
         stage.setResizable(false);
+        setAppIcon(stage);
         return stage;
     }
 

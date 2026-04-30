@@ -185,25 +185,29 @@ public class HelpController {
         }
         
         // После загрузки контента определяем, нужен ли скролл
-        javafx.application.Platform.runLater(() -> adjustWindowSize());
+        javafx.application.Platform.runLater(this::adjustWindowSize);
     }
     
     private Text createTextForLine(String line) {
         if (line.isEmpty()) {
             Text emptyText = new Text(" ");
             emptyText.setStyle("-fx-font-size: 8px;");
+            emptyText.getStyleClass().add("help-text-empty");
             return emptyText;
         } else if (line.startsWith("•")) {
             Text bulletText = new Text(line);
-            bulletText.setStyle("-fx-font-size: 14px; -fx-fill: #666;");
+            bulletText.setStyle("-fx-font-size: 14px;");
+            bulletText.getStyleClass().add("help-text-bullet");
             return bulletText;
         } else if (line.endsWith(":")) {
             Text headerText = new Text(line);
-            headerText.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-fill: #333;");
+            headerText.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+            headerText.getStyleClass().add("help-text-header");
             return headerText;
         } else {
             Text normalText = new Text(line);
-            normalText.setStyle("-fx-font-size: 14px; -fx-fill: #333;");
+            normalText.setStyle("-fx-font-size: 14px;");
+            normalText.getStyleClass().add("help-text-normal");
             return normalText;
         }
     }

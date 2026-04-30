@@ -292,12 +292,11 @@ public class SettingsController {
         loadingIndicator.setMessage("Экспорт в Excel...");
         loadingIndicator.show();
 
-        java.io.File finalFile = file;
         Task<Boolean> task = new Task<>() {
             @Override
             protected Boolean call() {
                 List<Device> devices = deviceDAO.getAllDevices();
-                return ExcelImportExportUtil.exportDevicesToFile(finalFile, devices);
+                return ExcelImportExportUtil.exportDevicesToFile(file, devices);
             }
         };
 
@@ -349,12 +348,11 @@ public class SettingsController {
         loadingIndicator.setMessage("Импорт из Excel...");
         loadingIndicator.show();
 
-        java.io.File finalFile = file;
         Task<String> task = new Task<>() {
             @Override
             protected String call() {
                 return ExcelImportExportUtil.importDevicesFromFile(
-                        finalFile,
+                        file,
                         deviceDAO,
                         () -> {
                             LOGGER.info("✅ Импорт из Excel завершён успешно");

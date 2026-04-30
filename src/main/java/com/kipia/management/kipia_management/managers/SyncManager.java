@@ -1,5 +1,6 @@
 package com.kipia.management.kipia_management.managers;
 
+import com.kipia.management.kipia_management.controllers.ConflictResolutionDialog;
 import com.kipia.management.kipia_management.models.Device;
 import com.kipia.management.kipia_management.models.DeviceLocation;
 import com.kipia.management.kipia_management.models.Scheme;
@@ -47,6 +48,25 @@ public class SyncManager {
     private final SchemeDAO           schemeDAO;
     private final DeviceLocationDAO   deviceLocationDAO;
     private final String              photosBasePath; // путь к папке device_photos
+
+    /**
+     * Внутренний класс для хранения информации о конфликтах при трёхстороннем merge
+     */
+    public static class ConflictInfo {
+        public final Object local;
+        public final Object remote;
+        public final Object base;
+        public final String type;
+        public final String key;
+        
+        public ConflictInfo(String type, String key, Object local, Object remote, Object base) {
+            this.type = type;
+            this.key = key;
+            this.local = local;
+            this.remote = remote;
+            this.base = base;
+        }
+    }
 
     public SyncManager(DatabaseService databaseService,
                        DeviceDAO deviceDAO,
@@ -301,8 +321,8 @@ public class SyncManager {
     // ============================================================
 
     /**
-     * Merge импортированной БД с текущей по updated_at.
-     * Побеждает запись с большим updated_at.
+     * Трёхсторонний merge импортированной БД с текущей.
+     * Использует last_synced_at для обнаружения конфликтов.
      */
     private int[] mergeDatabase(String importedDbPath) {
         // Проверка существования и размера БД
@@ -312,18 +332,42 @@ public class SyncManager {
         }
 
         // Подключаемся к импортированной БД
-        DatabaseService importedService             = new DatabaseService(importedDbPath);
-        DeviceDAO importedDeviceDAO                 = new DeviceDAO(importedService);
-        SchemeDAO importedSchemeDAO                 = new SchemeDAO(importedService);
-        DeviceLocationDAO importedLocationDAO       = new DeviceLocationDAO(importedService);
+        DatabaseService importedService = new DatabaseService(importedDbPath);
+        DeviceDAO importedDeviceDAO = new DeviceDAO(importedService);
+        SchemeDAO importedSchemeDAO = new SchemeDAO(importedService);
+        DeviceLocationDAO importedLocationDAO = new DeviceLocationDAO(importedService);
 
-        int[] result = {0, 0, 0, 0}; // [добавлено dev, обновлено dev, добавлено sch, обновлено sch]
+        int[] result = {0, 0, 0, 0};
+        List<ConflictInfo> conflicts = new ArrayList<>();
 
-        // --- Merge устройств ---
+        // Three-way merge для устройств
+        mergeDevices(importedDeviceDAO, conflicts, result);
+
+        // Three-way merge для схем
+        mergeSchemes(importedSchemeDAO, conflicts, result);
+
+        // Three-way merge для локаций
+        mergeDeviceLocations(importedLocationDAO, conflicts, result);
+
+        // Обработка конфликтов
+        if (!conflicts.isEmpty()) {
+            resolveConflicts(conflicts);
+        }
+
+        // Обновление last_synced_at после успешного merge
+        updateLastSyncedTimestamps();
+
+        importedService.closeConnection();
+        return result;
+    }
+
+    /**
+     * Three-way merge для устройств
+     */
+    private void mergeDevices(DeviceDAO importedDeviceDAO, List<ConflictInfo> conflicts, int[] result) {
         List<Device> importedDevices = importedDeviceDAO.getAllDevicesForExport();
-        List<Device> currentDevices  = deviceDAO.getAllDevicesForExport();
+        List<Device> currentDevices = deviceDAO.getAllDevicesForExport();
 
-        // Строим map текущих по inventoryNumber (уникальный бизнес-ключ)
         Map<String, Device> currentMap = new HashMap<>();
         for (Device d : currentDevices) {
             if (d.getInventoryNumber() != null) {
@@ -336,24 +380,38 @@ public class SyncManager {
             Device current = currentMap.get(inv);
 
             if (current == null) {
-                // Новое устройство — добавляем
-                imported.setId(0); // сброс id, БД назначит новый
-                deviceDAO.addDevice(imported);
-                result[0]++;
-            } else if (imported.getUpdatedAt() > current.getUpdatedAt()) {
-                // Импортированная запись новее — сначала удаляем осиротевшие файлы фото,
-                // затем обновляем запись в БД.
-                syncRemovedPhotos(current, imported);
-                imported.setId(current.getId());
-                deviceDAO.updateDevice(imported);
-                result[1]++;
-            }
-            // иначе — текущая запись новее, пропускаем
-        }
+                // Новое устройство
+                if (!imported.isDeleted()) {
+                    imported.setId(0);
+                    deviceDAO.addDevice(imported);
+                    result[0]++;
+                }
+            } else {
+                // Существующее устройство - проверяем конфликты
+                boolean localChanged = current.getUpdatedAt() > current.getLastSyncedAt();
+                boolean remoteChanged = imported.getUpdatedAt() > imported.getLastSyncedAt();
 
-        // --- Merge схем ---
+                if (localChanged && remoteChanged) {
+                    // КОНФЛИКТ!
+                    conflicts.add(new ConflictInfo("device", inv, current, imported, null));
+                    result[1]++;
+                } else if (remoteChanged && !localChanged) {
+                    // Только remote изменился
+                    syncRemovedPhotos(current, imported);
+                    imported.setId(current.getId());
+                    deviceDAO.updateDevice(imported);
+                    result[1]++;
+                }
+            }
+        }
+    }
+
+    /**
+     * Three-way merge для схем
+     */
+    private void mergeSchemes(SchemeDAO importedSchemeDAO, List<ConflictInfo> conflicts, int[] result) {
         List<Scheme> importedSchemes = importedSchemeDAO.getAllSchemesForExport();
-        List<Scheme> currentSchemes  = schemeDAO.getAllSchemesForExport();
+        List<Scheme> currentSchemes = schemeDAO.getAllSchemesForExport();
 
         Map<String, Scheme> currentSchemeMap = new HashMap<>();
         for (Scheme s : currentSchemes) {
@@ -362,63 +420,174 @@ public class SyncManager {
             }
         }
 
-        // Map: старый scheme_id из импорта -> новый scheme_id в текущей БД
-        Map<Integer, Integer> schemeIdMap = new HashMap<>();
-
         for (Scheme imported : importedSchemes) {
             Scheme current = currentSchemeMap.get(imported.getName());
 
             if (current == null) {
-                int oldImportedId = imported.getId();
-                schemeDAO.addScheme(imported); // он сам обновит imported.getId()
-                schemeIdMap.put(oldImportedId, imported.getId());
-                result[2]++;
+                // Новая схема
+                if (!imported.isDeleted()) {
+                    schemeDAO.addScheme(imported);
+                    result[2]++;
+                }
             } else {
-                schemeIdMap.put(imported.getId(), current.getId());
+                // Существующая схема - проверяем конфликты
+                boolean localChanged = current.getUpdatedAt() > current.getLastSyncedAt();
+                boolean remoteChanged = imported.getUpdatedAt() > imported.getLastSyncedAt();
 
-                boolean existingIsEmpty = current.getData() == null || current.getData().length() <= 2; // "{}" = 2 символа
-                boolean importedHasData = imported.getData() != null && imported.getData().length() > 2;
-
-                if (imported.getUpdatedAt() > current.getUpdatedAt()
-                        || (importedHasData && existingIsEmpty)) {
+                if (localChanged && remoteChanged) {
+                    // КОНФЛИКТ!
+                    conflicts.add(new ConflictInfo("scheme", imported.getName(), current, imported, null));
+                    result[3]++;
+                } else if (remoteChanged && !localChanged) {
+                    // Только remote изменился
                     imported.setId(current.getId());
                     schemeDAO.updateScheme(imported);
                     result[3]++;
                 }
             }
         }
+    }
 
-        // --- Merge device_locations ---
-        // Добавляем только те локации, которых нет в текущей БД
+    /**
+     * Three-way merge для локаций устройств
+     */
+    private void mergeDeviceLocations(DeviceLocationDAO importedLocationDAO, List<ConflictInfo> conflicts, int[] result) {
         List<DeviceLocation> importedLocations = importedLocationDAO.getAllLocations();
+        List<DeviceLocation> currentLocations = deviceLocationDAO.getAllLocations();
 
-        for (DeviceLocation loc : importedLocations) {
-            // Переводим scheme_id через map
-            Integer newSchemeId = schemeIdMap.get(loc.getSchemeId());
-            if (newSchemeId == null) continue;
-
-            // Ищем device_id по inventoryNumber через импортированную БД
-            Device importedDevice = importedDeviceDAO.getDeviceById(loc.getDeviceId());
-            if (importedDevice == null) continue;
-
-            // Находим соответствующий device в текущей БД
-            Device currentDevice = deviceDAO.findDeviceByInventoryNumber(
-                    importedDevice.getInventoryNumber());
-            if (currentDevice == null) continue;
-
-            // Проверяем что такой локации нет
-            if (!deviceLocationDAO.locationExists(currentDevice.getId(), newSchemeId)) {
-                DeviceLocation newLoc = new DeviceLocation(
-                        currentDevice.getId(), newSchemeId,
-                        loc.getX(), loc.getY()
-                );
-                newLoc.setRotation(loc.getRotation());
-                deviceLocationDAO.addDeviceLocation(newLoc);
-            }
+        Map<String, DeviceLocation> currentLocMap = new HashMap<>();
+        for (DeviceLocation loc : currentLocations) {
+            String key = loc.getDeviceId() + "_" + loc.getSchemeId();
+            currentLocMap.put(key, loc);
         }
 
-        importedService.closeConnection();
-        return result;
+        for (DeviceLocation imported : importedLocations) {
+            String key = imported.getDeviceId() + "_" + imported.getSchemeId();
+            DeviceLocation current = currentLocMap.get(key);
+
+            if (current == null) {
+                // Новая локация
+                if (!imported.isDeleted()) {
+                    deviceLocationDAO.addDeviceLocation(imported);
+                }
+            } else {
+                // Существующая локация - проверяем конфликты
+                boolean localChanged = current.getUpdatedAt() > current.getLastSyncedAt();
+                boolean remoteChanged = imported.getUpdatedAt() > imported.getLastSyncedAt();
+
+                if (localChanged && remoteChanged) {
+                    // КОНФЛИКТ!
+                    conflicts.add(new ConflictInfo("device_location", key, current, imported, null));
+                } else if (remoteChanged && !localChanged) {
+                    // Только remote изменился
+                    current.setX(imported.getX());
+                    current.setY(imported.getY());
+                    current.setRotation(imported.getRotation());
+                    current.setUpdatedAt(imported.getUpdatedAt());
+                    deviceLocationDAO.addDeviceLocation(current);
+                }
+            }
+        }
+    }
+
+    /**
+     * Обработка конфликтов с использованием UI
+     */
+    private void resolveConflicts(List<ConflictInfo> conflicts) {
+        LOGGER.warn("Обнаружено {} конфликтов при синхронизации:", conflicts.size());
+
+        if (conflicts.isEmpty()) {
+            return;
+        }
+
+        // Создаем список для хранения решений пользователя
+        List<ConflictResolutionDialog.ConflictResolution> resolutions = new ArrayList<>();
+
+        // Показываем диалог разрешения конфликтов
+        boolean applied = ConflictResolutionDialog.showConflictResolutionDialog(conflicts, resolutions);
+
+        if (!applied) {
+            LOGGER.warn("Пользователь отменил разрешение конфликтов");
+            return;
+        }
+
+        // Применяем выбранные решения
+        for (int i = 0; i < conflicts.size(); i++) {
+            ConflictInfo conflict = conflicts.get(i);
+            ConflictResolutionDialog.ConflictResolution resolution = resolutions.get(i);
+
+            LOGGER.info("Конфликт: {} '{}' - выбрано решение: {}",
+                    conflict.type, conflict.key, resolution);
+
+            switch (resolution) {
+                case LOCAL:
+                    applyConflictResolution(conflict, conflict.local);
+                    break;
+                case REMOTE:
+                    applyConflictResolution(conflict, conflict.remote);
+                    break;
+                case SKIP:
+                    // Пропускаем, ничего не делаем
+                    LOGGER.info("Конфликт {} '{}' пропущен", conflict.type, conflict.key);
+                    break;
+                case UNRESOLVED:
+                    // Не должно произойти, но на всякий случай
+                    LOGGER.warn("Конфликт {} '{}' остался неразрешенным", conflict.type, conflict.key);
+                    break;
+            }
+        }
+    }
+
+    /**
+     * Применяет выбранное разрешение конфликта
+     */
+    private void applyConflictResolution(ConflictInfo conflict, Object resolvedVersion) {
+        if (conflict.type.equals("device")) {
+            Device resolved = (Device) resolvedVersion;
+            resolved.setId(((Device) conflict.local).getId());
+            deviceDAO.updateDevice(resolved);
+        } else if (conflict.type.equals("scheme")) {
+            Scheme resolved = (Scheme) resolvedVersion;
+            resolved.setId(((Scheme) conflict.local).getId());
+            schemeDAO.updateScheme(resolved);
+        } else if (conflict.type.equals("device_location")) {
+            DeviceLocation resolved = (DeviceLocation) resolvedVersion;
+            // Для локаций ID не меняем, только данные
+            resolved.setUpdatedAt(System.currentTimeMillis());
+            deviceLocationDAO.addDeviceLocation(resolved);
+        }
+    }
+
+
+    /**
+     * Обновление last_synced_at после успешного merge
+     */
+    private void updateLastSyncedTimestamps() {
+        long now = System.currentTimeMillis();
+
+        // Обновляем все устройства
+        List<Device> devices = deviceDAO.getAllDevicesForExport();
+        for (Device device : devices) {
+            device.setLastSyncedAt(now);
+            deviceDAO.updateDevice(device);
+        }
+
+        // Обновляем все схемы
+        List<Scheme> schemes = schemeDAO.getAllSchemesForExport();
+        for (Scheme scheme : schemes) {
+            scheme.setLastSyncedAt(now);
+            schemeDAO.updateScheme(scheme);
+        }
+
+        // Обновляем все локации
+        List<DeviceLocation> locations = deviceLocationDAO.getAllLocations();
+        for (DeviceLocation location : locations) {
+            location.setLastSyncedAt(now);
+            deviceLocationDAO.addDeviceLocation(location);
+        }
+
+        LOGGER.info("Обновлены временные метки синхронизации для {} устройств, {} схем, {} локаций",
+                devices.size(), schemes.size(), locations.size());
     }
 
     /**

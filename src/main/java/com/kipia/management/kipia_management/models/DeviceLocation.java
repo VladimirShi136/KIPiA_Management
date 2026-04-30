@@ -19,6 +19,15 @@ public class DeviceLocation {
     private double y;
     private double rotation; // Новое поле для угла поворота
 
+    // Время обновления
+    private long updatedAt;
+
+    // Время удаления (soft delete) - 0 если активна, >0 если удалена
+    private long deletedAt;
+
+    // Время последней синхронизации (для трёхстороннего merge)
+    private long lastSyncedAt;
+
     /**
      * Конструктор по умолчанию.
      * Создает пустой объект DeviceLocation без инициализации полей.
@@ -135,6 +144,38 @@ public class DeviceLocation {
         this.rotation = rotation;
     }
 
+    public long getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(long updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public long getDeletedAt() {
+        return deletedAt;
+    }
+
+    public void setDeletedAt(long deletedAt) {
+        this.deletedAt = deletedAt;
+    }
+
+    public boolean isDeleted() {
+        return deletedAt > 0;
+    }
+
+    public void updateTimestamp() {
+        this.updatedAt = System.currentTimeMillis();
+    }
+
+    public long getLastSyncedAt() {
+        return lastSyncedAt;
+    }
+
+    public void setLastSyncedAt(long lastSyncedAt) {
+        this.lastSyncedAt = lastSyncedAt;
+    }
+
     /**
      * Переопределенный метод toString() для удобного представления объекта в виде строки.
      * Используется для отладки и вывода информации о привязке.
@@ -149,6 +190,9 @@ public class DeviceLocation {
                 ", x=" + x +
                 ", y=" + y +
                 ", rotation=" + rotation +
+                ", updatedAt=" + updatedAt +
+                ", deletedAt=" + deletedAt +
+                ", lastSyncedAt=" + lastSyncedAt +
                 '}';
     }
 }

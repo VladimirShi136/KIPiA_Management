@@ -48,7 +48,7 @@ public class AddDeviceController {
     @FXML
     private TextField accuracyClassField;
     @FXML
-    private ComboBox<String> locationField;  // ⭐⭐ ИЗМЕНЕНО: ComboBox вместо TextField ⭐⭐
+    private ComboBox<String> locationField;
     @FXML
     private TextField valveNumberField;
     @FXML
@@ -77,7 +77,7 @@ public class AddDeviceController {
     // ---------- Список выбранных фото (имена файлов) ----------
     private final ObservableList<String> selectedPhotoFiles = FXCollections.observableArrayList();
     
-    // ⭐⭐ НОВОЕ: Список выбранных файлов для копирования ⭐⭐
+    // ---------- Список выбранных файлов для копирования ---------
     private final java.util.List<File> pendingPhotoFiles = new java.util.ArrayList<>();
 
     // ---------- Сервисы ----------
@@ -90,6 +90,10 @@ public class AddDeviceController {
     // ---------- Колбэк после добавления (для обновления таблицы) ----------
     private Runnable onDeviceAdded;
 
+    /**
+     * Установка обратного вызова
+     * @param onDeviceAdded - колбек
+     */
     public void setOnDeviceAdded(Runnable onDeviceAdded) {
         this.onDeviceAdded = onDeviceAdded;
     }
@@ -119,7 +123,7 @@ public class AddDeviceController {
         yearField.setText(device.getYear() != null ? String.valueOf(device.getYear()) : "");
         measurementLimitField.setText(nvl(device.getMeasurementLimit()));
         accuracyClassField.setText(device.getAccuracyClass() != null ? String.valueOf(device.getAccuracyClass()) : "");
-        locationField.setValue(nvl(device.getLocation()));  // ⭐⭐ ИЗМЕНЕНО: setValue вместо setText ⭐⭐
+        locationField.setValue(nvl(device.getLocation()));
         valveNumberField.setText(nvl(device.getValveNumber()));
         additionalInfoField.setText(nvl(device.getAdditionalInfo()));
 
@@ -151,13 +155,12 @@ public class AddDeviceController {
      */
     public void setDeviceDAO(DeviceDAO deviceDAO) {
         this.deviceDAO = deviceDAO;
-        
-        // ⭐⭐ НОВОЕ: Загружаем список локаций ⭐⭐
+        // Загружаем список локаций
         loadLocations();
     }
     
     /**
-     * ⭐⭐ НОВОЕ: Загрузка списка уникальных локаций из БД ⭐⭐
+     * Загрузка списка уникальных локаций из БД
      */
     private void loadLocations() {
         if (deviceDAO != null && locationField != null) {
@@ -180,11 +183,8 @@ public class AddDeviceController {
         statusComboBox.setItems(FXCollections.observableArrayList("Хранение", "В работе", "Утерян", "Испорчен"));
         statusComboBox.getSelectionModel().selectFirst();
 
-        // ⭐⭐ НОВОЕ: Инициализация ComboBox локаций (загрузка позже через setDeviceDAO) ⭐⭐
+        // Инициализация ComboBox локаций (загрузка позже через setDeviceDAO)
         locationField.setEditable(true);
-
-        // Применение стилей к кнопкам
-        // Стили для кнопок определены в FXML
         
         // Установка иконок в зависимости от темы (после добавления в сцену)
         cancelBtn.sceneProperty().addListener((_, _, newScene) -> {
@@ -247,7 +247,7 @@ public class AddDeviceController {
                 String fileName = file.getName();
                 if (!selectedPhotoFiles.contains(fileName)) {
                     selectedPhotoFiles.add(fileName);
-                    // ⭐⭐ НОВОЕ: Сохраняем физический файл для последующего копирования ⭐⭐
+                    // Сохраняем физический файл для последующего копирования
                     pendingPhotoFiles.add(file);
                 } else {
                     LOGGER.info("Файл уже в списке: {}", fileName);
@@ -269,65 +269,35 @@ public class AddDeviceController {
             return;
         }
         // Получаем данные из полей
-        String type = typeField.getText().trim();
-        String name = nameField.getText().trim();
-        String manufacturer = manufacturerField.getText().trim();
-        String inventoryNumber = inventoryNumberField.getText().trim();
-        String yearStr = yearField.getText().trim();
-        Integer year = null;
-
-        if (!yearStr.isEmpty()) {
-            try {
-                year = Integer.parseInt(yearStr);
-            } catch (NumberFormatException e) {
-                CustomAlertDialog.showWarning("Валидация", "Год должен быть числом");
-                LOGGER.warn("Ошибка валидации: год должен быть числом");
-                return;
-            }
+        DeviceFormData data = extractFormData();
+        if (data == null) {
+            return;
         }
-
-        String measurementLimit = measurementLimitField.getText().trim();
-        String accuracyClassStr = accuracyClassField.getText().trim();
-        Double accuracyClass = null;
-
-        if (!accuracyClassStr.isEmpty()) {
-            try {
-                accuracyClass = Double.parseDouble(accuracyClassStr);
-            } catch (NumberFormatException e) {
-                CustomAlertDialog.showWarning("Валидация", "Класс точности должен быть числом");
-                LOGGER.warn("Ошибка валидации: класс точности должен быть числом");
-                return;
-            }
-        }
-
-        String location = locationField.getValue() != null ? locationField.getValue().trim() : "";  // ⭐⭐ ИЗМЕНЕНО ⭐⭐
-        String valveNumber = valveNumberField.getText().trim();
-        String status = statusComboBox.getValue();
 
         // Валидация обязательных полей
-        if (name.isEmpty() || type.isEmpty() || inventoryNumber.isEmpty() || location.isEmpty() || status == null) {
+        if (data.name.isEmpty() || data.type.isEmpty() || data.inventoryNumber.isEmpty() || data.location.isEmpty() || data.status == null) {
             CustomAlertDialog.showWarning("Валидация", "Пожалуйста, заполните все обязательные поля");
             LOGGER.warn("Ошибка валидации: не все поля заполнены");
             return;
         }
 
         // Проверка уникальности инвентарного номера
-        if (deviceDAO.findDeviceByInventoryNumber(inventoryNumber) != null) {
+        if (deviceDAO.findDeviceByInventoryNumber(data.inventoryNumber) != null) {
             CustomAlertDialog.showError("Ошибка", "Прибор с таким инвентарным номером уже существует");
-            LOGGER.warn("Инвентарный номер уже существует: {}", inventoryNumber);
+            LOGGER.warn("Инвентарный номер уже существует: {}", data.inventoryNumber);
             return;
         }
 
         // Создаём новый прибор
         Device device = new Device();
-        createOrUpdateDevice(type, name, manufacturer, inventoryNumber, year, measurementLimit, accuracyClass, location, valveNumber, status, device);
+        createOrUpdateDevice(data.type, data.name, data.manufacturer, data.inventoryNumber, data.year, data.measurementLimit, data.accuracyClass, data.location, data.valveNumber, data.status, device);
 
         // Добавляем выбранные фото
         for (String photoFileName : selectedPhotoFiles) {
             device.addPhoto(photoFileName);
         }
 
-        LOGGER.info("Попытка добавить прибор: {} (инв.: {}), фото: {}", name, inventoryNumber, selectedPhotoFiles.size());
+        LOGGER.info("Попытка добавить прибор: {} (инв.: {}), фото: {}", data.name, data.inventoryNumber, selectedPhotoFiles.size());
 
         // Сохраняем в DAO
         boolean success = deviceDAO.addDevice(device);
@@ -346,10 +316,10 @@ public class AddDeviceController {
                 stage.close();
             }
 
-            LOGGER.info("Прибор успешно добавлен: {}", name);
+            LOGGER.info("Прибор успешно добавлен: {}", data.name);
         } else {
             CustomAlertDialog.showError("Ошибка добавления", "Не удалось добавить прибор в базу данных");
-            LOGGER.error("Ошибка при добавлении прибора: {}", name);
+            LOGGER.error("Ошибка при добавлении прибора: {}", data.name);
         }
     }
 
@@ -357,61 +327,33 @@ public class AddDeviceController {
      * Сохранение изменений в режиме редактирования.
      */
     private void onSaveDevice() {
-        String type = typeField.getText().trim();
-        String name = nameField.getText().trim();
-        String manufacturer = manufacturerField.getText().trim();
-        String inventoryNumber = inventoryNumberField.getText().trim();
-        String yearStr = yearField.getText().trim();
-        Integer year = null;
-
-        if (!yearStr.isEmpty()) {
-            try {
-                year = Integer.parseInt(yearStr);
-            } catch (NumberFormatException e) {
-                CustomAlertDialog.showWarning("Валидация", "Год должен быть числом");
-                return;
-            }
+        DeviceFormData data = extractFormData();
+        if (data == null) {
+            return;
         }
 
-        String measurementLimit = measurementLimitField.getText().trim();
-        String accuracyClassStr = accuracyClassField.getText().trim();
-        Double accuracyClass = null;
-
-        if (!accuracyClassStr.isEmpty()) {
-            try {
-                accuracyClass = Double.parseDouble(accuracyClassStr);
-            } catch (NumberFormatException e) {
-                CustomAlertDialog.showWarning("Валидация", "Класс точности должен быть числом");
-                return;
-            }
-        }
-
-        String location = locationField.getValue() != null ? locationField.getValue().trim() : "";  // ⭐⭐ ИЗМЕНЕНО ⭐⭐
-        String valveNumber = valveNumberField.getText().trim();
-        String status = statusComboBox.getValue();
-
-        if (name.isEmpty() || type.isEmpty() || inventoryNumber.isEmpty() || location.isEmpty() || status == null) {
+        if (data.name.isEmpty() || data.type.isEmpty() || data.inventoryNumber.isEmpty() || data.location.isEmpty() || data.status == null) {
             CustomAlertDialog.showWarning("Валидация", "Пожалуйста, заполните все обязательные поля");
             return;
         }
 
         // Проверка уникальности инвентарного номера (только если изменился)
-        if (!inventoryNumber.equals(editingDevice.getInventoryNumber())) {
-            if (deviceDAO.findDeviceByInventoryNumber(inventoryNumber) != null) {
+        if (!data.inventoryNumber.equals(editingDevice.getInventoryNumber())) {
+            if (deviceDAO.findDeviceByInventoryNumber(data.inventoryNumber) != null) {
                 CustomAlertDialog.showError("Ошибка", "Прибор с таким инвентарным номером уже существует");
                 return;
             }
         }
 
-        // ⭐⭐ НОВОЕ: Сохраняем старую локацию ДО изменения ⭐⭐
+        // Сохраняем старую локацию ДО изменения
         String oldLocation = editingDevice.getLocation();
 
         // Обновляем поля существующего прибора
-        createOrUpdateDevice(type, name, manufacturer, inventoryNumber, year, measurementLimit, accuracyClass, location, valveNumber, status, editingDevice);
+        createOrUpdateDevice(data.type, data.name, data.manufacturer, data.inventoryNumber, data.year, data.measurementLimit, data.accuracyClass, data.location, data.valveNumber, data.status, editingDevice);
 
-        // ⭐⭐ НОВОЕ: Копируем новые фото через PhotoManager ⭐⭐
+        // Копируем новые фото через PhotoManager
         if (!pendingPhotoFiles.isEmpty()) {
-            LOGGER.info("📸 Копирование {} новых фото в локацию '{}'", pendingPhotoFiles.size(), location);
+            LOGGER.info("📸 Копирование {} новых фото в локацию '{}'", pendingPhotoFiles.size(), data.location);
             
             for (File photoFile : pendingPhotoFiles) {
                 try {
@@ -432,13 +374,13 @@ public class AddDeviceController {
             pendingPhotoFiles.clear();
         }
 
-        // ⭐⭐ Мигрируем фото если локация изменилась ⭐⭐
-        if (!location.equals(oldLocation)) {
+        // Мигрируем фото если локация изменилась
+        if (!data.location.equals(oldLocation)) {
             int migratedCount = PhotoManager.getInstance()
                     .migratePhotosToNewLocation(editingDevice, oldLocation);
 
             if (migratedCount > 0) {
-                LOGGER.info("📸 Перемещено {} фото в новую локацию '{}'", migratedCount, location);
+                LOGGER.info("📸 Перемещено {} фото в новую локацию '{}'", migratedCount, data.location);
             }
         }
 
@@ -544,13 +486,73 @@ public class AddDeviceController {
     }
 
     /**
+     * Внутренний класс для хранения данных из формы.
+     */
+    private static class DeviceFormData {
+        String type;
+        String name;
+        String manufacturer;
+        String inventoryNumber;
+        Integer year;
+        String measurementLimit;
+        Double accuracyClass;
+        String location;
+        String valveNumber;
+        String status;
+    }
+
+    /**
+     * Извлекает данные из полей формы.
+     * @return DeviceFormData с данными из формы или null при ошибке валидации
+     */
+    private DeviceFormData extractFormData() {
+        DeviceFormData data = new DeviceFormData();
+        data.type = typeField.getText().trim();
+        data.name = nameField.getText().trim();
+        data.manufacturer = manufacturerField.getText().trim();
+        data.inventoryNumber = inventoryNumberField.getText().trim();
+        data.year = null;
+
+        String yearStr = yearField.getText().trim();
+        if (!yearStr.isEmpty()) {
+            try {
+                data.year = Integer.parseInt(yearStr);
+            } catch (NumberFormatException e) {
+                CustomAlertDialog.showWarning("Валидация", "Год должен быть числом");
+                LOGGER.warn("Ошибка валидации: год должен быть числом");
+                return null;
+            }
+        }
+
+        data.measurementLimit = measurementLimitField.getText().trim();
+        data.accuracyClass = null;
+
+        String accuracyClassStr = accuracyClassField.getText().trim();
+        if (!accuracyClassStr.isEmpty()) {
+            try {
+                data.accuracyClass = Double.parseDouble(accuracyClassStr);
+            } catch (NumberFormatException e) {
+                CustomAlertDialog.showWarning("Валидация", "Класс точности должен быть числом");
+                LOGGER.warn("Ошибка валидации: класс точности должен быть числом");
+                return null;
+            }
+        }
+
+        data.location = locationField.getValue() != null ? locationField.getValue().trim() : "";
+        data.valveNumber = valveNumberField.getText().trim();
+        data.status = statusComboBox.getValue();
+
+        return data;
+    }
+
+    /**
      * Метод для очистки формы.
      */
     private void clearForm() {
         nameField.clear();
         typeField.clear();
         inventoryNumberField.clear();
-        locationField.setValue(null);  // ⭐⭐ ИЗМЕНЕНО ⭐⭐
+        locationField.setValue(null);
         valveNumberField.clear();
         manufacturerField.clear();
         yearField.clear();
@@ -559,7 +561,7 @@ public class AddDeviceController {
         additionalInfoField.clear();
         statusComboBox.getSelectionModel().selectFirst();
         selectedPhotoFiles.clear();
-        pendingPhotoFiles.clear();  // ⭐⭐ НОВОЕ ⭐⭐
+        pendingPhotoFiles.clear();
     }
 
     /**
@@ -567,7 +569,7 @@ public class AddDeviceController {
      */
     @FXML
     private void onCancel() {
-        // ⭐⭐ ИСПРАВЛЕНО: Просто закрываем форму без очистки ⭐⭐
+        // Просто закрываем форму без очистки
         Stage stage = (Stage) cancelBtn.getScene().getWindow();
         stage.close();
         LOGGER.info("Форма закрыта пользователем");

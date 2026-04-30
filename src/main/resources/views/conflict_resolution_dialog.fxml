@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.shape.SVGPath?>
+
+<!--
+  Author: vladimir_shi
+  Since: 28.04.2026
+  * Диалог разрешения конфликтов синхронизации *
+-->
+<VBox xmlns="http://javafx.com/javafx/23"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.kipia.management.kipia_management.controllers.ConflictResolutionDialog"
+      styleClass="conflict-dialog">
+
+    <!-- Кастомная шапка диалога -->
+    <HBox spacing="16" styleClass="top-box">
+        <padding>
+            <Insets top="20" right="20" bottom="12" left="20"/>
+        </padding>
+
+        <!-- Иконка конфликтов -->
+        <StackPane prefWidth="40" prefHeight="40" minWidth="40" minHeight="40">
+            <SVGPath styleClass="conflict-icon" content="M12,2 C6.48,2 2,6.48 2,12 s4.48,10 10,10 s10,-4.48 10,-10 S17.52,2 12,2 z M13,17 h-2 v-6 h2 v6 z M13,9 h-2 V7 h2 v2 z"/>
+        </StackPane>
+
+        <!-- Текст справа от иконки -->
+        <VBox spacing="3" HBox.hgrow="ALWAYS">
+            <Label text="Синхронизация" styleClass="type-label"/>
+            <Label fx:id="titleLabel" text="Разрешение конфликтов" styleClass="title-label" wrapText="true"/>
+            <Label fx:id="countLabel" text="Обнаружено конфликтов: 0" styleClass="section-label"/>
+        </VBox>
+    </HBox>
+
+    <!-- Тело с контентом -->
+    <VBox>
+        <padding>
+            <Insets top="10" right="20" bottom="8" left="20"/>
+        </padding>
+        
+        <!-- Инструкция -->
+        <VBox spacing="8">
+            <Label text="🔄 Обнаружены конфликты синхронизации"
+                   styleClass="instruction-label" wrapText="true"/>
+            <Label text="Конфликт возникает, когда один и тот же прибор был изменен на двух устройствах после последней синхронизации."
+                   styleClass="section-label" wrapText="true"/>
+        </VBox>
+        
+        <!-- Список конфликтов -->
+        <ListView fx:id="conflictListView"
+                  prefHeight="300"
+                  styleClass="conflict-list">
+        </ListView>
+        
+        <!-- Объяснение вариантов выбора -->
+        <VBox spacing="12" styleClass="explanation-box">
+            <Label text="📋 Что означают варианты выбора:" styleClass="section-label"/>
+            <HBox spacing="20">
+                <VBox spacing="4" prefWidth="200">
+                    <Label text="LOCAL" styleClass="choice-title-local"/>
+                    <Label text="Сохранить изменения с этого устройства" styleClass="choice-description"/>
+                    <Label text="✅ Ваша текущая версия данных" styleClass="choice-hint"/>
+                </VBox>
+                <VBox spacing="4" prefWidth="200">
+                    <Label text="REMOTE" styleClass="choice-title-remote"/>
+                    <Label text="Взять данные с другого устройства" styleClass="choice-description"/>
+                    <Label text="📡 Версия с удаленного устройства" styleClass="choice-hint"/>
+                </VBox>
+                <VBox spacing="4" prefWidth="200">
+                    <Label text="Пропустить" styleClass="choice-title-skip"/>
+                    <Label text="Не синхронизировать этот прибор" styleClass="choice-description"/>
+                    <Label text="⏸️ Оставить как есть без изменений" styleClass="choice-hint"/>
+                </VBox>
+            </HBox>
+        </VBox>
+        
+        <!-- Кнопки массового выбора -->
+        <HBox spacing="10" alignment="CENTER" styleClass="mass-action-box">
+            <Button fx:id="chooseAllLocalButton"
+                    text="Выбрать все LOCAL"
+                    styleClass="button-local"/>
+            
+            <Button fx:id="chooseAllRemoteButton"
+                    text="Выбрать все REMOTE"
+                    styleClass="button-remote"/>
+        </HBox>
+    </VBox>
+
+    <!-- Разделитель -->
+    <Region styleClass="conflict-divider"/>
+
+    <!-- Панель кнопок -->
+    <HBox spacing="10" alignment="CENTER_RIGHT" styleClass="conflict-btn-bar">
+        <padding>
+            <Insets top="12" right="20" bottom="24" left="20"/>
+        </padding>
+        <Button fx:id="cancelButton" text="Отмена" onAction="#cancelResolution" styleClass="button-secondary"/>
+        <Button fx:id="applyButton" text="Применить" onAction="#applyResolution" styleClass="button-primary"/>
+    </HBox>
+</VBox>

@@ -32,14 +32,18 @@ public class DeviceLocationDAO {
      * @return true если успешно, false если ошибка
      */
     public boolean addDeviceLocation(DeviceLocation location) {
-        String sql = "INSERT INTO device_locations (device_id, scheme_id, x, y, rotation) VALUES (?, ?, ?, ?, ?) " +
-                "ON CONFLICT(device_id, scheme_id) DO UPDATE SET x = excluded.x, y = excluded.y, rotation = excluded.rotation";
+        location.updateTimestamp(); // Обновляем timestamp
+        String sql = "INSERT INTO device_locations (device_id, scheme_id, x, y, rotation, updated_at, deleted_at, last_synced_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) " +
+                "ON CONFLICT(device_id, scheme_id) DO UPDATE SET x = excluded.x, y = excluded.y, rotation = excluded.rotation, updated_at = excluded.updated_at, deleted_at = excluded.deleted_at, last_synced_at = excluded.last_synced_at";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
             stmt.setInt(1, location.getDeviceId());
             stmt.setInt(2, location.getSchemeId());
             stmt.setDouble(3, location.getX());
             stmt.setDouble(4, location.getY());
             stmt.setDouble(5, location.getRotation()); // Добавлено
+            stmt.setLong(6, location.getUpdatedAt());
+            stmt.setLong(7, location.getDeletedAt());
+            stmt.setLong(8, location.getLastSyncedAt());
 
             int rowsAffected = stmt.executeUpdate();
 
@@ -56,19 +60,23 @@ public class DeviceLocationDAO {
 
     /**
      * Удаление привязки прибора к схеме по device_id и scheme_id
+     * Soft delete: помечаем как удалённую вместо физического удаления
      *
      * @param deviceId ID прибора
      * @param schemeId ID схемы
      */
     public void deleteDeviceLocation(int deviceId, int schemeId) {
-        String sql = "DELETE FROM device_locations WHERE device_id = ? AND scheme_id = ?";
+        String sql = "UPDATE device_locations SET deleted_at = ?, updated_at = ? WHERE device_id = ? AND scheme_id = ?";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
-            stmt.setInt(1, deviceId);
-            stmt.setInt(2, schemeId);
+            long now = System.currentTimeMillis();
+            stmt.setLong(1, now);
+            stmt.setLong(2, now);
+            stmt.setInt(3, deviceId);
+            stmt.setInt(4, schemeId);
             int rowsAffected = stmt.executeUpdate();
             boolean success = rowsAffected > 0;
             if (success) {
-                LOGGER.info("Успешно удалена локация: device_id={}, scheme_id={}", deviceId, schemeId);
+                LOGGER.info("Успешно удалена локация (soft delete): device_id={}, scheme_id={}", deviceId, schemeId);
             } else {
                 LOGGER.warn("Локация не найдена для удаления: device_id={}, scheme_id={}", deviceId, schemeId);
             }
@@ -109,7 +117,7 @@ public class DeviceLocationDAO {
      */
     public List<DeviceLocation> getLocationsBySchemeId(int schemeId) {
         List<DeviceLocation> locations = new ArrayList<>();
-        String sql = "SELECT * FROM device_locations WHERE scheme_id = ?";
+        String sql = "SELECT * FROM device_locations WHERE scheme_id = ? AND deleted_at = 0";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
             stmt.setInt(1, schemeId);
             ResultSet rs = stmt.executeQuery();
@@ -136,7 +144,7 @@ public class DeviceLocationDAO {
      */
     public List<DeviceLocation> getAllLocations() {
         List<DeviceLocation> locations = new ArrayList<>();
-        String sql = "SELECT * FROM device_locations";
+        String sql = "SELECT * FROM device_locations WHERE deleted_at = 0";
         try (Statement stmt = databaseService.getConnection().createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
@@ -155,16 +163,16 @@ public class DeviceLocationDAO {
         return locations;
     }
 
-    public boolean locationExists(int deviceId, int schemeId) {
-        String sql = "SELECT COUNT(*) FROM device_locations WHERE device_id = ? AND scheme_id = ?";
-        try (PreparedStatement ps = databaseService.getConnection().prepareStatement(sql)) {
-            ps.setInt(1, deviceId);
-            ps.setInt(2, schemeId);
-            ResultSet rs = ps.executeQuery();
-            return rs.next() && rs.getInt(1) > 0;
-        } catch (SQLException e) {
-            LOGGER.error("Ошибка проверки локации: {}", e.getMessage(), e);
-            return false;
-        }
+    private DeviceLocation createDeviceLocationFromResultSet(ResultSet rs) throws SQLException {
+        DeviceLocation location = new DeviceLocation();
+        location.setDeviceId(rs.getInt("device_id"));
+        location.setSchemeId(rs.getInt("scheme_id"));
+        location.setX(rs.getDouble("x"));
+        location.setY(rs.getDouble("y"));
+        location.setRotation(rs.getDouble("rotation"));
+        location.setUpdatedAt(rs.getLong("updated_at"));
+        location.setDeletedAt(rs.getLong("deleted_at"));
+        location.setLastSyncedAt(rs.getLong("last_synced_at"));
+        return location;
     }
 }

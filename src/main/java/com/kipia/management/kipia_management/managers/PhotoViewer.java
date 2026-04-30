@@ -165,6 +165,7 @@ public class PhotoViewer {
         stage.initOwner(ownerStage);
         stage.initStyle(StageStyle.UNDECORATED);
         stage.setMaximized(true);
+        CustomAlertDialog.setAppIcon(stage);
 
         createUIComponents();
         VBox root = buildLayout();

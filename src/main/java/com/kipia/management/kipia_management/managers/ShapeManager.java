@@ -319,6 +319,10 @@ public class ShapeManager {
     public void onMouseReleasedForTool(Tool tool, double x, double y) {
         if (previewShape == null) return;
 
+        // Ограничиваем координаты границами канваса (как в превью)
+        x = Math.max(0, Math.min(x, canvasBoundsWidth));
+        y = Math.max(0, Math.min(y, canvasBoundsHeight));
+
         // СОХРАНЯЕМ ПРОВЕРКИ МИНИМАЛЬНОГО РАЗМЕРА
         double minSize = 10.0;
 
@@ -708,8 +712,8 @@ public class ShapeManager {
         double startY = this.startY;
 
         // Убираем принудительную фиксацию - оставляем свободное рисование
-        double endX = x;
-        double endY = y;
+        double endX = Math.max(0, Math.min(x, canvasBoundsWidth));
+        double endY = Math.max(0, Math.min(y, canvasBoundsHeight));
 
         // "Умная" фиксация только при приближении
         double deltaX = Math.abs(endX - startX);
@@ -740,23 +744,29 @@ public class ShapeManager {
 
 
     private void updateRectanglePreview(Rectangle rect, double x, double y) {
-        rect.setX(Math.min(startX, x));
-        rect.setY(Math.min(startY, y));
-        rect.setWidth(Math.abs(x - startX));
-        rect.setHeight(Math.abs(y - startY));
+        double clampedX = Math.max(0, Math.min(x, canvasBoundsWidth));
+        double clampedY = Math.max(0, Math.min(y, canvasBoundsHeight));
+        rect.setX(Math.min(startX, clampedX));
+        rect.setY(Math.min(startY, clampedY));
+        rect.setWidth(Math.abs(clampedX - startX));
+        rect.setHeight(Math.abs(clampedY - startY));
     }
 
     private void updateEllipsePreview(Ellipse ellipse, double x, double y) {
-        ellipse.setCenterX((startX + x) / 2);
-        ellipse.setCenterY((startY + y) / 2);
-        ellipse.setRadiusX(Math.abs(x - startX) / 2);
-        ellipse.setRadiusY(Math.abs(y - startY) / 2);
+        double clampedX = Math.max(0, Math.min(x, canvasBoundsWidth));
+        double clampedY = Math.max(0, Math.min(y, canvasBoundsHeight));
+        ellipse.setCenterX((startX + clampedX) / 2);
+        ellipse.setCenterY((startY + clampedY) / 2);
+        ellipse.setRadiusX(Math.abs(clampedX - startX) / 2);
+        ellipse.setRadiusY(Math.abs(clampedY - startY) / 2);
     }
 
     private void updateRhombusPreview(Path path, double x, double y) {
-        path.setLayoutX(Math.min(startX, x));
-        path.setLayoutY(Math.min(startY, y));
-        rebuildButterflyPath(path, x, y);
+        double clampedX = Math.max(0, Math.min(x, canvasBoundsWidth));
+        double clampedY = Math.max(0, Math.min(y, canvasBoundsHeight));
+        path.setLayoutX(Math.min(startX, clampedX));
+        path.setLayoutY(Math.min(startY, clampedY));
+        rebuildButterflyPath(path, clampedX, clampedY);
     }
 
     private void rebuildButterflyPath(Path rhombusPath, double endX, double endY) {

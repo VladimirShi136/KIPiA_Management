@@ -93,15 +93,6 @@ public class DevicesTableController implements SearchableController {
     }
 
     /**
-     * Инициализация контроллера редактирования схемы.
-     *
-     * @param controller - контроллер
-     */
-    public void setSchemeEditorController(SchemeEditorController controller) {
-        this.schemeEditorController = controller;
-    }
-
-    /**
      * Метод, вызываемый после загрузки FXML.
      */
     public void init() {
@@ -651,6 +642,7 @@ public class DevicesTableController implements SearchableController {
 
         Stage dialog = new Stage();
         closeBtn.setOnAction(_ -> dialog.close());
+        CustomAlertDialog.setAppIcon(dialog);
 
         javafx.scene.layout.HBox titleBar = new javafx.scene.layout.HBox(12, iconWrap, titleBox, closeBtn);
         titleBar.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
@@ -810,5 +802,9 @@ public class DevicesTableController implements SearchableController {
             filteredList.setPredicate(_ -> true);
             updateStatistics();
         }
+    }
+
+    public void setSchemeEditorController(SchemeEditorController schemeEditorController) {
+        this.schemeEditorController = schemeEditorController;
     }
 }

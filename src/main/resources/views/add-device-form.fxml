@@ -129,7 +129,7 @@
 
                     <!-- СТРОКА 13: Последнее обновление -->
                     <Label text="Последнее обновление:" GridPane.rowIndex="13" GridPane.columnIndex="0" styleClass="form-label"/>
-                    <Label fx:id="updatedAtLabel" GridPane.rowIndex="13" GridPane.columnIndex="1"/>
+                    <Label fx:id="updatedAtLabel" GridPane.rowIndex="13" GridPane.columnIndex="1" styleClass="form-value"/>
                 </GridPane>
 
                 <Label text="* — обязательные поля"

@@ -1,7 +1,11 @@
 package com.kipia.management.kipia_management.utils;
 
+import com.kipia.management.kipia_management.controllers.ConflictResolutionDialog;
 import com.kipia.management.kipia_management.controllers.HelpController;
+import com.kipia.management.kipia_management.managers.SyncManager;
 import com.kipia.management.kipia_management.models.Device;
+import com.kipia.management.kipia_management.models.DeviceLocation;
+import com.kipia.management.kipia_management.models.Scheme;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.control.Button;
 import javafx.scene.layout.VBox;
@@ -10,7 +14,10 @@ import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -25,6 +32,7 @@ import java.util.function.Consumer;
  * @since 24.04.2026
  */
 public class DevTools {
+    private static final Logger LOGGER = LogManager.getLogger(DevTools.class);
 
     /**
      * Проверяет, запущено ли приложение в режиме разработки
@@ -120,11 +128,14 @@ public class DevTools {
         // Device Selection Dialog - используется в SchemeEditorController для выбора прибора для добавления на схему
         Button btnDeviceSelection = getBtnDeviceSelection(onStatusUpdate);
 
+        Button conflictTestBtn = new Button("Тест конфликтов");
+        conflictTestBtn.setOnAction(_ -> testConflictResolutionDialog());
+
         testPanel.getChildren().addAll(
                 btnInfo, btnSuccess, btnWarning, btnError,
                 btnConfirm, btnChoice, btnTextInput,
                 btnColorPicker, btnFontDialog, btnLoading,
-                btnHelpDialog, btnDeviceSelection
+                btnHelpDialog, btnDeviceSelection, conflictTestBtn
         );
 
         return testPanel;
@@ -190,6 +201,7 @@ public class DevTools {
             helpStage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
             helpStage.initStyle(javafx.stage.StageStyle.TRANSPARENT);
             helpStage.setTitle("Справка");
+            CustomAlertDialog.setAppIcon(helpStage);
 
             // Прозрачный фон сцены
             Scene scene = new Scene(root);
@@ -219,8 +231,95 @@ public class DevTools {
 
             helpStage.showAndWait();
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("Не удалось открыть окно справки: {}", e.getMessage(), e);
             CustomAlertDialog.showError("Ошибка", "Не удалось открыть окно справки: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Тестирование диалога разрешения конфликтов
+     */
+    public static void testConflictResolutionDialog() {
+        try {
+            // Создаем тестовые конфликты
+            List<SyncManager.ConflictInfo> testConflicts = new ArrayList<>();
+
+            // Тестовый конфликт для устройства
+            Device localDevice = new Device();
+            localDevice.setId(1);
+            localDevice.setName("Локальное устройство");
+            localDevice.setInventoryNumber("INV001");
+            localDevice.setUpdatedAt(System.currentTimeMillis() - 10000);
+            localDevice.setLastSyncedAt(System.currentTimeMillis() - 20000);
+
+            Device remoteDevice = new Device();
+            remoteDevice.setId(1);
+            remoteDevice.setName("Удаленное устройство");
+            remoteDevice.setInventoryNumber("INV001");
+            remoteDevice.setUpdatedAt(System.currentTimeMillis() - 5000);
+            remoteDevice.setLastSyncedAt(System.currentTimeMillis() - 20000);
+
+            testConflicts.add(new SyncManager.ConflictInfo("device", "INV001", localDevice, remoteDevice, null));
+
+            // Тестовый конфликт для схемы
+            Scheme localScheme = new Scheme();
+            localScheme.setId(1);
+            localScheme.setName("Локальная схема");
+            localScheme.setData("<?xml version='1.0'?><scheme><local/></scheme>");
+            localScheme.setUpdatedAt(System.currentTimeMillis() - 8000);
+            localScheme.setLastSyncedAt(System.currentTimeMillis() - 18000);
+
+            Scheme remoteScheme = new Scheme();
+            remoteScheme.setId(1);
+            remoteScheme.setName("Удаленная схема");
+            remoteScheme.setData("<?xml version='1.0'?><scheme><remote/></scheme>");
+            remoteScheme.setUpdatedAt(System.currentTimeMillis() - 3000);
+            remoteScheme.setLastSyncedAt(System.currentTimeMillis() - 18000);
+
+            testConflicts.add(new SyncManager.ConflictInfo("scheme", "Тестовая схема", localScheme, remoteScheme, null));
+
+            // Тестовый конфликт для локации
+            DeviceLocation localLocation = new DeviceLocation();
+            localLocation.setDeviceId(1);
+            localLocation.setSchemeId(1);
+            localLocation.setX(100.0);
+            localLocation.setY(200.0);
+            localLocation.setRotation(0.0);
+            localLocation.setUpdatedAt(System.currentTimeMillis() - 6000);
+            localLocation.setLastSyncedAt(System.currentTimeMillis() - 16000);
+
+            DeviceLocation remoteLocation = new DeviceLocation();
+            remoteLocation.setDeviceId(1);
+            remoteLocation.setSchemeId(1);
+            remoteLocation.setX(150.0);
+            remoteLocation.setY(250.0);
+            remoteLocation.setRotation(45.0);
+            remoteLocation.setUpdatedAt(System.currentTimeMillis() - 2000);
+            remoteLocation.setLastSyncedAt(System.currentTimeMillis() - 16000);
+
+            testConflicts.add(new SyncManager.ConflictInfo("device_location", "1_1", localLocation, remoteLocation, null));
+
+            // Показываем диалог
+            List<ConflictResolutionDialog.ConflictResolution> resolutions = new ArrayList<>();
+            boolean applied = ConflictResolutionDialog.showConflictResolutionDialog(testConflicts, resolutions);
+
+            if (applied) {
+                String result = "Результаты разрешения конфликтов:\n\n";
+                for (int i = 0; i < testConflicts.size(); i++) {
+                    SyncManager.ConflictInfo conflict = testConflicts.get(i);
+                    ConflictResolutionDialog.ConflictResolution resolution = resolutions.get(i);
+                    result += String.format("%s '%s': %s\n",
+                            conflict.type, conflict.key, resolution);
+                }
+
+                CustomAlertDialog.showInfo("Тест завершен", result);
+            } else {
+                CustomAlertDialog.showInfo("Тест отменен", "Пользователь отменил разрешение конфликтов");
+            }
+
+        } catch (Exception e) {
+            LOGGER.error("Не удалось запустить тест диалога: {}", e.getMessage(), e);
+            CustomAlertDialog.showError("Ошибка теста", "Не удалось запустить тест диалога: " + e.getMessage());
         }
     }
 }

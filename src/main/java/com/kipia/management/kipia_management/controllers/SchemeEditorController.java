@@ -946,14 +946,15 @@ public class SchemeEditorController {
 
     private void setupMiddleMousePan() {
         schemeScrollPane.addEventFilter(javafx.scene.input.MouseEvent.MOUSE_PRESSED, event -> {
-            if (event.isMiddleButtonDown()) {
+            if (event.isMiddleButtonDown() || (event.isControlDown() && event.isPrimaryButtonDown())) {
                 lastMiddleMousePos = new Point2D(event.getSceneX(), event.getSceneY());
                 event.consume();
             }
         });
 
         schemeScrollPane.addEventFilter(javafx.scene.input.MouseEvent.MOUSE_DRAGGED, event -> {
-            if (event.isMiddleButtonDown() && lastMiddleMousePos != null) {
+            boolean isPanning = (event.isMiddleButtonDown() || (event.isControlDown() && event.isPrimaryButtonDown()));
+            if (isPanning && lastMiddleMousePos != null) {
                 double dx = event.getSceneX() - lastMiddleMousePos.getX();
                 double dy = event.getSceneY() - lastMiddleMousePos.getY();
                 canvasState.setOffsetX(canvasState.getOffsetX() + dx);
@@ -965,7 +966,7 @@ public class SchemeEditorController {
         });
 
         schemeScrollPane.addEventFilter(javafx.scene.input.MouseEvent.MOUSE_RELEASED, event -> {
-            if (event.getButton() == MouseButton.MIDDLE) {
+            if (event.getButton() == MouseButton.MIDDLE || (event.isControlDown() && event.getButton() == MouseButton.PRIMARY)) {
                 lastMiddleMousePos = null;
                 event.consume();
             }

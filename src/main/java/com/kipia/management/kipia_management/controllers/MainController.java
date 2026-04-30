@@ -873,6 +873,7 @@ public class MainController {
             helpStage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
             helpStage.initStyle(javafx.stage.StageStyle.TRANSPARENT);
             helpStage.setTitle("Справка");
+            CustomAlertDialog.setAppIcon(helpStage);
 
             // Прозрачный фон сцены
             Scene scene = new Scene(root);

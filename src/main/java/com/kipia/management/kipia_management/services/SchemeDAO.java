@@ -38,12 +38,14 @@ public class SchemeDAO {
     public boolean addScheme(Scheme scheme) {
         scheme.updateTimestamp(); // Обновляем timestamp
 
-        String sql = "INSERT INTO schemes (name, description, data, updated_at) VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO schemes (name, description, data, updated_at, deleted_at, last_synced_at) VALUES (?, ?, ?, ?, ?, ?)";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setString(1, scheme.getName());
             stmt.setString(2, scheme.getDescription());
             stmt.setString(3, scheme.getData());
-            stmt.setLong(4, scheme.getUpdatedAt()); // Новое поле
+            stmt.setLong(4, scheme.getUpdatedAt()); // updated_at
+            stmt.setLong(5, scheme.getDeletedAt()); // deleted_at
+            stmt.setLong(6, scheme.getLastSyncedAt()); // last_synced_at
 
             int rowsAffected = stmt.executeUpdate();
             if (rowsAffected > 0) {
@@ -74,7 +76,7 @@ public class SchemeDAO {
 
         scheme.updateTimestamp(); // Обновляем timestamp
 
-        String sql = "UPDATE schemes SET name=?, description=?, data=?, updated_at=? WHERE id=?";
+        String sql = "UPDATE schemes SET name=?, description=?, data=?, updated_at=?, deleted_at=?, last_synced_at=? WHERE id=?";
 
         try {
             Connection conn = databaseService.getConnection();
@@ -88,8 +90,10 @@ public class SchemeDAO {
                 pstmt.setString(1, scheme.getName() != null ? scheme.getName() : "");
                 pstmt.setString(2, scheme.getDescription() != null ? scheme.getDescription() : "");
                 pstmt.setString(3, scheme.getData() != null ? scheme.getData() : "{}");
-                pstmt.setLong(4, scheme.getUpdatedAt()); // Новое поле
-                pstmt.setInt(5, scheme.getId());
+                pstmt.setLong(4, scheme.getUpdatedAt());
+                pstmt.setLong(5, scheme.getDeletedAt());
+                pstmt.setLong(6, scheme.getLastSyncedAt());
+                pstmt.setInt(7, scheme.getId());
 
                 int rows = pstmt.executeUpdate();
                 boolean success = rows > 0;
@@ -237,7 +241,7 @@ public class SchemeDAO {
      */
     public List<Scheme> getAllSchemes() {
         List<Scheme> schemes = new ArrayList<>();
-        String sql = "SELECT * FROM schemes ORDER BY name";
+        String sql = "SELECT * FROM schemes WHERE deleted_at = 0 ORDER BY name";
         try (Statement stmt = databaseService.getConnection().createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
@@ -251,14 +255,18 @@ public class SchemeDAO {
 
     /**
      * ⭐⭐ НОВОЕ: Удаление схемы по ID ⭐⭐
+     *  Soft delete: помечаем как удалённую вместо физического удаления
      */
     public boolean deleteScheme(int schemeId) {
-        String sql = "DELETE FROM schemes WHERE id = ?";
+        String sql = "UPDATE schemes SET deleted_at = ?, updated_at = ? WHERE id = ?";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
-            stmt.setInt(1, schemeId);
+            long now = System.currentTimeMillis();
+            stmt.setLong(1, now);
+            stmt.setLong(2, now);
+            stmt.setInt(3, schemeId);
             int rows = stmt.executeUpdate();
             if (rows > 0) {
-                LOGGER.info("✅ Схема удалена: ID={}", schemeId);
+                LOGGER.info("✅ Схема удалена (soft delete): ID={}", schemeId);
                 return true;
             }
             return false;
@@ -306,7 +314,9 @@ public class SchemeDAO {
         scheme.setName(rs.getString("name"));
         scheme.setDescription(rs.getString("description"));
         scheme.setData(rs.getString("data"));
-        scheme.setUpdatedAt(rs.getLong("updated_at")); // Новое поле
+        scheme.setUpdatedAt(rs.getLong("updated_at"));
+        scheme.setDeletedAt(rs.getLong("deleted_at"));
+        scheme.setLastSyncedAt(rs.getLong("last_synced_at"));
         return scheme;
     }
 }

@@ -170,7 +170,9 @@ public class DatabaseService {
                     status TEXT DEFAULT 'В работе',
                     additional_info TEXT,
                     photos TEXT,
-                    updated_at INTEGER DEFAULT (strftime('%%s','now') * 1000)
+                    updated_at INTEGER DEFAULT (strftime('%%s','now') * 1000),
+                    deleted_at INTEGER DEFAULT 0,
+                    last_synced_at INTEGER DEFAULT 0
                 );""";
 
         String sqlSchemes = """
@@ -179,7 +181,9 @@ public class DatabaseService {
                     name TEXT NOT NULL,
                     description TEXT,
                     data TEXT,
-                    updated_at INTEGER DEFAULT (strftime('%%s','now') * 1000)
+                    updated_at INTEGER DEFAULT (strftime('%%s','now') * 1000),
+                    deleted_at INTEGER DEFAULT 0,
+                    last_synced_at INTEGER DEFAULT 0
                 );""";
 
         String sqlDeviceLocations = """
@@ -189,6 +193,9 @@ public class DatabaseService {
                     x REAL NOT NULL,
                     y REAL NOT NULL,
                     rotation REAL DEFAULT 0.0,
+                    updated_at INTEGER DEFAULT (strftime('%%s','now') * 1000),
+                    deleted_at INTEGER DEFAULT 0,
+                    last_synced_at INTEGER DEFAULT 0,
                     PRIMARY KEY (device_id, scheme_id),
                     FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE,
                     FOREIGN KEY (scheme_id) REFERENCES schemes(id) ON DELETE CASCADE
@@ -203,6 +210,88 @@ public class DatabaseService {
         } catch (SQLException e) {
             LOGGER.error("Ошибка создания таблиц: {}", e.getMessage(), e);
             throw new RuntimeException("Ошибка создания таблиц базы данных", e);
+        }
+
+        // Запуск миграции для существующих БД
+        migrateToSoftDelete();
+    }
+
+    /**
+     * Миграция существующей БД для поддержки soft delete и three-way merge.
+     * Добавляет поля deleted_at, updated_at и last_synced_at если они отсутствуют.
+     * Безопасен для повторного запуска.
+     */
+    private void migrateToSoftDelete() {
+        try {
+            // Проверяем и добавляем deleted_at для devices
+            addColumnIfNotExists("devices", "deleted_at", "INTEGER DEFAULT 0");
+
+            // Проверяем и добавляем deleted_at для schemes
+            addColumnIfNotExists("schemes", "deleted_at", "INTEGER DEFAULT 0");
+
+            // Проверяем и добавляем deleted_at для device_locations
+            addColumnIfNotExists("device_locations", "deleted_at", "INTEGER DEFAULT 0");
+
+            // Проверяем и добавляем updated_at для device_locations (если старая БД)
+            // SQLite не позволяет добавить колонку с неконстантным дефолтом через ALTER TABLE
+            // Поэтому добавляем с дефолтом 0, затем обновляем существующие записи
+            addColumnIfNotExists("device_locations", "updated_at", "INTEGER DEFAULT 0");
+            updateColumnIfZero("device_locations", "updated_at");
+
+            // Проверяем и добавляем last_synced_at для трёхстороннего merge
+            addColumnIfNotExists("devices", "last_synced_at", "INTEGER DEFAULT 0");
+            addColumnIfNotExists("schemes", "last_synced_at", "INTEGER DEFAULT 0");
+            addColumnIfNotExists("device_locations", "last_synced_at", "INTEGER DEFAULT 0");
+
+            LOGGER.info("Миграция soft delete и three-way merge завершена успешно");
+        } catch (SQLException e) {
+            LOGGER.error("Ошибка миграции soft delete: {}", e.getMessage(), e);
+            // Не выбрасываем исключение, чтобы приложение могло продолжить работу
+        }
+    }
+
+    /**
+     * Добавляет колонку в таблицу, если она ещё не существует.
+     * SQLite не поддерживает IF NOT EXISTS для ALTER TABLE, поэтому проверяем вручную.
+     */
+    private void addColumnIfNotExists(String tableName, String columnName, String columnDefinition) throws SQLException {
+        // Проверяем существование колонки
+        String checkSql = "PRAGMA table_info(" + tableName + ")";
+        boolean columnExists = false;
+
+        try (Statement stmt = getConnection().createStatement();
+             ResultSet rs = stmt.executeQuery(checkSql)) {
+            while (rs.next()) {
+                if (columnName.equals(rs.getString("name"))) {
+                    columnExists = true;
+                    break;
+                }
+            }
+        }
+
+        // Если колонки нет - добавляем
+        if (!columnExists) {
+            String alterSql = "ALTER TABLE " + tableName + " ADD COLUMN " + columnName + " " + columnDefinition;
+            try (Statement stmt = getConnection().createStatement()) {
+                stmt.executeUpdate(alterSql);
+                LOGGER.info("Добавлена колонка {}.{}", tableName, columnName);
+            }
+        } else {
+            LOGGER.debug("Колонка {}.{} уже существует", tableName, columnName);
+        }
+    }
+
+    /**
+     * Обновляет значения колонки, которые равны 0, на текущее время в миллисекундах.
+     * Используется для миграции updated_at после добавления колонки с дефолтом 0.
+     */
+    private void updateColumnIfZero(String tableName, String columnName) throws SQLException {
+        String updateSql = "UPDATE " + tableName + " SET " + columnName + " = (strftime('%s','now') * 1000) WHERE " + columnName + " = 0";
+        try (Statement stmt = getConnection().createStatement()) {
+            int rowsUpdated = stmt.executeUpdate(updateSql);
+            if (rowsUpdated > 0) {
+                LOGGER.info("Обновлено {} записей в {}.{}", rowsUpdated, tableName, columnName);
+            }
         }
     }
 

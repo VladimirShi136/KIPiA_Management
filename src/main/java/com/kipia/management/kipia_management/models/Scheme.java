@@ -20,6 +20,12 @@ public class Scheme {
     // Время обновления
     private long updatedAt;
 
+    // Время удаления (soft delete) - 0 если активна, >0 если удалена
+    private long deletedAt;
+
+    // Время последней синхронизации (для трёхстороннего merge)
+    private long lastSyncedAt;
+
     /**
      * Конструктор по умолчанию.
      * Создает пустой объект Scheme без инициализации полей.
@@ -143,6 +149,51 @@ public class Scheme {
     }
 
     /**
+     * Получить время удаления
+     *
+     * @return время удаления (0 если активна)
+     */
+    public long getDeletedAt() {
+        return deletedAt;
+    }
+
+    /**
+     * Установить время удаления
+     *
+     * @param deletedAt время удаления
+     */
+    public void setDeletedAt(long deletedAt) {
+        this.deletedAt = deletedAt;
+    }
+
+    /**
+     * Проверить, удалена ли схема
+     *
+     * @return true если удалена, false если активна
+     */
+    public boolean isDeleted() {
+        return deletedAt > 0;
+    }
+
+    /**
+     * Получить время последней синхронизации
+     *
+     * @return время последней синхронизации
+     */
+    public long getLastSyncedAt() {
+        return lastSyncedAt;
+    }
+
+    /**
+     * Установить время последней синхронизации
+     *
+     * @param lastSyncedAt время последней синхронизации
+     */
+    public void setLastSyncedAt(long lastSyncedAt) {
+        this.lastSyncedAt = lastSyncedAt;
+    }
+
+    /**
      * Переопределенный метод toString() для удобного представления объекта в виде строки.
      * Используется для отладки и вывода информации о схеме.
      *
@@ -156,6 +207,8 @@ public class Scheme {
                 ", description='" + description + '\'' +
                 ", data='" + data + '\'' +
                 ", updatedAt=" + updatedAt +
+                ", deletedAt=" + deletedAt +
+                ", lastSyncedAt=" + lastSyncedAt +
                 '}';
     }
 }

@@ -170,6 +170,8 @@ public class RhombusShape extends ShapeBase {
         setLayoutX(newX);
         setLayoutY(newY);
         resizeShape(newWidth, newHeight);
+        // Ограничиваем фигуру границами канваса при ресайзе
+        clampResizeToCanvasBounds(canvasBoundsWidth, canvasBoundsHeight);
 
         updateResizeHandles();
         wasResizedInSession = true;
@@ -298,18 +300,22 @@ public class RhombusShape extends ShapeBase {
         double height = getCurrentHeight();
         double centerX = width / 2;
         double centerY = height / 2;
-        double tolerance = DEFAULT_STROKE_WIDTH + 2.0;
+        double tolerance = DEFAULT_STROKE_WIDTH + 4.0;
 
-        // Ромб состоит из 4 линий:
+        // Ромб состоит из 6 линий (бабочка):
         // 1. Левый верхний угол (0,0) -> центр
         // 2. Центр -> левый нижний угол (0, height)
-        // 3. Правый верхний угол (width, 0) -> центр
-        // 4. Центр -> правый нижний угол (width, height)
+        // 3. Левая граница (0,0) -> (0, height)
+        // 4. Правый верхний угол (width, 0) -> центр
+        // 5. Центр -> правый нижний угол (width, height)
+        // 6. Правая граница (width, 0) -> (width, height)
 
         return isPointNearLine(localX, localY, 0, 0, centerX, centerY, tolerance) ||
                isPointNearLine(localX, localY, centerX, centerY, 0, height, tolerance) ||
                isPointNearLine(localX, localY, width, 0, centerX, centerY, tolerance) ||
-               isPointNearLine(localX, localY, centerX, centerY, width, height, tolerance);
+               isPointNearLine(localX, localY, centerX, centerY, width, height, tolerance) ||
+               isPointNearLine(localX, localY, 0, 0, 0, height, tolerance) ||
+               isPointNearLine(localX, localY, width, 0, width, height, tolerance);
     }
 
     /**

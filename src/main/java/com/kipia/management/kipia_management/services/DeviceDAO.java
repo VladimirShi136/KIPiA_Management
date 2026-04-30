@@ -69,13 +69,14 @@ public class DeviceDAO {
         // Обновляем timestamp перед сохранением
         device.updateTimestamp();
 
-        // Добавлено поле updated_at (13-й параметр)
         String sql = "INSERT INTO devices (type, name, manufacturer, inventory_number, year, measurement_limit, " +
-                "accuracy_class, location, valve_number, status, additional_info, photos, updated_at) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
+                "accuracy_class, location, valve_number, status, additional_info, photos, updated_at, deleted_at, last_synced_at) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
             installParameters(device, stmt); // Устанавливаем первые 12 параметров
-            stmt.setLong(13, device.getUpdatedAt()); // 13-й - updated_at
+            stmt.setLong(13, device.getUpdatedAt());
+            stmt.setLong(14, device.getDeletedAt());
+            stmt.setLong(15, device.getLastSyncedAt());
             stmt.executeUpdate();
             return true;
         } catch (SQLException e) {
@@ -91,7 +92,7 @@ public class DeviceDAO {
     public List<Device> getAllDevices() {
         List<Device> devices = new ArrayList<>();
         // SQL с новым полем photos
-        String sql = "SELECT * FROM devices ORDER BY name";
+        String sql = "SELECT * FROM devices WHERE deleted_at = 0 ORDER BY name";
         try (Statement stmt = databaseService.getConnection().createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
@@ -115,11 +116,13 @@ public class DeviceDAO {
         // Добавлено поле updated_at (13-й параметр в SET, 14-й WHERE id)
         String sql = "UPDATE devices SET type = ?, name = ?, manufacturer = ?, inventory_number = ?, " +
                 "year = ?, measurement_limit = ?, accuracy_class = ?, location = ?, valve_number = ?, " +
-                "status = ?, additional_info = ?, photos = ?, updated_at = ? WHERE id = ?";
+                "status = ?, additional_info = ?, photos = ?, updated_at = ?, deleted_at = ?, last_synced_at = ? WHERE id = ?";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
             installParameters(device, stmt); // Устанавливаем первые 12 параметров
-            stmt.setLong(13, device.getUpdatedAt()); // 13-й - updated_at
-            stmt.setInt(14, device.getId()); // 14-й - id для WHERE
+            stmt.setLong(13, device.getUpdatedAt());
+            stmt.setLong(14, device.getDeletedAt());
+            stmt.setLong(15, device.getLastSyncedAt());
+            stmt.setInt(16, device.getId());
             stmt.executeUpdate();
             return true;
         } catch (SQLException e) {
@@ -130,13 +133,17 @@ public class DeviceDAO {
 
     /**
      * Удаление прибора из базы данных по идентификатору
+     * Soft delete: помечаем как удалённый вместо физического удаления
      * @param id идентификатор прибора для удаления
      * @return true - если удаление прошло успешно, false - в случае ошибки
      */
     public boolean deleteDevice(int id) {
-        String sql = "DELETE FROM devices WHERE id = ?";
+        String sql = "UPDATE devices SET deleted_at = ?, updated_at = ? WHERE id = ?";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
-            stmt.setInt(1, id);
+            long now = System.currentTimeMillis();
+            stmt.setLong(1, now);
+            stmt.setLong(2, now);
+            stmt.setInt(3, id);
             stmt.executeUpdate();
             return true;
         } catch (SQLException e) {
@@ -151,7 +158,7 @@ public class DeviceDAO {
      * @return объект Device если найден, null - если не найден или произошла ошибка
      */
     public Device findDeviceByInventoryNumber(String inventoryNumber) {
-        String sql = "SELECT * FROM devices WHERE inventory_number = ?";
+        String sql = "SELECT * FROM devices WHERE inventory_number = ? AND deleted_at = 0";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
             stmt.setString(1, inventoryNumber);
             ResultSet rs = stmt.executeQuery();
@@ -168,7 +175,7 @@ public class DeviceDAO {
      * Получение прибора по ID (для SchemeEditor)
      */
     public Device getDeviceById(int id) {
-        String sql = "SELECT * FROM devices WHERE id = ?";
+        String sql = "SELECT * FROM devices WHERE id = ? AND deleted_at = 0";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
             stmt.setInt(1, id);
             ResultSet rs = stmt.executeQuery();
@@ -187,7 +194,7 @@ public class DeviceDAO {
      */
     public List<String> getDistinctLocations() {
         List<String> locations = new ArrayList<>();
-        String sql = "SELECT DISTINCT location FROM devices WHERE location IS NOT NULL AND location <> '' ORDER BY location";
+        String sql = "SELECT DISTINCT location FROM devices WHERE location IS NOT NULL AND location <> '' AND deleted_at = 0 ORDER BY location";
         try (Statement stmt = databaseService.getConnection().createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
@@ -244,8 +251,9 @@ public class DeviceDAO {
         List<String> photos = stringToPhotos(photosStr);
         device.setPhotos(photos);
 
-        // ★★★ НОВОЕ: читаем updated_at
         device.setUpdatedAt(rs.getLong("updated_at"));
+        device.setDeletedAt(rs.getLong("deleted_at"));
+        device.setLastSyncedAt(rs.getLong("last_synced_at"));
 
         return device;
     }
