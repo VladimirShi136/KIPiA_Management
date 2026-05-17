@@ -9,6 +9,7 @@ import javafx.scene.Cursor;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.paint.Color;
@@ -32,41 +33,53 @@ public class LineShape extends ShapeBase {
     private static final double SNAP_THRESHOLD = 10.0;
 
     // Константы для точного определения попадания
-    private static final double HIT_THRESHOLD = 5.0; // Порог захвата в пикселях (уменьшен для точности)
-
-    // Границы красного квадрата
+    private static final double HIT_THRESHOLD = 5.0;
 
     public LineShape(double startX, double startY, double endX, double endY,
                      AnchorPane pane, Consumer<String> statusSetter,
                      Consumer<ShapeHandler> onSelectCallback, ShapeManager shapeManager) {
         super(pane, statusSetter, onSelectCallback, shapeManager);
 
-        // УБИРАЕМ ВСЕ ПРОВЕРКИ И ОГРАНИЧЕНИЯ
-        line = new Line(0, 0, endX - startX, endY - startY);
-        Color defaultStroke = Color.BLACK;
-        line.setStroke(defaultStroke);
+        LOGGER.info("LineShape constructor: original start=({},{}), end=({},{})",
+                startX, startY, endX, endY);
+
+        // ИСПРАВЛЕНО: нормализуем layoutX/Y = minX/minY,
+        // а координаты линии хранятся в локальной системе группы
+        double minX = Math.min(startX, endX);
+        double minY = Math.min(startY, endY);
+
+        line = new Line(startX - minX, startY - minY, endX - minX, endY - minY);
+        line.setStroke(Color.BLACK);
         line.setStrokeWidth(defaultStrokeWidth);
 
         getChildren().clear();
         getChildren().add(line);
 
-        // Устанавливаем позицию без ограничений
-        setLayoutX(startX);
-        setLayoutY(startY);
+        // Группа позиционируется в мировых координатах
+        setLayoutX(minX);
+        setLayoutY(minY);
 
         createLineHandles();
         setCurrentDimensions(Math.abs(endX - startX), Math.abs(endY - startY));
         setupLineEventHandlers();
+
+        LOGGER.info("LineShape created: layoutX={}, layoutY={}, line.start=({}, {}), line.end=({}, {})",
+                getLayoutX(), getLayoutY(), line.getStartX(), line.getStartY(), line.getEndX(), line.getEndY());
     }
 
     /**
      * Переопределяем contains для точного определения попадания на линию
-     * Это ЕДИНСТВЕННЫЙ метод, который нужно переопределить для hit detection
      */
     @Override
     public boolean contains(double localX, double localY) {
         return containsPoint(localX, localY);
     }
+
+    /**
+     * ИСПРАВЛЕНО: больше не переопределяем handleDragDragged и handleDragReleased —
+     * базовая реализация ShapeBase корректно работает через layoutX/Y.
+     * Оба метода были удалены из LineShape.
+     */
 
     @Override
     public boolean contains(Point2D localPoint) {
@@ -74,32 +87,36 @@ public class LineShape extends ShapeBase {
     }
 
     /**
-     * Переопределяем containsLocalPoint для использования в ShapeBase
-     * Проверяет попадание точки на линию в локальных координатах группы
+     * Проверяет попадание точки на линию в локальных координатах группы.
+     * localX/localY уже в системе группы (т.е. смещены на layoutX/Y).
      */
     @Override
     protected boolean containsLocalPoint(double localX, double localY) {
-        // Преобразуем локальные координаты группы в абсолютные координаты панели
-        double worldX = getLayoutX() + localX;
-        double worldY = getLayoutY() + localY;
-        
-        // Используем существующий метод containsPoint
-        return containsPoint(worldX, worldY);
+        double x1 = line.getStartX();
+        double y1 = line.getStartY();
+        double x2 = line.getEndX();
+        double y2 = line.getEndY();
+        double distance = distanceToLine(localX, localY, x1, y1, x2, y2);
+        double effectiveThreshold = HIT_THRESHOLD + (line.getStrokeWidth() / 2);
+        return distance <= effectiveThreshold;
     }
 
     /**
-     * Получает абсолютные координаты обеих точек линии
+     * ИСПРАВЛЕНО: возвращает мировые координаты обеих точек,
+     * добавляя layoutX/Y к локальным координатам линии.
      */
     protected double[] getAbsoluteCoordinates() {
-        double startXAbs = getLayoutX() + line.getStartX();
-        double startYAbs = getLayoutY() + line.getStartY();
-        double endXAbs = getLayoutX() + line.getEndX();
-        double endYAbs = getLayoutY() + line.getEndY();  // ← ИСПРАВИТЬ НА getEndY()
-        return new double[]{startXAbs, startYAbs, endXAbs, endYAbs};
+        return new double[]{
+                getLayoutX() + line.getStartX(),
+                getLayoutY() + line.getStartY(),
+                getLayoutX() + line.getEndX(),
+                getLayoutY() + line.getEndY()
+        };
     }
 
     @Override
     protected double getMaxRelativeX() {
+        // Локальные координаты линии уже относительны группе
         return Math.max(line.getStartX(), line.getEndX());
     }
 
@@ -120,11 +137,10 @@ public class LineShape extends ShapeBase {
 
     @Override
     protected void resizeShape(double width, double height) {
-        // For line: ignore, resize через handles
+        // Для линии resize происходит через handles
     }
 
     private void createLineHandles() {
-        // УДАЛЯЕМ СТАРЫЕ HANDLES ЕСЛИ ЕСТЬ
         if (startHandle != null) {
             pane.getChildren().remove(startHandle);
             startHandle = null;
@@ -134,7 +150,6 @@ public class LineShape extends ShapeBase {
             endHandle = null;
         }
 
-        // СОЗДАЕМ НОВЫЕ HANDLES
         startHandle = new Circle(HANDLE_RADIUS, Color.CORAL);
         startHandle.setCursor(Cursor.CROSSHAIR);
         startHandle.setVisible(false);
@@ -145,7 +160,6 @@ public class LineShape extends ShapeBase {
         endHandle.setVisible(false);
         pane.getChildren().add(endHandle);
 
-        // ВАЖНО: НАСТРАИВАЕМ ОБРАБОТЧИКИ СРАЗУ
         setupLineHandleEvents();
         updateResizeHandles();
     }
@@ -155,18 +169,18 @@ public class LineShape extends ShapeBase {
         createLineHandles();
     }
 
+    /**
+     * ИСПРАВЛЕНО: позиции handles = layoutX/Y + локальные координаты линии
+     */
     @Override
     public void updateResizeHandles() {
         if (startHandle != null) {
-            double startXAbs = getLayoutX() + line.getStartX();
-            double startYAbs = getLayoutY() + line.getStartY();
-            double endXAbs = getLayoutX() + line.getEndX();
-            double endYAbs = getLayoutY() + line.getEndY();
-
-            startHandle.setCenterX(startXAbs);
-            startHandle.setCenterY(startYAbs);
-            endHandle.setCenterX(endXAbs);
-            endHandle.setCenterY(endYAbs);
+            startHandle.setCenterX(getLayoutX() + line.getStartX());
+            startHandle.setCenterY(getLayoutY() + line.getStartY());
+        }
+        if (endHandle != null) {
+            endHandle.setCenterX(getLayoutX() + line.getEndX());
+            endHandle.setCenterY(getLayoutY() + line.getEndY());
         }
     }
 
@@ -176,22 +190,20 @@ public class LineShape extends ShapeBase {
     private void setupLineEventHandlers() {
         line.setOnMousePressed(event -> {
             if (event.isPrimaryButtonDown()) {
-                // Используем родительскую логику инициализации перетаскивания
-                Point2D mousePos = pane.sceneToLocal(event.getSceneX(), event.getSceneY());
-                initializeDrag(mousePos);
+                // Переводим координаты события линии в координаты панели
+                Point2D panePoint = line.localToParent(event.getX(), event.getY());
+                // Инициализируем drag: dragOffset = позиция мыши в системе группы
+                // event.getX()/getY() уже в локальной системе группы (Group)
+                initializeDrag(new Point2D(event.getX(), event.getY()));
 
-                // Выделяем линию при клике
                 if (onSelectCallback != null) {
                     onSelectCallback.accept(this);
                 }
-                // Показываем handles при одинарном клике
                 makeResizeHandlesVisible();
-
                 event.consume();
             }
         });
 
-        // Двойной клик на линии
         line.setOnMouseClicked(clickEvent -> {
             if (clickEvent.getButton() == MouseButton.PRIMARY && clickEvent.getClickCount() == 2) {
                 if (onSelectCallback != null) {
@@ -204,17 +216,24 @@ public class LineShape extends ShapeBase {
     }
 
     /**
-     * Проверяет, находится ли точка рядом с линией
-     * Теперь координаты точки уже преобразованы в рабочую область
+     * Проверяет, находится ли точка рядом с линией (в мировых координатах).
+     * containsPoint использует мировые координаты, вычисленные через getAbsoluteCoordinates().
      */
-    public boolean containsPoint(double workspaceX, double workspaceY) {
+    public boolean containsPoint(double worldX, double worldY) {
         try {
-            // ПРОСТАЯ проверка без коррекции зума
-            double[] absCoords = getAbsoluteCoordinates();
-            double x1 = absCoords[0], y1 = absCoords[1];
-            double x2 = absCoords[2], y2 = absCoords[3];
+            // Переводим мировые координаты в локальные для distanceToLine
+            double localX = worldX;
+            double localY = worldY;
+            double x1 = line.getStartX();
+            double y1 = line.getStartY();
+            double x2 = line.getEndX();
+            double y2 = line.getEndY();
 
-            double distance = distanceToLine(workspaceX, workspaceY, x1, y1, x2, y2);
+            // Смещаем точку в локальную систему группы
+            double localPx = localX - getLayoutX();
+            double localPy = localY - getLayoutY();
+
+            double distance = distanceToLine(localPx, localPy, x1, y1, x2, y2);
             double effectiveThreshold = HIT_THRESHOLD + (line.getStrokeWidth() / 2);
 
             return distance <= effectiveThreshold;
@@ -222,8 +241,6 @@ public class LineShape extends ShapeBase {
             return false;
         }
     }
-
-    // УБИРАЕМ все проверки границ из методов drag
 
     /**
      * Вычисляет расстояние от точки до отрезка
@@ -237,7 +254,6 @@ public class LineShape extends ShapeBase {
         double dot = A * C + B * D;
         double lenSq = C * C + D * D;
 
-        // Обрабатываем случай нулевой длины линии
         if (lenSq == 0) {
             return Math.sqrt(A * A + B * B);
         }
@@ -278,7 +294,6 @@ public class LineShape extends ShapeBase {
             endHandle.setOnMouseReleased(null);
             endHandle = null;
         }
-        // Удаляем индикатор фиксации
         removeSnapHighlight();
         removeSnapIndicator();
     }
@@ -290,25 +305,17 @@ public class LineShape extends ShapeBase {
                     final double[][] initialCoordsHolder = new double[1][];
 
                     handle.setOnMousePressed(event -> {
-                        double handleX = getLayoutX() + (handle == startHandle ? line.getStartX() : line.getEndX());
-                        double handleY = getLayoutY() + (handle == startHandle ? line.getStartY() : line.getEndY());
-                        initialX = handleX;
-                        initialY = handleY;
-
-                        // Сохраняем начальные координаты линии для undo
+                        // Сохраняем начальные мировые координаты линии для undo
                         initialCoordsHolder[0] = getAbsoluteCoordinates();
-
                         event.consume();
                     });
 
                     handle.setOnMouseDragged(event -> {
-                        double sceneX = event.getSceneX();
-                        double sceneY = event.getSceneY();
-                        Point2D panePoint = pane.sceneToLocal(sceneX, sceneY);
-                        double paneX = panePoint.getX();
-                        double paneY = panePoint.getY();
+                        // Переводим в мировые координаты панели
+                        Point2D worldPoint = ((Node) event.getSource()).localToParent(event.getX(), event.getY());
+                        double paneX = worldPoint.getX();
+                        double paneY = worldPoint.getY();
 
-                        // ВАЖНО: Ограничиваем координаты границами канваса
                         paneX = Math.max(0, Math.min(paneX, canvasBoundsWidth));
                         paneY = Math.max(0, Math.min(paneY, canvasBoundsHeight));
 
@@ -323,14 +330,9 @@ public class LineShape extends ShapeBase {
                             otherY = currentCoords[1];
                         }
 
-                        // ИСПОЛЬЗУЕМ НОВЫЙ МЕТОД С ПРИВЯЗКОЙ К ФИГУРАМ
                         double[] snappedCoords = applyLineSnapWithShapes(paneX, paneY, otherX, otherY);
-                        double snappedX = snappedCoords[0];
-                        double snappedY = snappedCoords[1];
-
-                        // ВАЖНО: Еще раз проверяем границы после привязки
-                        snappedX = Math.max(0, Math.min(snappedX, canvasBoundsWidth));
-                        snappedY = Math.max(0, Math.min(snappedY, canvasBoundsHeight));
+                        double snappedX = Math.max(0, Math.min(snappedCoords[0], canvasBoundsWidth));
+                        double snappedY = Math.max(0, Math.min(snappedCoords[1], canvasBoundsHeight));
 
                         if (handle == startHandle) {
                             setLinePoints(snappedX, snappedY, otherX, otherY);
@@ -348,7 +350,6 @@ public class LineShape extends ShapeBase {
                             double[] finalCoords = getAbsoluteCoordinates();
 
                             if (hasLineChanged(initialCoordsHolder[0], finalCoords)) {
-                                // РЕГИСТРИРУЕМ ИЗМЕНЕНИЕ В UNDO/REDO
                                 shapeManager.registerLinePointsChange(
                                         this,
                                         initialCoordsHolder[0][0], initialCoordsHolder[0][1],
@@ -357,7 +358,6 @@ public class LineShape extends ShapeBase {
                                         finalCoords[2], finalCoords[3]
                                 );
 
-                                // ДОБАВЬТЕ СТАТУС ДЛЯ ЛИНИИ
                                 if (statusSetter != null) {
                                     statusSetter.accept("Размер линии изменен");
                                 }
@@ -370,18 +370,12 @@ public class LineShape extends ShapeBase {
         }
     }
 
-    /**
-     * Скрывает индикатор фиксации
-     */
     private void hideSnapHighlight() {
         if (snapHighlight != null) {
             snapHighlight.setVisible(false);
         }
     }
 
-    /**
-     * Удаляет индикатор фиксации
-     */
     private void removeSnapHighlight() {
         if (snapHighlight != null) {
             pane.getChildren().remove(snapHighlight);
@@ -394,12 +388,10 @@ public class LineShape extends ShapeBase {
      */
     private double[] applyLineSnap(double movingX, double movingY, double fixedX, double fixedY) {
         double snapThreshold = 15.0;
-        double angleSnapThreshold = 10.0; // градусы
+        double angleSnapThreshold = 10.0;
 
-        // Вычисляем текущий угол линии
         double currentAngle = Math.toDegrees(Math.atan2(movingY - fixedY, movingX - fixedX));
 
-        // Фиксация к основным углам (0°, 45°, 90°, 135°, 180°, 225°, 270°, 315°)
         double[] snapAngles = {0, 45, 90, 135, 180, 225, 270, 315};
         double snappedAngle = currentAngle;
 
@@ -411,7 +403,6 @@ public class LineShape extends ShapeBase {
             }
         }
 
-        // Если нашли подходящий угол, применяем фиксацию
         if (snappedAngle != currentAngle) {
             double distance = Math.sqrt(Math.pow(movingX - fixedX, 2) + Math.pow(movingY - fixedY, 2));
             double angleRad = Math.toRadians(snappedAngle);
@@ -419,14 +410,12 @@ public class LineShape extends ShapeBase {
             double resultX = fixedX + distance * Math.cos(angleRad);
             double resultY = fixedY + distance * Math.sin(angleRad);
 
-            // Определяем тип фиксации
             int snapType = (snappedAngle % 90 == 0) ?
-                    (snappedAngle % 180 == 0 ? 1 : 2) : 3; // 1=horizontal, 2=vertical, 3=diagonal
+                    (snappedAngle % 180 == 0 ? 1 : 2) : 3;
 
             return new double[]{resultX, resultY, snapType};
         }
 
-        // Старая логика фиксации к осям
         double deltaX = Math.abs(movingX - fixedX);
         double deltaY = Math.abs(movingY - fixedY);
 
@@ -448,9 +437,6 @@ public class LineShape extends ShapeBase {
         return new double[]{resultX, resultY, snapType};
     }
 
-    /**
-     * Проверяет, изменились ли координаты линии
-     */
     private boolean hasLineChanged(double[] initial, double[] current) {
         return Math.abs(initial[0] - current[0]) > 0.1 ||
                 Math.abs(initial[1] - current[1]) > 0.1 ||
@@ -498,26 +484,19 @@ public class LineShape extends ShapeBase {
         if (endHandle != null) {
             endHandle.setVisible(false);
         }
-        // Скрываем индикатор фиксации
         hideSnapHighlight();
     }
 
-    // Привязка к фигурам
-
-    /**
-     * Поиск ближайшей точки привязки среди всех фигур
-     */
     private Point2D findNearestSnapPoint(double x, double y) {
         if (shapeManager == null) return null;
 
         Point2D bestSnap = null;
         double minDistance = Double.MAX_VALUE;
 
-        // Получаем все фигуры из ShapeService
         List<ShapeBase> allShapes = getAllOtherShapes();
 
         for (ShapeBase shape : allShapes) {
-            if (shape == this) continue; // Пропускаем саму себя
+            if (shape == this) continue;
 
             List<Point2D> snapPoints = shape.getSnapPoints();
             for (Point2D point : snapPoints) {
@@ -529,7 +508,6 @@ public class LineShape extends ShapeBase {
             }
         }
 
-        // Также проверяем привязку к другим линиям
         Point2D lineSnap = findNearestLineSnapPoint(x, y);
         if (lineSnap != null && lineSnap.distance(x, y) < minDistance) {
             bestSnap = lineSnap;
@@ -538,9 +516,6 @@ public class LineShape extends ShapeBase {
         return bestSnap;
     }
 
-    /**
-     * Поиск точек привязки на других линиях
-     */
     private Point2D findNearestLineSnapPoint(double x, double y) {
         List<ShapeBase> allShapes = getAllOtherShapes();
         Point2D bestSnap = null;
@@ -562,22 +537,16 @@ public class LineShape extends ShapeBase {
         return bestSnap;
     }
 
-    /**
-     * Получение всех других фигур на панели через ShapeService
-     */
     private List<ShapeBase> getAllOtherShapes() {
         List<ShapeBase> shapes = new ArrayList<>();
 
-        // Получаем доступ к ShapeService через ShapeManager
         if (shapeManager != null) {
-            // Используем рефлексию для доступа к ShapeService
             try {
                 java.lang.reflect.Field shapeServiceField = shapeManager.getClass().getDeclaredField("shapeService");
                 shapeServiceField.setAccessible(true);
                 ShapeService shapeService = (ShapeService) shapeServiceField.get(shapeManager);
 
                 if (shapeService != null) {
-                    // Получаем список фигур из ShapeService
                     java.lang.reflect.Field shapesField = shapeService.getClass().getDeclaredField("shapes");
                     shapesField.setAccessible(true);
                     List<ShapeBase> allShapes = (List<ShapeBase>) shapesField.get(shapeService);
@@ -590,7 +559,6 @@ public class LineShape extends ShapeBase {
                 }
             } catch (Exception e) {
                 System.err.println("Ошибка доступа к ShapeService: " + e.getMessage());
-                // Fallback: собираем фигуры из панели
                 return getShapesFromPane();
             }
         }
@@ -598,9 +566,6 @@ public class LineShape extends ShapeBase {
         return shapes;
     }
 
-    /**
-     * Fallback метод: сбор фигур из панели
-     */
     private List<ShapeBase> getShapesFromPane() {
         List<ShapeBase> shapes = new ArrayList<>();
         for (Node node : pane.getChildren()) {
@@ -611,9 +576,6 @@ public class LineShape extends ShapeBase {
         return shapes;
     }
 
-    /**
-     * Показывает индикатор привязки
-     */
     private void showSnapIndicator(double x, double y, int snapType) {
         if (snapIndicator == null) {
             snapIndicator = new Circle(4, getSnapColor(snapType));
@@ -628,49 +590,35 @@ public class LineShape extends ShapeBase {
         snapIndicator.setVisible(true);
     }
 
-    /**
-     * Возвращает цвет индикатора в зависимости от типа привязки
-     */
     private Color getSnapColor(int snapType) {
         return switch (snapType) {
-            case 1 -> Color.RED;    // Горизонталь
-            case 2 -> Color.BLUE;   // Вертикаль
-            case 3 -> Color.GREEN;  // Диагональ
-            case 4 -> Color.PURPLE; // Привязка к фигуре
+            case 1 -> Color.RED;
+            case 2 -> Color.BLUE;
+            case 3 -> Color.GREEN;
+            case 4 -> Color.PURPLE;
             default -> Color.RED;
         };
     }
 
-    /**
-     * Скрывает индикатор привязки
-     */
     private void hideSnapIndicator() {
         if (snapIndicator != null) {
             snapIndicator.setVisible(false);
         }
     }
 
-    /**
-     * Улучшенный метод для применения привязки при перемещении ручек
-     */
     private double[] applyLineSnapWithShapes(double movingX, double movingY, double fixedX, double fixedY) {
-        // Сначала проверяем привязку к другим фигурам
         Point2D snapPoint = findNearestSnapPoint(movingX, movingY);
 
         if (snapPoint != null) {
             showSnapIndicator(snapPoint.getX(), snapPoint.getY(), 4);
-            return new double[]{snapPoint.getX(), snapPoint.getY(), 4}; // тип 4 = привязка к фигуре
+            return new double[]{snapPoint.getX(), snapPoint.getY(), 4};
         } else {
             hideSnapIndicator();
         }
 
-        // Если привязки к фигурам нет, применяем старую логику привязки к осям
         return applyLineSnap(movingX, movingY, fixedX, fixedY);
     }
 
-    /**
-     * Удаляет индикатор привязки
-     */
     private void removeSnapIndicator() {
         if (snapIndicator != null) {
             pane.getChildren().remove(snapIndicator);
@@ -682,14 +630,12 @@ public class LineShape extends ShapeBase {
     public void addContextMenu(Consumer<ShapeHandler> deleteAction) {
         ContextMenu lineContextMenu = new ContextMenu();
 
-        // Пункт "Копировать"
         MenuItem copyItem = new MenuItem("Копировать");
         copyItem.setOnAction(_ -> {
             copyToClipboard();
             lineContextMenu.hide();
         });
 
-        // Пункт "Вставить"
         MenuItem pasteItem = new MenuItem("Вставить");
         pasteItem.setOnAction(_ -> {
             pasteFromClipboard();
@@ -697,7 +643,6 @@ public class LineShape extends ShapeBase {
         });
         pasteItem.disableProperty().bind(ClipboardManager.hasShapeDataProperty().not());
 
-        // Пункт "Изменить цвет линии"
         MenuItem strokeColorItem = new MenuItem("Изменить цвет линии");
         strokeColorItem.setOnAction(_ -> {
             changeLineColor();
@@ -706,7 +651,6 @@ public class LineShape extends ShapeBase {
 
         SeparatorMenuItem separator = new SeparatorMenuItem();
 
-        // Пункт "Удалить"
         MenuItem deleteItem = new MenuItem("Удалить");
         deleteItem.setOnAction(_ -> {
             if (deleteAction != null) {
@@ -717,22 +661,17 @@ public class LineShape extends ShapeBase {
 
         lineContextMenu.getItems().addAll(copyItem, pasteItem, strokeColorItem, separator, deleteItem);
 
-        // Настраиваем обработчик контекстного меню на линию
         line.setOnContextMenuRequested(event -> {
             lineContextMenu.show(line, event.getScreenX(), event.getScreenY());
             event.consume();
         });
 
-        // Также настраиваем на группу
         setOnContextMenuRequested(event -> {
             lineContextMenu.show(this, event.getScreenX(), event.getScreenY());
             event.consume();
         });
     }
 
-    /**
-     * Собственный метод для изменения цвета линии
-     */
     private void changeLineColor() {
         Optional<Color> result = CustomAlertDialog.showColorPickerDialog("Изменение цвета линии", strokeColor);
         result.ifPresent(color -> {
@@ -745,12 +684,10 @@ public class LineShape extends ShapeBase {
 
     @Override
     public void makeResizeHandlesVisible() {
-        // ВАЖНО: Всегда пересоздаем handles если их нет
         if (startHandle == null || endHandle == null) {
-            removeResizeHandles(); // Очищаем старые если есть
+            removeResizeHandles();
             createLineHandles();
         }
-        // ВАЖНО: Всегда перенастраиваем обработчики
         setupLineHandleEvents();
         if (startHandle != null) {
             startHandle.setVisible(true);
@@ -761,16 +698,14 @@ public class LineShape extends ShapeBase {
         updateResizeHandles();
     }
 
+    /**
+     * ИСПРАВЛЕНО: центр вычисляется в мировых координатах
+     */
     @Override
     protected Point2D getCenterInPane() {
-        double startXAbs = getLayoutX() + line.getStartX();
-        double startYAbs = getLayoutY() + line.getStartY();
-        double endXAbs = getLayoutX() + line.getEndX();
-        double endYAbs = getLayoutY() + line.getEndY();
-
         return new Point2D(
-                (startXAbs + endXAbs) / 2,
-                (startYAbs + endYAbs) / 2
+                getLayoutX() + (line.getStartX() + line.getEndX()) / 2,
+                getLayoutY() + (line.getStartY() + line.getEndY()) / 2
         );
     }
 
@@ -786,126 +721,87 @@ public class LineShape extends ShapeBase {
 
     @Override
     protected void setCurrentDimensions(double width, double height) {
-        // Для линии не нужно сохранять dimensions
+        // Для линии dimensions не кешируются — всегда вычисляются из координат
     }
 
     /**
-     * Устанавливает абсолютные координаты линии (для использования в командах undo/redo)
+     * ИСПРАВЛЕНО: нормализует layoutX/Y = minX/minY, линия хранится в локальных координатах.
+     * Это обеспечивает корректную работу drag и clampToCanvasBounds из ShapeBase.
      */
     public void setLinePoints(double startX, double startY, double endX, double endY) {
-        // ВАЖНО: Правильно вычисляем относительные координаты
-        double relStartX = 0;
-        double relStartY = 0;
-        double relEndX = endX - startX;
-        double relEndY = endY - startY;
+        double minX = Math.min(startX, endX);
+        double minY = Math.min(startY, endY);
 
-        line.setStartX(relStartX);
-        line.setStartY(relStartY);
-        line.setEndX(relEndX);
-        line.setEndY(relEndY);
+        line.setStartX(startX - minX);
+        line.setStartY(startY - minY);
+        line.setEndX(endX - minX);
+        line.setEndY(endY - minY);
 
-        // Устанавливаем позицию группы
-        setLayoutX(startX);
-        setLayoutY(startY);
+        setLayoutX(minX);
+        setLayoutY(minY);
 
-        // Обновляем handles
         updateResizeHandles();
     }
 
     @Override
     public void setPosition(double x, double y) {
-        setLayoutX(x);
-        setLayoutY(y);
-        // Принудительно обновляем handles если они есть
-        if (startHandle != null && endHandle != null) {
-            updateResizeHandles();
-        }
+        // Вычисляем смещение и двигаем обе точки, сохраняя направление
+        double[] abs = getAbsoluteCoordinates();
+        double dx = x - getLayoutX();
+        double dy = y - getLayoutY();
+        setLinePoints(abs[0] + dx, abs[1] + dy, abs[2] + dx, abs[3] + dy);
     }
 
-    /**
-     * Переопределяем метод поворота - отключаем для линии
-     */
     @Override
     public void setRotation(double angle) {
         // Линия не поддерживает поворот
     }
 
-    /**
-     * Переопределяем handleRotationInMenu для линии - отключаем поворот
-     */
     @Override
     protected void handleRotationInMenu() {
-        // Линия не поддерживает поворот через контекстное меню
         if (statusSetter != null) {
             statusSetter.accept("Поворот линии не поддерживается");
         }
     }
 
-    /**
-     * Переопределяем сериализацию для линии
-     */
     @Override
     public String serialize() {
         double[] absCoords = getAbsoluteCoordinates();
         return String.format("LINE|%.2f|%.2f|%.2f|%.2f|%.1f%s",
-                absCoords[0], absCoords[1], absCoords[2], absCoords[3], 0.0, serializeColors());
+                absCoords[0], absCoords[1], absCoords[2], absCoords[3], rotationAngle, serializeColors());
     }
 
     // ============================================================
-    // GETTERS FOR LINE POINTS
+    // GETTERS
     // ============================================================
 
-    /**
-     * Получить начальную X координату линии
-     */
     public double getStartX() {
         return getLayoutX() + line.getStartX();
     }
 
-    /**
-     * Получить начальную Y координату линии
-     */
     public double getStartY() {
         return getLayoutY() + line.getStartY();
     }
 
-    /**
-     * Получить конечную X координату линии
-     */
     public double getEndX() {
         return getLayoutX() + line.getEndX();
     }
 
-    /**
-     * Получить конечную Y координату линии
-     */
     public double getEndY() {
         return getLayoutY() + line.getEndY();
     }
 
-    /**
-     * Получить объект Line для доступа к его свойствам
-     */
     public Line getLine() {
         return line;
     }
 
-    /**
-     * Переопределяем getWorldBounds для линии - возвращаем границы на основе координат концов
-     */
     @Override
     public javafx.geometry.Rectangle2D getWorldBounds() {
         double[] coords = getAbsoluteCoordinates();
-        double startX = coords[0];
-        double startY = coords[1];
-        double endX = coords[2];
-        double endY = coords[3];
-
-        double minX = Math.min(startX, endX);
-        double minY = Math.min(startY, endY);
-        double maxX = Math.max(startX, endX);
-        double maxY = Math.max(startY, endY);
-
+        double minX = Math.min(coords[0], coords[2]);
+        double minY = Math.min(coords[1], coords[3]);
+        double maxX = Math.max(coords[0], coords[2]);
+        double maxY = Math.max(coords[1], coords[3]);
         return new javafx.geometry.Rectangle2D(minX, minY, maxX - minX, maxY - minY);
     }
 }

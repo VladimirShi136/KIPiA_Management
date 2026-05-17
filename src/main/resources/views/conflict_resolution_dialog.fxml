@@ -29,7 +29,7 @@
         <!-- Текст справа от иконки -->
         <VBox spacing="3" HBox.hgrow="ALWAYS">
             <Label text="Синхронизация" styleClass="type-label"/>
-            <Label fx:id="titleLabel" text="Разрешение конфликтов" styleClass="title-label" wrapText="true"/>
+            <Label fx:id="titleLabel" text="Разрешение конфликтов данных" styleClass="title-label" wrapText="true"/>
             <Label fx:id="countLabel" text="Обнаружено конфликтов: 0" styleClass="section-label"/>
         </VBox>
     </HBox>

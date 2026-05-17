@@ -185,9 +185,6 @@ public class RhombusShape extends ShapeBase {
 
         rebuildButterflyPath(actualWidth, actualHeight);
         setCurrentDimensions(actualWidth, actualHeight);
-
-        // Для отладки
-        LOGGER.debug("Resize Rhombus to: width={}, height={}", actualWidth, actualHeight);
     }
 
     /**

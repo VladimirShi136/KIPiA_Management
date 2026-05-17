@@ -61,7 +61,7 @@
                    editable="true"
                    VBox.vgrow="ALWAYS">
             <placeholder>
-                <Label text="Таблица пуста"/>
+                <Label text="Таблица пуста" style="-fx-text-fill: #7F7F7F"/>
             </placeholder>
         </TableView>
     </VBox>

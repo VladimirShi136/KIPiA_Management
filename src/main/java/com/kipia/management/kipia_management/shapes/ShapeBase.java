@@ -52,7 +52,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     public static final Logger LOGGER = LogManager.getLogger(ShapeBase.class);
 
     // Добавляем поля для сохранения начальной позиции перед перемещением
-    private double dragStartX, dragStartY;
+    protected double dragStartX, dragStartY;
 
     // ============================================================
     // DEPENDENCIES
@@ -569,18 +569,17 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      * Обработка начала перетаскивания
      */
     private void handleDragPressed(MouseEvent event) {
-        Point2D mousePos = pane.sceneToLocal(event.getSceneX(), event.getSceneY());
-        
-        // Проверяем, попал ли клик на фигуру (с учетом переопределенного containsLocalPoint)
-        if (!containsWorldPoint(mousePos.getX(), mousePos.getY())) {
-            // Клик не попал на фигуру - полностью игнорируем событие
-            event.consume(); // Останавливаем распространение
+        // Получаем координаты в локальной системе группы (фигуры)
+        Point2D mousePos = new Point2D(event.getX(), event.getY());
+
+        // Проверяем попадание на фигуру (локальные координаты группы)
+        if (!containsLocalPoint(mousePos.getX(), mousePos.getY())) {
+            event.consume();
             return;
         }
-        
+
         initializeDrag(mousePos);
 
-        // ВАЖНО: Для линии выделение происходит при ЛЮБОМ клике
         if (this instanceof LineShape) {
             if (onSelectCallback != null) {
                 onSelectCallback.accept(this);
@@ -588,7 +587,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
             makeResizeHandlesVisible();
         }
 
-        isDragging = false; // Сбрасываем флаг в начале
+        isDragging = false;
         event.consume();
     }
 
@@ -596,11 +595,11 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      * Инициализация параметров перетаскивания
      */
     protected void initializeDrag(Point2D mousePos) {
-        // Используем мировые координаты для расчета смещения
-        dragOffsetX = mousePos.getX() - getLayoutX();
-        dragOffsetY = mousePos.getY() - getLayoutY();
+        // Смещение от левого верхнего угла фигуры до точки клика (в локальных координатах)
+        dragOffsetX = mousePos.getX();
+        dragOffsetY = mousePos.getY();
 
-        // СОХРАНЯЕМ НАЧАЛЬНУЮ ПОЗИЦИЮ ДЛЯ UNDO (мировые координаты)
+        // СОХРАНЯЕМ НАЧАЛЬНУЮ ПОЗИЦИЮ ДЛЯ UNDO
         dragStartX = getLayoutX();
         dragStartY = getLayoutY();
     }
@@ -608,10 +607,8 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     /**
      * Обработка перетаскивания фигуры
      */
-    private void handleDragDragged(MouseEvent event) {
+    protected void handleDragDragged(MouseEvent event) {
         if (!isDragging) {
-            // Проверяем, было ли начало перетаскивания в handleDragPressed
-            // Если нет - игнорируем
             if (dragStartX < 0 || dragStartY < 0) {
                 event.consume();
                 return;
@@ -619,19 +616,16 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
             isDragging = true;
         }
 
-        Point2D scenePos = new Point2D(event.getSceneX(), event.getSceneY());
-        Point2D panePos = pane.sceneToLocal(scenePos);
+        // Получаем координаты мыши в локальной системе группы
+        Point2D mousePos = new Point2D(event.getX(), event.getY());
 
-        // Вычисляем новую позицию в мировых координатах
-        double newWorldX = panePos.getX() - dragOffsetX;
-        double newWorldY = panePos.getY() - dragOffsetY;
-        
-        // ВАЖНО: Применяем позицию БЕЗ ограничений
-        setWorldPosition(newWorldX, newWorldY);
-        
-        // ВАЖНО: Проверяем границы ПОСЛЕ установки позиции с учетом поворота
+        // Новая позиция: текущие координаты мыши минус смещение внутри фигуры
+        double newWorldX = getLayoutX() + (mousePos.getX() - dragOffsetX);
+        double newWorldY = getLayoutY() + (mousePos.getY() - dragOffsetY);
+
+        setLayoutX(newWorldX);
+        setLayoutY(newWorldY);
         clampToCanvasBounds(canvasBoundsWidth, canvasBoundsHeight);
-        
         updateResizeHandles();
         event.consume();
     }
@@ -639,24 +633,21 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     /**
      * Обработка окончания перетаскивания
      */
-    private void handleDragReleased(MouseEvent event) {
+    protected void handleDragReleased(MouseEvent event) {
         if (isDragging && statusSetter != null && event.getButton() == MouseButton.PRIMARY) {
-            // ИСПОЛЬЗУЕМ КАСТОМНОЕ СООБЩЕНИЕ ДЛЯ ТИПА ФИГУРЫ
             statusSetter.accept(getMoveStatusMessage());
 
-            // РЕГИСТРИРУЕМ ПЕРЕМЕЩЕНИЕ В UNDO/REDO
             double currentX = getLayoutX();
             double currentY = getLayoutY();
 
-            // ИСПОЛЬЗУЕМ СОХРАНЕННЫЕ НАЧАЛЬНЫЕ КООРДИНАТЫ ИЗ handleDragPressed
             double oldX = dragStartX;
             double oldY = dragStartY;
-            if (shapeManager != null) {
+            if (shapeManager != null && (Math.abs(oldX - currentX) > 0.1 || Math.abs(oldY - currentY) > 0.1)) {
                 shapeManager.registerMove(this, oldX, oldY, currentX, currentY);
             }
         }
         isDragging = false;
-        dragStartX = -1.0; // Сбрасываем для следующего цикла
+        dragStartX = -1.0;
         dragStartY = -1.0;
         updateResizeHandles();
         event.consume();
@@ -675,12 +666,8 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         this.pressPaneY = pressY;
         this.initialX = getLayoutX();
         this.initialY = getLayoutY();
-        currentWidth = getCurrentWidth();
-        currentHeight = getCurrentHeight();
-        initialWidth = currentWidth;
-        initialHeight = currentHeight;
-        this.initialWidth = getBoundsInLocal().getWidth();
-        this.initialHeight = getBoundsInLocal().getHeight();
+        this.initialWidth = getCurrentWidth();
+        this.initialHeight = getCurrentHeight();
         this.wasResizedInSession = false;
     }
 

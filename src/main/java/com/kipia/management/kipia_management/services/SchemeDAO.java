@@ -17,35 +17,38 @@ import java.util.List;
  */
 
 public class SchemeDAO {
-    // Сервис для работы с базой данных
     private final DatabaseService databaseService;
-    // логгер для сообщений
     private static final Logger LOGGER = LogManager.getLogger(SchemeDAO.class);
 
-    /**
-     * Конструктор класса SchemeDAO
-     * @param databaseService экземпляр сервиса для работы с БД
-     */
     public SchemeDAO(DatabaseService databaseService) {
         this.databaseService = databaseService;
     }
 
     /**
-     * Добавление новой схемы в базу данных
-     * @param scheme объект схемы для добавления
-     * @return true - если добавление прошло успешно, false - в случае ошибки
+     * Добавление новой схемы (автоматически обновляет updated_at)
      */
     public boolean addScheme(Scheme scheme) {
-        scheme.updateTimestamp(); // Обновляем timestamp
+        return addScheme(scheme, true);
+    }
+
+    /**
+     * Добавление новой схемы с контролем обновления timestamp
+     * @param scheme схема для добавления
+     * @param updateTimestamp если true - обновляет updated_at, если false - оставляет как есть
+     */
+    public boolean addScheme(Scheme scheme, boolean updateTimestamp) {
+        if (updateTimestamp) {
+            scheme.updateTimestamp();
+        }
 
         String sql = "INSERT INTO schemes (name, description, data, updated_at, deleted_at, last_synced_at) VALUES (?, ?, ?, ?, ?, ?)";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             stmt.setString(1, scheme.getName());
             stmt.setString(2, scheme.getDescription());
             stmt.setString(3, scheme.getData());
-            stmt.setLong(4, scheme.getUpdatedAt()); // updated_at
-            stmt.setLong(5, scheme.getDeletedAt()); // deleted_at
-            stmt.setLong(6, scheme.getLastSyncedAt()); // last_synced_at
+            stmt.setLong(4, scheme.getUpdatedAt());
+            stmt.setLong(5, scheme.getDeletedAt());
+            stmt.setLong(6, scheme.getLastSyncedAt());
 
             int rowsAffected = stmt.executeUpdate();
             if (rowsAffected > 0) {
@@ -63,24 +66,31 @@ public class SchemeDAO {
     }
 
     /**
-     * Обновление данных схемы в базе данных
-     *
-     * @param scheme объект схемы с обновленными данными
-     * @return true если обновлено (rows >0), false - ошибка
+     * Обновление данных схемы (автоматически обновляет updated_at)
      */
     public boolean updateScheme(Scheme scheme) {
+        return updateScheme(scheme, true);
+    }
+
+    /**
+     * Обновление данных схемы с контролем обновления timestamp
+     * @param scheme схема для обновления
+     * @param updateTimestamp если true - обновляет updated_at, если false - оставляет как есть
+     */
+    public boolean updateScheme(Scheme scheme, boolean updateTimestamp) {
         if (scheme == null || scheme.getId() <= 0) {
             LOGGER.warn("DAO updateScheme: Invalid scheme (null or id <=0)");
             return false;
         }
 
-        scheme.updateTimestamp(); // Обновляем timestamp
+        if (updateTimestamp) {
+            scheme.updateTimestamp();
+        }
 
         String sql = "UPDATE schemes SET name=?, description=?, data=?, updated_at=?, deleted_at=?, last_synced_at=? WHERE id=?";
 
         try {
             Connection conn = databaseService.getConnection();
-
             if (conn == null || conn.isClosed()) {
                 LOGGER.error("Не удалось получить активное соединение с БД");
                 return false;
@@ -96,12 +106,8 @@ public class SchemeDAO {
                 pstmt.setInt(7, scheme.getId());
 
                 int rows = pstmt.executeUpdate();
-                boolean success = rows > 0;
-
-                LOGGER.info("Схема обновлена: {} (ID: {}), строк затронуто: {}",
-                        scheme.getName(), scheme.getId(), rows);
-
-                return success;
+                LOGGER.info("Схема обновлена: {} (ID: {}), строк затронуто: {}", scheme.getName(), scheme.getId(), rows);
+                return rows > 0;
             }
         } catch (SQLException e) {
             LOGGER.error("SQLException in updateScheme: {}", e.getMessage(), e);
@@ -109,9 +115,6 @@ public class SchemeDAO {
         }
     }
 
-    /**
-     * ★★★ НОВЫЙ: Получение всех схем для экспорта
-     */
     public List<Scheme> getAllSchemesForExport() {
         List<Scheme> schemes = new ArrayList<>();
         String sql = "SELECT * FROM schemes ORDER BY id";
@@ -126,119 +129,6 @@ public class SchemeDAO {
         return schemes;
     }
 
-    /**
-     * ★★★ НОВЫЙ: Массовое добавление/обновление схем с проверкой updated_at
-     */
-    public void insertOrUpdateSchemes(List<Scheme> schemes) {
-        String checkSql = "SELECT updated_at FROM schemes WHERE id = ?";
-        String updateSql = "UPDATE schemes SET name=?, description=?, data=?, updated_at=? WHERE id=?";
-        String insertSql = "INSERT INTO schemes (id, name, description, data, updated_at) VALUES (?, ?, ?, ?, ?)";
-
-        try {
-            Connection conn = databaseService.getConnection();
-            conn.setAutoCommit(false);
-
-            try (PreparedStatement checkStmt = conn.prepareStatement(checkSql);
-                 PreparedStatement updateStmt = conn.prepareStatement(updateSql);
-                 PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
-
-                for (Scheme scheme : schemes) {
-                    checkStmt.setInt(1, scheme.getId());
-                    ResultSet rs = checkStmt.executeQuery();
-
-                    if (rs.next()) {
-                        long existingUpdatedAt = rs.getLong("updated_at");
-                        if (scheme.getUpdatedAt() > existingUpdatedAt) {
-                            updateStmt.setString(1, scheme.getName());
-                            updateStmt.setString(2, scheme.getDescription());
-                            updateStmt.setString(3, scheme.getData());
-                            updateStmt.setLong(4, scheme.getUpdatedAt());
-                            updateStmt.setInt(5, scheme.getId());
-                            updateStmt.addBatch();
-                        }
-                    } else {
-                        insertStmt.setInt(1, scheme.getId());
-                        insertStmt.setString(2, scheme.getName());
-                        insertStmt.setString(3, scheme.getDescription());
-                        insertStmt.setString(4, scheme.getData());
-                        insertStmt.setLong(5, scheme.getUpdatedAt());
-                        insertStmt.addBatch();
-                    }
-                }
-
-                updateStmt.executeBatch();
-                insertStmt.executeBatch();
-
-                conn.commit();
-                LOGGER.info("Импорт схем завершён, обновлено/добавлено: {}", schemes.size());
-
-            } catch (SQLException e) {
-                conn.rollback();
-                throw e;
-            } finally {
-                conn.setAutoCommit(true);
-            }
-
-        } catch (SQLException e) {
-            LOGGER.error("Ошибка при массовом импорте схем: {}", e.getMessage(), e);
-        }
-    }
-
-    /**
-     * ★★★ НОВЫЙ: Получить максимальную дату обновления схем
-     */
-    public Long getMaxUpdatedAt() {
-        String sql = "SELECT MAX(updated_at) FROM schemes";
-        try (Statement stmt = databaseService.getConnection().createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-            if (rs.next()) {
-                return rs.getLong(1);
-            }
-        } catch (SQLException e) {
-            LOGGER.error("Ошибка получения MAX(updated_at) схем: {}", e.getMessage(), e);
-        }
-        return 0L;
-    }
-
-    /**
-     * ★★★ НОВЫЙ: Получение схемы по ID
-     */
-    public Scheme getSchemeById(int id) {
-        String sql = "SELECT * FROM schemes WHERE id = ?";
-        try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
-            stmt.setInt(1, id);
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                return createSchemeFromResultSet(rs);
-            }
-        } catch (SQLException e) {
-            LOGGER.error("Ошибка получения схемы по ID: {}", e.getMessage(), e);
-        }
-        return null;
-    }
-
-    /**
-     * Поиск схемы по названию
-     * @param name название схемы для поиска
-     * @return объект Scheme если найден, null - если не найден или произошла ошибка
-     */
-    public Scheme findSchemeByName(String name) {
-        String sql = "SELECT * FROM schemes WHERE name = ?";
-        try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
-            stmt.setString(1, name);
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                return createSchemeFromResultSet(rs);
-            }
-        } catch (SQLException e) {
-            LOGGER.error("Ошибка поиска схемы: {}", e.getMessage(), e);
-        }
-        return null;
-    }
-
-    /**
-     * ⭐⭐ НОВОЕ: Получение всех схем из БД ⭐⭐
-     */
     public List<Scheme> getAllSchemes() {
         List<Scheme> schemes = new ArrayList<>();
         String sql = "SELECT * FROM schemes WHERE deleted_at = 0 ORDER BY name";
@@ -253,10 +143,34 @@ public class SchemeDAO {
         return schemes;
     }
 
-    /**
-     * ⭐⭐ НОВОЕ: Удаление схемы по ID ⭐⭐
-     *  Soft delete: помечаем как удалённую вместо физического удаления
-     */
+    public Scheme getSchemeById(int id) {
+        String sql = "SELECT * FROM schemes WHERE id = ?";
+        try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
+            stmt.setInt(1, id);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return createSchemeFromResultSet(rs);
+            }
+        } catch (SQLException e) {
+            LOGGER.error("Ошибка получения схемы по ID: {}", e.getMessage(), e);
+        }
+        return null;
+    }
+
+    public Scheme findSchemeByName(String name) {
+        String sql = "SELECT * FROM schemes WHERE name = ?";
+        try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
+            stmt.setString(1, name);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return createSchemeFromResultSet(rs);
+            }
+        } catch (SQLException e) {
+            LOGGER.error("Ошибка поиска схемы: {}", e.getMessage(), e);
+        }
+        return null;
+    }
+
     public boolean deleteScheme(int schemeId) {
         String sql = "UPDATE schemes SET deleted_at = ?, updated_at = ? WHERE id = ?";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
@@ -276,25 +190,18 @@ public class SchemeDAO {
         }
     }
 
-    /**
-     * ⭐⭐ НОВОЕ: Проверка, есть ли приборы привязанные к схеме ⭐⭐
-     * Проверяет наличие приборов с location равным названию схемы
-     */
     public boolean hasDevicesOnScheme(int schemeId) {
-        // Сначала получаем название схемы
         Scheme scheme = getSchemeById(schemeId);
         if (scheme == null) {
             return false;
         }
-        
-        // Проверяем, есть ли приборы с location равным названию схемы
+
         String sql = "SELECT COUNT(*) FROM devices WHERE location = ?";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
             stmt.setString(1, scheme.getName());
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
-                int count = rs.getInt(1);
-                return count > 0;
+                return rs.getInt(1) > 0;
             }
         } catch (SQLException e) {
             LOGGER.error("Ошибка проверки приборов на схеме: {}", e.getMessage(), e);
@@ -302,12 +209,6 @@ public class SchemeDAO {
         return false;
     }
 
-    /**
-     * Вспомогательный метод для создания объекта Scheme из ResultSet
-     * @param rs ResultSet из запроса
-     * @return объект Scheme
-     * @throws SQLException при ошибке чтения
-     */
     private Scheme createSchemeFromResultSet(ResultSet rs) throws SQLException {
         Scheme scheme = new Scheme();
         scheme.setId(rs.getInt("id"));

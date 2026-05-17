@@ -199,7 +199,7 @@ public class SettingsController {
 
     /**
      * Импорт базы данных из ZIP-архива.
-     * FileChooser открывается в JavaFX-потоке, merge — в фоновом.
+     * Использует асинхронный API с поддержкой диалога разрешения конфликтов.
      */
     @FXML
     private void importDatabase() {
@@ -212,13 +212,9 @@ public class SettingsController {
         boolean confirm = CustomAlertDialog.showConfirmation("Импорт БД",
                 """
                 Данные из архива будут объединены с текущей БД.
-                Победит запись с более поздней датой обновления.
+                При конфликтах будет показан диалог для выбора версии.
                 Продолжить?""");
         if (!confirm) return;
-
-        // FileChooser обязан вызываться в JavaFX-потоке
-        java.io.File file = syncManager.showImportDialog(importDbBtn.getScene().getWindow());
-        if (file == null) return; // пользователь отменил
 
         setButtonsDisabled(true);
         if (mainController != null) mainController.setNavigationDisabled(true);
@@ -226,43 +222,114 @@ public class SettingsController {
         loadingIndicator.setMessage("Распаковка архива...");
         loadingIndicator.show();
 
-        Task<int[]> task = new Task<>() {
-            @Override
-            protected int[] call() {
-                return syncManager.importFromZipFile(file);
-            }
-        };
+        // Используем новый асинхронный API
+        syncManager.importFromZipAsync(
+            importDbBtn.getScene().getWindow(),
+            loadingIndicator,
+            (result, tempDirectory, error) -> {
+                // Этот коллбэк вызывается в JavaFX-потоке
+                if (error != null) {
+                    loadingIndicator.hide();
+                    setButtonsDisabled(false);
+                    if (mainController != null) mainController.setNavigationDisabled(false);
+                    operationInProgress = false;
+                    LOGGER.error("Ошибка импорта БД: {}", error.getMessage(), error);
+                    CustomAlertDialog.showError("Ошибка импорта", error.getMessage());
+                    return;
+                }
 
-        task.setOnSucceeded(_ -> {
-            loadingIndicator.hide();
-            setButtonsDisabled(false);
-            if (mainController != null) mainController.setNavigationDisabled(false);
-            operationInProgress = false;
-            int[] result = task.getValue();
-            if (result != null) {
-                String msg = String.format(
-                        "Приборы: добавлено %d, обновлено %d\nСхемы: добавлено %d, обновлено %d",
-                        result[0], result[1], result[2], result[3]);
-                CustomAlertDialog.showSuccess("Импорт завершён", msg);
-                saveLastImportTime();
-                lastImportTimeLabel.setText("Последний импорт: " +
+                if (result == null) {
+                    // Пользователь отменил выбор файла
+                    loadingIndicator.hide();
+                    setButtonsDisabled(false);
+                    if (mainController != null) mainController.setNavigationDisabled(false);
+                    operationInProgress = false;
+                    return;
+                }
+
+                if (result.hasConflicts()) {
+                    // Показываем диалог разрешения конфликтов
+                    LOGGER.info("Показываем диалог для {} конфликтов", result.conflicts().size());
+                    java.util.List<ConflictResolutionDialog.ConflictResolution> resolutions =
+                        new java.util.ArrayList<>();
+
+                    boolean applied = ConflictResolutionDialog.showConflictResolutionDialog(
+                        result.conflicts(), resolutions);
+
+                    if (!applied) {
+                        // Пользователь отменил разрешение конфликтов
+                        LOGGER.warn("Пользователь отменил разрешение конфликтов");
+                        loadingIndicator.hide();
+                        setButtonsDisabled(false);
+                        if (mainController != null) mainController.setNavigationDisabled(false);
+                        operationInProgress = false;
+                        // Удаляем временную директорию
+                        syncManager.deleteDirectory(tempDirectory);
+                        return;
+                    }
+
+                    // Применяем решения асинхронно
+                    syncManager.applyConflictResolutions(
+                        result.conflicts(),
+                        resolutions,
+                        tempDirectory,
+                        (success, stats) -> {
+                            // Этот коллбэк тоже вызывается в JavaFX-потоке
+                            loadingIndicator.hide();
+                            setButtonsDisabled(false);
+                            if (mainController != null) mainController.setNavigationDisabled(false);
+                            operationInProgress = false;
+
+                            if (success) {
+                                int updatedLocs = stats.length > 4 ? stats[4] : 0;
+                                String msg = String.format(
+                                    "Приборы: добавлено %d, обновлено %d\n" +
+                                    "Схемы: добавлено %d, обновлено %d\n" +
+                                    "Локации: обновлено %d\n" +
+                                    "Фотографий импортировано: %d",
+                                    result.getAddedDevices(),
+                                    result.getUpdatedDevices() + stats[1], // + конфликты
+                                    result.getAddedSchemes(),
+                                    result.getUpdatedSchemes() + stats[3], // + конфликты
+                                    updatedLocs,
+                                    result.importedPhotosCount());
+                                CustomAlertDialog.showSuccess("Импорт завершён", msg);
+                                saveLastImportTime();
+                                lastImportTimeLabel.setText("Последний импорт: " +
+                                    formatTimestamp(System.currentTimeMillis()));
+                                LOGGER.info("✅ Импорт БД с разрешением конфликтов завершён");
+                                if (onDataChanged != null) onDataChanged.run();
+                            } else {
+                                CustomAlertDialog.showError("Ошибка",
+                                    "Не удалось применить решения конфликтов");
+                            }
+                        }
+                    );
+                } else {
+                    // Нет конфликтов — сразу показываем успех
+                    loadingIndicator.hide();
+                    setButtonsDisabled(false);
+                    if (mainController != null) mainController.setNavigationDisabled(false);
+                    operationInProgress = false;
+
+                    String msg = String.format(
+                        "Приборы: добавлено %d, обновлено %d\n" +
+                        "Схемы: добавлено %d, обновлено %d\n" +
+                        "Локации: обновлено %d\n" +
+                        "Фотографий импортировано: %d",
+                        result.getAddedDevices(), result.getUpdatedDevices(),
+                        result.getAddedSchemes(), result.getUpdatedSchemes(),
+                        result.getUpdatedLocations(),
+                        result.importedPhotosCount());
+                    CustomAlertDialog.showSuccess("Импорт завершён", msg);
+                    saveLastImportTime();
+                    lastImportTimeLabel.setText("Последний импорт: " +
                         formatTimestamp(System.currentTimeMillis()));
-                LOGGER.info("✅ Импорт БД завершён: {}", msg);
-                if (onDataChanged != null) onDataChanged.run();
+                    LOGGER.info("✅ Импорт БД завершён: {}", msg);
+                    if (onDataChanged != null) onDataChanged.run();
+                }
             }
-        });
-
-        task.setOnFailed(_ -> {
-            loadingIndicator.hide();
-            setButtonsDisabled(false);
-            if (mainController != null) mainController.setNavigationDisabled(false);
-            operationInProgress = false;
-            Throwable e = task.getException();
-            LOGGER.error("Ошибка импорта БД: {}", e.getMessage(), e);
-            CustomAlertDialog.showError("Ошибка импорта", e.getMessage());
-        });
-
-        new Thread(task).start();
+        );
     }
 
     // ---------------------------------------------------------

@@ -794,6 +794,8 @@ public class MainController {
                     this.reportsController = ctrl;
                 }
                 contentArea.getChildren().add(view);
+                currentSearchableController = null;
+                showTopSearchPanel(false, false);
                 updateNavigationButtonsState();
             } catch (IOException e) {
                 statusLabel.setText("Ошибка загрузки отчётов: " + e.getMessage());

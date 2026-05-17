@@ -16,6 +16,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.File;
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -591,7 +592,7 @@ public class AddDeviceController {
         
         LOGGER.debug("Обновление иконок: isDarkTheme={}, stopIcon={}, saveIcon={}", isDarkTheme, stopIcon, saveIcon);
         
-        // Устанавливаем иконки
+        // Устанавливаем иконки с проверкой существования файлов
         installSuitableIcon(stopIcon, cancelBtn);
         installSuitableIcon(saveIcon, addBtn);
     }
@@ -603,13 +604,22 @@ public class AddDeviceController {
      */
     private void installSuitableIcon(String icon, Button button) {
         if (button != null) {
-            javafx.scene.image.ImageView installIcon = new javafx.scene.image.ImageView(
-                new javafx.scene.image.Image(Objects.requireNonNull(getClass().getResourceAsStream(icon)))
-            );
-            installIcon.setFitWidth(20);
+            try {
+                InputStream iconStream = getClass().getResourceAsStream(icon);
+                if (iconStream == null) {
+                    LOGGER.warn("Иконка не найдена: {}", icon);
+                    return;
+                }
+                javafx.scene.image.ImageView installIcon = new javafx.scene.image.ImageView(
+                    new javafx.scene.image.Image(iconStream)
+                );
+                installIcon.setFitWidth(20);
             installIcon.setFitHeight(20);
             installIcon.setPreserveRatio(true);
             button.setGraphic(installIcon);
+            } catch (Exception e) {
+                LOGGER.error("Ошибка при установке иконки {}: {}", icon, e.getMessage());
+            }
         }
     }
 

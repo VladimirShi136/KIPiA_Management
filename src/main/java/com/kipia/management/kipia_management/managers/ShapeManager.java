@@ -45,8 +45,6 @@ public class ShapeManager {
     private Shape previewShape;
     private double startX, startY;
 
-    private double previewEndX, previewEndY;
-
     private Runnable onShapeSelected;    // Callback при выделении фигуры
     private Runnable onShapeDeselected;  // Callback при снятии выделения
     private Runnable onChangeCallback;   // Callback при любой мутации (markDirty)
@@ -54,6 +52,12 @@ public class ShapeManager {
     // Границы канваса
     private double canvasBoundsWidth = 2000.0;
     private double canvasBoundsHeight = 1200.0;
+
+    // Поля для сохранения конечных координат линии (с учетом snap)
+    private double previewEndX = 0;
+    private double previewEndY = 0;
+
+    private boolean isLoading = false;  // Флаг загрузки схемы
 
     // Команда добавления
     public class AddShapeCommand implements CommandManager.Command {
@@ -384,6 +388,7 @@ public class ShapeManager {
      * Регистрация поворота фигуры в undo-стек
      */
     public void registerRotation(ShapeBase shape, double oldAngle, double newAngle) {
+        if (isLoading) return;
         RotateShapeCommand cmd = new RotateShapeCommand(shape, oldAngle, newAngle);
         commandManager.execute(cmd);
         notifyChange();
@@ -421,6 +426,7 @@ public class ShapeManager {
      * Регистрация перемещения фигуры в undo-стек
      */
     public void registerMove(ShapeBase shape, double oldX, double oldY, double newX, double newY) {
+        if (isLoading) return;
         MoveShapeCommand cmd = new MoveShapeCommand(shape, oldX, oldY, newX, newY);
         commandManager.execute(cmd);
         notifyChange();
@@ -430,6 +436,7 @@ public class ShapeManager {
      * Регистрация изменения цвета в undo-стек
      */
     public void registerColorChange(ShapeBase shape, Color oldStroke, Color oldFill, Color newStroke, Color newFill) {
+        if (isLoading) return;
         ChangeColorCommand cmd = new ChangeColorCommand(shape, oldStroke, oldFill, newStroke, newFill);
         commandManager.execute(cmd);
         notifyChange();
@@ -440,6 +447,7 @@ public class ShapeManager {
      */
     public void registerResize(ShapeBase shape, double oldX, double oldY, double oldWidth, double oldHeight,
                                double newX, double newY, double newWidth, double newHeight) {
+        if (isLoading) return;
         ResizeShapeCommand cmd = new ResizeShapeCommand(shape, oldX, oldY, oldWidth, oldHeight, newX, newY, newWidth, newHeight);
         commandManager.execute(cmd);
         notifyChange();
@@ -449,6 +457,7 @@ public class ShapeManager {
      * Регистрация изменения шрифта в undo-стек
      */
     public void registerFontChange(TextShape textShape, Font oldFont, Font newFont) {
+        if (isLoading) return;
         ChangeFontCommand cmd = new ChangeFontCommand(textShape, oldFont, newFont);
         commandManager.execute(cmd);
         notifyChange();
@@ -460,6 +469,7 @@ public class ShapeManager {
     public void registerLinePointsChange(LineShape lineShape,
                                          double oldStartX, double oldStartY, double oldEndX, double oldEndY,
                                          double newStartX, double newStartY, double newEndX, double newEndY) {
+        if (isLoading) return;
         ChangeLinePointsCommand cmd = new ChangeLinePointsCommand(lineShape,
                 oldStartX, oldStartY, oldEndX, oldEndY,
                 newStartX, newStartY, newEndX, newEndY);
@@ -711,7 +721,7 @@ public class ShapeManager {
         double startX = this.startX;
         double startY = this.startY;
 
-        // Убираем принудительную фиксацию - оставляем свободное рисование
+        // Ограничиваем координаты границами канваса ДО вычислений
         double endX = Math.max(0, Math.min(x, canvasBoundsWidth));
         double endY = Math.max(0, Math.min(y, canvasBoundsHeight));
 
@@ -726,12 +736,23 @@ public class ShapeManager {
 
         if (nearHorizontal) {
             endY = startY; // Фиксируем горизонталь
+            // Проверяем, что после фиксации координаты остаются в пределах канваса
+            if (endY < 0) endY = 0;
+            if (endY > canvasBoundsHeight) endY = canvasBoundsHeight;
         } else if (nearVertical) {
             endX = startX; // Фиксируем вертикаль
+            if (endX < 0) endX = 0;
+            if (endX > canvasBoundsWidth) endX = canvasBoundsWidth;
         }
 
+        // Еще раз проверяем границы после фиксации
+        endX = Math.max(0, Math.min(endX, canvasBoundsWidth));
+        endY = Math.max(0, Math.min(endY, canvasBoundsHeight));
+
+        // СОХРАНЯЕМ КОНЕЧНЫЕ КООРДИНАТЫ ДЛЯ createFinalShape
         this.previewEndX = endX;
         this.previewEndY = endY;
+
         line.setEndX(endX);
         line.setEndY(endY);
 
@@ -741,7 +762,6 @@ public class ShapeManager {
             hideSnapHighlight();
         }
     }
-
 
     private void updateRectanglePreview(Rectangle rect, double x, double y) {
         double clampedX = Math.max(0, Math.min(x, canvasBoundsWidth));
@@ -794,9 +814,6 @@ public class ShapeManager {
                 new LineTo(width, height),               // Правый нижний угол (width, height)
                 new ClosePath()
         );
-
-        LOGGER.debug("Preview rebuild: width={}, height={}, center=({},{})",
-                width, height, centerX, centerY);
     }
 
     /**
@@ -809,18 +826,60 @@ public class ShapeManager {
         double[] coordinates;
 
         if (tool == Tool.LINE) {
-            coordinates = new double[]{startX, startY, previewEndX, previewEndY};
+            // Ограничиваем конечные координаты границами канваса
+            double endX = Math.max(0, Math.min(previewEndX, canvasBoundsWidth));
+            double endY = Math.max(0, Math.min(previewEndY, canvasBoundsHeight));
+
+            // Начальные координаты тоже ограничиваем
+            double startXClamped = Math.max(0, Math.min(this.startX, canvasBoundsWidth));
+            double startYClamped = Math.max(0, Math.min(this.startY, canvasBoundsHeight));
+
+            // Если preview координаты не были установлены, используем переданные
+            if (endX == 0 && endY == 0) {
+                endX = Math.max(0, Math.min(x, canvasBoundsWidth));
+                endY = Math.max(0, Math.min(y, canvasBoundsHeight));
+            }
+
+            // ВАЖНО: Не нормализуем здесь, передаем как есть
+            // LineShape сам нормализует в конструкторе
+            coordinates = new double[]{startXClamped, startYClamped, endX, endY};
+
+            LOGGER.info("Creating Line with coords: ({},{}) -> ({},{})",
+                    startXClamped, startYClamped, endX, endY);
+
+            if (statusSetter != null) {
+                if (Math.abs(endY - startYClamped) < 15.0 && Math.abs(endX - startXClamped) > 15.0) {
+                    statusSetter.accept("Горизонтальная линия добавлена");
+                } else if (Math.abs(endX - startXClamped) < 15.0 && Math.abs(endY - startYClamped) > 15.0) {
+                    statusSetter.accept("Вертикальная линия добавлена");
+                } else {
+                    statusSetter.accept("Линия добавлена");
+                }
+            }
         } else if (tool == Tool.RHOMBUS) {
-            // Для ромба передаем x, y, width, height
-            double finalX = Math.min(startX, x);
-            double finalY = Math.min(startY, y);
+            double finalX = Math.max(0, Math.min(startX, x));
+            double finalY = Math.max(0, Math.min(startY, y));
             double finalWidth = Math.abs(x - startX);
             double finalHeight = Math.abs(y - startY);
+
+            // Ограничиваем размеры, чтобы не выходили за границы
+            if (finalX + finalWidth > canvasBoundsWidth) {
+                finalWidth = canvasBoundsWidth - finalX;
+            }
+            if (finalY + finalHeight > canvasBoundsHeight) {
+                finalHeight = canvasBoundsHeight - finalY;
+            }
+
             coordinates = new double[]{finalX, finalY, finalWidth, finalHeight};
             LOGGER.info("Creating final Rhombus: x={}, y={}, width={}, height={}",
                     finalX, finalY, finalWidth, finalHeight);
         } else {
             coordinates = calculateFinalCoordinates(shapeType, x, y);
+            // Ограничиваем координаты для остальных фигур
+            if (coordinates.length >= 4) {
+                coordinates[0] = Math.max(0, Math.min(coordinates[0], canvasBoundsWidth - coordinates[2]));
+                coordinates[1] = Math.max(0, Math.min(coordinates[1], canvasBoundsHeight - coordinates[3]));
+            }
         }
 
         try {
@@ -835,6 +894,27 @@ public class ShapeManager {
             setStatus("Ошибка создания фигуры");
             System.err.println("ERROR creating shape: " + e.getMessage());
         }
+
+        // Сбрасываем preview координаты
+        previewEndX = 0;
+        previewEndY = 0;
+    }
+
+    // -----------------------------------------------------------------
+    // CLEAR STACK UNDO / REDO
+    // -----------------------------------------------------------------
+
+    public void startLoading() {
+        isLoading = true;
+        commandManager.clear();  // Очищаем историю перед загрузкой
+    }
+
+    public void finishLoading() {
+        isLoading = false;
+    }
+
+    public boolean isLoading() {
+        return isLoading;
     }
 
     // -----------------------------------------------------------------

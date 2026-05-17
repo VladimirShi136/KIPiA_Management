@@ -1016,6 +1016,10 @@ public class SchemeEditorController {
         }
 
         try {
+            if (shapeManager != null) {
+                shapeManager.startLoading();
+            }
+
             currentScheme = scheme;
             deviceIconService.setCurrentScheme(scheme);
 
@@ -1041,6 +1045,11 @@ public class SchemeEditorController {
             updateDeleteButtonState();
         } catch (Exception e) {
             handleSchemeLoadError(scheme, e);
+        } finally {
+            // ✅ Выключаем режим загрузки
+            if (shapeManager != null) {
+                shapeManager.finishLoading();
+            }
         }
     }
 
@@ -1092,6 +1101,11 @@ public class SchemeEditorController {
                 }
             }
 
+            // ✅ Включаем режим загрузки для очистки
+            if (shapeManager != null) {
+                shapeManager.startLoading();
+            }
+
             clearSchemePane();
             updateCanvasDisplay(); // Восстанавливаем фон и сетку
             refreshAvailableDevices();
@@ -1100,6 +1114,10 @@ public class SchemeEditorController {
         } catch (Exception e) {
             LOGGER.error("Ошибка при очистке схемы: {}", e.getMessage(), e);
             CustomAlertDialog.showError("Ошибка", "Не удалось полностью очистить схему: " + e.getMessage());
+        } finally {
+            if (shapeManager != null) {
+                shapeManager.finishLoading();
+            }
         }
     }
 
@@ -1300,12 +1318,11 @@ public class SchemeEditorController {
     @FXML
     private void onPaneMousePressed(MouseEvent event) {
         if (schemePane == null || shapeManager == null) return;
-
         if (event.isSecondaryButtonDown()) return;
         if (event.getClickCount() == 2) return;
 
-        // event.getX/Y() уже в мировых координатах благодаря трансформациям
-        Point2D worldPoint = new Point2D(event.getX(), event.getY());
+        // ИСПРАВЛЕНО: Преобразуем координаты сцены в мировые координаты панели
+        Point2D worldPoint = schemePane.sceneToLocal(event.getSceneX(), event.getSceneY());
 
         Node clickedNode = findNodeAtWorldPosition(worldPoint.getX(), worldPoint.getY());
         boolean clickedOnShape = clickedNode != null && isShapeOrDevice(clickedNode);
@@ -1333,15 +1350,17 @@ public class SchemeEditorController {
     @FXML
     private void onPaneMouseDragged(MouseEvent event) {
         if (event.isSecondaryButtonDown()) return;
-
-        // event.getX/Y() уже в мировых координатах
-        shapeManager.onMouseDraggedForTool(currentTool, event.getX(), event.getY());
+        // ИСПРАВЛЕНО: Преобразуем координаты сцены в мировые координаты панели
+        Point2D worldPoint = schemePane.sceneToLocal(event.getSceneX(), event.getSceneY());
+        shapeManager.onMouseDraggedForTool(currentTool, worldPoint.getX(), worldPoint.getY());
     }
 
     @FXML
     private void onPaneMouseReleased(MouseEvent event) {
         if (event.getButton() == MouseButton.PRIMARY) {
-            handleLeftMouseRelease(event.getX(), event.getY());
+            // ИСПРАВЛЕНО: Преобразуем координаты сцены в мировые координаты панели
+            Point2D worldPoint = schemePane.sceneToLocal(event.getSceneX(), event.getSceneY());
+            handleLeftMouseRelease(worldPoint.getX(), worldPoint.getY());
         } else if (event.getButton() == MouseButton.SECONDARY) {
             handleRightMouseClick(event.getSceneX(), event.getSceneY());
         }

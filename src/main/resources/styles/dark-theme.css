@@ -200,7 +200,7 @@
 
 /* ==================== HELP DIALOG ==================== */
 .help-dialog {
-    -fx-background-color: #2d2d2d;
+    -fx-background-color: #2e2c23;
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.4), 20, 0, 0, 5);
 }
 
@@ -711,6 +711,7 @@
 /* ==================== MAIN.FXML - ЦЕНТРАЛЬНАЯ ОБЛАСТЬ ==================== */
 .content-area {
     -fx-background-color: #1e1e1e;
+    -fx-text-fill: white;
 }
 
 /* Убираем лишние отступы у корневых элементов view,

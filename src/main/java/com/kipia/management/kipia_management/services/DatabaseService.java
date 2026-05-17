@@ -21,6 +21,9 @@ public class DatabaseService {
     // Объект подключения к базе данных
     private Connection connection;
 
+    // Путь к внешней БД (если используется конструктор с путём для импорта)
+    private String externalDbPath;
+
     // Статический блок для регистрации драйвера SQLite
     static {
         try {
@@ -41,6 +44,7 @@ public class DatabaseService {
      * Конструктор для подключения к произвольному файлу БД (для merge при импорте)
      */
     public DatabaseService(String dbPath) {
+        this.externalDbPath = dbPath;
         try {
             String dbUrl = "jdbc:sqlite:" + dbPath;
             connection = DriverManager.getConnection(dbUrl);
@@ -178,7 +182,7 @@ public class DatabaseService {
         String sqlSchemes = """
                 CREATE TABLE IF NOT EXISTS schemes (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT NOT NULL,
+                    name TEXT UNIQUE NOT NULL,
                     description TEXT,
                     data TEXT,
                     updated_at INTEGER DEFAULT (strftime('%%s','now') * 1000),
@@ -217,7 +221,15 @@ public class DatabaseService {
     }
 
     /**
-     * Миграция существующей БД для поддержки soft delete и three-way merge.
+     * Запускает миграции схемы БД (soft delete и two-way merge).
+     * Публичный метод для использования при импорте внешней БД.
+     */
+    public void runMigrations() {
+        migrateToSoftDelete();
+    }
+
+    /**
+     * Миграция существующей БД для поддержки soft delete и two-way merge.
      * Добавляет поля deleted_at, updated_at и last_synced_at если они отсутствуют.
      * Безопасен для повторного запуска.
      */
@@ -243,7 +255,7 @@ public class DatabaseService {
             addColumnIfNotExists("schemes", "last_synced_at", "INTEGER DEFAULT 0");
             addColumnIfNotExists("device_locations", "last_synced_at", "INTEGER DEFAULT 0");
 
-            LOGGER.info("Миграция soft delete и three-way merge завершена успешно");
+            LOGGER.info("Миграция soft delete и two-way merge завершена успешно");
         } catch (SQLException e) {
             LOGGER.error("Ошибка миграции soft delete: {}", e.getMessage(), e);
             // Не выбрасываем исключение, чтобы приложение могло продолжить работу
@@ -303,12 +315,23 @@ public class DatabaseService {
         try {
             if (connection == null || connection.isClosed()) {
                 LOGGER.warn("Соединение с БД закрыто, пересоздаем...");
-                connect();
+                if (externalDbPath != null) {
+                    // Для внешней БД используем сохранённый путь
+                    String dbUrl = "jdbc:sqlite:" + externalDbPath;
+                    connection = DriverManager.getConnection(dbUrl);
+                    LOGGER.info("Переподключение к внешней БД: {}", externalDbPath);
+                } else {
+                    // Для основной БД используем стандартный connect()
+                    connect();
+                }
             }
             return connection;
         } catch (SQLException e) {
             LOGGER.error("Ошибка при проверке соединения: {}", e.getMessage(), e);
             // Пытаемся пересоздать соединение
+            if (externalDbPath != null) {
+                throw new RuntimeException("Не удалось переподключиться к внешней БД: " + externalDbPath, e);
+            }
             connect();
             return connection;
         }

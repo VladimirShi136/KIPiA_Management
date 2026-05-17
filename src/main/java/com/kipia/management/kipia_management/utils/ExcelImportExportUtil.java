@@ -2,6 +2,8 @@ package com.kipia.management.kipia_management.utils;
 
 import com.kipia.management.kipia_management.models.Device;
 import com.kipia.management.kipia_management.services.DeviceDAO;
+
+import com.kipia.management.kipia_management.managers.PhotoManager;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
 import org.apache.logging.log4j.LogManager;
@@ -14,6 +16,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -67,6 +70,9 @@ public class ExcelImportExportUtil {
         if (file == null) return false;  // Пользователь отменил
 
         showLoading(loadingIndicator, "Экспорт в Excel...");
+        // Сортировка по инвентарному номеру
+        List<Device> sortedDevices = new ArrayList<>(devices);
+        sortedDevices.sort(Comparator.comparing(d -> d.getInventoryNumber() != null ? d.getInventoryNumber() : ""));
         try (Workbook wb = new XSSFWorkbook()) {
             Sheet sheet = wb.createSheet("Devices");
             setupSheetForPrinting(sheet);
@@ -79,9 +85,9 @@ public class ExcelImportExportUtil {
             createInfoRow(sheet, infoStyle);   // строка 0 — подсказка
             createHeaderRow(sheet, headerStyle, requiredStyle);  // строка 1 — заголовки
 
-            for (int i = 0; i < devices.size(); i++) {
+            for (int i = 0; i < sortedDevices.size(); i++) {
                 Row row = sheet.createRow(i + 2);  // данные с строки 2
-                fillDeviceRow(devices.get(i), row, cellStyle);
+                fillDeviceRow(sortedDevices.get(i), row, cellStyle);
             }
 
             setColumnWidths(sheet);
@@ -421,6 +427,8 @@ public class ExcelImportExportUtil {
      * Обновляет поля существующего прибора.
      */
     private static void updateDevice(Device existing, Device d) {
+        // Сохраняем старую локацию до изменения для миграции фото
+        String oldLocation = existing.getLocation();
         existing.setType(d.getType());
         existing.setName(d.getName());
         existing.setManufacturer(d.getManufacturer());
@@ -431,6 +439,10 @@ public class ExcelImportExportUtil {
         existing.setValveNumber(d.getValveNumber());
         existing.setStatus(d.getStatus());
         existing.setAdditionalInfo(d.getAdditionalInfo());
+        // Миграция фото при изменении локации
+        if (oldLocation != null && !oldLocation.equals(existing.getLocation())) {
+            PhotoManager.getInstance().migratePhotosToNewLocation(existing, oldLocation);
+        }
     }
 
     /**
@@ -461,6 +473,9 @@ public class ExcelImportExportUtil {
      * Экспорт в уже выбранный файл (без FileChooser) — безопасно вызывать из фонового потока.
      */
     public static boolean exportDevicesToFile(File file, List<Device> devices) {
+        // Сортировка по инвентарному номеру
+        List<Device> sortedDevices = new ArrayList<>(devices);
+        sortedDevices.sort(Comparator.comparing(d -> d.getInventoryNumber() != null ? d.getInventoryNumber() : ""));
         try (Workbook wb = new XSSFWorkbook()) {
             Sheet sheet = wb.createSheet("Devices");
             setupSheetForPrinting(sheet);
@@ -473,9 +488,9 @@ public class ExcelImportExportUtil {
             createInfoRow(sheet, infoStyle);
             createHeaderRow(sheet, headerStyle, requiredStyle);
 
-            for (int i = 0; i < devices.size(); i++) {
+            for (int i = 0; i < sortedDevices.size(); i++) {
                 Row row = sheet.createRow(i + 2);
-                fillDeviceRow(devices.get(i), row, cellStyle);
+                fillDeviceRow(sortedDevices.get(i), row, cellStyle);
             }
 
             setColumnWidths(sheet);

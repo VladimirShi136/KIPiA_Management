@@ -73,7 +73,8 @@ public class ConflictResolutionDialog implements Initializable {
 
         public ConflictItem(ConflictInfo conflict) {
             this.conflict = conflict;
-            this.choice = ConflictResolution.UNRESOLVED;
+            // По умолчанию выбираем REMOTE ("В архиве"), так как импорт обычно делается для получения свежих данных
+            this.choice = ConflictResolution.REMOTE;
         }
 
         public ConflictInfo getConflict() {
@@ -247,7 +248,7 @@ public class ConflictResolutionDialog implements Initializable {
             conflictItems.add(new ConflictItem(conflict));
         }
         
-        titleLabel.setText("Разрешение конфликтов");
+        titleLabel.setText("Разрешение конфликтов данных");
         countLabel.setText(String.format("Обнаружено конфликтов: %d", conflicts.size()));
     }
 
@@ -417,7 +418,7 @@ public class ConflictResolutionDialog implements Initializable {
     private static boolean showProgrammaticDialog(List<ConflictInfo> conflicts, 
                                                 List<ConflictResolution> resolutions) {
         Stage dialogStage = new Stage();
-        dialogStage.setTitle("Разрешение конфликтов синхронизации");
+        dialogStage.setTitle("Разрешение конфликтов данных");
         dialogStage.initModality(Modality.APPLICATION_MODAL);
         CustomAlertDialog.setAppIcon(dialogStage);
         
@@ -426,7 +427,7 @@ public class ConflictResolutionDialog implements Initializable {
         root.setStyle("-fx-background-color: #ffffff;");
         
         // Заголовок
-        Label title = new Label(String.format("Разрешение конфликтов (%d)", conflicts.size()));
+        Label title = new Label(String.format("Разрешение конфликтов данных (%d)", conflicts.size()));
         title.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;");
         
         // Инструкция
@@ -545,123 +546,282 @@ public class ConflictResolutionDialog implements Initializable {
     }
 
     /**
-     * Ячейка ListView для отображения конфликта с кнопками выбора
+     * Ячейка ListView для отображения конфликта с двумя колонками сравнения
      */
     private static class ConflictListCell extends ListCell<ConflictItem> {
+        private static final java.time.format.DateTimeFormatter DATE_FORMATTER =
+                java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
+
         @Override
         protected void updateItem(ConflictItem item, boolean empty) {
             super.updateItem(item, empty);
-            
+
             if (empty || item == null) {
                 setGraphic(null);
                 setText(null);
                 return;
             }
-            
-            VBox mainBox = new VBox(5);
+
+            ConflictInfo conflict = item.getConflict();
+            boolean localNewer = isLocalNewer(conflict);
+            boolean remoteNewer = isRemoteNewer(conflict);
+
+            VBox mainBox = new VBox(8);
             mainBox.getStyleClass().add("conflict-cell-box");
+            mainBox.setPadding(new Insets(10));
 
-            // Заголовок конфликта
-            Label titleLabel = new Label(getConflictTitle(item));
-            titleLabel.getStyleClass().add("conflict-cell-title");
+            // === ЗАГОЛОВОК ===
+            HBox headerBox = new HBox(10);
+            headerBox.setAlignment(Pos.CENTER_LEFT);
 
-            // Детали конфликта
-            Label detailsLabel = new Label(getConflictDetails(item));
-            detailsLabel.getStyleClass().add("conflict-cell-details");
+            Label badge = new Label(getTypeLabel(conflict.type));
+            badge.setStyle("-fx-background-color: #3498db; -fx-text-fill: white; -fx-padding: 2 8; -fx-background-radius: 4; -fx-font-size: 11px; -fx-font-weight: bold;");
 
-            // Кнопки выбора
-            HBox buttonBox = new HBox(10);
+            Label keyLabel = new Label(conflict.key);
+            keyLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
+
+            Label statusLabel = new Label(getChoiceLabel(item.getChoice()));
+            statusLabel.setStyle(getChoiceStyle(item.getChoice()));
+
+            javafx.scene.layout.Region spacer = new javafx.scene.layout.Region();
+            HBox.setHgrow(spacer, javafx.scene.layout.Priority.ALWAYS);
+
+            headerBox.getChildren().addAll(badge, keyLabel, spacer, statusLabel);
+
+            // === СРАВНЕНИЕ КОЛОНОК ===
+            HBox compareBox = new HBox(15);
+            compareBox.setAlignment(Pos.TOP_CENTER);
+
+            VBox localColumn = buildColumn("ЛОКАЛЬНО", conflict.local, localNewer, true, conflict);
+            VBox remoteColumn = buildColumn("В АРХИВЕ", conflict.remote, remoteNewer, false, conflict);
+
+            String selectedBorder = "-fx-border-color: #3498db; -fx-border-width: 2; -fx-border-radius: 6;";
+            String unselectedBorder = "-fx-border-color: #bdc3c7; -fx-border-width: 1; -fx-border-radius: 6;";
+            String baseStyle = "-fx-background-color: #f8f9fa; -fx-padding: 10; -fx-background-radius: 6;";
+
+            updateColumnStyles(localColumn, remoteColumn, item.getChoice(), baseStyle, selectedBorder, unselectedBorder);
+
+            VBox.setVgrow(localColumn, javafx.scene.layout.Priority.ALWAYS);
+            VBox.setVgrow(remoteColumn, javafx.scene.layout.Priority.ALWAYS);
+            HBox.setHgrow(localColumn, javafx.scene.layout.Priority.ALWAYS);
+            HBox.setHgrow(remoteColumn, javafx.scene.layout.Priority.ALWAYS);
+
+            compareBox.getChildren().addAll(localColumn, remoteColumn);
+
+            // === КНОПКИ ВЫБОРА ===
+            HBox buttonBox = new HBox(12);
             buttonBox.setAlignment(Pos.CENTER_LEFT);
-            
+
             ToggleGroup toggleGroup = new ToggleGroup();
-            
+
             RadioButton localRadio = new RadioButton("LOCAL");
             localRadio.setToggleGroup(toggleGroup);
             localRadio.setUserData(ConflictResolution.LOCAL);
-            localRadio.getStyleClass().add("conflict-cell-radio");
 
-            RadioButton remoteRadio = new RadioButton("REMOTE");
+            RadioButton remoteRadio = new RadioButton("В АРХИВЕ");
             remoteRadio.setToggleGroup(toggleGroup);
             remoteRadio.setUserData(ConflictResolution.REMOTE);
-            remoteRadio.getStyleClass().add("conflict-cell-radio");
-            
+
             RadioButton skipRadio = new RadioButton("Пропустить");
             skipRadio.setToggleGroup(toggleGroup);
             skipRadio.setUserData(ConflictResolution.SKIP);
-            skipRadio.getStyleClass().add("conflict-cell-radio");
-            
-            // Устанавливаем выбранное значение
+
             switch (item.getChoice()) {
                 case LOCAL -> localRadio.setSelected(true);
                 case REMOTE -> remoteRadio.setSelected(true);
                 case SKIP -> skipRadio.setSelected(true);
                 case UNRESOLVED -> toggleGroup.selectToggle(null);
             }
-            
-            // Обработчик изменения выбора
+
+            // Предупреждение при пропуске
+            Label skipWarning = new Label("⚠ Объект будет пропущен. Конфликт сохранится при следующем merge.");
+            skipWarning.setStyle("-fx-text-fill: #e67e22; -fx-font-size: 11px; -fx-wrap-text: true;");
+            skipWarning.setVisible(item.getChoice() == ConflictResolution.SKIP);
+            skipWarning.setManaged(item.getChoice() == ConflictResolution.SKIP);
+
             toggleGroup.selectedToggleProperty().addListener((_, _, newVal) -> {
                 if (newVal != null) {
                     item.setChoice((ConflictResolution) newVal.getUserData());
                 } else {
                     item.setChoice(ConflictResolution.UNRESOLVED);
                 }
+                updateColumnStyles(localColumn, remoteColumn, item.getChoice(), baseStyle, selectedBorder, unselectedBorder);
+                statusLabel.setText(getChoiceLabel(item.getChoice()));
+                statusLabel.setStyle(getChoiceStyle(item.getChoice()));
+                boolean isSkip = newVal != null && newVal.getUserData() == ConflictResolution.SKIP;
+                skipWarning.setVisible(isSkip);
+                skipWarning.setManaged(isSkip);
             });
-            
+
             buttonBox.getChildren().addAll(localRadio, remoteRadio, skipRadio);
-            mainBox.getChildren().addAll(titleLabel, detailsLabel, buttonBox);
-            
+
+            mainBox.getChildren().addAll(headerBox, compareBox, buttonBox, skipWarning);
+
             setGraphic(mainBox);
             setText(null);
         }
-        
-        private String getConflictTitle(ConflictItem item) {
-            String typeStr = switch (item.getConflict().type) {
-                case "device" -> "Устройство";
-                case "scheme" -> "Схема";
-                case "device_location" -> "Локация";
-                default -> item.getConflict().type;
-            };
-            
-            String statusStr = switch (item.getChoice()) {
-                case LOCAL -> "✓ LOCAL";
-                case REMOTE -> "✓ REMOTE";
-                case SKIP -> "✗ Пропущено";
-                case UNRESOLVED -> "? Не решено";
-            };
-            
-            return String.format("[%s] %s - %s", typeStr, item.getConflict().key, statusStr);
-        }
-        
-        private String getConflictDetails(ConflictItem item) {
-            ConflictInfo conflict = item.getConflict();
-            
-            if (conflict.type.equals("device")) {
-                Device local = (Device) conflict.local;
-                Device remote = (Device) conflict.remote;
-                return String.format("📍 LOCAL: '%s' (изменен %s) | 📡 REMOTE: '%s' (изменен %s)", 
-                        local.getName(), formatTimestamp(local.getUpdatedAt()),
-                        remote.getName(), formatTimestamp(remote.getUpdatedAt()));
-            } else if (conflict.type.equals("scheme")) {
-                Scheme local = (Scheme) conflict.local;
-                Scheme remote = (Scheme) conflict.remote;
-                return String.format("📍 LOCAL: '%s' (изменен %s) | 📡 REMOTE: '%s' (изменен %s)", 
-                        local.getName(), formatTimestamp(local.getUpdatedAt()),
-                        remote.getName(), formatTimestamp(remote.getUpdatedAt()));
+
+        private void updateColumnStyles(VBox localColumn, VBox remoteColumn, ConflictResolution choice,
+                                        String baseStyle, String selectedBorder, String unselectedBorder) {
+            if (choice == ConflictResolution.LOCAL) {
+                localColumn.setStyle(baseStyle + selectedBorder);
+                remoteColumn.setStyle(baseStyle + unselectedBorder);
+            } else if (choice == ConflictResolution.REMOTE) {
+                localColumn.setStyle(baseStyle + unselectedBorder);
+                remoteColumn.setStyle(baseStyle + selectedBorder);
             } else {
-                DeviceLocation local = (DeviceLocation) conflict.local;
-                DeviceLocation remote = (DeviceLocation) conflict.remote;
-                return String.format("📍 LOCAL: координаты (%.1f,%.1f) | 📡 REMOTE: координаты (%.1f,%.1f)", 
-                        local.getX(), local.getY(), remote.getX(), remote.getY());
+                localColumn.setStyle(baseStyle + unselectedBorder);
+                remoteColumn.setStyle(baseStyle + unselectedBorder);
             }
         }
-        
-        private String formatTimestamp(Long timestamp) {
-            if (timestamp == null) return "неизвестно";
+
+        private String getTypeLabel(String type) {
+            return switch (type) {
+                case "device" -> "УСТРОЙСТВО";
+                case "scheme" -> "СХЕМА";
+                case "device_location" -> "РАЗМЕЩЕНИЕ";
+                default -> type.toUpperCase();
+            };
+        }
+
+        private String getChoiceLabel(ConflictResolution choice) {
+            return switch (choice) {
+                case LOCAL -> "✓ LOCAL";
+                case REMOTE -> "✓ В АРХИВЕ";
+                case SKIP -> "✗ Пропущен";
+                case UNRESOLVED -> "? Не решено";
+            };
+        }
+
+        private String getChoiceStyle(ConflictResolution choice) {
+            return switch (choice) {
+                case LOCAL -> "-fx-text-fill: #27ae60; -fx-font-weight: bold; -fx-font-size: 12px;";
+                case REMOTE -> "-fx-text-fill: #2980b9; -fx-font-weight: bold; -fx-font-size: 12px;";
+                case SKIP -> "-fx-text-fill: #e67e22; -fx-font-weight: bold; -fx-font-size: 12px;";
+                case UNRESOLVED -> "-fx-text-fill: #c0392b; -fx-font-weight: bold; -fx-font-size: 12px;";
+            };
+        }
+
+        private boolean isLocalNewer(ConflictInfo conflict) {
+            long localTime = getUpdatedAt(conflict.local);
+            long remoteTime = getUpdatedAt(conflict.remote);
+            return localTime > remoteTime;
+        }
+
+        private boolean isRemoteNewer(ConflictInfo conflict) {
+            long localTime = getUpdatedAt(conflict.local);
+            long remoteTime = getUpdatedAt(conflict.remote);
+            return remoteTime > localTime;
+        }
+
+        private long getUpdatedAt(Object obj) {
+            if (obj instanceof Device d) return d.getUpdatedAt();
+            if (obj instanceof Scheme s) return s.getUpdatedAt();
+            if (obj instanceof DeviceLocation loc) return loc.getUpdatedAt();
+            return 0;
+        }
+
+        private VBox buildColumn(String title, Object obj, boolean isNewer, boolean isLocal, ConflictInfo conflict) {
+            VBox column = new VBox(6);
+            column.setAlignment(Pos.TOP_LEFT);
+
+            HBox titleBox = new HBox(6);
+            titleBox.setAlignment(Pos.CENTER_LEFT);
+
+            Label titleLabel = new Label(title);
+            titleLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 13px; -fx-text-fill: #2c3e50;");
+            titleBox.getChildren().add(titleLabel);
+
+            if (isNewer) {
+                Label newerLabel = new Label("НОВЕЕ");
+                newerLabel.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white; -fx-padding: 1 6; -fx-background-radius: 4; -fx-font-size: 10px; -fx-font-weight: bold;");
+                titleBox.getChildren().add(newerLabel);
+            }
+
+            column.getChildren().add(titleBox);
+
+            long updatedAt = getUpdatedAt(obj);
+            Label timeLabel = new Label("Изменён: " + formatTimestamp(updatedAt));
+            timeLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #7f8c8d;");
+            column.getChildren().add(timeLabel);
+
+            VBox fieldsBox = new VBox(3);
+            fieldsBox.setPadding(new Insets(4, 0, 0, 0));
+            addFieldComparisons(fieldsBox, conflict, isLocal);
+            column.getChildren().add(fieldsBox);
+
+            return column;
+        }
+
+        private void addFieldComparisons(VBox container, ConflictInfo conflict, boolean isLocal) {
+            Object localObj = conflict.local;
+            Object remoteObj = conflict.remote;
+
+            if (conflict.type.equals("device")) {
+                Device local = (Device) localObj;
+                Device remote = (Device) remoteObj;
+                addFieldRow(container, "Статус", local.getStatus(), remote.getStatus(), isLocal);
+                addFieldRow(container, "Тип", local.getType(), remote.getType(), isLocal);
+                addFieldRow(container, "Имя", local.getName(), remote.getName(), isLocal);
+                addFieldRow(container, "Местоположение", local.getLocation(), remote.getLocation(), isLocal);
+                addFieldRow(container, "Завод-изготовитель", local.getManufacturer(), remote.getManufacturer(), isLocal);
+                addFieldRow(container, "Год", String.valueOf(local.getYear()), String.valueOf(remote.getYear()), isLocal);
+                addFieldRow(container, "Предел измерения", local.getMeasurementLimit(), remote.getMeasurementLimit(), isLocal);
+                addFieldRow(container, "Класс точности",
+                        local.getAccuracyClass() != null ? local.getAccuracyClass().toString() : null,
+                        remote.getAccuracyClass() != null ? remote.getAccuracyClass().toString() : null, isLocal);
+                addFieldRow(container, "Номер крана", local.getValveNumber(), remote.getValveNumber(), isLocal);
+                int localPhotos = local.getPhotos() != null ? local.getPhotos().size() : 0;
+                int remotePhotos = remote.getPhotos() != null ? remote.getPhotos().size() : 0;
+                addFieldRow(container, "Фото (шт)", String.valueOf(localPhotos), String.valueOf(remotePhotos), isLocal);
+            } else if (conflict.type.equals("scheme")) {
+                Scheme local = (Scheme) localObj;
+                Scheme remote = (Scheme) remoteObj;
+                addFieldRow(container, "Описание", local.getDescription(), remote.getDescription(), isLocal);
+                int localDataLen = local.getData() != null ? local.getData().length() : 0;
+                int remoteDataLen = remote.getData() != null ? remote.getData().length() : 0;
+                addFieldRow(container, "Объём данных", localDataLen + " симв.", remoteDataLen + " симв.", isLocal);
+            } else if (conflict.type.equals("device_location")) {
+                DeviceLocation local = (DeviceLocation) localObj;
+                DeviceLocation remote = (DeviceLocation) remoteObj;
+                addFieldRow(container, "Координата X",
+                        String.valueOf(local.getX()), String.valueOf(remote.getX()), isLocal);
+                addFieldRow(container, "Координата Y",
+                        String.valueOf(local.getY()), String.valueOf(remote.getY()), isLocal);
+                addFieldRow(container, "Угол поворота",
+                        String.valueOf(local.getRotation()), String.valueOf(remote.getRotation()), isLocal);
+            }
+        }
+
+        private void addFieldRow(VBox container, String fieldName, String localValue, String remoteValue, boolean showLocal) {
+            String displayValue = showLocal ? localValue : remoteValue;
+            boolean differs = !java.util.Objects.equals(localValue, remoteValue);
+
+            HBox row = new HBox(6);
+            row.setAlignment(Pos.CENTER_LEFT);
+
+            Label nameLabel = new Label(fieldName + ":");
+            nameLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #7f8c8d; -fx-min-width: 100;");
+
+            String valueText = displayValue != null ? displayValue : "(пусто)";
+            Label valueLabel = new Label(valueText);
+            if (differs) {
+                valueLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #c0392b; -fx-font-weight: bold;");
+            } else {
+                valueLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #2c3e50;");
+            }
+
+            row.getChildren().addAll(nameLabel, valueLabel);
+            container.getChildren().add(row);
+        }
+
+        private String formatTimestamp(long timestamp) {
+            if (timestamp <= 0) return "неизвестно";
             java.time.LocalDateTime dateTime = java.time.LocalDateTime.ofInstant(
-                java.time.Instant.ofEpochMilli(timestamp), 
-                java.time.ZoneId.systemDefault()
+                    java.time.Instant.ofEpochMilli(timestamp),
+                    java.time.ZoneId.systemDefault()
             );
-            return dateTime.format(java.time.format.DateTimeFormatter.ofPattern("dd.MM HH:mm"));
+            return dateTime.format(DATE_FORMATTER);
         }
     }
 }

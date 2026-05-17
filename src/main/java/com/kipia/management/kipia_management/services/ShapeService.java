@@ -174,6 +174,13 @@ public class ShapeService {
 
             for (ShapeData shapeData : schemeData.getShapes()) {
                 try {
+                    // Проверяем что тип фигуры не null
+                    if (shapeData.getType() == null) {
+                        failed++;
+                        LOGGER.error("Ошибка создания фигуры типа null: тип фигуры не определен");
+                        continue;
+                    }
+                    
                     ShapeBase shape = convertDataToShape(shapeData);
                     shapes.add(shape);
                     shape.addToPane();
@@ -181,7 +188,8 @@ public class ShapeService {
                     loaded++;
                 } catch (Exception e) {
                     failed++;
-                    LOGGER.error("Ошибка создания фигуры типа {}: {}", shapeData.getType(), e.getMessage());
+                    LOGGER.error("Ошибка создания фигуры типа {}: {}", 
+                        shapeData.getType() != null ? shapeData.getType() : "null", e.getMessage());
                 }
             }
 
@@ -195,62 +203,77 @@ public class ShapeService {
     }
 
     /**
+     * Очистка и валидация координат из Android версии
+     */
+    private double sanitizeCoordinate(double value) {
+        // Проверяем на NaN, Infinite и другие некорректные значения
+        if (Double.isNaN(value) || Double.isInfinite(value)) {
+            return 0.0;
+        }
+        // Ограничиваем значения разумными пределами
+        return Math.max(-10000, Math.min(10000, value));
+    }
+
+    /**
      * Конвертация ShapeData в ShapeBase
      */
     private ShapeBase convertDataToShape(ShapeData data) {
+        // Дополнительная проверка на null
+        if (data == null || data.getType() == null) {
+            throw new IllegalArgumentException("ShapeData или тип фигуры не может быть null");
+        }
+        
+        // Валидация и исправление координат из Android версии
+        double x = sanitizeCoordinate(data.getX());
+        double y = sanitizeCoordinate(data.getY());
+        double width = sanitizeCoordinate(data.getWidth());
+        double height = sanitizeCoordinate(data.getHeight());
+        double rotation = sanitizeCoordinate(data.getRotation());
+        
         double[] coords;
 
         switch (data.getType()) {
             case LINE:
                 coords = new double[]{
-                        data.getStartX(), data.getStartY(),
-                        data.getEndX(), data.getEndY()
+                        sanitizeCoordinate(data.getStartX()), sanitizeCoordinate(data.getStartY()),
+                        sanitizeCoordinate(data.getEndX()), sanitizeCoordinate(data.getEndY())
                 };
                 break;
             case TEXT:
-                coords = new double[]{data.getX(), data.getY(), 0};
+                coords = new double[]{x, y, 0};
                 LOGGER.info("Loading Text: x={}, y={}, text='{}', fontSize={}, fontStyle={}",
-                        data.getX(), data.getY(), data.getText(),
+                        x, y, data.getText(),
                         data.getFontSize(), data.getFontStyle());
                 break;
             case RHOMBUS:
                 // Для отладки
                 LOGGER.info("Loading Rhombus: x={}, y={}, width={}, height={}",
-                        data.getX(), data.getY(), data.getWidth(), data.getHeight());
-                coords = new double[]{
-                        data.getX(), data.getY(),
-                        data.getWidth(), data.getHeight()
-                };
+                        x, y, width, height);
+                coords = new double[]{x, y, width, height};
                 break;
             default: // RECTANGLE, ELLIPSE
-                coords = new double[]{
-                        data.getX(), data.getY(),
-                        data.getWidth(), data.getHeight()
-                };
+                coords = new double[]{x, y, width, height};
                 break;
         }
 
         ShapeBase shape = factory.createShape(data.getType(), coords);
 
-        // Устанавливаем цвета
-        if (data.getStrokeColor() != null) {
-            shape.setStrokeColor(ShapeData.stringToColor(data.getStrokeColor()));
-        } else {
-            shape.setStrokeColor(Color.BLACK);
-        }
+        // Устанавливаем цвета с улучшенной обработкой
+        Color strokeColor = ShapeData.stringToColor(data.getStrokeColor());
+        shape.setStrokeColor(strokeColor != null ? strokeColor : Color.BLACK);
 
-        if (data.getFillColor() != null) {
-            shape.setFillColor(ShapeData.stringToColor(data.getFillColor()));
-        } else {
-            shape.setFillColor(Color.TRANSPARENT);
-        }
+        Color fillColor = ShapeData.stringToColor(data.getFillColor());
+        shape.setFillColor(fillColor != null ? fillColor : Color.TRANSPARENT);
+        
+        LOGGER.debug("Установлены цвета для фигуры {}: stroke={}, fill={}", 
+            data.getType(), strokeColor, fillColor);
 
         try {
             shape.setStrokeWidth(data.getStrokeWidth());
         } catch (Exception e) {
             // Игнорируем
         }
-        shape.setRotation(data.getRotation());
+        shape.setRotation(rotation);
 
         // Для текста - ВАЖНО: здесь должны быть данные о шрифте!
         if (shape instanceof TextShape textShape && data.getText() != null) {

@@ -94,11 +94,21 @@ public class ShapeData {
     }
 
     public static Color stringToColor(String colorStr) {
-        if (colorStr == null || colorStr.isEmpty()) return null;
+        if (colorStr == null || colorStr.isEmpty()) return null; // Возвращаем null для обработки прозрачного цвета
         try {
+            // Проверяем на формат Android ARGB (0xAARRGGBB)
+            if (colorStr.startsWith("0x") && colorStr.length() == 10) {
+                // Конвертируем ARGB в RGB
+                long argb = Long.parseLong(colorStr.substring(2), 16);
+                int r = (int) ((argb >> 16) & 0xFF);
+                int g = (int) ((argb >> 8) & 0xFF);
+                int b = (int) (argb & 0xFF);
+                return Color.rgb(r, g, b);
+            }
+            // Стандартный формат
             return Color.web(colorStr);
         } catch (Exception e) {
-            return null;
+            return Color.BLACK; // Возвращаем черный цвет при ошибке парсинга
         }
     }
 }

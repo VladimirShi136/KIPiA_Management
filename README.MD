@@ -254,7 +254,7 @@ CREATE TABLE devices (
     valve_number TEXT,               -- Номер крана/узла
     status TEXT DEFAULT 'В работе',  -- Статус
     additional_info TEXT,            -- Дополнительная информация
-    photos TEXT                      -- JSON массив путей к фото
+    photos TEXT                      -- Список имён файлов фото, разделённых точкой с запятой (;)
 );
 ```
 

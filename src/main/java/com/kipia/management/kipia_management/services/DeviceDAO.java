@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-
 /**
  * Класс DeviceDAO (Data Access Object) предоставляет методы для работы с данными приборов
  * в базе данных. Реализует основные CRUD-операции (Create, Read, Update, Delete).
@@ -19,66 +18,64 @@ import java.util.List;
  * @since 29.08.2025
  */
 public class DeviceDAO {
-    // Сервис для работы с базой данных
     private final DatabaseService databaseService;
-    // Логгер для сообщений
     private static final Logger LOGGER = LogManager.getLogger(DeviceDAO.class);
-    // Получаем PhotoManager для миграции фото
 
-    /**
-     * Конструктор класса DeviceDAO
-     * @param databaseService экземпляр сервиса для работы с базой данных
-     */
     public DeviceDAO(DatabaseService databaseService) {
         this.databaseService = databaseService;
     }
 
-    /**
-     * Вспомогательный метод: сериализация списка фото в строку.
-     * Теперь храним только имена файлов!
-     */
     private String photosToString(List<String> photos) {
         if (photos == null || photos.isEmpty()) return "";
-
-        // Фильтруем только имена файлов (без путей)
         List<String> fileNames = new ArrayList<>();
         for (String photo : photos) {
             if (photo != null && !photo.trim().isEmpty()) {
                 File file = new File(photo);
-                fileNames.add(file.getName()); // ⭐⭐ ТОЛЬКО ИМЯ ФАЙЛА! ⭐⭐
+                fileNames.add(file.getName());
             }
         }
-
         return String.join(";", fileNames);
     }
 
-    /**
-     * Вспомогательный метод: десериализация строки в список фото.
-     */
     private List<String> stringToPhotos(String photosStr) {
         if (photosStr == null || photosStr.isEmpty()) return new ArrayList<>();
         return new ArrayList<>(Arrays.asList(photosStr.split(";")));
     }
 
     /**
-     * Добавление нового прибора в базу данных
-     * @param device объект прибора для добавления
-     * @return true - если добавление прошло успешно, false - в случае ошибки
+     * Добавление нового прибора (автоматически обновляет updated_at)
      */
     public boolean addDevice(Device device) {
-        // Обновляем timestamp перед сохранением
-        device.updateTimestamp();
+        return addDevice(device, true);
+    }
+
+    /**
+     * Добавление нового прибора с контролем обновления timestamp
+     * @param device прибор для добавления
+     * @param updateTimestamp если true - обновляет updated_at, если false - оставляет как есть
+     */
+    public boolean addDevice(Device device, boolean updateTimestamp) {
+        if (updateTimestamp) {
+            device.updateTimestamp();
+        }
 
         String sql = "INSERT INTO devices (type, name, manufacturer, inventory_number, year, measurement_limit, " +
                 "accuracy_class, location, valve_number, status, additional_info, photos, updated_at, deleted_at, last_synced_at) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
-        try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
-            installParameters(device, stmt); // Устанавливаем первые 12 параметров
+        try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            installParameters(device, stmt);
             stmt.setLong(13, device.getUpdatedAt());
             stmt.setLong(14, device.getDeletedAt());
             stmt.setLong(15, device.getLastSyncedAt());
-            stmt.executeUpdate();
-            return true;
+            int rowsAffected = stmt.executeUpdate();
+            if (rowsAffected > 0) {
+                try (ResultSet keys = stmt.getGeneratedKeys()) {
+                    if (keys.next()) {
+                        device.setId(keys.getInt(1));
+                    }
+                }
+            }
+            return rowsAffected > 0;
         } catch (SQLException e) {
             LOGGER.error("Ошибка добавления прибора: {}", e.getMessage(), e);
             return false;
@@ -86,39 +83,27 @@ public class DeviceDAO {
     }
 
     /**
-     * Получение списка всех приборов из базы данных
-     * @return список объектов Device, отсортированный по названию
+     * Обновление данных прибора (автоматически обновляет updated_at)
      */
-    public List<Device> getAllDevices() {
-        List<Device> devices = new ArrayList<>();
-        // SQL с новым полем photos
-        String sql = "SELECT * FROM devices WHERE deleted_at = 0 ORDER BY name";
-        try (Statement stmt = databaseService.getConnection().createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-            while (rs.next()) {
-                devices.add(createDeviceSQL(rs));
-            }
-        } catch (SQLException e) {
-            LOGGER.error("Ошибка получения приборов: {}", e.getMessage(), e);  // Замена println
-        }
-        return devices;
+    public boolean updateDevice(Device device) {
+        return updateDevice(device, true);
     }
 
     /**
-     * Обновление данных прибора в базе данных
-     *
-     * @return - результат обновления
+     * Обновление данных прибора с контролем обновления timestamp
+     * @param device прибор для обновления
+     * @param updateTimestamp если true - обновляет updated_at, если false - оставляет как есть
      */
-    public boolean updateDevice(Device device) {
-        // Обновляем timestamp перед сохранением
-        device.updateTimestamp();
+    public boolean updateDevice(Device device, boolean updateTimestamp) {
+        if (updateTimestamp) {
+            device.updateTimestamp();
+        }
 
-        // Добавлено поле updated_at (13-й параметр в SET, 14-й WHERE id)
         String sql = "UPDATE devices SET type = ?, name = ?, manufacturer = ?, inventory_number = ?, " +
                 "year = ?, measurement_limit = ?, accuracy_class = ?, location = ?, valve_number = ?, " +
                 "status = ?, additional_info = ?, photos = ?, updated_at = ?, deleted_at = ?, last_synced_at = ? WHERE id = ?";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
-            installParameters(device, stmt); // Устанавливаем первые 12 параметров
+            installParameters(device, stmt);
             stmt.setLong(13, device.getUpdatedAt());
             stmt.setLong(14, device.getDeletedAt());
             stmt.setLong(15, device.getLastSyncedAt());
@@ -132,10 +117,7 @@ public class DeviceDAO {
     }
 
     /**
-     * Удаление прибора из базы данных по идентификатору
-     * Soft delete: помечаем как удалённый вместо физического удаления
-     * @param id идентификатор прибора для удаления
-     * @return true - если удаление прошло успешно, false - в случае ошибки
+     * Удаление прибора (soft delete)
      */
     public boolean deleteDevice(int id) {
         String sql = "UPDATE devices SET deleted_at = ?, updated_at = ? WHERE id = ?";
@@ -152,11 +134,20 @@ public class DeviceDAO {
         }
     }
 
-    /**
-     * Поиск прибора по инвентарному номеру
-     * @param inventoryNumber инвентарный номер для поиска
-     * @return объект Device если найден, null - если не найден или произошла ошибка
-     */
+    public List<Device> getAllDevices() {
+        List<Device> devices = new ArrayList<>();
+        String sql = "SELECT * FROM devices WHERE deleted_at = 0 ORDER BY name";
+        try (Statement stmt = databaseService.getConnection().createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                devices.add(createDeviceSQL(rs));
+            }
+        } catch (SQLException e) {
+            LOGGER.error("Ошибка получения приборов: {}", e.getMessage(), e);
+        }
+        return devices;
+    }
+
     public Device findDeviceByInventoryNumber(String inventoryNumber) {
         String sql = "SELECT * FROM devices WHERE inventory_number = ? AND deleted_at = 0";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
@@ -171,9 +162,6 @@ public class DeviceDAO {
         return null;
     }
 
-    /**
-     * Получение прибора по ID (для SchemeEditor)
-     */
     public Device getDeviceById(int id) {
         String sql = "SELECT * FROM devices WHERE id = ? AND deleted_at = 0";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
@@ -188,10 +176,6 @@ public class DeviceDAO {
         return null;
     }
 
-    /**
-     * Получение списка уникальных локаций
-     * @return - список уникальных локаций
-     */
     public List<String> getDistinctLocations() {
         List<String> locations = new ArrayList<>();
         String sql = "SELECT DISTINCT location FROM devices WHERE location IS NOT NULL AND location <> '' AND deleted_at = 0 ORDER BY location";
@@ -206,9 +190,6 @@ public class DeviceDAO {
         return locations;
     }
 
-    /**
-     * ★★★ НОВЫЙ: Получение всех приборов для экспорта (с сортировкой)
-     */
     public List<Device> getAllDevicesForExport() {
         List<Device> devices = new ArrayList<>();
         String sql = "SELECT * FROM devices ORDER BY id";
@@ -223,9 +204,6 @@ public class DeviceDAO {
         return devices;
     }
 
-    /**
-     * Вспомогательный метод для создания объекта Device из ResultSet
-     */
     private Device createDeviceSQL(ResultSet rs) throws SQLException {
         Device device = new Device();
         device.setId(rs.getInt("id"));
@@ -258,10 +236,6 @@ public class DeviceDAO {
         return device;
     }
 
-    /**
-     * Вспомогательный метод для установки параметров PreparedStatement
-     * Порядок: 1-12 для полей (соответствует addDevice и updateDevice)
-     */
     private void installParameters(Device device, PreparedStatement stmt) throws SQLException {
         int idx = 1;
         stmt.setString(idx++, device.getType());
