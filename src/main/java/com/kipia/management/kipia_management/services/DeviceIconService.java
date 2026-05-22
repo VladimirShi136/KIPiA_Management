@@ -6,6 +6,7 @@ import com.kipia.management.kipia_management.models.Device;
 import com.kipia.management.kipia_management.models.DeviceLocation;
 import com.kipia.management.kipia_management.models.Scheme;
 import com.kipia.management.kipia_management.utils.CustomAlertDialog;
+import com.kipia.management.kipia_management.utils.TimeValidator;
 import javafx.application.Platform;
 import javafx.scene.Node;
 import javafx.scene.control.Menu;
@@ -154,32 +155,41 @@ public class DeviceIconService {
      * Сохранение позиции и угла поворота устройства
      */
     private void saveDevicePositionAndRotation(Node node, Device device) {
-        if (currentScheme != null && deviceLocationDAO != null) {
-            double x = node.getLayoutX();
-            double y = node.getLayoutY();
-            double rotation = node.getRotate();
+        if (currentScheme == null || deviceLocationDAO == null) return;
 
-            // Корректировка для Circle (центр вместо левого верхнего угла)
-            if (node instanceof Circle) {
-                x -= 10;
-                y -= 10;
+        // Проверяем системное время перед записью в БД
+        TimeValidator timeValidator = TimeValidator.getInstance();
+        if (!timeValidator.validateTimeForWrite()) {
+            LOGGER.error("Сохранение позиции/поворота заблокировано: проблема с системным временем");
+            CustomAlertDialog.showWarning(
+                    "Сохранение заблокировано",
+                    "Позиция прибора не сохранена: " + timeValidator.getTimeIssueDescription()
+            );
+            return;
+        }
+
+        double x = node.getLayoutX();
+        double y = node.getLayoutY();
+        double rotation = node.getRotate();
+
+        // Корректировка для Circle (центр вместо левого верхнего угла)
+        if (node instanceof Circle) {
+            x -= 10;
+            y -= 10;
+        }
+
+        DeviceLocation location = new DeviceLocation(device.getId(), currentScheme.getId(), x, y, rotation);
+        boolean saved = deviceLocationDAO.addDeviceLocation(location);
+
+        if (saved) {
+            // Обновляем timestamp устройства
+            device.updateTimestamp();
+            if (deviceDAO != null) {
+                deviceDAO.updateDevice(device);
             }
-
-            DeviceLocation location = new DeviceLocation(device.getId(), currentScheme.getId(), x, y, rotation);
-
-            boolean saved = deviceLocationDAO.addDeviceLocation(location);
-
-            if (saved) {
-                // === НОВЫЙ КОД: Обновляем timestamp устройства ===
-                device.updateTimestamp();
-                if (deviceDAO != null) {
-                    deviceDAO.updateDevice(device);
-                }
-                // =================================================
-                LOGGER.info("Device position and rotation successfully saved to database after rotation");
-            } else {
-                LOGGER.warn("FAILED to save device position and rotation after rotation!");
-            }
+            LOGGER.info("Позиция и поворот прибора '{}' сохранены в БД", device.getName());
+        } else {
+            LOGGER.warn("Не удалось сохранить позицию и поворот прибора '{}'", device.getName());
         }
     }
 
@@ -308,22 +318,31 @@ public class DeviceIconService {
      * Обработка удаления устройства
      */
     private void handleDeviceDeletion(Node node, Scheme currentScheme) {
-        // Получаем устройство из UserData
         Device deviceToDelete = extractDeviceFromUserData(node);
         assert deviceToDelete != null;
+
+        // Проверяем системное время до диалога подтверждения
+        TimeValidator timeValidator = TimeValidator.getInstance();
+        if (!timeValidator.validateTimeForWrite()) {
+            LOGGER.error("Удаление прибора заблокировано: проблема с системным временем");
+            CustomAlertDialog.showWarning(
+                    "Удаление заблокировано",
+                    "Невозможно удалить прибор: " + timeValidator.getTimeIssueDescription()
+            );
+            return;
+        }
+
         boolean confirmed = CustomAlertDialog.showConfirmation(
                 "Подтверждение удаления",
                 "Вы уверены, что хотите удалить прибор '" + deviceToDelete.getName() + "'?"
         );
 
         if (confirmed) {
-            // === НОВЫЙ КОД: Обновляем timestamp устройства перед удалением ===
+            // Обновляем timestamp устройства перед удалением
             deviceToDelete.updateTimestamp();
             if (deviceDAO != null) {
                 deviceDAO.updateDevice(deviceToDelete);
             }
-            // ==============================================================
-
             deleteDeviceFromScheme(node, deviceToDelete, currentScheme);
         }
 
@@ -355,7 +374,7 @@ public class DeviceIconService {
             }
 
             schemePane.getChildren().remove(node);
-            LOGGER.info("Прибор '{}' удален со схемы", device.getName());
+            LOGGER.info("Прибор '{}' удалён со схемы", device.getName());
             CustomAlertDialog.showInfo("Удаление", "Прибор '" + device.getName() + "' удалён со схемы");
 
         } catch (Exception e) {
@@ -416,9 +435,9 @@ public class DeviceIconService {
     // ============================================================
 
     /**
-         * Вспомогательный класс для хранения устройства и его угла поворота
-         */
-        public record DeviceWithRotation(Device device, double rotation) {
+     * Вспомогательный класс для хранения устройства и его угла поворота
+     */
+    public record DeviceWithRotation(Device device, double rotation) {
     }
 
     // ============================================================

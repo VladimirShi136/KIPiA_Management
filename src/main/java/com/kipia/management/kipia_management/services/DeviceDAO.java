@@ -1,6 +1,7 @@
 package com.kipia.management.kipia_management.services;
 
 import com.kipia.management.kipia_management.models.Device;
+import com.kipia.management.kipia_management.utils.TimeValidator;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -55,6 +56,11 @@ public class DeviceDAO {
      * @param updateTimestamp если true - обновляет updated_at, если false - оставляет как есть
      */
     public boolean addDevice(Device device, boolean updateTimestamp) {
+        if (!TimeValidator.getInstance().validateTimeForWrite()) {
+            LOGGER.error("Добавление прибора заблокировано: проблема с системным временем");
+            return false;
+        }
+        
         if (updateTimestamp) {
             device.updateTimestamp();
         }
@@ -95,6 +101,11 @@ public class DeviceDAO {
      * @param updateTimestamp если true - обновляет updated_at, если false - оставляет как есть
      */
     public boolean updateDevice(Device device, boolean updateTimestamp) {
+        if (!TimeValidator.getInstance().validateTimeForWrite()) {
+            LOGGER.error("Обновление прибора заблокировано: проблема с системным временем");
+            return false;
+        }
+        
         if (updateTimestamp) {
             device.updateTimestamp();
         }
@@ -120,6 +131,11 @@ public class DeviceDAO {
      * Удаление прибора (soft delete)
      */
     public boolean deleteDevice(int id) {
+        if (!TimeValidator.getInstance().validateTimeForWrite()) {
+            LOGGER.error("Удаление прибора заблокировано: проблема с системным временем");
+            return false;
+        }
+        
         String sql = "UPDATE devices SET deleted_at = ?, updated_at = ? WHERE id = ?";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
             long now = System.currentTimeMillis();

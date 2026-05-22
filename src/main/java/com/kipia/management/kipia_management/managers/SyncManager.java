@@ -9,6 +9,7 @@ import com.kipia.management.kipia_management.services.DeviceDAO;
 import com.kipia.management.kipia_management.services.DeviceLocationDAO;
 import com.kipia.management.kipia_management.services.SchemeDAO;
 import com.kipia.management.kipia_management.utils.LoadingIndicator;
+import com.kipia.management.kipia_management.utils.TimeValidator;
 import javafx.concurrent.Task;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
@@ -60,7 +61,7 @@ public class SyncManager {
         public final Object base;
         public final String type;
         public final String key;
-        
+
         public ConflictInfo(String type, String key, Object local, Object remote, Object base) {
             this.type = type;
             this.key = key;
@@ -170,6 +171,15 @@ public class SyncManager {
      * @return результат: [добавлено устройств, обновлено устройств, добавлено схем, обновлено схем]
      */
     public int[] importFromZipFile(File file) {
+        // Проверяем системное время перед импортом — merge использует DAO,
+        // которые блокируют запись при сбое времени, и данные молча не применятся
+        TimeValidator timeValidator = TimeValidator.getInstance();
+        if (!timeValidator.validateTimeForWrite()) {
+            String reason = timeValidator.getTimeIssueDescription();
+            LOGGER.error("❌ Импорт заблокирован: проблема с системным временем — {}", reason);
+            throw new RuntimeException("Импорт заблокирован: " + reason);
+        }
+
         long fileSize = file.length();
         LOGGER.info("🔄 Начало импорта ZIP: {} ({} MB)", file.getName(), fileSize / 1024 / 1024);
         try {
@@ -186,9 +196,9 @@ public class SyncManager {
 
             // Выполняем merge без UI
             MergeResult result = performMerge(
-                importedDb.toString(),
-                Files.exists(importedPhotos) ? importedPhotos : null,
-                tempDir
+                    importedDb.toString(),
+                    Files.exists(importedPhotos) ? importedPhotos : null,
+                    tempDir
             );
 
             // Обрабатываем конфликты автоматически: предпочитаем локальные данные,
@@ -250,7 +260,7 @@ public class SyncManager {
      */
     public String exportToZip(Window ownerWindow, LoadingIndicator loadingIndicator) {
         checkFreeSpaceForExport();
-        
+
         File file = createExportFileChooser().showSaveDialog(ownerWindow);
         if (file == null) return null;
 
@@ -348,6 +358,17 @@ public class SyncManager {
             return;
         }
 
+        // Проверяем системное время перед импортом — merge использует DAO,
+        // которые блокируют запись при сбое времени, и данные молча не применятся
+        TimeValidator timeValidator = TimeValidator.getInstance();
+        if (!timeValidator.validateTimeForWrite()) {
+            String reason = timeValidator.getTimeIssueDescription();
+            LOGGER.error("❌ Импорт заблокирован: проблема с системным временем — {}", reason);
+            callback.onImportCompleted(null, null,
+                    new RuntimeException("Импорт заблокирован: " + reason));
+            return;
+        }
+
         long fileSize = file.length();
         LOGGER.info("🔄 Начало импорта ZIP: {} ({} MB)", file.getName(), fileSize / 1024 / 1024);
 
@@ -380,9 +401,9 @@ public class SyncManager {
                 LOGGER.info("Путь к импортированным фото: {} (exists={})", importedPhotos, Files.exists(importedPhotos));
 
                 return performMerge(
-                    importedDb.toString(),
-                    Files.exists(importedPhotos) ? importedPhotos : null,
-                    tempDir
+                        importedDb.toString(),
+                        Files.exists(importedPhotos) ? importedPhotos : null,
+                        tempDir
                 );
             }
         };
@@ -435,9 +456,9 @@ public class SyncManager {
      * @param callback коллбэк с результатом
      */
     public void applyConflictResolutions(List<ConflictInfo> conflicts,
-                                          List<ConflictResolutionDialog.ConflictResolution> resolutions,
-                                          Path tempDirectory,
-                                          ConflictResolutionCallback callback) {
+                                         List<ConflictResolutionDialog.ConflictResolution> resolutions,
+                                         Path tempDirectory,
+                                         ConflictResolutionCallback callback) {
         if (conflicts == null || conflicts.isEmpty()) {
             deleteDirectory(tempDirectory);
             callback.onResolutionsApplied(true, new int[4]);
@@ -582,17 +603,17 @@ public class SyncManager {
             setLoadingMessage(loadingIndicator, "Объединение данных...");
 
             MergeResult result = performMerge(
-                importedDb.toString(),
-                Files.exists(importedPhotos) ? importedPhotos : null,
-                tempDir
+                    importedDb.toString(),
+                    Files.exists(importedPhotos) ? importedPhotos : null,
+                    tempDir
             );
 
             if (result.hasConflicts()) {
                 // Синхронный вызов — только если в UI-потоке
                 if (!javafx.application.Platform.isFxApplicationThread()) {
                     throw new IllegalStateException(
-                        "Обнаружены конфликты при импорте: " + result.conflicts().size() +
-                        ". Требуется ручное разрешение в UI-потоке через importFromZipAsync()");
+                            "Обнаружены конфликты при импорте: " + result.conflicts().size() +
+                                    ". Требуется ручное разрешение в UI-потоке через importFromZipAsync()");
                 }
                 resolveConflictsSync(result.conflicts());
             }
@@ -647,7 +668,7 @@ public class SyncManager {
         int[] result = {0, 0, 0, 0};
         List<ConflictInfo> conflicts = new ArrayList<>();
         int photosCount = 0;
-        
+
         // Списки изменённых записей для точечного обновления timestamps
         List<Device> changedDevices = new ArrayList<>();
         List<Scheme> changedSchemes = new ArrayList<>();
@@ -753,23 +774,23 @@ public class SyncManager {
             for (String table : requiredTables) {
                 if (!tableExists(stmt, table)) {
                     throw new RuntimeException(
-                        "База данных повреждена или имеет неправильный формат.\n" +
-                        "Отсутствует обязательная таблица: " + table + "\n" +
-                        "Убедитесь, что вы выбрали корректный файл бэкапа KIPiA Management.");
+                            "База данных повреждена или имеет неправильный формат.\n" +
+                                    "Отсутствует обязательная таблица: " + table + "\n" +
+                                    "Убедитесь, что вы выбрали корректный файл бэкапа KIPiA Management.");
                 }
             }
 
             // Проверяем наличие колонок для синхронизации
             String[][] requiredColumns = {
-                {"devices", "deleted_at"},
-                {"devices", "updated_at"},
-                {"devices", "last_synced_at"},
-                {"schemes", "deleted_at"},
-                {"schemes", "updated_at"},
-                {"schemes", "last_synced_at"},
-                {"device_locations", "deleted_at"},
-                {"device_locations", "updated_at"},
-                {"device_locations", "last_synced_at"}
+                    {"devices", "deleted_at"},
+                    {"devices", "updated_at"},
+                    {"devices", "last_synced_at"},
+                    {"schemes", "deleted_at"},
+                    {"schemes", "updated_at"},
+                    {"schemes", "last_synced_at"},
+                    {"device_locations", "deleted_at"},
+                    {"device_locations", "updated_at"},
+                    {"device_locations", "last_synced_at"}
             };
 
             java.util.List<String> missingColumns = new java.util.ArrayList<>();
@@ -781,16 +802,16 @@ public class SyncManager {
 
             if (!missingColumns.isEmpty()) {
                 throw new RuntimeException(
-                    "База данных устарела и не поддерживает синхронизацию.\n" +
-                    "Отсутствуют обязательные поля: " + String.join(", ", missingColumns) + "\n" +
-                    "Необходимо обновить исходное приложение до актуальной версии " +
-                    "и создать новый бэкап.");
+                        "База данных устарела и не поддерживает синхронизацию.\n" +
+                                "Отсутствуют обязательные поля: " + String.join(", ", missingColumns) + "\n" +
+                                "Необходимо обновить исходное приложение до актуальной версии " +
+                                "и создать новый бэкап.");
             }
 
         } catch (java.sql.SQLException e) {
             throw new RuntimeException(
-                "Ошибка проверки совместимости базы данных: " + e.getMessage() + "\n" +
-                "Возможно, файл не является бэкапом KIPiA Management или повреждён.", e);
+                    "Ошибка проверки совместимости базы данных: " + e.getMessage() + "\n" +
+                            "Возможно, файл не является бэкапом KIPiA Management или повреждён.", e);
         }
     }
 
@@ -799,7 +820,7 @@ public class SyncManager {
      */
     private boolean tableExists(java.sql.Statement stmt, String tableName) throws java.sql.SQLException {
         try (java.sql.ResultSet rs = stmt.executeQuery(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='" + tableName + "'")) {
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='" + tableName + "'")) {
             return rs.next();
         }
     }
@@ -827,17 +848,17 @@ public class SyncManager {
         if (a == b) return true;
         if (a == null || b == null) return false;
         return Objects.equals(a.getType(), b.getType())
-            && Objects.equals(a.getName(), b.getName())
-            && Objects.equals(a.getManufacturer(), b.getManufacturer())
-            && Objects.equals(a.getInventoryNumber(), b.getInventoryNumber())
-            && Objects.equals(a.getYear(), b.getYear())
-            && Objects.equals(a.getMeasurementLimit(), b.getMeasurementLimit())
-            && Objects.equals(a.getAccuracyClass(), b.getAccuracyClass())
-            && Objects.equals(a.getLocation(), b.getLocation())
-            && Objects.equals(a.getValveNumber(), b.getValveNumber())
-            && Objects.equals(a.getStatus(), b.getStatus())
-            && Objects.equals(a.getAdditionalInfo(), b.getAdditionalInfo())
-            && Objects.equals(a.getPhotos(), b.getPhotos());
+                && Objects.equals(a.getName(), b.getName())
+                && Objects.equals(a.getManufacturer(), b.getManufacturer())
+                && Objects.equals(a.getInventoryNumber(), b.getInventoryNumber())
+                && Objects.equals(a.getYear(), b.getYear())
+                && Objects.equals(a.getMeasurementLimit(), b.getMeasurementLimit())
+                && Objects.equals(a.getAccuracyClass(), b.getAccuracyClass())
+                && Objects.equals(a.getLocation(), b.getLocation())
+                && Objects.equals(a.getValveNumber(), b.getValveNumber())
+                && Objects.equals(a.getStatus(), b.getStatus())
+                && Objects.equals(a.getAdditionalInfo(), b.getAdditionalInfo())
+                && Objects.equals(a.getPhotos(), b.getPhotos());
     }
 
     /**
@@ -848,8 +869,8 @@ public class SyncManager {
         if (a == b) return true;
         if (a == null || b == null) return false;
         return Objects.equals(a.getName(), b.getName())
-            && Objects.equals(a.getDescription(), b.getDescription())
-            && Objects.equals(a.getData(), b.getData());
+                && Objects.equals(a.getDescription(), b.getDescription())
+                && Objects.equals(a.getData(), b.getData());
     }
 
     /**
@@ -860,8 +881,8 @@ public class SyncManager {
         if (a == b) return true;
         if (a == null || b == null) return false;
         return Double.compare(a.getX(), b.getX()) == 0
-            && Double.compare(a.getY(), b.getY()) == 0
-            && Double.compare(a.getRotation(), b.getRotation()) == 0;
+                && Double.compare(a.getY(), b.getY()) == 0
+                && Double.compare(a.getRotation(), b.getRotation()) == 0;
     }
 
     /**
@@ -1039,33 +1060,33 @@ public class SyncManager {
 
         // Maps для импортированной стороны: ID -> stable key
         Map<Integer, String> importedDeviceIdToInv = importedDevices.stream()
-            .filter(d -> d.getInventoryNumber() != null)
-            .collect(Collectors.toMap(Device::getId, Device::getInventoryNumber));
+                .filter(d -> d.getInventoryNumber() != null)
+                .collect(Collectors.toMap(Device::getId, Device::getInventoryNumber));
         Map<Integer, String> importedSchemeIdToName = importedSchemes.stream()
-            .filter(s -> s.getName() != null)
-            .collect(Collectors.toMap(Scheme::getId, Scheme::getName));
+                .filter(s -> s.getName() != null)
+                .collect(Collectors.toMap(Scheme::getId, Scheme::getName));
 
         // Maps для локальной стороны: stable key -> ID
         Map<String, Integer> localInvToDeviceId = localDevices.stream()
-            .filter(d -> d.getInventoryNumber() != null)
-            .collect(Collectors.toMap(Device::getInventoryNumber, Device::getId));
+                .filter(d -> d.getInventoryNumber() != null)
+                .collect(Collectors.toMap(Device::getInventoryNumber, Device::getId));
         Map<String, Integer> localNameToSchemeId = localSchemes.stream()
-            .filter(s -> s.getName() != null)
-            .collect(Collectors.toMap(Scheme::getName, Scheme::getId));
+                .filter(s -> s.getName() != null)
+                .collect(Collectors.toMap(Scheme::getName, Scheme::getId));
 
         // Build local location map by stable key
         Map<String, DeviceLocation> currentLocMap = new HashMap<>();
         for (DeviceLocation loc : currentLocations) {
             String deviceInv = localDevices.stream()
-                .filter(d -> d.getId() == loc.getDeviceId())
-                .findFirst()
-                .map(Device::getInventoryNumber)
-                .orElse(null);
+                    .filter(d -> d.getId() == loc.getDeviceId())
+                    .findFirst()
+                    .map(Device::getInventoryNumber)
+                    .orElse(null);
             String schemeName = localSchemes.stream()
-                .filter(s -> s.getId() == loc.getSchemeId())
-                .findFirst()
-                .map(Scheme::getName)
-                .orElse(null);
+                    .filter(s -> s.getId() == loc.getSchemeId())
+                    .findFirst()
+                    .map(Scheme::getName)
+                    .orElse(null);
             if (deviceInv != null && schemeName != null) {
                 String stableKey = deviceInv + "|" + schemeName;
                 currentLocMap.put(stableKey, loc);
@@ -1077,7 +1098,7 @@ public class SyncManager {
             String schemeName = importedSchemeIdToName.get(imported.getSchemeId());
             if (invNum == null || schemeName == null) {
                 LOGGER.warn("Импортированная локация ссылается на отсутствующее устройство/схему: deviceId={}, schemeId={}",
-                    imported.getDeviceId(), imported.getSchemeId());
+                        imported.getDeviceId(), imported.getSchemeId());
                 continue;
             }
             String stableKey = invNum + "|" + schemeName;
@@ -1503,16 +1524,16 @@ public class SyncManager {
         try {
             List<String> photoFiles = new ArrayList<>();
             Files.list(deviceDir)
-                .filter(Files::isRegularFile)
-                .filter(path -> {
-                    String fileName = path.getFileName().toString().toLowerCase();
-                    return fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") || 
-                           fileName.endsWith(".png") || fileName.endsWith(".bmp") ||
-                           fileName.endsWith(".gif");
-                })
-                .sorted()
-                .forEach(path -> photoFiles.add(path.getFileName().toString()));
-            
+                    .filter(Files::isRegularFile)
+                    .filter(path -> {
+                        String fileName = path.getFileName().toString().toLowerCase();
+                        return fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") ||
+                                fileName.endsWith(".png") || fileName.endsWith(".bmp") ||
+                                fileName.endsWith(".gif");
+                    })
+                    .sorted()
+                    .forEach(path -> photoFiles.add(path.getFileName().toString()));
+
             return photoFiles;
         } catch (IOException e) {
             LOGGER.warn("Ошибка сканирования папки фото для устройства {}: {}",  location, e.getMessage());

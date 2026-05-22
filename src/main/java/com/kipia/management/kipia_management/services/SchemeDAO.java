@@ -1,6 +1,7 @@
 package com.kipia.management.kipia_management.services;
 
 import com.kipia.management.kipia_management.models.Scheme;
+import com.kipia.management.kipia_management.utils.TimeValidator;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import java.sql.*;
@@ -37,6 +38,11 @@ public class SchemeDAO {
      * @param updateTimestamp если true - обновляет updated_at, если false - оставляет как есть
      */
     public boolean addScheme(Scheme scheme, boolean updateTimestamp) {
+        if (!TimeValidator.getInstance().validateTimeForWrite()) {
+            LOGGER.error("Добавление схемы заблокировано: проблема с системным временем");
+            return false;
+        }
+        
         if (updateTimestamp) {
             scheme.updateTimestamp();
         }
@@ -78,6 +84,11 @@ public class SchemeDAO {
      * @param updateTimestamp если true - обновляет updated_at, если false - оставляет как есть
      */
     public boolean updateScheme(Scheme scheme, boolean updateTimestamp) {
+        if (!TimeValidator.getInstance().validateTimeForWrite()) {
+            LOGGER.error("Обновление схемы заблокировано: проблема с системным временем");
+            return false;
+        }
+        
         if (scheme == null || scheme.getId() <= 0) {
             LOGGER.warn("DAO updateScheme: Invalid scheme (null or id <=0)");
             return false;
@@ -172,6 +183,11 @@ public class SchemeDAO {
     }
 
     public boolean deleteScheme(int schemeId) {
+        if (!TimeValidator.getInstance().validateTimeForWrite()) {
+            LOGGER.error("Удаление схемы заблокировано: проблема с системным временем");
+            return false;
+        }
+        
         String sql = "UPDATE schemes SET deleted_at = ?, updated_at = ? WHERE id = ?";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
             long now = System.currentTimeMillis();

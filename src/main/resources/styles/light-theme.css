@@ -696,13 +696,13 @@
 
 /* ==================== MAIN.FXML - НИЖНЯЯ ПАНЕЛЬ ==================== */
 .bottom {
-    -fx-background-color: #ecf0f1;
+    -fx-background-color: #6c7884;
     -fx-padding: 5px;
     -fx-alignment: center-left;
 }
 
 .status-label {
-    -fx-text-fill: black;
+    -fx-text-fill: white;
     -fx-font-size: 12px;
 }
 
@@ -1595,7 +1595,13 @@
 }
 
 .scheme-zoom-label {
-    -fx-text-fill: #666;
+    -fx-text-fill: #000000;
+    -fx-font-size: 12px;
+    -fx-padding: 0 5;
+}
+
+.scheme-status-label {
+    -fx-text-fill: #000000;
     -fx-font-size: 12px;
     -fx-padding: 0 5;
 }

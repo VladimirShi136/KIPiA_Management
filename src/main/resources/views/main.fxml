@@ -80,7 +80,7 @@
                 </HBox>
             </HBox>
             <Region HBox.hgrow="ALWAYS"/>
-            <Label text="ver 2.0.0" styleClass="version-label">
+            <Label text="ver 2.0.1" styleClass="version-label">
                 <padding>
                     <Insets right="15"/>
                 </padding>

@@ -6,6 +6,7 @@ import com.kipia.management.kipia_management.managers.SyncManager;
 import com.kipia.management.kipia_management.services.*;
 import com.kipia.management.kipia_management.utils.CustomAlertDialog;
 import com.kipia.management.kipia_management.utils.LoggingConfig;
+import com.kipia.management.kipia_management.utils.TimeValidator;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
@@ -65,6 +66,10 @@ public class Main extends Application {
                 showErrorAndExit("Критическая ошибка", "Не удалось инициализировать необходимые сервисы");
                 return;
             }
+
+            // Проверка системного времени — вызываем checkOnStartup(),
+            // чтобы обнаружить аномалию сразу, а не при первой записи
+            checkSystemTime();
 
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/views/main.fxml"));
             Parent root = loader.load();
@@ -149,6 +154,32 @@ public class Main extends Application {
         } catch (Exception e) {
             LOGGER.error("❌ Ошибка инициализации сервисов: {}", e.getMessage(), e);
             throw new RuntimeException("Не удалось инициализировать сервисы приложения", e);
+        }
+    }
+
+    /**
+     * Проверяет системное время при старте.
+     * Использует checkOnStartup() — он обнаруживает аномалию сразу,
+     * а не только при первой попытке записи в БД.
+     */
+    private void checkSystemTime() {
+        TimeValidator timeValidator = TimeValidator.getInstance();
+        boolean timeOk = timeValidator.checkOnStartup();
+
+        if (!timeOk) {
+            String issueDescription = timeValidator.getTimeIssueDescription();
+            LOGGER.warn("Обнаружена проблема с системным временем: {}", issueDescription);
+
+            Platform.runLater(() ->
+                    CustomAlertDialog.showWarning(
+                            "Проблема с системным временем",
+                            issueDescription + "\n\n" +
+                                    "Операции записи данных будут заблокированы до устранения проблемы.\n" +
+                                    "После коррекции времени перезапустите приложение."
+                    )
+            );
+        } else {
+            LOGGER.info("Системное время в порядке");
         }
     }
 

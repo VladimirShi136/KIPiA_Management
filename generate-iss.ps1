@@ -1,10 +1,10 @@
-<#
+﻿<#
 .SYNOPSIS
 Генерирует ISS-файл для Inno Setup на основе шаблонов и параметров.
 #>
 
 param(
-    [string]$Version = "1.0.3",
+    [string]$Version = "2.0.1",
     [string]$OutputDir = "$PSScriptRoot\Output",
     [string]$InstallerDir = "$PSScriptRoot\KIPiA_Installer"
 )

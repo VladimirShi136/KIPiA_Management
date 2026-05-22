@@ -120,8 +120,8 @@
         </center>
         <!-- Нижняя панель: статус -->
         <bottom>
-            <HBox styleClass="bottom" style="-fx-padding: 5 10;">
-                <Label fx:id="statusLabel" text="Готово к редактированию" styleClass="status-label"/>
+            <HBox style="-fx-padding: 5 10;">
+                <Label fx:id="statusLabel" text="Готово к редактированию" styleClass="scheme-status-label"/>
                 <Region HBox.hgrow="ALWAYS"/>
                 <Label fx:id="zoomLabel" text="Масштаб: 100%" styleClass="scheme-zoom-label"/>
             </HBox>

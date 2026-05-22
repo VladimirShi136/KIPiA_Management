@@ -1,10 +1,10 @@
-[Setup]
+﻿[Setup]
 AppName=KIPiA_Management
-AppVersion=1.0.3
-AppVerName=KIPiA_Management 1.0.3
+AppVersion=2.0.1
+AppVerName=KIPiA_Management 2.0.1
 DefaultDirName={commonpf}\KIPiA_Management
 DefaultGroupName=KIPiA_Management
-OutputBaseFilename=KIPiA_Management_1.0.3
+OutputBaseFilename=KIPiA_Management_2.0.1
 Compression=lzma2
 SolidCompression=yes
 PrivilegesRequired=admin
@@ -12,7 +12,7 @@ FlatComponentsList=false
 ShowComponentSizes=yes
 AllowNoIcons=yes
 LanguageDetectionMethod=locale
-UninstallDisplayName=KIPiA_Management 1.0.3 - Удаление
+UninstallDisplayName=KIPiA_Management 2.0.1 - Удаление
 UninstallDisplayIcon={app}\iconApp.ico
 DirExistsWarning=no
 SetupIconFile=C:\Users\kalba\IdeaProjects\KIPiA_Management\installer_resources\iconApp.ico
