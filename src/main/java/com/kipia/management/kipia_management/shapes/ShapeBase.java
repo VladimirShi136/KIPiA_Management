@@ -569,16 +569,20 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      * Обработка начала перетаскивания
      */
     private void handleDragPressed(MouseEvent event) {
-        // Получаем координаты в локальной системе группы (фигуры)
-        Point2D mousePos = new Point2D(event.getX(), event.getY());
+        // Получаем координаты мыши в мировых координатах панели
+        Point2D worldMousePos = pane.sceneToLocal(event.getSceneX(), event.getSceneY());
+
+        // Трансформируем мировые координаты в локальные с учетом поворота — только для hit-test
+        Point2D localMousePos = transformWorldToLocal(worldMousePos.getX(), worldMousePos.getY());
 
         // Проверяем попадание на фигуру (локальные координаты группы)
-        if (!containsLocalPoint(mousePos.getX(), mousePos.getY())) {
+        if (!containsLocalPoint(localMousePos.getX(), localMousePos.getY())) {
             event.consume();
             return;
         }
 
-        initializeDrag(mousePos);
+        // Передаём мировые координаты мыши — смещение считаем в мировом пространстве
+        initializeDrag(worldMousePos);
 
         if (this instanceof LineShape) {
             if (onSelectCallback != null) {
@@ -595,9 +599,10 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      * Инициализация параметров перетаскивания
      */
     protected void initializeDrag(Point2D mousePos) {
-        // Смещение от левого верхнего угла фигуры до точки клика (в локальных координатах)
-        dragOffsetX = mousePos.getX();
-        dragOffsetY = mousePos.getY();
+        // Смещение от layoutX/Y фигуры до точки клика в МИРОВЫХ координатах.
+        // Это гарантирует корректный drag при любом угле поворота.
+        dragOffsetX = mousePos.getX() - getLayoutX();
+        dragOffsetY = mousePos.getY() - getLayoutY();
 
         // СОХРАНЯЕМ НАЧАЛЬНУЮ ПОЗИЦИЮ ДЛЯ UNDO
         dragStartX = getLayoutX();
@@ -616,12 +621,14 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
             isDragging = true;
         }
 
-        // Получаем координаты мыши в локальной системе группы
-        Point2D mousePos = new Point2D(event.getX(), event.getY());
+        // Получаем координаты мыши в мировых координатах панели
+        Point2D worldMousePos = pane.sceneToLocal(event.getSceneX(), event.getSceneY());
 
-        // Новая позиция: текущие координаты мыши минус смещение внутри фигуры
-        double newWorldX = getLayoutX() + (mousePos.getX() - dragOffsetX);
-        double newWorldY = getLayoutY() + (mousePos.getY() - dragOffsetY);
+        // Новая позиция фигуры: мировые координаты мыши минус мировое смещение.
+        // transformWorldToLocal здесь НЕ нужен — drag всегда в мировом пространстве,
+        // независимо от угла поворота фигуры.
+        double newWorldX = worldMousePos.getX() - dragOffsetX;
+        double newWorldY = worldMousePos.getY() - dragOffsetY;
 
         setLayoutX(newWorldX);
         setLayoutY(newWorldY);
@@ -1054,39 +1061,40 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      * @return true если позиция была изменена
      */
     public boolean clampToCanvasBounds(double canvasWidth, double canvasHeight) {
-        double newX = getLayoutX();
-        double newY = getLayoutY();
-        boolean changed = false;
-
-        // Получаем границы фигуры в мировых координатах
+        // Реальный bounding box с учётом поворота
         javafx.geometry.Rectangle2D bounds = getWorldBounds();
 
-        // Проверяем выход за левую границу
-        if (bounds.getMinX() < 0) {
-            newX -= bounds.getMinX();
-            changed = true;
+        // Смещение между layoutX/Y (левый верх неповёрнутого bbox) и bounds.minX/Y
+        // (левый верх повёрнутого bbox). При rotation=0 это всегда (0, 0).
+        // При любом другом угле — ненулевое, и его нужно учитывать при пересчёте layoutX/Y.
+        double offsetX = bounds.getMinX() - getLayoutX();
+        double offsetY = bounds.getMinY() - getLayoutY();
+
+        // Зажимаем bounding box строго в одну сторону (if-else, не if-if):
+        // если фигура шире канваса — прижимаем к левому краю, иначе — к правому.
+        double clampedMinX = bounds.getMinX();
+        if (clampedMinX < 0) {
+            clampedMinX = 0;
+        } else if (bounds.getMaxX() > canvasWidth) {
+            clampedMinX = canvasWidth - bounds.getWidth();
         }
 
-        // Проверяем выход за правую границу
-        if (bounds.getMaxX() > canvasWidth) {
-            newX -= (bounds.getMaxX() - canvasWidth);
-            changed = true;
+        double clampedMinY = bounds.getMinY();
+        if (clampedMinY < 0) {
+            clampedMinY = 0;
+        } else if (bounds.getMaxY() > canvasHeight) {
+            clampedMinY = canvasHeight - bounds.getHeight();
         }
 
-        // Проверяем выход за верхнюю границу
-        if (bounds.getMinY() < 0) {
-            newY -= bounds.getMinY();
-            changed = true;
-        }
+        // Обратно пересчитываем layoutX/Y из нового положения bounds
+        double newLayoutX = clampedMinX - offsetX;
+        double newLayoutY = clampedMinY - offsetY;
 
-        // Проверяем выход за нижнюю границу
-        if (bounds.getMaxY() > canvasHeight) {
-            newY -= (bounds.getMaxY() - canvasHeight);
-            changed = true;
-        }
+        boolean changed = Math.abs(newLayoutX - getLayoutX()) > 0.01
+                || Math.abs(newLayoutY - getLayoutY()) > 0.01;
 
         if (changed) {
-            setWorldPosition(newX, newY);
+            setWorldPosition(newLayoutX, newLayoutY);
         }
 
         return changed;
@@ -1498,15 +1506,17 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      * Обработчик поворота в контекстном меню (будет переопределен в LineShape)
      */
     protected void handleRotationInMenu() {
-        // Для линии этот метод не должен вызываться
         if (this instanceof LineShape) {
             return;
         }
 
-        // ВАЖНО: Сохраняем старый угол ДО изменения
         double oldAngle = rotationAngle;
         double newAngle = (rotationAngle + 45) % 360;
         setRotation(newAngle);
+
+        // После поворота фигура может выйти за границы канваса —
+        // принудительно возвращаем её внутрь по новому bounding box
+        clampToCanvasBounds(canvasBoundsWidth, canvasBoundsHeight);
 
         if (shapeManager != null) {
             shapeManager.registerRotation(this, oldAngle, newAngle);

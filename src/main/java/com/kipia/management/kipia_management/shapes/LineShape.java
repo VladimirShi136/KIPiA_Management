@@ -105,7 +105,7 @@ public class LineShape extends ShapeBase {
      * ИСПРАВЛЕНО: возвращает мировые координаты обеих точек,
      * добавляя layoutX/Y к локальным координатам линии.
      */
-    protected double[] getAbsoluteCoordinates() {
+    public double[] getAbsoluteCoordinates() {
         return new double[]{
                 getLayoutX() + line.getStartX(),
                 getLayoutY() + line.getStartY(),

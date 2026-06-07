@@ -95,7 +95,7 @@
                               styleClass="form-textarea"/>
 
                     <!-- СТРОКА 11: Фото -->
-                    <Label text="Фото (несколько):" GridPane.rowIndex="11" GridPane.columnIndex="0" styleClass="form-label"/>
+                    <Label fx:id="photoSectionLabel" text="Фото (несколько):" GridPane.rowIndex="11" GridPane.columnIndex="0" styleClass="form-label"/>
                     <HBox spacing="20" GridPane.rowIndex="11" GridPane.columnIndex="1" alignment="CENTER_LEFT">
                         <Button fx:id="photoChooseBtn" onAction="#onChooseFiles"
                                 styleClass="photo-icon-btn" prefWidth="24" prefHeight="24">
@@ -116,7 +116,7 @@
                     </HBox>
 
                     <!-- СТРОКА 12: Выбранные фото -->
-                    <Label text="Выбранные фото:" GridPane.rowIndex="12" GridPane.columnIndex="0" styleClass="form-label"/>
+                    <Label fx:id="selectedPhotosLabel" text="Выбранные фото:" GridPane.rowIndex="12" GridPane.columnIndex="0" styleClass="form-label"/>
                     <HBox GridPane.rowIndex="12" GridPane.columnIndex="1" alignment="CENTER_LEFT">
                         <VBox spacing="5" prefWidth="280">
                             <ListView fx:id="selectedPhotosListView"

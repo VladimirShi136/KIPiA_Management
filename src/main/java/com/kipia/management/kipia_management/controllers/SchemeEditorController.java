@@ -147,6 +147,7 @@ public class SchemeEditorController {
             setupPaneEventHandlers();
             setupToolButtons();
             applyButtonStyles();
+            setToolbarDisabled(true);
             setupWindowCloseHandler();
             setupCanvasTransforms();
         } catch (Exception e) {
@@ -524,6 +525,33 @@ public class SchemeEditorController {
         deleteSchemeBtn.getStyleClass().add("tool-button");
     }
 
+    /**
+     * Возвращает список всех кнопок панели инструментов (кроме комбобокса выбора схемы)
+     */
+    private List<Button> getToolbarButtons() {
+        return Arrays.asList(
+                lineToolBtn, rectToolBtn, ellipseToolBtn, rhombusToolBtn, textToolBtn,
+                saveSchemeBtn, clearSchemeBtn, deleteSchemeBtn, undoBtn, redoBtn, resetViewBtn
+        );
+    }
+
+    /**
+     * Блокирует или разблокирует все кнопки панели инструментов.
+     * @param disabled true — заблокировать, false — разблокировать
+     */
+    private void setToolbarDisabled(boolean disabled) {
+        getToolbarButtons().forEach(btn -> {
+            if (btn != null) btn.setDisable(disabled);
+        });
+        // undo/redo управляются ShapeManager'ом отдельно — оставляем заблокированными
+        // если схем нет, иначе восстанавливаем их исходное состояние
+        if (!disabled && shapeManager != null) {
+            // ShapeManager сам выставит правильное состояние undo/redo через колбэки
+            undoBtn.setDisable(true);
+            redoBtn.setDisable(true);
+        }
+    }
+
     // ============================================================
     // TOOL MANAGEMENT
     // ============================================================
@@ -703,10 +731,12 @@ public class SchemeEditorController {
     private void updateSchemeComboBox(List<Scheme> schemes) {
         if (schemes.isEmpty()) {
             handleNoSchemesFound();
+            setToolbarDisabled(true);
             return;
         }
         ObservableList<Scheme> schemeList = FXCollections.observableArrayList(schemes);
         schemeComboBox.setItems(schemeList);
+        setToolbarDisabled(false);
         LOGGER.info("Загружено {} схем", schemeList.size());
     }
 
@@ -717,6 +747,18 @@ public class SchemeEditorController {
         LOGGER.warn("Список схем пуст");
         CustomAlertDialog.showWarning("Загрузка схем",
                 "Не удалось загрузить или создать схемы. Возможно, отсутствуют устройства с расположениями.");
+    }
+
+    /**
+     * Проверяет, есть ли хотя бы одно устройство,
+     * у которого поле {@code location} равно названию текущей схемы.
+     * @return true – если такие устройства найдены
+     */
+    private boolean hasDevicesWithSchemeName() {
+        if (currentScheme == null || deviceList == null) return false;
+        String schemeName = currentScheme.getName();
+        return deviceList.stream()
+                .anyMatch(dev -> schemeName.equals(dev.getLocation()));
     }
 
     /**
@@ -779,7 +821,6 @@ public class SchemeEditorController {
 
     /**
      * Поиск узла (фигуры или прибора) в указанной мировой позиции
-     * Обновленная версия с использованием ShapeUtils
      */
     private Node findNodeAtWorldPosition(double worldX, double worldY) {
 
@@ -1003,6 +1044,8 @@ public class SchemeEditorController {
      * Загрузка выбранной схемы
      */
     private void loadScheme(Scheme scheme) {
+        ClipboardManager.clearForNewScheme();
+
         // СОХРАНЯЕМ текущую схему перед загрузкой новой
         if (currentScheme != null && !currentScheme.equals(scheme)) {
             boolean hadChanges = schemeSaver.isDirty();
@@ -1079,6 +1122,9 @@ public class SchemeEditorController {
                 "Это действие удалит ВСЕ фигуры и приборы с панели, без возможности восстановления. Продолжить?");
         if (!confirm) return;
 
+        // ⭐ ОЧИЩАЕМ БУФЕР ОБМЕНА ПРИ ОЧИСТКЕ СХЕМЫ
+        ClipboardManager.clearForNewScheme();
+
         try {
             if (currentScheme != null) {
                 if (deviceLocationDAO != null) {
@@ -1129,15 +1175,20 @@ public class SchemeEditorController {
             CustomAlertDialog.showWarning("Удаление схемы", "Не выбрана схема для удаления");
             return;
         }
-        boolean hasDevices = schemeDAO.hasDevicesOnScheme(currentScheme.getId());
-        if (hasDevices) {
+
+        if (hasDevicesWithSchemeName()) {
             CustomAlertDialog.showWarning("Удаление схемы",
-                    "Невозможно удалить схему \"" + currentScheme.getName() + "\".\n\nК схеме привязаны приборы (поле 'Местоположение').\nСначала измените местоположение всех приборов или удалите их.");
+                    "Невозможно удалить схему \"" + currentScheme.getName() + "\".\n" +
+                            "В базе есть приборы, у которых поле \"location\" содержит название этой схемы.\n" +
+                            "Перенесите их в другую схему или измените значение поля \"location\".");
             return;
         }
+
         boolean confirm = CustomAlertDialog.showConfirmation("Удаление схемы",
                 "Удалить схему \"" + currentScheme.getName() + "\"?\n\nСхема будет полностью удалена из базы данных.\nЭто действие необратимо!");
         if (!confirm) return;
+
+        ClipboardManager.clearForNewScheme();
         try {
             int schemeId = currentScheme.getId();
             String schemeName = currentScheme.getName();
@@ -1163,17 +1214,21 @@ public class SchemeEditorController {
         }
     }
 
+    /**
+     * Обновляет состояние кнопки удаления схемы
+     */
     private void updateDeleteButtonState() {
         if (deleteSchemeBtn == null || currentScheme == null) {
             if (deleteSchemeBtn != null) deleteSchemeBtn.setDisable(true);
             return;
         }
-        boolean hasDevices = schemeDAO.hasDevicesOnScheme(currentScheme.getId());
-        deleteSchemeBtn.setDisable(hasDevices);
-        if (hasDevices) {
-            deleteSchemeBtn.setTooltip(new javafx.scene.control.Tooltip("Удаление заблокировано: к схеме привязаны приборы"));
+        boolean hasDevicesByName = hasDevicesWithSchemeName();
+        deleteSchemeBtn.setDisable(hasDevicesByName);
+        if (hasDevicesByName) {
+            deleteSchemeBtn.setTooltip(new Tooltip(
+                    "Удаление заблокировано: есть приборы с location = \"" + currentScheme.getName() + "\""));
         } else {
-            deleteSchemeBtn.setTooltip(new javafx.scene.control.Tooltip("Удалить схему"));
+            deleteSchemeBtn.setTooltip(new Tooltip("Удалить схему"));
         }
     }
 
@@ -1267,6 +1322,7 @@ public class SchemeEditorController {
             statusLabel.setText("Схема не выбрана");
             return;
         }
+
         // Просто логируем информацию о доступных приборах
         String selectedSchemeName = currentScheme.getName();
         List<Integer> usedDeviceIds = getUsedDeviceIds();
@@ -1276,6 +1332,8 @@ public class SchemeEditorController {
                 .filter(device -> !usedDeviceIds.contains(device.getId()))
                 .filter(device -> !currentSchemeDeviceIds.contains(device.getId()))
                 .count();
+
+        updateDeleteButtonState();
     }
 
     /**
@@ -1532,7 +1590,9 @@ public class SchemeEditorController {
                     try {
                         ShapeBase shape = shapeService.addShape(ShapeType.TEXT, coords);
                         if (shape instanceof TextShape textShape) {
-                            textShape.setText(newText);
+                            String oldText = textShape.getText(); // сохраняем ДО изменения
+                            textShape.setTextSilent(newText);     // меняем без авторегистрации
+                            shapeManager.registerTextChange(textShape, oldText, newText); // регистрируем
                             shapeManager.addShape(shape);
                             statusLabel.setText("Текст добавлен: '" + newText + "'");
                         }

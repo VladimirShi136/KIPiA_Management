@@ -110,6 +110,36 @@ public class EllipseShape extends ShapeBase {
     }
 
     /**
+     * Точный bounding box повёрнутого эллипса.
+     * Для эллипса с полуосями a и b, повёрнутого на угол θ:
+     *   halfW = sqrt((a·cos θ)² + (b·sin θ)²)
+     *   halfH = sqrt((a·sin θ)² + (b·cos θ)²)
+     */
+    @Override
+    public javafx.geometry.Rectangle2D getWorldBounds() {
+        double a = getCurrentWidth() / 2;   // полуось X
+        double b = getCurrentHeight() / 2;  // полуось Y
+
+        double centerX = getLayoutX() + a;
+        double centerY = getLayoutY() + b;
+
+        double radians = Math.toRadians(rotationAngle);
+        double cosA = Math.cos(radians);
+        double sinA = Math.sin(radians);
+
+        // Реальные полуоси bounding box повёрнутого эллипса
+        double halfW = Math.sqrt(a * a * cosA * cosA + b * b * sinA * sinA);
+        double halfH = Math.sqrt(a * a * sinA * sinA + b * b * cosA * cosA);
+
+        return new javafx.geometry.Rectangle2D(
+                centerX - halfW,
+                centerY - halfH,
+                halfW * 2,
+                halfH * 2
+        );
+    }
+
+    /**
      * Проверка попадания точки на границу эллипса (только контур, не внутренность)
      */
     @Override

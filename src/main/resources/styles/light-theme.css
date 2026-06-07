@@ -201,11 +201,13 @@
 /* ==================== HELP DIALOG ==================== */
 .help-dialog {
     -fx-background-color: #f4eae5;
+    -fx-border-color: #465261;
+    -fx-border-radius: 10px;
     -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.22), 20, 0, 0, 5);
 }
 
 .help-dialog .top-box {
-    -fx-background-color: #465261;
+    -fx-background-color: #3a4655;
     -fx-border-color: #3a4655;
     -fx-border-width: 0 0 1 0;
 }
@@ -293,7 +295,7 @@
 }
 
 #contentWrapper {
-    -fx-background-color: transparent;
+    -fx-background-color: #f4eae5;
     -fx-background-radius: 0;
 }
 

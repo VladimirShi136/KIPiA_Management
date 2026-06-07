@@ -4,16 +4,12 @@ import com.kipia.management.kipia_management.managers.ClipboardManager;
 import com.kipia.management.kipia_management.managers.ShapeManager;
 import com.kipia.management.kipia_management.utils.CustomAlertDialog;
 import javafx.geometry.Bounds;
-import javafx.geometry.Insets;
 import javafx.geometry.VPos;
 import javafx.scene.control.*;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.AnchorPane;
-import javafx.scene.layout.GridPane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
-import javafx.scene.text.FontPosture;
-import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 
 import java.util.Optional;
@@ -165,11 +161,15 @@ public class TextShape extends ShapeBase {
         // ДОБАВИТЬ пункт поворота
         MenuItem rotateItem = new MenuItem("Повернуть");
         rotateItem.setOnAction(_ -> {
-            double newAngle = (rotationAngle + 45) % 360;
+            double oldAngle = rotationAngle;
+            double newAngle = (oldAngle + 45) % 360;
             setRotation(newAngle);
 
+            // Возвращаем в границы канваса после поворота
+            clampToCanvasBounds(canvasBoundsWidth, canvasBoundsHeight);
+
             if (shapeManager != null) {
-                shapeManager.registerRotation(this, rotationAngle, newAngle);
+                shapeManager.registerRotation(this, oldAngle, newAngle);
                 statusSetter.accept("Текст повернут на " + newAngle + " градусов");
             }
         });
@@ -338,12 +338,25 @@ public class TextShape extends ShapeBase {
     }
 
     private void openTextEditDialog() {
-        Optional<String> result = CustomAlertDialog.showTextInputDialog("Редактирование текста", "Введите новый текст:", getText());
+        Optional<String> result = CustomAlertDialog.showTextInputDialog(
+                "Редактирование текста", "Введите новый текст:", getText());
         if (result.isPresent()) {
             String newText = result.get().trim();
-            setText(newText);
-            statusSetter.accept("Текст изменен");
+            if (!newText.isEmpty() && !newText.equals(getText())) {
+                String oldText = getText(); // сохраняем ДО изменения
+                setTextSilent(newText);     // меняем без авторегистрации
+                if (shapeManager != null) {
+                    shapeManager.registerTextChange(this, oldText, newText);
+                }
+                statusSetter.accept("Текст изменен");
+            }
         }
+    }
+
+    // Устанавливает текст без регистрации в undo/redo (для использования в командах)
+    public void setTextSilent(String content) {
+        this.text.setText(content != null ? content : "Текст");
+        calculateTextSize();
     }
 
     /**

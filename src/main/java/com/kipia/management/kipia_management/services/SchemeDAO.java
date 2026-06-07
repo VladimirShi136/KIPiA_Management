@@ -206,25 +206,6 @@ public class SchemeDAO {
         }
     }
 
-    public boolean hasDevicesOnScheme(int schemeId) {
-        Scheme scheme = getSchemeById(schemeId);
-        if (scheme == null) {
-            return false;
-        }
-
-        String sql = "SELECT COUNT(*) FROM devices WHERE location = ?";
-        try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
-            stmt.setString(1, scheme.getName());
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                return rs.getInt(1) > 0;
-            }
-        } catch (SQLException e) {
-            LOGGER.error("Ошибка проверки приборов на схеме: {}", e.getMessage(), e);
-        }
-        return false;
-    }
-
     private Scheme createSchemeFromResultSet(ResultSet rs) throws SQLException {
         Scheme scheme = new Scheme();
         scheme.setId(rs.getInt("id"));

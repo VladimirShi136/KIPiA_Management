@@ -63,6 +63,10 @@ public class AddDeviceController {
     @FXML
     private Label photoCounterLabel;
     @FXML
+    private Label photoSectionLabel;
+    @FXML
+    private Label selectedPhotosLabel;
+    @FXML
     private Label updatedAtLabel;
 
     @FXML
@@ -142,11 +146,48 @@ public class AddDeviceController {
                     .format(new Date(device.getUpdatedAt())));
         }
 
+        // Включаем элементы для работы с фото при редактировании
+        disablePhotoControls(false);
+
         LOGGER.info("Форма переведена в режим редактирования: {}", device.getName());
     }
 
     private String nvl(String value) {
         return value != null ? value : "";
+    }
+
+    /**
+     * Включает или отключает элементы управления фото.
+     * @param disable - true для отключения, false для включения
+     */
+    private void disablePhotoControls(boolean disable) {
+        if (photoChooseBtn != null) {
+            photoChooseBtn.setDisable(disable);
+            photoChooseBtn.setVisible(!disable);
+            photoChooseBtn.setManaged(!disable);
+        }
+        if (photoRemoveBtn != null) {
+            photoRemoveBtn.setDisable(disable);
+            photoRemoveBtn.setVisible(!disable);
+            photoRemoveBtn.setManaged(!disable);
+        }
+        if (selectedPhotosListView != null) {
+            selectedPhotosListView.setDisable(disable);
+            selectedPhotosListView.setVisible(!disable);
+            selectedPhotosListView.setManaged(!disable);
+        }
+        if (photoCounterLabel != null) {
+            photoCounterLabel.setVisible(!disable);
+            photoCounterLabel.setManaged(!disable);
+        }
+        if (photoSectionLabel != null) {
+            photoSectionLabel.setVisible(!disable);
+            photoSectionLabel.setManaged(!disable);
+        }
+        if (selectedPhotosLabel != null) {
+            selectedPhotosLabel.setVisible(!disable);
+            selectedPhotosLabel.setManaged(!disable);
+        }
     }
 
     /**
@@ -186,7 +227,7 @@ public class AddDeviceController {
 
         // Инициализация ComboBox локаций (загрузка позже через setDeviceDAO)
         locationField.setEditable(true);
-        
+
         // Установка иконок в зависимости от темы (после добавления в сцену)
         cancelBtn.sceneProperty().addListener((_, _, newScene) -> {
             if (newScene != null) {
@@ -225,6 +266,9 @@ public class AddDeviceController {
         // Настройка обработчиков
         photoChooseBtn.setOnAction(_ -> onChooseFiles());
         photoRemoveBtn.setOnAction(_ -> onRemovePhoto());
+
+        // Отключаем элементы для работы с фото при создании прибора
+        disablePhotoControls(true);
 
         LOGGER.info("Форма добавления прибора инициализирована");
     }
@@ -293,12 +337,7 @@ public class AddDeviceController {
         Device device = new Device();
         createOrUpdateDevice(data.type, data.name, data.manufacturer, data.inventoryNumber, data.year, data.measurementLimit, data.accuracyClass, data.location, data.valveNumber, data.status, device);
 
-        // Добавляем выбранные фото
-        for (String photoFileName : selectedPhotoFiles) {
-            device.addPhoto(photoFileName);
-        }
-
-        LOGGER.info("Попытка добавить прибор: {} (инв.: {}), фото: {}", data.name, data.inventoryNumber, selectedPhotoFiles.size());
+        LOGGER.info("Попытка добавить прибор: {} (инв.: {})", data.name, data.inventoryNumber);
 
         // Сохраняем в DAO
         boolean success = deviceDAO.addDevice(device);

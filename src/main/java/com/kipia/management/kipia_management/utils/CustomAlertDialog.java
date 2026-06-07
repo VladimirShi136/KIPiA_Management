@@ -161,6 +161,72 @@ public class CustomAlertDialog {
         });
         cancelBtn.setOnAction(_ -> stage.close());
 
+        // Стилизация выпадающего списка для темной темы
+        if (dark) {
+            stage.setOnShown(_ -> {
+                // Применяем стили к popup и list cells
+                comboBox.skinProperty().addListener((_, _, newSkin) -> {
+                    if (newSkin != null) {
+                        // Стилизация popup через lookup
+                        javafx.scene.Node popupNode = comboBox.lookup(".popup-content");
+                        if (popupNode != null) {
+                            popupNode.setStyle(
+                                    "-fx-background-color:#2d2d2d;" +
+                                            "-fx-border-color:#4A5568;" +
+                                            "-fx-border-width:1px;" +
+                                            "-fx-background-radius:5px;" +
+                                            "-fx-border-radius:5px;" +
+                                            "-fx-effect:null;"
+                            );
+                        }
+
+                        // Стилизация list cells
+                        comboBox.setCellFactory(_ -> new ListCell<>() {
+                            @Override
+                            protected void updateItem(String item, boolean empty) {
+                                super.updateItem(item, empty);
+                                if (empty || item == null) {
+                                    setText(null);
+                                    setStyle("-fx-background-color:transparent;");
+                                } else {
+                                    setText(item);
+                                    setStyle(
+                                            "-fx-text-fill:#ecf0f1;" +
+                                                    "-fx-background-color:transparent;" +
+                                                    "-fx-padding:6px 10px;" +
+                                                    "-fx-font-size:13px;" +
+                                                    "-fx-font-family:'Segoe UI',Arial,sans-serif;"
+                                    );
+                                }
+                            }
+
+                            @Override
+                            public void updateSelected(boolean selected) {
+                                super.updateSelected(selected);
+                                if (selected) {
+                                    setStyle(
+                                            "-fx-text-fill:#ecf0f1;" +
+                                                    "-fx-background-color:#4A5568;" +
+                                                    "-fx-padding:6px 10px;" +
+                                                    "-fx-font-size:13px;" +
+                                                    "-fx-font-family:'Segoe UI',Arial,sans-serif;"
+                                    );
+                                } else {
+                                    setStyle(
+                                            "-fx-text-fill:#ecf0f1;" +
+                                                    "-fx-background-color:transparent;" +
+                                                    "-fx-padding:6px 10px;" +
+                                                    "-fx-font-size:13px;" +
+                                                    "-fx-font-family:'Segoe UI',Arial,sans-serif;"
+                                    );
+                                }
+                            }
+                        });
+                    }
+                });
+            });
+        }
+
         stage.showAndWait();
         return result[0] != null ? Optional.of(result[0]) : Optional.empty();
     }
@@ -1014,7 +1080,11 @@ public class CustomAlertDialog {
                 "-fx-text-fill:" + (dark ? "#ecf0f1" : "#333") + ";" +
                 "-fx-border-color:" + (dark ? "#4A5568" : "#bdc3c7") + ";" +
                 "-fx-border-width:1px;-fx-border-radius:5px;-fx-background-radius:5px;" +
-                "-fx-padding:6px 10px;-fx-font-size:13px;";
+                "-fx-padding:6px 10px;-fx-font-size:13px;" +
+                // Стили для выпадающего списка
+                "-fx-prompt-text-fill:" + (dark ? "#6a7a8a" : "#999") + ";" +
+                "-fx-selection-bar:" + (dark ? "#4A5568" : "#d0d4d8") + ";" +
+                "-fx-selection-bar-text:" + (dark ? "#ecf0f1" : "#333") + ";";
     }
 
     private static void setupButtonStyles(Button btn, boolean primary) {

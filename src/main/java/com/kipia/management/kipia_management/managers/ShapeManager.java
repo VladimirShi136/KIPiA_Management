@@ -87,9 +87,26 @@ public class ShapeManager {
         }
     }
 
-    /** Устанавливает колбэк для отслеживания изменений (markDirty) */
-    public void setOnChangeCallback(Runnable callback) {
-        this.onChangeCallback = callback;
+    // Команда для изменения текста
+    public static class ChangeTextCommand implements CommandManager.Command {
+        private final TextShape textShape;
+        private final String oldText, newText;
+
+        public ChangeTextCommand(TextShape textShape, String oldText, String newText) {
+            this.textShape = textShape;
+            this.oldText = oldText;
+            this.newText = newText;
+        }
+
+        @Override
+        public void execute() {
+            textShape.setTextSilent(newText);
+        }
+
+        @Override
+        public void undo() {
+            textShape.setTextSilent(oldText);
+        }
     }
 
     // Команда удаления
@@ -394,6 +411,19 @@ public class ShapeManager {
         notifyChange();
     }
 
+    /**
+     * Регистрация изменения текста
+     * @param textShape - фигура-текст
+     * @param oldText - старое значение
+     * @param newText - новое значение
+     */
+    public void registerTextChange(TextShape textShape, String oldText, String newText) {
+        if (isLoading) return;
+        ChangeTextCommand cmd = new ChangeTextCommand(textShape, oldText, newText);
+        commandManager.execute(cmd);
+        notifyChange();
+    }
+
     // -----------------------------------------------------------------
     // UNDO/REDO MANAGEMENT
     // -----------------------------------------------------------------
@@ -542,6 +572,11 @@ public class ShapeManager {
 
     public void setOnShapeSelected(Runnable onShapeSelected) {
         this.onShapeSelected = onShapeSelected;
+    }
+
+    /** Устанавливает колбэк для отслеживания изменений (markDirty) */
+    public void setOnChangeCallback(Runnable callback) {
+        this.onChangeCallback = callback;
     }
 
     public void setOnShapeDeselected(Runnable onShapeDeselected) {

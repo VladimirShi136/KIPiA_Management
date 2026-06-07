@@ -37,4 +37,11 @@ public class ClipboardManager {
         copiedShapeData = null;
         hasShapeData.set(false);
     }
+
+    // Очистка при смене схемы
+    public static void clearForNewScheme() {
+        copiedShapeData = null;
+        hasShapeData.set(false);
+        System.out.println("Clipboard cleared for new scheme"); // логирование для отладки
+    }
 }

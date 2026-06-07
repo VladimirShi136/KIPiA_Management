@@ -136,19 +136,30 @@ public class ShapeService {
         data.setStrokeWidth(shape.getStrokeWidth());
         // Специфичные для типа свойства
         if (shape instanceof LineShape line) {
-            data.setStartX(line.getStartX());
-            data.setStartY(line.getStartY());
-            data.setEndX(line.getEndX());
-            data.setEndY(line.getEndY());
-            // Вычисляем bounding box для совместимости с Android
-            data.setWidth(Math.abs(line.getEndX() - line.getStartX()));
-            data.setHeight(Math.abs(line.getEndY() - line.getStartY()));
+            // getAbsoluteCoordinates() возвращает мировые координаты точек (layoutX + localX).
+            // line.getStartX() — это локальные координаты внутри Group, их сохранять нельзя.
+            double[] abs = line.
+                    getAbsoluteCoordinates();
+            data.setStartX(abs[0]);
+            data.setStartY(abs[1]);
+            data.setEndX(abs[2]);
+            data.setEndY(abs[3]);
+            // x/y для линии переопределяем: левый верхний угол bounding box в мировых координатах
+            data.setX(Math.min(abs[0], abs[2]));
+            data.setY(Math.min(abs[1], abs[3]));
+            data.setWidth(Math.abs(abs[2] - abs[0]));
+            data.setHeight(Math.abs(abs[3] - abs[1]));
         } else if (shape instanceof TextShape text) {
             data.setText(text.getText());
+            // currentWidth/currentHeight — исходные размеры без учёта поворота
+            data.setWidth(shape.getCurrentWidth());
+            data.setHeight(shape.getCurrentHeight());
         } else {
-            // Для остальных фигур - ширина и высота из bounds
-            data.setWidth(shape.getBoundsInLocal().getWidth());
-            data.setHeight(shape.getBoundsInLocal().getHeight());
+            // ИСПРАВЛЕНО: getBoundsInLocal() на повёрнутом Group расширяется под угол поворота.
+            // Для прямоугольника 200x100 при rotation=90 вернёт width=100, height=200.
+            // currentWidth/currentHeight всегда хранят исходные (неповёрнутые) размеры фигуры.
+            data.setWidth(shape.getCurrentWidth());
+            data.setHeight(shape.getCurrentHeight());
         }
 
         return data;
@@ -180,7 +191,7 @@ public class ShapeService {
                         LOGGER.error("Ошибка создания фигуры типа null: тип фигуры не определен");
                         continue;
                     }
-                    
+
                     ShapeBase shape = convertDataToShape(shapeData);
                     shapes.add(shape);
                     shape.addToPane();
@@ -188,8 +199,8 @@ public class ShapeService {
                     loaded++;
                 } catch (Exception e) {
                     failed++;
-                    LOGGER.error("Ошибка создания фигуры типа {}: {}", 
-                        shapeData.getType() != null ? shapeData.getType() : "null", e.getMessage());
+                    LOGGER.error("Ошибка создания фигуры типа {}: {}",
+                            shapeData.getType() != null ? shapeData.getType() : "null", e.getMessage());
                 }
             }
 
@@ -222,14 +233,14 @@ public class ShapeService {
         if (data == null || data.getType() == null) {
             throw new IllegalArgumentException("ShapeData или тип фигуры не может быть null");
         }
-        
+
         // Валидация и исправление координат из Android версии
         double x = sanitizeCoordinate(data.getX());
         double y = sanitizeCoordinate(data.getY());
         double width = sanitizeCoordinate(data.getWidth());
         double height = sanitizeCoordinate(data.getHeight());
         double rotation = sanitizeCoordinate(data.getRotation());
-        
+
         double[] coords;
 
         switch (data.getType()) {
@@ -264,9 +275,9 @@ public class ShapeService {
 
         Color fillColor = ShapeData.stringToColor(data.getFillColor());
         shape.setFillColor(fillColor != null ? fillColor : Color.TRANSPARENT);
-        
-        LOGGER.debug("Установлены цвета для фигуры {}: stroke={}, fill={}", 
-            data.getType(), strokeColor, fillColor);
+
+        LOGGER.debug("Установлены цвета для фигуры {}: stroke={}, fill={}",
+                data.getType(), strokeColor, fillColor);
 
         try {
             shape.setStrokeWidth(data.getStrokeWidth());
