@@ -88,8 +88,30 @@ public class Main extends Application {
 
             Scene scene = new Scene(root, 1000, 700);
             scene.setFill(javafx.scene.paint.Color.TRANSPARENT);
-            scene.getStylesheets().add(Objects.requireNonNull(
-                    getClass().getResource("/styles/light-theme.css")).toExternalForm());
+            
+            // Загружаем базовые стили с переменными темы
+            for (String stylesheet : com.kipia.management.kipia_management.utils.StyleUtils.getBaseStylesheets()) {
+                scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource(stylesheet)).toExternalForm());
+            }
+            
+            // Загружаем стили для всех экранов
+            String[] screenStylesheets = {
+                "/styles/devices.css",
+                "/styles/add-device.css",
+                "/styles/schemes.css",
+                "/styles/reports.css",
+                "/styles/photo-gallery.css",
+                "/styles/conflict-dialog.css",
+                "/styles/help-dialog.css"
+            };
+            
+            for (String stylesheet : screenStylesheets) {
+                try {
+                    scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource(stylesheet)).toExternalForm());
+                } catch (Exception e) {
+                    LOGGER.warn("Не удалось загрузить stylesheet: {}", stylesheet);
+                }
+            }
 
             if (mainController != null) {
                 mainController.setScene(scene);

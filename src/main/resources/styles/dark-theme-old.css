@@ -394,7 +394,8 @@
 
 .conflict-dialog .section-label {
     -fx-font-size: 12px;
-    -fx-text-fill: rgba(255,255,255,0.8);
+    -fx-font-weight: 500;
+    -fx-text-fill: #e2e8f0 !important;
 }
 
 .conflict-dialog .instruction-label {

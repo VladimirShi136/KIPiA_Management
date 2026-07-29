@@ -178,6 +178,25 @@ public class DeviceDAO {
         return null;
     }
 
+    /**
+     * Поиск прибора по инвентарному номеру среди всех записей (включая мягко-удаленные)
+     * @param inventoryNumber инвентарный номер
+     * @return прибор или null если не найден
+     */
+    public Device findDeviceByInventoryNumberIncludingDeleted(String inventoryNumber) {
+        String sql = "SELECT * FROM devices WHERE inventory_number = ?";
+        try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
+            stmt.setString(1, inventoryNumber);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return createDeviceSQL(rs);
+            }
+        } catch (SQLException e) {
+            LOGGER.error("Ошибка поиска прибора (включая удаленные): {}", e.getMessage(), e);
+        }
+        return null;
+    }
+
     public Device getDeviceById(int id) {
         String sql = "SELECT * FROM devices WHERE id = ? AND deleted_at = 0";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {

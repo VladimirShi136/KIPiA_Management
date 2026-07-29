@@ -333,6 +333,13 @@ public class AddDeviceController {
             return;
         }
 
+        // Проверка на занятость инвентарного номера мягко-удаленным прибором
+        if (deviceDAO.findDeviceByInventoryNumberIncludingDeleted(data.inventoryNumber) != null) {
+            CustomAlertDialog.showError("Ошибка", "Инвентарный номер занят ранее удаленным прибором. Используйте другой номер.");
+            LOGGER.warn("Инвентарный номер занят мягко-удаленным прибором: {}", data.inventoryNumber);
+            return;
+        }
+
         // Создаём новый прибор
         Device device = new Device();
         createOrUpdateDevice(data.type, data.name, data.manufacturer, data.inventoryNumber, data.year, data.measurementLimit, data.accuracyClass, data.location, data.valveNumber, data.status, device);
@@ -381,6 +388,13 @@ public class AddDeviceController {
         if (!data.inventoryNumber.equals(editingDevice.getInventoryNumber())) {
             if (deviceDAO.findDeviceByInventoryNumber(data.inventoryNumber) != null) {
                 CustomAlertDialog.showError("Ошибка", "Прибор с таким инвентарным номером уже существует");
+                return;
+            }
+
+            // Проверка на занятость инвентарного номера мягко-удаленным прибором
+            if (deviceDAO.findDeviceByInventoryNumberIncludingDeleted(data.inventoryNumber) != null) {
+                CustomAlertDialog.showError("Ошибка", "Инвентарный номер занят ранее удаленным прибором. Используйте другой номер.");
+                LOGGER.warn("Инвентарный номер занят мягко-удаленным прибором: {}", data.inventoryNumber);
                 return;
             }
         }
@@ -621,9 +635,8 @@ public class AddDeviceController {
     private void updateButtonIcons() {
         if (cancelBtn.getScene() == null) return;
         
-        // Определяем текущую тему - проверяем стили СЦЕНЫ, а не корневого элемента
-        boolean isDarkTheme = cancelBtn.getScene().getStylesheets().stream()
-                .anyMatch(s -> s.contains("dark-theme.css"));
+        // Определяем текущую тему через StyleUtils
+        boolean isDarkTheme = com.kipia.management.kipia_management.utils.StyleUtils.isDarkTheme();
         
         // Выбираем иконки в зависимости от темы
         String stopIcon = isDarkTheme ? "/images/stop-white.png" : "/images/stop-dark.png";

@@ -201,15 +201,6 @@ public class MainController {
             testDialogsBtn.setManaged(false);
         }
 
-        if (scene != null) {
-            try {
-                scene.getStylesheets().add(
-                        Objects.requireNonNull(getClass().getResource("/styles/light-theme.css")).toExternalForm());
-            } catch (Exception e) {
-                LOGGER.warn("Не удалось загрузить CSS: {}", e.getMessage());
-            }
-        }
-
         currentActiveSection = null;
         updateNavigationButtonsState();
         setupTopSearch();
@@ -585,21 +576,38 @@ public class MainController {
     private void toggleTheme() {
         if (scene == null) { CustomAlertDialog.showError("Ошибка", "Scene не передана"); return; }
 
-        if (isDarkTheme) {
-            scene.getStylesheets().clear();
-            scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource("/styles/light-theme.css")).toExternalForm());
-            isDarkTheme = false;
-            StyleUtils.setCurrentTheme("/styles/light-theme.css");
-            if (themeToggleIcon != null)
-                themeToggleIcon.setImage(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/images/theme-white.png"))));
-        } else {
-            scene.getStylesheets().clear();
-            scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource("/styles/dark-theme.css")).toExternalForm());
-            isDarkTheme = true;
-            StyleUtils.setCurrentTheme("/styles/dark-theme.css");
-            if (themeToggleIcon != null)
-                themeToggleIcon.setImage(new Image(Objects.requireNonNull(getClass().getResourceAsStream("/images/theme-dark.png"))));
+        isDarkTheme = !isDarkTheme;
+        StyleUtils.setDarkTheme(isDarkTheme);
+
+        scene.getStylesheets().clear();
+        
+        // Загружаем базовые стили с переменными темы
+        for (String stylesheet : StyleUtils.getBaseStylesheets()) {
+            scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource(stylesheet)).toExternalForm());
         }
+        
+        // Загружаем стили для всех экранов
+        String[] screenStylesheets = {
+            "/styles/devices.css",
+            "/styles/add-device.css",
+            "/styles/schemes.css",
+            "/styles/reports.css",
+            "/styles/photo-gallery.css",
+            "/styles/conflict-dialog.css",
+            "/styles/help-dialog.css"
+        };
+        
+        for (String stylesheet : screenStylesheets) {
+            try {
+                scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource(stylesheet)).toExternalForm());
+            } catch (Exception e) {
+                LOGGER.warn("Не удалось загрузить stylesheet: {}", stylesheet);
+            }
+        }
+
+        if (themeToggleIcon != null)
+            themeToggleIcon.setImage(new Image(Objects.requireNonNull(getClass().getResourceAsStream(
+                isDarkTheme ? "/images/theme-dark.png" : "/images/theme-white.png"))));
 
         if (reportsController != null) reportsController.refreshTheme();
     }
@@ -881,10 +889,16 @@ public class MainController {
             Scene scene = new Scene(root);
             scene.setFill(javafx.scene.paint.Color.TRANSPARENT);
             
-            // Применяем текущую тему
-            String currentTheme = StyleUtils.getCurrentTheme();
+            // Применяем базовые стили с переменными темы
+            for (String stylesheet : StyleUtils.getBaseStylesheets()) {
+                scene.getStylesheets().add(
+                        Objects.requireNonNull(getClass().getResource(stylesheet)).toExternalForm()
+                );
+            }
+            
+            // Загружаем стили для help-dialog
             scene.getStylesheets().add(
-                    Objects.requireNonNull(getClass().getResource(currentTheme)).toExternalForm()
+                    Objects.requireNonNull(getClass().getResource("/styles/help-dialog.css")).toExternalForm()
             );
 
             helpStage.setScene(scene);

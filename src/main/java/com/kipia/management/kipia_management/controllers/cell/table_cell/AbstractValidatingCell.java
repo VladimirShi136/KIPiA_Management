@@ -7,7 +7,7 @@ import javafx.scene.control.TableCell;
 
 /**
  * Абстрактный класс для валидации числовых данных в таблице приборов.
- * Теперь использует ValidatingCellEditor для делегирования общей логики.
+ * Использует ValidatingCellEditor для делегирования общей логики.
  *
  * @author vladimir_shi
  * @since 13.09.2025

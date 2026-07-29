@@ -7,6 +7,7 @@ import com.kipia.management.kipia_management.models.Device;
 import com.kipia.management.kipia_management.services.DeviceDAO;
 import com.kipia.management.kipia_management.utils.CustomAlertDialog;
 import com.kipia.management.kipia_management.utils.LoadingIndicator;
+import com.kipia.management.kipia_management.utils.StyleUtils;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.transformation.FilteredList;
@@ -567,8 +568,7 @@ public class DevicesTableController implements SearchableController {
      * Стиль соответствует CustomAlertDialog — скругление, тень, тема.
      */
     private void openStyledDialog(Parent formContent, String titleText) {
-        boolean dark = com.kipia.management.kipia_management.utils.StyleUtils
-                .getCurrentTheme().contains("dark");
+        boolean dark = com.kipia.management.kipia_management.utils.StyleUtils.isDarkTheme();
 
         Stage ownerStage = (Stage) deviceTable.getScene().getWindow();
 
@@ -683,9 +683,12 @@ public class DevicesTableController implements SearchableController {
         // ===== SCENE =====
         Scene scene = new Scene(root, 580, 720);
         scene.setFill(javafx.scene.paint.Color.TRANSPARENT);
-        Scene ownerScene = ownerStage.getScene();
-        if (ownerScene != null) {
-            scene.getStylesheets().addAll(ownerScene.getStylesheets());
+        
+        // Применяем базовые стили с переменными темы
+        for (String stylesheet : StyleUtils.getBaseStylesheets()) {
+            scene.getStylesheets().add(
+                    Objects.requireNonNull(getClass().getResource(stylesheet)).toExternalForm()
+            );
         }
 
         dialog.initStyle(javafx.stage.StageStyle.TRANSPARENT);

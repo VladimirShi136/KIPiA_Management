@@ -1,0 +1,121 @@
+/* ============================================================
+   HELP-DIALOG.CSS - Help dialog styles
+   ============================================================ */
+
+/* ==================== HELP DIALOG ==================== */
+.help-dialog {
+    -fx-background-color: -fx-help-dialog-bg;
+    -fx-border-color: -fx-nav-top;
+    -fx-border-radius: 10px;
+    -fx-effect: dropshadow(gaussian, -fx-shadow-medium, 20, 0, 0, 5);
+}
+
+.help-dialog .top-box {
+    -fx-background-color: -fx-help-dialog-header;
+    -fx-border-color: -fx-help-dialog-header;
+    -fx-border-width: 0 0 1 0;
+}
+
+.help-dialog .type-label {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-tertiary;
+    -fx-padding: 0 0 4 0;
+}
+
+.help-dialog .title-label {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-on-dark;
+    -fx-padding: 0 0 4 0;
+}
+
+.help-dialog .section-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-text-tertiary;
+}
+
+.help-icon {
+    -fx-fill: transparent;
+    -fx-stroke: -fx-text-tertiary;
+    -fx-stroke-width: 1.5;
+    -fx-stroke-line-cap: round;
+    -fx-stroke-line-join: round;
+}
+
+.help-scroll-pane {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-border-radius: 0;
+}
+
+.help-scroll-pane .viewport {
+    -fx-background-color: transparent;
+}
+
+.help-scroll-pane .scroll-bar:vertical {
+    -fx-background-color: transparent;
+}
+
+.help-scroll-pane .scroll-bar .thumb {
+    -fx-background-color: -fx-scrollbar-thumb;
+    -fx-background-radius: 10px;
+}
+
+.help-scroll-pane .scroll-bar .thumb:hover {
+    -fx-background-color: -fx-scrollbar-thumb-hover;
+}
+
+.help-content {
+    -fx-background-color: transparent;
+    -fx-background-radius: 10px;
+}
+
+.help-content .help-text-normal {
+    -fx-fill: -fx-text-primary;
+}
+
+.help-content .help-text-header {
+    -fx-fill: -fx-text-primary;
+}
+
+.help-content .help-text-bullet {
+    -fx-fill: -fx-text-secondary;
+}
+
+.help-content .help-text-empty {
+    -fx-fill: transparent;
+}
+
+.help-divider {
+    -fx-background-color: -fx-border-primary;
+    -fx-pref-height: 1;
+}
+
+.help-btn-bar {
+    -fx-background-color: transparent;
+}
+
+#contentWrapper {
+    -fx-background-color: -fx-help-dialog-bg;
+    -fx-background-radius: 0;
+}
+
+.help-btn-bar .button {
+    -fx-background-color: -fx-nav-top !important;
+    -fx-text-fill: -fx-text-on-dark !important;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-padding: 8 20;
+    -fx-background-radius: 5px;
+    -fx-border-radius: 5px;
+    -fx-cursor: hand;
+    -fx-min-width: 80px;
+    -fx-border-width: 0;
+}
+
+.help-btn-bar .button:hover {
+    -fx-opacity: 0.85;
+}

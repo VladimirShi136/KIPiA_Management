@@ -10,6 +10,7 @@
   * Окно редактора схем *
 -->
 <StackPane fx:id="rootPane"
+           styleClass="scheme-editor-root"
            xmlns="http://javafx.com/javafx/23"
            xmlns:fx="http://javafx.com/fxml/1"
            fx:controller="com.kipia.management.kipia_management.controllers.SchemeEditorController">
@@ -18,7 +19,7 @@
         <top>
             <VBox spacing="10">
                 <!-- Панель инструментов -->
-                <ToolBar styleClass="scheme-toolbar">
+                <ToolBar styleClass="tool-bar">
                     <!-- Группа инструментов редактирования -->
                     <Button fx:id="undoBtn" styleClass="tool-button">
                         <tooltip>
@@ -103,14 +104,13 @@
         <!-- Центральная область: холст схемы -->
         <center>
             <ScrollPane fx:id="schemeScrollPane" styleClass="scheme-scroll"
-                        style="-fx-background: #ffffff;"
                         hbarPolicy="NEVER" vbarPolicy="NEVER">
                 <AnchorPane fx:id="schemePane"
+                            styleClass="scheme-pane"
                             prefWidth="2000"
                             prefHeight="1200"
                             minWidth="1200"
                             minHeight="800"
-                            style="-fx-background-color: white;"
                             onMousePressed="#onPaneMousePressed"
                             onMouseDragged="#onPaneMouseDragged"
                             onMouseReleased="#onPaneMouseReleased">

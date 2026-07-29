@@ -211,7 +211,8 @@ public class HelpController {
             return normalText;
         }
     }
-    
+
+    // Метод для
     private void adjustWindowSize() {
         // Получаем преферредный размер контента
         helpContentNoScroll.applyCss();

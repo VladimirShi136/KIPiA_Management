@@ -3,6 +3,8 @@ package com.kipia.management.kipia_management.utils;
 import javafx.animation.ScaleTransition;
 import javafx.scene.control.*;
 import javafx.util.Duration;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Утилиты для работы со стилями CSS в JavaFX.
@@ -12,20 +14,72 @@ import javafx.util.Duration;
  */
 public class StyleUtils {
 
-    private static String currentThemePath = "/styles/light-theme.css";
+    private static boolean isDarkTheme = false;
+
+    /**
+     * Устанавливает текущую тему (light или dark)
+     */
+    public static void setDarkTheme(boolean dark) {
+        isDarkTheme = dark;
+    }
+
+    /**
+     * Проверяет, включена ли темная тема
+     */
+    public static boolean isDarkTheme() {
+        return isDarkTheme;
+    }
+
+    /**
+     * Получает путь к файлу переменных текущей темы
+     */
+    public static String getThemeVariablesPath() {
+        return isDarkTheme ? "/styles/dark-theme-vars.css" : "/styles/light-theme-vars.css";
+    }
+
+    /**
+     * Получает список всех базовых стилей для загрузки
+     */
+    public static List<String> getBaseStylesheets() {
+        List<String> stylesheets = new ArrayList<>();
+        stylesheets.add(getThemeVariablesPath());
+        stylesheets.add("/styles/common.css");
+        stylesheets.add("/styles/main.css");
+        return stylesheets;
+    }
+
+    /**
+     * Получает стили для конкретного экрана
+     */
+    public static String getScreenStylesheet(String screenName) {
+        return switch (screenName) {
+            case "devices" -> "/styles/devices.css";
+            case "add-device" -> "/styles/add-device.css";
+            case "conflict-dialog" -> "/styles/conflict-dialog.css";
+            case "help-dialog" -> "/styles/help-dialog.css";
+            case "schemes" -> "/styles/schemes.css";
+            case "reports" -> "/styles/reports.css";
+            case "photo-gallery" -> "/styles/photo-gallery.css";
+            default -> null;
+        };
+    }
 
     /**
      * Устанавливает текущую тему для использования в алертах и диалогах
+     * @deprecated Используйте setDarkTheme(boolean) вместо этого
      */
+    @Deprecated
     public static void setCurrentTheme(String themePath) {
-        currentThemePath = themePath;
+        isDarkTheme = themePath.contains("dark");
     }
 
     /**
      * Получает путь к текущей теме
+     * @deprecated Используйте getThemeVariablesPath() вместо этого
      */
+    @Deprecated
     public static String getCurrentTheme() {
-        return currentThemePath;
+        return isDarkTheme ? "/styles/dark-theme-old.css" : "/styles/light-theme-old.css";
     }
 
     // ============================================================

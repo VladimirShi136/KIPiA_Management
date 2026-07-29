@@ -35,11 +35,11 @@
     </HBox>
 
     <!-- Тело с контентом -->
-    <VBox>
+    <VBox spacing="15">
         <padding>
             <Insets top="10" right="20" bottom="8" left="20"/>
         </padding>
-        
+
         <!-- Инструкция -->
         <VBox spacing="8">
             <Label text="🔄 Обнаружены конфликты синхронизации"
@@ -47,10 +47,10 @@
             <Label text="Конфликт возникает, когда один и тот же прибор был изменен на двух устройствах после последней синхронизации."
                    styleClass="section-label" wrapText="true"/>
         </VBox>
-        
+
         <!-- Список конфликтов -->
         <ListView fx:id="conflictListView"
-                  prefHeight="300"
+                  prefHeight="200"
                   styleClass="conflict-list">
         </ListView>
         

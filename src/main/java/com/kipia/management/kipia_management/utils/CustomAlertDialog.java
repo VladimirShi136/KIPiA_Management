@@ -126,6 +126,28 @@ public class CustomAlertDialog {
         comboBox.setPrefWidth(300);
         comboBox.setStyle(comboBoxStyle());
 
+        // 🔥 ИСПРАВЛЕНИЕ: Стилизуем button cell для текста выбранного элемента
+        comboBox.setButtonCell(new ListCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setStyle("-fx-background-color:transparent;");
+                } else {
+                    setText(item);
+                    // Стиль для выбранного элемента (текст в combobox)
+                    setStyle(
+                            "-fx-text-fill:" + (dark ? "#ecf0f1" : "#333") + ";" +
+                                    "-fx-background-color:transparent;" +
+                                    "-fx-padding:6px 10px;" +
+                                    "-fx-font-size:13px;" +
+                                    "-fx-font-family:'Segoe UI',Arial,sans-serif;"
+                    );
+                }
+            }
+        });
+
         // Кнопки
         Button cancelBtn = new Button("Отмена");
         Button okBtn = new Button("ОК");
@@ -152,6 +174,19 @@ public class CustomAlertDialog {
 
         Scene scene = new Scene(root);
         scene.setFill(Color.TRANSPARENT);
+        
+        // Применяем базовые стили с переменными темы
+        for (String stylesheet : StyleUtils.getBaseStylesheets()) {
+            scene.getStylesheets().add(
+                    Objects.requireNonNull(Main.class.getResource(stylesheet)).toExternalForm()
+            );
+        }
+        
+        // Загружаем стили для alert-dialog
+        scene.getStylesheets().add(
+                Objects.requireNonNull(Main.class.getResource("/styles/alert-dialog.css")).toExternalForm()
+        );
+        
         stage.setScene(scene);
 
         final String[] result = {null};
@@ -161,74 +196,157 @@ public class CustomAlertDialog {
         });
         cancelBtn.setOnAction(_ -> stage.close());
 
-        // Стилизация выпадающего списка для темной темы
-        if (dark) {
-            stage.setOnShown(_ -> {
-                // Применяем стили к popup и list cells
-                comboBox.skinProperty().addListener((_, _, newSkin) -> {
-                    if (newSkin != null) {
-                        // Стилизация popup через lookup
-                        javafx.scene.Node popupNode = comboBox.lookup(".popup-content");
-                        if (popupNode != null) {
-                            popupNode.setStyle(
-                                    "-fx-background-color:#2d2d2d;" +
-                                            "-fx-border-color:#4A5568;" +
-                                            "-fx-border-width:1px;" +
-                                            "-fx-background-radius:5px;" +
-                                            "-fx-border-radius:5px;" +
-                                            "-fx-effect:null;"
-                            );
-                        }
+        // 🔥 ИСПРАВЛЕНИЕ: Добавляем CSS для popup стилей (для обеих тем)
+        String comboBoxPopupCSS = createComboBoxPopupCSS(dark);
 
-                        // Стилизация list cells
-                        comboBox.setCellFactory(_ -> new ListCell<>() {
-                            @Override
-                            protected void updateItem(String item, boolean empty) {
-                                super.updateItem(item, empty);
-                                if (empty || item == null) {
-                                    setText(null);
-                                    setStyle("-fx-background-color:transparent;");
-                                } else {
-                                    setText(item);
-                                    setStyle(
-                                            "-fx-text-fill:#ecf0f1;" +
-                                                    "-fx-background-color:transparent;" +
-                                                    "-fx-padding:6px 10px;" +
-                                                    "-fx-font-size:13px;" +
-                                                    "-fx-font-family:'Segoe UI',Arial,sans-serif;"
-                                    );
-                                }
-                            }
+        // Создаем временный stylesheet из строки
+        java.net.URL cssUrl;
+        try {
+            // Записываем CSS во временный файл
+            java.nio.file.Path tempPath = java.nio.file.Files.createTempFile("combobox-popup-styles", ".css");
+            java.nio.file.Files.writeString(tempPath, comboBoxPopupCSS);
+            cssUrl = tempPath.toUri().toURL();
 
-                            @Override
-                            public void updateSelected(boolean selected) {
-                                super.updateSelected(selected);
-                                if (selected) {
-                                    setStyle(
-                                            "-fx-text-fill:#ecf0f1;" +
-                                                    "-fx-background-color:#4A5568;" +
-                                                    "-fx-padding:6px 10px;" +
-                                                    "-fx-font-size:13px;" +
-                                                    "-fx-font-family:'Segoe UI',Arial,sans-serif;"
-                                    );
-                                } else {
-                                    setStyle(
-                                            "-fx-text-fill:#ecf0f1;" +
-                                                    "-fx-background-color:transparent;" +
-                                                    "-fx-padding:6px 10px;" +
-                                                    "-fx-font-size:13px;" +
-                                                    "-fx-font-family:'Segoe UI',Arial,sans-serif;"
-                                    );
-                                }
-                            }
-                        });
-                    }
-                });
+            // Добавляем stylesheet к сцене
+            scene.getStylesheets().add(cssUrl.toExternalForm());
+
+            // Удаляем временный файл при закрытии stage
+            stage.setOnHiding(_ -> {
+                try {
+                    java.nio.file.Files.deleteIfExists(tempPath);
+                } catch (Exception e) {
+                    LOGGER.warn("Не удалось удалить временный CSS файл: {}", e.getMessage());
+                }
             });
+        } catch (Exception e) {
+            LOGGER.warn("Не удалось создать временный CSS файл: {}", e.getMessage());
         }
+
+        // Применяем стили к ячейкам через cell factory (для обеих тем)
+        comboBox.setCellFactory(_ -> new ListCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setStyle("-fx-background-color:transparent;");
+                } else {
+                    setText(item);
+                    setStyle(
+                            "-fx-text-fill:" + (dark ? "#ecf0f1" : "#333") + ";" +
+                                    "-fx-background-color:transparent;" +
+                                    "-fx-padding:6px 10px;" +
+                                    "-fx-font-size:13px;" +
+                                    "-fx-font-family:'Segoe UI',Arial,sans-serif;"
+                    );
+                }
+            }
+
+            @Override
+            public void updateSelected(boolean selected) {
+                super.updateSelected(selected);
+                if (selected) {
+                    setStyle(
+                            "-fx-text-fill:" + (dark ? "#ecf0f1" : "#333") + ";" +
+                                    "-fx-background-color:" + (dark ? "#4A5568" : "#d0d4d8") + ";" +
+                                    "-fx-padding:6px 10px;" +
+                                    "-fx-font-size:13px;" +
+                                    "-fx-font-family:'Segoe UI',Arial,sans-serif;"
+                    );
+                } else {
+                    setStyle(
+                            "-fx-text-fill:" + (dark ? "#ecf0f1" : "#333") + ";" +
+                                    "-fx-background-color:transparent;" +
+                                    "-fx-padding:6px 10px;" +
+                                    "-fx-font-size:13px;" +
+                                    "-fx-font-family:'Segoe UI',Arial,sans-serif;"
+                    );
+                }
+        }
+        });
 
         stage.showAndWait();
         return result[0] != null ? Optional.of(result[0]) : Optional.empty();
+    }
+
+    /**
+     * 🔥 НОВЫЙ МЕТОД: Создает CSS для стилизации ComboBox popup
+     */
+    private static String createComboBoxPopupCSS(boolean dark) {
+        String popupBg = dark ? "#2d2d2d" : "white";
+        String popupBorder = dark ? "#4A5568" : "#bdc3c7";
+        String textColor = dark ? "#ecf0f1" : "#333";
+        String selectedBg = dark ? "#4A5568" : "#d0d4d8";
+        String scrollBg = dark ? "#3a4a5a" : "#f0f0f0";
+        String scrollThumb = dark ? "#5a6a7a" : "#c0c0c0";
+
+        return """
+            /* Popup контейнер */
+            .combo-box-popup {
+                -fx-background-color: %s;
+                -fx-background-insets: 0;
+                -fx-border-color: %s;
+                -fx-border-width: 1px;
+                -fx-border-radius: 8px;
+                -fx-background-radius: 8px;
+                -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.25), 8, 0, 0, 0);
+            }
+            
+            /* ListView внутри popup */
+            .combo-box-popup .list-view {
+                -fx-background-color: %s;
+                -fx-background-insets: 0;
+                -fx-border-color: transparent;
+                -fx-border-width: 0;
+                -fx-border-radius: 0;
+                -fx-background-radius: 0;
+            }
+            
+            /* ListCell - отдельные элементы */
+            .combo-box-popup .list-cell {
+                -fx-background-color: transparent;
+                -fx-text-fill: %s;
+                -fx-padding: 6px 12px;
+                -fx-font-size: 13px;
+                -fx-font-family: 'Segoe UI', Arial, sans-serif;
+            }
+            
+            /* Выбранная ячейка */
+            .combo-box-popup .list-cell:selected {
+                -fx-background-color: %s;
+                -fx-text-fill: %s;
+            }
+            
+            /* Hover ячейка */
+            .combo-box-popup .list-cell:hover {
+                -fx-background-color: %s;
+                -fx-text-fill: %s;
+            }
+            
+            /* Scrollbar */
+            .combo-box-popup .scroll-bar {
+                -fx-background-color: transparent;
+                -fx-border-color: transparent;
+            }
+            
+            .combo-box-popup .scroll-bar .thumb {
+                -fx-background-color: %s;
+                -fx-background-radius: 3px;
+                -fx-border-radius: 3px;
+                -fx-border-color: transparent;
+            }
+            
+            .combo-box-popup .scroll-bar .track {
+                -fx-background-color: transparent;
+                -fx-border-color: transparent;
+            }
+            """.formatted(
+                popupBg, popupBorder, popupBg,
+                textColor,
+                selectedBg, textColor,
+                dark ? "#3a4a5a" : "#e0e0e0", dark ? "#ecf0f1" : "#333",
+                scrollThumb
+        );
     }
 
     public static ButtonType showAdvancedError(String title, String message, Throwable ex) {
@@ -335,6 +453,19 @@ public class CustomAlertDialog {
 
         Scene scene = new Scene(root);
         scene.setFill(Color.TRANSPARENT);
+        
+        // Применяем базовые стили с переменными темы
+        for (String stylesheet : StyleUtils.getBaseStylesheets()) {
+            scene.getStylesheets().add(
+                    Objects.requireNonNull(Main.class.getResource(stylesheet)).toExternalForm()
+            );
+        }
+        
+        // Загружаем стили для alert-dialog
+        scene.getStylesheets().add(
+                Objects.requireNonNull(Main.class.getResource("/styles/alert-dialog.css")).toExternalForm()
+        );
+        
         stage.setScene(scene);
 
         final Color[] result = {null};
@@ -428,6 +559,19 @@ public class CustomAlertDialog {
 
         Scene scene = new Scene(root);
         scene.setFill(Color.TRANSPARENT);
+        
+        // Применяем базовые стили с переменными темы
+        for (String stylesheet : StyleUtils.getBaseStylesheets()) {
+            scene.getStylesheets().add(
+                    Objects.requireNonNull(Main.class.getResource(stylesheet)).toExternalForm()
+            );
+        }
+        
+        // Загружаем стили для alert-dialog
+        scene.getStylesheets().add(
+                Objects.requireNonNull(Main.class.getResource("/styles/alert-dialog.css")).toExternalForm()
+        );
+        
         stage.setScene(scene);
 
         final javafx.scene.text.Font[] result = {null};
@@ -523,6 +667,19 @@ public class CustomAlertDialog {
             // Scene
             Scene scene = new Scene(content);
             scene.setFill(Color.TRANSPARENT);
+            
+            // Применяем базовые стили с переменными темы
+            for (String stylesheet : StyleUtils.getBaseStylesheets()) {
+                scene.getStylesheets().add(
+                        Objects.requireNonNull(Main.class.getResource(stylesheet)).toExternalForm()
+                );
+            }
+            
+            // Загружаем стили для alert-dialog
+            scene.getStylesheets().add(
+                    Objects.requireNonNull(Main.class.getResource("/styles/alert-dialog.css")).toExternalForm()
+            );
+            
             stage.setScene(scene);
 
             // Позиционирование по центру главного окна
@@ -699,11 +856,12 @@ public class CustomAlertDialog {
         Scene scene = new Scene(root);
         scene.setFill(Color.TRANSPARENT);
 
-        // Применяем текущую тему через StyleUtils
-        String currentTheme = StyleUtils.getCurrentTheme();
-        scene.getStylesheets().add(
-                Objects.requireNonNull(Main.class.getResource(currentTheme)).toExternalForm()
-        );
+        // Применяем базовые стили с переменными темы
+        for (String stylesheet : StyleUtils.getBaseStylesheets()) {
+            scene.getStylesheets().add(
+                    Objects.requireNonNull(Main.class.getResource(stylesheet)).toExternalForm()
+            );
+        }
 
         stage.setScene(scene);
 
@@ -835,6 +993,19 @@ public class CustomAlertDialog {
 
             Scene scene = new Scene(root);
             scene.setFill(Color.TRANSPARENT);
+            
+            // Применяем базовые стили с переменными темы
+            for (String stylesheet : StyleUtils.getBaseStylesheets()) {
+                scene.getStylesheets().add(
+                        Objects.requireNonNull(Main.class.getResource(stylesheet)).toExternalForm()
+                );
+            }
+            
+            // Загружаем стили для alert-dialog
+            scene.getStylesheets().add(
+                    Objects.requireNonNull(Main.class.getResource("/styles/alert-dialog.css")).toExternalForm()
+            );
+            
             stage.setScene(scene);
         }
 
@@ -1105,7 +1276,7 @@ public class CustomAlertDialog {
     // ════════════════════════════════════════════════════════════════════════
 
     private static boolean isDark() {
-        return StyleUtils.getCurrentTheme().contains("dark");
+        return StyleUtils.isDarkTheme();
     }
 
     private static String stackTrace(Throwable t) {

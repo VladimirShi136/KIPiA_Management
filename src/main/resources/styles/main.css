@@ -1,0 +1,483 @@
+/* ============================================================
+   MAIN.CSS - Main window and navigation styles
+   ============================================================ */
+
+/* ==================== MAIN.FXML - ВЕРХНЯЯ ПАНЕЛЬ ==================== */
+.top {
+    -fx-background-color: -fx-nav-top;
+    -fx-padding: 10px;
+    -fx-min-height: 50px;
+    -fx-pref-height: 50px;
+    -fx-max-height: 50px;
+}
+
+.header-label {
+    -fx-text-fill: -fx-text-on-dark;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-padding: 1px 10px;
+    -fx-border-color: -fx-text-on-dark;
+    -fx-border-width: 2px;
+    -fx-border-radius: 25px;
+    -fx-background-radius: 25px;
+    -fx-background-color: -fx-nav-top;
+    -fx-effect: dropshadow(three-pass-box, rgba(255, 255, 255, 0.3), 8, 0, 0, 2);
+}
+
+.version-label {
+    -fx-text-fill: -fx-text-tertiary;
+    -fx-font-size: 12px;
+    -fx-font-style: italic;
+}
+
+/* ==================== HELP BUTTON ==================== */
+.help-button {
+    -fx-background-color: transparent;
+    -fx-background-radius: 50%;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+    -fx-min-width: 30px;
+    -fx-min-height: 30px;
+    -fx-pref-width: 30px;
+    -fx-pref-height: 30px;
+    -fx-border-width: 0;
+    -fx-border-color: transparent;
+}
+
+.help-button:hover {
+    -fx-scale-x: 1.10;
+    -fx-scale-y: 1.10;
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+}
+
+.help-button:pressed {
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+}
+
+/* ==================== MAIN.FXML - ЛЕВАЯ НАВИГАЦИЯ ==================== */
+.left {
+    -fx-background-color: -fx-nav-left;
+    -fx-padding: 10px;
+    -fx-min-width: 200px;
+    -fx-pref-width: 160px;
+}
+
+.left .button {
+    -fx-padding: 10 20;
+    -fx-min-width: 160px;
+    -fx-pref-width: 160px;
+    -fx-border-color: -fx-text-on-dark;
+    -fx-border-width: 2px;
+    -fx-effect: dropshadow(three-pass-box, -fx-shadow-light, 2, 0, 0, 1);
+    -fx-text-fill: -fx-text-primary;
+}
+
+.button-devices { 
+    -fx-background-color: -fx-btn-devices; 
+    -fx-text-fill: -fx-text-primary; 
+}
+
+.button-devices:hover { 
+    -fx-background-color: -fx-btn-devices-hover; 
+    -fx-text-fill: -fx-text-primary; 
+    -fx-border-color: -fx-border-dark !important; 
+}
+
+.button-devices-active { 
+    -fx-background-color: -fx-btn-devices-hover; 
+    -fx-text-fill: -fx-text-primary; 
+    -fx-border-color: -fx-border-dark !important; 
+}
+
+.button-photo-gallery { 
+    -fx-background-color: -fx-btn-photo-gallery; 
+    -fx-text-fill: -fx-text-primary; 
+}
+
+.button-photo-gallery:hover { 
+    -fx-background-color: -fx-btn-photo-gallery-hover; 
+    -fx-text-fill: -fx-text-primary; 
+    -fx-border-color: -fx-border-dark !important; 
+}
+
+.button-photo-gallery-active { 
+    -fx-background-color: -fx-btn-photo-gallery-hover; 
+    -fx-text-fill: -fx-text-primary; 
+    -fx-border-color: -fx-border-dark !important; 
+}
+
+.button-schemes { 
+    -fx-background-color: -fx-btn-schemes; 
+    -fx-text-fill: -fx-text-primary; 
+}
+
+.button-schemes:hover { 
+    -fx-background-color: -fx-btn-schemes-hover; 
+    -fx-text-fill: -fx-text-primary; 
+    -fx-border-color: -fx-border-dark !important; 
+}
+
+.button-schemes-active { 
+    -fx-background-color: -fx-btn-schemes-hover; 
+    -fx-text-fill: -fx-text-primary; 
+    -fx-border-color: -fx-border-dark !important; 
+}
+
+.button-reports { 
+    -fx-background-color: -fx-btn-reports; 
+    -fx-text-fill: -fx-text-primary; 
+}
+
+.button-reports:hover { 
+    -fx-background-color: -fx-btn-reports-hover; 
+    -fx-text-fill: -fx-text-primary; 
+    -fx-border-color: -fx-border-dark !important; 
+}
+
+.button-reports-active { 
+    -fx-background-color: -fx-btn-reports-hover; 
+    -fx-text-fill: -fx-text-primary; 
+    -fx-border-color: -fx-border-dark !important; 
+}
+
+.left .button-settings,
+.left .button-theme-toggle,
+.left .button-exit {
+    -fx-background-color: transparent !important;
+    -fx-background-radius: 50% !important;
+    -fx-padding: 0 !important;
+    -fx-cursor: hand;
+    -fx-border-width: 0 !important;
+    -fx-border-color: transparent !important;
+    -fx-effect: none !important;
+    -fx-min-width: 40px !important;
+    -fx-min-height: 40px !important;
+    -fx-pref-width: 40px !important;
+    -fx-pref-height: 40px !important;
+    -fx-text-fill: transparent !important;
+    -fx-font-size: 0 !important;
+}
+
+.left .button-settings:hover,
+.left .button-theme-toggle:hover,
+.left .button-exit:hover {
+    -fx-scale-x: 1.10;
+    -fx-scale-y: 1.10;
+    -fx-background-color: transparent !important;
+    -fx-border-color: transparent !important;
+}
+
+.button-settings-active {
+    -fx-scale-x: 1.15;
+    -fx-scale-y: 1.15;
+}
+
+/* ==================== SETTINGS.FXML ==================== */
+.settings-root {
+    -fx-background-color: -fx-bg-primary;
+}
+
+.settings-header {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-secondary;
+}
+
+.settings-section-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-secondary;
+}
+
+.settings-section-description {
+    -fx-font-size: 13px;
+    -fx-text-fill: -fx-text-tertiary;
+}
+
+.timestamp-label {
+    -fx-font-size: 11px;
+    -fx-text-fill: -fx-text-tertiary;
+}
+
+.arrow-icon-top {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-accent-warning;
+    -fx-underline: true;
+}
+
+.arrow-icon-bottom {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-on-dark;
+    -fx-underline: true;
+}
+
+.export-button-label {
+    -fx-text-fill: -fx-accent-warning;
+    -fx-font-weight: bold;
+}
+
+.import-button-label {
+    -fx-text-fill: -fx-text-on-dark;
+    -fx-font-weight: bold;
+}
+
+.settings-button-export {
+    -fx-background-color: transparent;
+    -fx-background-radius: 10px;
+    -fx-text-fill: -fx-accent-warning;
+    -fx-font-weight: bold;
+    -fx-border-color: -fx-border-primary;
+    -fx-border-radius: 10px;
+    -fx-cursor: hand;
+}
+
+.settings-button-export:hover {
+    -fx-background-color: -fx-accent-warning-hover;
+}
+
+.settings-button-import {
+    -fx-background-color: -fx-accent-warning;
+    -fx-background-radius: 10px;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-border-color: -fx-accent-warning;
+    -fx-border-radius: 10px;
+    -fx-cursor: hand;
+}
+
+.settings-button-import:hover {
+    -fx-background-color: -fx-accent-warning-hover;
+    -fx-border-color: -fx-accent-warning-hover;
+}
+
+.settings-info-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-accent-info;
+}
+
+.settings-info-text {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-text-tertiary;
+}
+
+/* ==================== MAIN.FXML - НИЖНЯЯ ПАНЕЛЬ ==================== */
+.bottom {
+    -fx-background-color: -fx-nav-bottom;
+    -fx-padding: 5px;
+    -fx-alignment: center-left;
+}
+
+.status-label {
+    -fx-text-fill: -fx-text-on-dark;
+    -fx-font-size: 12px;
+}
+
+/* ==================== MAIN.FXML - ЦЕНТРАЛЬНАЯ ОБЛАСТЬ ==================== */
+.content-area {
+    -fx-background-color: -fx-bg-primary;
+}
+
+.devices-root, .photo-gallery-root, .scheme-editor-root, .reports-root {
+    -fx-padding: 0;
+    -fx-background-color: transparent;
+}
+
+.devices-stack-pane {
+    -fx-padding: 0;
+}
+
+/* ==================== MAIN.FXML - ПОИСК ==================== */
+.search-toggle-button {
+    -fx-background-color: transparent;
+    -fx-background-radius: 50%;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+    -fx-min-width: 24px;
+    -fx-min-height: 24px;
+    -fx-pref-width: 24px;
+    -fx-pref-height: 24px;
+}
+
+.search-toggle-button:hover {
+    -fx-scale-x: 1.10;
+    -fx-scale-y: 1.10;
+}
+
+.search-toggle-button:pressed {
+    -fx-scale-x: 0.95;
+    -fx-scale-y: 0.95;
+}
+
+.search-field-animated {
+    -fx-pref-width: 350px;
+    -fx-pref-height: 30px;
+    -fx-max-height: 30px;
+    -fx-background-color: -fx-input-bg;
+    -fx-border-width: 2px;
+    -fx-border-radius: 15px;
+    -fx-background-radius: 15px;
+    -fx-padding: 0px 12px;
+    -fx-font-size: 13px;
+    -fx-effect: dropshadow(three-pass-box, rgba(52, 152, 219, 0.2), 4, 0, 0, 2);
+}
+
+.search-field-animated:focused {
+    -fx-border-color: -fx-accent-primary;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.filter-combo {
+    -fx-pref-width: 250px;
+    -fx-pref-height: 30px;
+    -fx-max-height: 30px;
+    -fx-background-color: -fx-input-bg;
+    -fx-border-width: 2px;
+    -fx-border-color: -fx-border-primary;
+    -fx-border-radius: 15px;
+    -fx-background-radius: 15px;
+    -fx-font-size: 11px;
+}
+
+.filter-combo .list-cell {
+    -fx-background-color: -fx-input-bg;
+    -fx-text-fill: -fx-text-primary;
+    -fx-background-radius: 15px 0 0 15px;
+}
+
+.filter-combo .list-cell:hover {
+    -fx-background-color: -fx-bg-tertiary;
+}
+
+.filter-combo .arrow-button {
+    -fx-background-color: -fx-input-bg;
+    -fx-border-color: -fx-border-primary;
+    -fx-border-width: 0 0 0 2px;
+    -fx-background-radius: 0 15px 15px 0;
+    -fx-padding: 0 8px 0 8px;
+}
+
+.filter-combo .arrow {
+    -fx-background-color: -fx-text-primary;
+}
+
+.filter-combo .button-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: -fx-text-primary;
+    -fx-padding: 0 0 0 12px;
+}
+
+.filter-combo .combo-box-popup .list-view {
+    -fx-background-color: -fx-input-bg;
+    -fx-border-color: -fx-border-primary;
+    -fx-border-width: 2px;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+}
+
+.filter-combo .combo-box-popup .list-view .list-cell {
+    -fx-background-color: -fx-input-bg;
+    -fx-text-fill: -fx-text-primary;
+    -fx-padding: 8px 12px;
+    -fx-background-radius: 0;
+}
+
+.filter-combo .combo-box-popup .list-view .list-cell:filled:hover {
+    -fx-background-color: -fx-bg-tertiary;
+}
+
+.filter-combo .combo-box-popup .list-view .list-cell:filled:selected {
+    -fx-background-color: -fx-accent-primary;
+    -fx-text-fill: #ffffff;
+}
+
+.filter-combo .combo-box-popup .list-view .scroll-bar:vertical {
+    -fx-background-color: -fx-scrollbar-bg;
+    -fx-pref-width: 10px;
+}
+
+.filter-combo .combo-box-popup .list-view .scroll-bar:vertical .track {
+    -fx-background-color: -fx-scrollbar-bg;
+    -fx-background-radius: 5px;
+}
+
+.filter-combo .combo-box-popup .list-view .scroll-bar:vertical .thumb {
+    -fx-background-color: -fx-scrollbar-thumb;
+    -fx-background-radius: 5px;
+}
+
+.filter-combo .combo-box-popup .list-view .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: -fx-scrollbar-thumb-hover;
+}
+
+.filter-combo .combo-box-popup .list-view .scroll-bar:vertical .thumb:pressed {
+    -fx-background-color: -fx-scrollbar-thumb-hover;
+}
+
+.filter-combo .combo-box-popup .list-view .scroll-bar:vertical .increment-button,
+.filter-combo .combo-box-popup .list-view .scroll-bar:vertical .decrement-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+    -fx-pref-height: 0;
+}
+
+.filter-checkbox {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-primary;
+}
+
+.filter-checkbox .box {
+    -fx-background-color: -fx-input-bg;
+    -fx-border-color: -fx-border-primary;
+    -fx-border-width: 2px;
+    -fx-border-radius: 3px;
+    -fx-background-radius: 3px;
+}
+
+.filter-checkbox:hover .box {
+    -fx-border-color: -fx-accent-primary;
+}
+
+.filter-checkbox:selected .box {
+    -fx-background-color: -fx-input-bg;
+    -fx-border-color: -fx-accent-primary;
+}
+
+.filter-checkbox .mark {
+    -fx-background-color: transparent;
+}
+
+.filter-checkbox:selected .mark {
+    -fx-background-color: -fx-accent-primary;
+}
+
+.clear-search-button {
+    -fx-background-color: transparent;
+    -fx-background-radius: 50%;
+    -fx-padding: 0;
+    -fx-cursor: hand;
+    -fx-min-width: 24px;
+    -fx-min-height: 24px;
+    -fx-pref-width: 24px;
+    -fx-pref-height: 24px;
+}
+
+.clear-search-button:hover {
+    -fx-scale-x: 1.1;
+    -fx-scale-y: 1.1;
+}
+
+.clear-search-button:pressed {
+    -fx-scale-x: 0.9;
+    -fx-scale-y: 0.9;
+}
+
+.search-field-container {
+    -fx-spacing: 10;
+    -fx-alignment: center-left;
+}

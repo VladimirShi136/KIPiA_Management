@@ -229,7 +229,6 @@ public class ReportsController {
     }
 
     private boolean isDarkThemeActive() {
-        if (chartPane == null || chartPane.getScene() == null) return false;
-        return chartPane.getScene().getStylesheets().stream().anyMatch(s -> s.contains("dark-theme.css"));
+        return com.kipia.management.kipia_management.utils.StyleUtils.isDarkTheme();
     }
 }

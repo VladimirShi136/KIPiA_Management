@@ -1,0 +1,134 @@
+/* ============================================================
+   REPORTS.CSS - Reports window styles
+   ============================================================ */
+
+/* ==================== REPORTS ROOT ==================== */
+.reports-root {
+    -fx-background-color: -fx-bg-primary;
+}
+
+/* ==================== REPORTS HEADER ==================== */
+.reports-header {
+    -fx-background-color: -fx-bg-secondary;
+    -fx-padding: 15 20;
+    -fx-border-color: -fx-border-primary;
+    -fx-border-width: 0 0 1 0;
+}
+
+.reports-title {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-secondary;
+}
+
+.reports-subtitle {
+    -fx-font-size: 13px;
+    -fx-text-fill: -fx-text-tertiary;
+    -fx-padding: 4 0 0 0;
+}
+
+/* ==================== REPORTS CONTROLS ==================== */
+.reports-controls {
+    -fx-background-color: -fx-bg-secondary;
+    -fx-padding: 12 20;
+    -fx-spacing: 12;
+    -fx-alignment: center-left;
+}
+
+.reports-controls .label {
+    -fx-font-size: 13px;
+    -fx-text-fill: -fx-text-secondary;
+    -fx-font-weight: 500;
+}
+
+.reports-controls .combo-box {
+    -fx-pref-width: 200px;
+}
+
+.reports-controls .date-picker {
+    -fx-pref-width: 150px;
+}
+
+/* ==================== REPORTS TABLE ==================== */
+.reports-table {
+    -fx-font-size: 13px;
+    -fx-border-color: -fx-border-secondary;
+    -fx-border-radius: 10px;
+    -fx-background-radius: 10px;
+    -fx-background-color: -fx-bg-secondary;
+}
+
+.reports-table .column-header {
+    -fx-background-color: transparent;
+    -fx-text-fill: -fx-text-primary;
+    -fx-font-weight: bold;
+    -fx-min-height: 50px;
+    -fx-pref-height: 50px;
+}
+
+.reports-table .column-header-background {
+    -fx-background-color: -fx-bg-surface-variant;
+    -fx-background-radius: 10px 10px 0 0;
+}
+
+.reports-table .column-header .label {
+    -fx-text-fill: -fx-text-primary;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+}
+
+.reports-table .table-row-cell:even {
+    -fx-background-color: -fx-bg-secondary;
+}
+
+.reports-table .table-row-cell:odd {
+    -fx-background-color: rgba(182, 192, 201, 0.1);
+}
+
+.reports-table .table-row-cell:selected {
+    -fx-background-color: rgba(52, 152, 219, 0.3);
+}
+
+.reports-table .table-row-cell:filled:hover {
+    -fx-background-color: rgba(52, 152, 219, 0.15);
+}
+
+.reports-table .table-cell {
+    -fx-border-color: -fx-border-primary;
+    -fx-padding: 8px;
+    -fx-alignment: center-left;
+    -fx-text-fill: -fx-text-primary;
+}
+
+/* ==================== REPORTS BUTTONS ==================== */
+.reports-button {
+    -fx-background-color: -fx-accent-primary;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8px;
+    -fx-border-radius: 8px;
+    -fx-padding: 10 20;
+    -fx-cursor: hand;
+}
+
+.reports-button:hover {
+    -fx-background-color: -fx-accent-primary-hover;
+}
+
+.reports-button-export {
+    -fx-background-color: -fx-accent-success;
+    -fx-text-fill: white;
+}
+
+.reports-button-export:hover {
+    -fx-background-color: -fx-accent-success-hover;
+}
+
+.reports-button-print {
+    -fx-background-color: -fx-accent-warning;
+    -fx-text-fill: white;
+}
+
+.reports-button-print:hover {
+    -fx-background-color: -fx-accent-warning-hover;
+}

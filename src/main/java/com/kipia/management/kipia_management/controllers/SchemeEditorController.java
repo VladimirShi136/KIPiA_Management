@@ -1772,8 +1772,7 @@ public class SchemeEditorController {
     private void updateButtonIcons() {
         if (schemePane.getScene() == null) return;
 
-        boolean isDarkTheme = schemePane.getScene().getStylesheets().stream()
-                .anyMatch(s -> s.contains("dark-theme.css"));
+        boolean isDarkTheme = com.kipia.management.kipia_management.utils.StyleUtils.isDarkTheme();
 
         String suffix = isDarkTheme ? "-dark.png" : "-white.png";
 

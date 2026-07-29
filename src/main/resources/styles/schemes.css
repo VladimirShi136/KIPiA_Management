@@ -1,0 +1,143 @@
+/* ============================================================
+   SCHEMES.CSS - Scheme editor styles
+   ============================================================ */
+
+/* ==================== SCHEME EDITOR ROOT ==================== */
+.scheme-editor-root {
+    -fx-background-color: -fx-bg-primary;
+}
+
+/* ==================== TOOLBAR ==================== */
+.tool-bar {
+    -fx-background-color: -fx-bg-secondary;
+    -fx-border-color: -fx-border-primary;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 8 12;
+    -fx-spacing: 8;
+}
+
+.tool-bar .separator {
+    -fx-background-color: -fx-border-primary;
+    -fx-pref-width: 1;
+}
+
+/* ==================== TOOL BUTTONS ==================== */
+.tool-button {
+    -fx-background-color: transparent;
+    -fx-background-radius: 5px;
+    -fx-border-radius: 5px;
+    -fx-border-width: 0;
+    -fx-padding: 6 10;
+    -fx-cursor: hand;
+    -fx-text-fill: -fx-text-primary;
+}
+
+.tool-button:hover {
+    -fx-background-color: rgba(52, 152, 219, 0.2);
+}
+
+.tool-button:pressed {
+    -fx-background-color: rgba(52, 152, 219, 0.3);
+}
+
+.tool-button-active {
+    -fx-background-color: -fx-accent-primary;
+    -fx-text-fill: white;
+}
+
+/* ==================== SCHEME LABELS ==================== */
+.scheme-label {
+    -fx-font-size: 13px;
+    -fx-font-weight: 500;
+    -fx-text-fill: -fx-text-secondary;
+}
+
+.scheme-status-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-text-tertiary;
+}
+
+.scheme-zoom-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-text-tertiary;
+}
+
+.scheme-updated-label {
+    -fx-font-size: 10px;
+    -fx-text-fill: -fx-accent-warning;
+    -fx-font-style: italic;
+}
+
+/* ==================== SCROLL PANE ==================== */
+.scheme-scroll {
+    -fx-background-color: -fx-bg-primary;
+    -fx-border-color: -fx-border-primary;
+}
+
+.scheme-scroll .viewport {
+    -fx-background-color: -fx-bg-primary;
+}
+
+/* ==================== CANVAS ==================== */
+.scheme-pane {
+    -fx-background-color: -fx-bg-primary;
+    -fx-border-color: -fx-border-primary;
+}
+
+/* ==================== PROPERTIES PANEL ==================== */
+.properties-panel {
+    -fx-background-color: -fx-bg-secondary;
+    -fx-border-color: -fx-border-primary;
+    -fx-border-width: 0 0 0 1;
+    -fx-padding: 12;
+}
+
+.properties-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-secondary;
+    -fx-padding: 0 0 10 0;
+}
+
+.properties-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-text-tertiary;
+    -fx-padding: 4 0;
+}
+
+.properties-value {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-text-primary;
+    -fx-padding: 4 0;
+}
+
+/* ==================== ZOOM CONTROLS ==================== */
+.zoom-controls {
+    -fx-background-color: -fx-bg-secondary;
+    -fx-border-color: -fx-border-primary;
+    -fx-border-radius: 20px;
+    -fx-background-radius: 20px;
+    -fx-padding: 4 8;
+    -fx-spacing: 4;
+}
+
+.zoom-controls .button {
+    -fx-background-color: transparent;
+    -fx-background-radius: 15px;
+    -fx-border-radius: 15px;
+    -fx-border-width: 0;
+    -fx-padding: 4 8;
+    -fx-cursor: hand;
+    -fx-text-fill: -fx-text-primary;
+    -fx-font-size: 14px;
+}
+
+.zoom-controls .button:hover {
+    -fx-background-color: rgba(52, 152, 219, 0.2);
+}
+
+.zoom-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-text-secondary;
+    -fx-padding: 4 8;
+}

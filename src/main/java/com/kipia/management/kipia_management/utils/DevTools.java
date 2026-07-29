@@ -207,10 +207,16 @@ public class DevTools {
             Scene scene = new Scene(root);
             scene.setFill(javafx.scene.paint.Color.TRANSPARENT);
 
-            // Применяем текущую тему
-            String currentTheme = StyleUtils.getCurrentTheme();
+            // Применяем базовые стили с переменными темы
+            for (String stylesheet : StyleUtils.getBaseStylesheets()) {
+                scene.getStylesheets().add(
+                        Objects.requireNonNull(DevTools.class.getResource(stylesheet)).toExternalForm()
+                );
+            }
+            
+            // Загружаем стили для help-dialog
             scene.getStylesheets().add(
-                    Objects.requireNonNull(DevTools.class.getResource(currentTheme)).toExternalForm()
+                    Objects.requireNonNull(DevTools.class.getResource("/styles/help-dialog.css")).toExternalForm()
             );
 
             helpStage.setScene(scene);

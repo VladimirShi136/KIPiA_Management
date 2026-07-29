@@ -1,0 +1,224 @@
+/* ============================================================
+   CONFLICT-DIALOG.CSS - Conflict resolution dialog styles
+   ============================================================ */
+
+/* ==================== CONFLICT DIALOG ==================== */
+.conflict-dialog .conflict-cell-box {
+    -fx-padding: 10;
+    -fx-border-color: -fx-border-primary;
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
+    -fx-background-color: -fx-bg-secondary;
+    -fx-background-radius: 6;
+}
+
+.conflict-dialog .conflict-cell-title {
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-text-fill: -fx-text-secondary;
+}
+
+.conflict-dialog .conflict-cell-details {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-text-tertiary;
+    -fx-wrap-text: true;
+}
+
+.conflict-dialog .conflict-cell-radio {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-text-secondary;
+}
+
+/* Скроллбар списка конфликтов */
+.conflict-dialog .conflict-list .scroll-bar:vertical {
+    -fx-background-color: -fx-scrollbar-bg;
+    -fx-pref-width: 10px;
+}
+
+.conflict-dialog .conflict-list .scroll-bar:vertical .thumb {
+    -fx-background-color: -fx-scrollbar-thumb;
+    -fx-background-radius: 5px;
+}
+
+.conflict-dialog .conflict-list .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: -fx-scrollbar-thumb-hover;
+}
+
+.conflict-dialog {
+    -fx-pref-width: 900px !important;
+    -fx-min-width: 850px !important;
+    -fx-max-width: 1000px !important;
+    -fx-background-color: -fx-dialog-bg;
+    -fx-background-radius: 12;
+    -fx-effect: dropshadow(gaussian, -fx-shadow-medium, 20, 0, 0, 5);
+}
+
+.conflict-dialog .top-box {
+    -fx-background-color: -fx-dialog-header !important;
+    -fx-background-radius: 12 12 0 0;
+    -fx-border-color: -fx-dialog-header-border !important;
+    -fx-border-width: 0 0 1 0;
+    -fx-cursor: hand !important;
+}
+
+.conflict-dialog .conflict-icon {
+    -fx-fill: -fx-text-on-dark;
+}
+
+.conflict-dialog .type-label {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-tertiary;
+    -fx-padding: 0 0 4 0;
+}
+
+.conflict-dialog .title-label {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-on-dark;
+    -fx-padding: 0 0 4 0;
+}
+
+.conflict-dialog .section-label {
+    -fx-text-fill: -fx-text-secondary !important;
+    -fx-font-size: 12px;
+    -fx-font-weight: 500;
+}
+
+.conflict-dialog .instruction-label {
+    -fx-font-size: 14px;
+    -fx-text-fill: -fx-text-secondary;
+    -fx-wrap-text: true;
+    -fx-padding: 0 0 10 0;
+}
+
+.conflict-dialog .conflict-list {
+    -fx-background-color: -fx-bg-tertiary;
+    -fx-border-color: -fx-border-primary;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+}
+
+.conflict-dialog .conflict-list .list-cell {
+    -fx-background-color: transparent;
+    -fx-padding: 8;
+    -fx-border-color: transparent;
+}
+
+.conflict-dialog .conflict-list .list-cell:filled:selected {
+    -fx-background-color: rgba(232, 244, 248, 0.5);
+    -fx-border-color: -fx-accent-primary;
+}
+
+.conflict-dialog .mass-action-box {
+    -fx-padding: 15 0 10 0;
+}
+
+.conflict-dialog .button {
+    -fx-effect: none;
+    -fx-text-fill: -fx-text-on-dark;
+}
+
+.conflict-dialog .button-local {
+    -fx-background-color: -fx-accent-primary;
+    -fx-text-fill: white;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-cursor: hand;
+    -fx-padding: 8 16;
+    -fx-font-weight: bold;
+}
+
+.conflict-dialog .button-local:hover {
+    -fx-background-color: -fx-accent-primary-hover;
+}
+
+.conflict-dialog .button-remote {
+    -fx-background-color: -fx-accent-danger;
+    -fx-text-fill: white;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-cursor: hand;
+    -fx-padding: 8 16;
+    -fx-font-weight: bold;
+}
+
+.conflict-dialog .button-remote:hover {
+    -fx-background-color: -fx-accent-danger-hover;
+}
+
+.conflict-dialog .conflict-divider {
+    -fx-background-color: -fx-border-primary;
+    -fx-pref-height: 1;
+}
+
+.conflict-dialog .conflict-btn-bar {
+    -fx-background-color: transparent;
+}
+
+.conflict-dialog .button-primary {
+    -fx-background-color: -fx-accent-success;
+    -fx-text-fill: white;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-cursor: hand;
+    -fx-padding: 10 20;
+    -fx-font-weight: bold;
+}
+
+.conflict-dialog .button-primary:hover {
+    -fx-background-color: -fx-accent-success-hover;
+}
+
+.conflict-dialog .button-secondary {
+    -fx-background-color: -fx-text-tertiary;
+    -fx-text-fill: -fx-text-on-dark;
+    -fx-background-radius: 6;
+    -fx-border-radius: 6;
+    -fx-cursor: hand;
+    -fx-padding: 10 20;
+    -fx-font-weight: bold;
+}
+
+.conflict-dialog .button-secondary:hover {
+    -fx-background-color: -fx-text-secondary;
+}
+
+.conflict-dialog .explanation-box {
+    -fx-background-color: -fx-bg-tertiary;
+    -fx-border-color: -fx-border-primary;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-border-width: 1;
+    -fx-padding: 15;
+}
+
+.conflict-dialog .choice-title-local {
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-text-fill: -fx-accent-primary;
+}
+
+.conflict-dialog .choice-title-remote {
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-text-fill: -fx-accent-danger;
+}
+
+.conflict-dialog .choice-title-skip {
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-text-fill: -fx-text-tertiary;
+}
+
+.conflict-dialog .choice-description {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-text-secondary;
+    -fx-wrap-text: true;
+}
+
+.conflict-dialog .choice-hint {
+    -fx-font-size: 11px;
+    -fx-text-fill: -fx-text-tertiary;
+    -fx-font-style: italic;
+}

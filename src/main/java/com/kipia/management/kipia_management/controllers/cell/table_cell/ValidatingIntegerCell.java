@@ -4,7 +4,7 @@ import com.kipia.management.kipia_management.utils.CustomAlertDialog;
 
 /**
  * Класс для валидации целых чисел.
- * Теперь использует композицию с ValidatingCellEditor для делегирования сообщений об ошибках.
+ * Использует композицию с ValidatingCellEditor для делегирования сообщений об ошибках.
  *
  * @author vladimir_shi
  * @since 13.09.2025

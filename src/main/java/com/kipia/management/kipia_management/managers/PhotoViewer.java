@@ -101,7 +101,7 @@ public class PhotoViewer {
         this.photoManager    = photoManager;
         this.device          = device;
         this.ownerStage      = ownerStage;
-        this.darkTheme       = StyleUtils.getCurrentTheme().contains("dark");
+        this.darkTheme       = StyleUtils.isDarkTheme();
         this.locationTitle   = null;
         this.multiDeviceMode = false;
         this.photoEntries    = null;
@@ -125,7 +125,7 @@ public class PhotoViewer {
         this.device          = null;
         this.photos          = null;
         this.ownerStage      = ownerStage;
-        this.darkTheme       = StyleUtils.getCurrentTheme().contains("dark");
+        this.darkTheme       = StyleUtils.isDarkTheme();
         this.locationTitle   = locationTitle;
         this.multiDeviceMode = true;
 
@@ -172,6 +172,13 @@ public class PhotoViewer {
 
         Scene scene = new Scene(root);
         scene.setFill(javafx.scene.paint.Color.BLACK);
+        
+        // Применяем базовые стили с переменными темы
+        for (String stylesheet : StyleUtils.getBaseStylesheets()) {
+            scene.getStylesheets().add(
+                    Objects.requireNonNull(PhotoViewer.class.getResource(stylesheet)).toExternalForm()
+            );
+        }
 
         stage.addEventHandler(javafx.scene.input.KeyEvent.KEY_PRESSED, event -> {
             switch (event.getCode()) {

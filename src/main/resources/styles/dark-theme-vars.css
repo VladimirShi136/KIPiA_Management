@@ -1,0 +1,80 @@
+/* ============================================================
+   DARK THEME VARIABLES
+   ============================================================ */
+
+.root {
+    /* ==================== BACKGROUND COLORS ==================== */
+    -fx-bg-primary: #1e1e1e;
+    -fx-bg-secondary: #2d2d2d;
+    -fx-bg-tertiary: #1a1a1a;
+    -fx-bg-surface-variant: #49454F;
+    
+    /* ==================== TEXT COLORS ==================== */
+    -fx-text-primary: #ffffff;
+    -fx-text-secondary: #ecf0f1;
+    -fx-text-tertiary: #bdc3c7;
+    -fx-text-on-dark: #ffffff;
+    -fx-text-on-surface-variant: #CAC4D0;
+    
+    /* ==================== NAVIGATION COLORS ==================== */
+    -fx-nav-top: #1E2A3A;
+    -fx-nav-left: #4A5568;
+    -fx-nav-bottom: #4A5568;
+    
+    /* ==================== BUTTON COLORS ==================== */
+    -fx-btn-devices: #f58352;
+    -fx-btn-devices-hover: #fb5302;
+    -fx-btn-photo-gallery: #e2a58c;
+    -fx-btn-photo-gallery-hover: #e67d51;
+    -fx-btn-schemes: #dbecf0;
+    -fx-btn-schemes-hover: #9ce6f6;
+    -fx-btn-reports: #b6c0c9;
+    -fx-btn-reports-hover: #79a4cc;
+    
+    /* ==================== ACCENT COLORS ==================== */
+    -fx-accent-primary: #3498db;
+    -fx-accent-primary-hover: #2980b9;
+    -fx-accent-success: #38a169;
+    -fx-accent-success-hover: #2f855a;
+    -fx-accent-danger: #c53030;
+    -fx-accent-danger-hover: #9b2c2c;
+    -fx-accent-warning: #ff9c7a;
+    -fx-accent-warning-hover: #fb5302;
+    -fx-accent-info: #1abc9c;
+    
+    /* ==================== BORDER COLORS ==================== */
+    -fx-border-primary: #3d3d3d;
+    -fx-border-secondary: #2c3e50;
+    -fx-border-dark: #4a5568;
+    
+    /* ==================== STATUS COLORS ==================== */
+    -fx-status-total: #1D5A73;
+    -fx-status-working: #4CAF50;
+    -fx-status-storage: #F58352;
+    -fx-status-lost: #848C9B;
+    -fx-status-broken: #F44336;
+    -fx-status-with-photos: #A8C8D0;
+    
+    /* ==================== DIALOG COLORS ==================== */
+    -fx-dialog-bg: #2d2d2d;
+    -fx-dialog-header: #8b0000;
+    -fx-dialog-header-border: #6b0000;
+    -fx-help-dialog-bg: #2e2c23;
+    -fx-help-dialog-header: #1E2A3A;
+    
+    /* ==================== SCROLLBAR COLORS ==================== */
+    -fx-scrollbar-bg: #2d2d2d;
+    -fx-scrollbar-thumb: #555555;
+    -fx-scrollbar-thumb-hover: #777777;
+    
+    /* ==================== INPUT COLORS ==================== */
+    -fx-input-bg: #1a1a1a;
+    -fx-input-border: #3d3d3d;
+    -fx-input-border-focused: #3498db;
+    -fx-input-bg-dark: #2d2d2d;
+    
+    /* ==================== SHADOWS ==================== */
+    -fx-shadow-light: rgba(0, 0, 0, 0.3);
+    -fx-shadow-medium: rgba(0, 0, 0, 0.4);
+    -fx-shadow-dark: rgba(0, 0, 0, 0.5);
+}

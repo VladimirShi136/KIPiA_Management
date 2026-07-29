@@ -163,8 +163,7 @@ public class PhotoGalleryController implements SearchableController {
                 // чтобы вызывать и из onAction, и из updateItem при восстановлении состояния
                 updateToggleIcon = () -> {
                     if (toggleBtn.getScene() == null) return;
-                    boolean dark = toggleBtn.getScene().getStylesheets().stream()
-                            .anyMatch(s -> s.contains("dark-theme.css"));
+                    boolean dark = com.kipia.management.kipia_management.utils.StyleUtils.isDarkTheme();
                     String iconPath = isExpanded
                             ? (dark ? "/images/arrow-up-dark.png"   : "/images/arrow-up-white.png")
                             : (dark ? "/images/arrow-down-dark.png" : "/images/arrow-down-white.png");

@@ -84,31 +84,69 @@ public class ShapeData {
     public String getFontStyle() { return fontStyle; }
     public void setFontStyle(String fontStyle) { this.fontStyle = fontStyle; }
 
-    // Хелперы для цветов
+    // -----------------------------------------------
+    //  Конвертеры цветов для совместимости с Android
+    // -----------------------------------------------
+
+    /**
+     * Преобразует объект {@link javafx.scene.paint.Color} в строку формата
+     * <b>0xRRGGBBAA</b>, где последние два символа – альфа‑канал.
+     * Соответствует формату Android (Kotlin) реализации.
+     *
+     * @param color объект JavaFX‑цвета (может быть null)
+     * @return строковое представление в формате 0xRRGGBBAA или null,
+     *         если color == null
+     */
     public static String colorToString(Color color) {
         if (color == null) return null;
-        return String.format("#%02X%02X%02X",
-                (int)(color.getRed() * 255),
-                (int)(color.getGreen() * 255),
-                (int)(color.getBlue() * 255));
+        return String.format("0x%02X%02X%02X%02X",
+                (int) Math.round(color.getRed() * 255),
+                (int) Math.round(color.getGreen() * 255),
+                (int) Math.round(color.getBlue() * 255),
+                (int) Math.round(color.getOpacity() * 255));
     }
 
+    /**
+     * Преобразует строковое представление цвета в объект {@link Color}.
+     * Поддерживает формат Android (Kotlin): 0xRRGGBBAA.
+     *
+     * @param colorStr строка с цветом
+     * @return объект {@link Color} либо null, если строка пустая/null
+     */
     public static Color stringToColor(String colorStr) {
-        if (colorStr == null || colorStr.isEmpty()) return null; // Возвращаем null для обработки прозрачного цвета
+        if (colorStr == null || colorStr.trim().isEmpty()) return null;
+
+        String trimmed = colorStr.trim();
+
         try {
-            // Проверяем на формат Android ARGB (0xAARRGGBB)
-            if (colorStr.startsWith("0x") && colorStr.length() == 10) {
-                // Конвертируем ARGB в RGB
-                long argb = Long.parseLong(colorStr.substring(2), 16);
-                int r = (int) ((argb >> 16) & 0xFF);
-                int g = (int) ((argb >> 8) & 0xFF);
-                int b = (int) (argb & 0xFF);
-                return Color.rgb(r, g, b);
+            // Если формат 0xRRGGBBAA (как в Kotlin: "0x" + 8 символов)
+            if (trimmed.toLowerCase().startsWith("0x") && trimmed.length() == 10) {
+                String hex = trimmed.substring(2); // Берем 8 символов после 0x
+                int r = Integer.parseInt(hex.substring(0, 2), 16);
+                int g = Integer.parseInt(hex.substring(2, 4), 16);
+                int b = Integer.parseInt(hex.substring(4, 6), 16);
+                int a = Integer.parseInt(hex.substring(6, 8), 16);
+                return Color.rgb(r, g, b, a / 255.0);
             }
-            // Стандартный формат
-            return Color.web(colorStr);
+
+            // Если старый формат #AARRGGBB
+            if (trimmed.startsWith("#") && trimmed.length() == 9) {
+                int a = Integer.parseInt(trimmed.substring(1, 3), 16);
+                int r = Integer.parseInt(trimmed.substring(3, 5), 16);
+                int g = Integer.parseInt(trimmed.substring(5, 7), 16);
+                int b = Integer.parseInt(trimmed.substring(7, 9), 16);
+                return Color.rgb(r, g, b, a / 255.0);
+            }
+
+            // Если просто 6-значный HEX (RGB)
+            if (trimmed.length() == 7 && trimmed.startsWith("#")) {
+                return Color.web(trimmed);
+            }
+
+            // Fallback для стандартных названий цветов JavaFX
+            return Color.web(trimmed);
         } catch (Exception e) {
-            return Color.BLACK; // Возвращаем черный цвет при ошибке парсинга
+            return Color.BLACK; // Безопасное значение по умолчанию
         }
     }
 }

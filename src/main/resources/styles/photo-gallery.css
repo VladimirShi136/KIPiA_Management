@@ -1,0 +1,237 @@
+/* ============================================================
+   PHOTO-GALLERY.CSS - Photo gallery styles
+   ============================================================ */
+
+/* ==================== PHOTO GALLERY ROOT ==================== */
+.photo-gallery-root {
+    -fx-background-color: -fx-bg-primary;
+}
+
+/* ==================== PHOTO GALLERY HEADER ==================== */
+.gallery-header {
+    -fx-background-color: -fx-bg-secondary;
+    -fx-padding: 15 20;
+    -fx-border-color: -fx-border-primary;
+    -fx-border-width: 0 0 1 0;
+}
+
+.gallery-title {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-secondary;
+}
+
+.gallery-subtitle {
+    -fx-font-size: 13px;
+    -fx-text-fill: -fx-text-tertiary;
+    -fx-padding: 4 0 0 0;
+}
+
+/* ==================== PHOTO GALLERY CONTROLS ==================== */
+.gallery-controls {
+    -fx-background-color: -fx-bg-secondary;
+    -fx-padding: 12 20;
+    -fx-spacing: 12;
+    -fx-alignment: center-left;
+}
+
+.gallery-controls .label {
+    -fx-font-size: 13px;
+    -fx-text-fill: -fx-text-secondary;
+    -fx-font-weight: 500;
+}
+
+.gallery-controls .combo-box {
+    -fx-pref-width: 200px;
+}
+
+/* ==================== PHOTO GRID ==================== */
+.photo-grid {
+    -fx-background-color: -fx-bg-primary;
+    -fx-padding: 15;
+}
+
+.photo-cell {
+    -fx-background-color: -fx-bg-secondary;
+    -fx-border-color: -fx-border-primary;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+    -fx-padding: 8;
+    -fx-effect: dropshadow(three-pass-box, -fx-shadow-light, 3, 0, 0, 2);
+}
+
+.photo-cell:hover {
+    -fx-border-color: -fx-accent-primary;
+    -fx-border-width: 2;
+    -fx-effect: dropshadow(three-pass-box, -fx-shadow-medium, 5, 0, 0, 3);
+}
+
+.photo-cell:selected {
+    -fx-border-color: -fx-accent-primary;
+    -fx-border-width: 2;
+    -fx-background-color: rgba(52, 152, 219, 0.1);
+}
+
+.photo-image {
+    -fx-fit-width: 150px;
+    -fx-fit-height: 150px;
+    -fx-smooth: true;
+    -fx-preserve-ratio: true;
+}
+
+.photo-info {
+    -fx-padding: 8 0 0 0;
+}
+
+.photo-device-name {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-primary;
+}
+
+.photo-date {
+    -fx-font-size: 11px;
+    -fx-text-fill: -fx-text-tertiary;
+}
+
+/* ==================== PHOTO VIEWER ==================== */
+.photo-viewer {
+    -fx-background-color: -fx-bg-tertiary;
+    -fx-padding: 20;
+}
+
+.photo-viewer-image {
+    -fx-smooth: true;
+    -fx-preserve-ratio: true;
+}
+
+.photo-viewer-info {
+    -fx-background-color: -fx-bg-secondary;
+    -fx-padding: 12;
+    -fx-border-color: -fx-border-primary;
+    -fx-border-radius: 8px;
+    -fx-background-radius: 8px;
+}
+
+.photo-viewer-info .label {
+    -fx-font-size: 13px;
+    -fx-text-fill: -fx-text-secondary;
+}
+
+/* ==================== STATISTICS PANE (for photo gallery) ==================== */
+.gallery-statistics-pane,
+.statistics-pane {
+    -fx-background-color: -fx-bg-surface-variant;
+    -fx-padding: 12px 15px;
+    -fx-border-radius: 10px;
+    -fx-background-radius: 10px;
+}
+
+.gallery-statistics-data,
+.statistics-data {
+    -fx-spacing: 10;
+    -fx-alignment: center;
+}
+
+.gallery-stat-total,
+.stat-total {
+    -fx-text-fill: -fx-status-total;
+    -fx-font-size: 30px;
+    -fx-font-weight: bold;
+}
+
+.stat-working {
+    -fx-text-fill: -fx-status-working;
+    -fx-font-size: 30px;
+    -fx-font-weight: bold;
+}
+
+.stat-storage {
+    -fx-text-fill: -fx-status-storage;
+    -fx-font-size: 30px;
+    -fx-font-weight: bold;
+}
+
+.stat-with-photos {
+    -fx-text-fill: -fx-status-with-photos;
+    -fx-font-size: 30px;
+    -fx-font-weight: bold;
+}
+
+.gallery-stat-label,
+.stat-label {
+    -fx-font-size: 13px;
+    -fx-text-fill: -fx-text-on-surface-variant;
+}
+
+/* ==================== PHOTO GALLERY LISTVIEW ==================== */
+.photo-gallery-listview {
+    -fx-background-color: -fx-bg-primary;
+    -fx-border-color: transparent;
+    -fx-background-radius: 0;
+}
+
+.photo-gallery-listview .list-cell {
+    -fx-background-color: transparent;
+    -fx-padding: 10;
+    -fx-border-color: transparent;
+}
+
+/* ==================== LOCATION CARD ==================== */
+.location-card {
+    -fx-background-color: -fx-bg-secondary;
+    -fx-border-color: -fx-border-primary;
+    -fx-border-radius: 10px;
+    -fx-background-radius: 10px;
+    -fx-border-width: 1px;
+    -fx-effect: dropshadow(three-pass-box, -fx-shadow-light, 3, 0, 0, 2);
+}
+
+.location-card:hover {
+    -fx-border-color: -fx-accent-primary;
+    -fx-border-width: 1px;
+    -fx-effect: dropshadow(three-pass-box, -fx-shadow-medium, 5, 0, 0, 3);
+}
+
+.location-card-hover {
+    -fx-border-color: -fx-accent-primary;
+    -fx-border-width: 1px;
+}
+
+.location-name {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-text-secondary;
+}
+
+.card-stats-row {
+    -fx-spacing: 15;
+    -fx-padding: 5 0;
+}
+
+.card-buttons-row {
+    -fx-spacing: 10;
+    -fx-padding: 5 0;
+}
+
+.view-all-button {
+    -fx-background-color: -fx-accent-primary;
+    -fx-text-fill: -fx-text-on-dark;
+    -fx-font-weight: bold;
+    -fx-padding: 8 16;
+    -fx-background-radius: 6px;
+    -fx-cursor: hand;
+}
+
+.view-all-button:hover {
+    -fx-background-color: -fx-accent-primary-hover;
+}
+
+.devices-list {
+    -fx-background-color: -fx-bg-tertiary;
+    -fx-border-color: -fx-border-primary;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-padding: 8;
+    -fx-spacing: 5;
+}

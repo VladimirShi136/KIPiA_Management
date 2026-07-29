@@ -27,6 +27,7 @@ import com.kipia.management.kipia_management.utils.CustomAlertDialog;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.ResourceBundle;
 
 import static com.kipia.management.kipia_management.shapes.ShapeBase.LOGGER;
@@ -353,35 +354,24 @@ public class ConflictResolutionDialog implements Initializable {
             Scene scene = new Scene(root);
             scene.setFill(Color.TRANSPARENT);
             
-            // Применяем текущую тему
-            String currentTheme = StyleUtils.getCurrentTheme();
-            LOGGER.info("Current theme: {}", currentTheme);
+            // Применяем текущую тему через новую систему стилей
+            LOGGER.info("Current theme is dark: {}", StyleUtils.isDarkTheme());
             
-            // Добавляем стили для конфликтного диалога
-            try {
-                // Всегда добавляем светлую тему как базовую
-                URL lightStylesUrl = ConflictResolutionDialog.class.getResource("/styles/light-theme.css");
-                if (lightStylesUrl != null) {
-                    scene.getStylesheets().add(lightStylesUrl.toExternalForm());
-                    LOGGER.info("Added light-theme.css for conflict dialog");
+            // Добавляем базовые стили с переменными темы
+            for (String stylesheet : StyleUtils.getBaseStylesheets()) {
+                URL url = ConflictResolutionDialog.class.getResource(stylesheet);
+                if (url != null) {
+                    scene.getStylesheets().add(url.toExternalForm());
+                    LOGGER.info("Added stylesheet: {}", stylesheet);
                 } else {
-                    LOGGER.warn("light-theme.css not found at /styles/light-theme.css");
+                    LOGGER.warn("Stylesheet not found: {}", stylesheet);
                 }
-                
-                // Если темная тема, добавляем её после светлой (для перекрытия)
-                if (currentTheme.contains("dark")) {
-                    URL darkStylesUrl = ConflictResolutionDialog.class.getResource("/styles/dark-theme.css");
-                    if (darkStylesUrl != null) {
-                        scene.getStylesheets().add(darkStylesUrl.toExternalForm());
-                        LOGGER.info("Added dark-theme.css for conflict dialog");
-                    } else {
-                        LOGGER.warn("dark-theme.css not found at /styles/dark-theme.css");
-                    }
-                }
-                
-            } catch (Exception e) {
-                LOGGER.error("Failed to load conflict dialog styles: {}", e.getMessage());
             }
+            
+            // Добавляем специфичные стили для диалога конфликтов
+            scene.getStylesheets().add(
+                    Objects.requireNonNull(ConflictResolutionDialog.class.getResource("/styles/conflict-dialog.css")).toExternalForm()
+            );
             
             dialogStage.setScene(scene);
             
@@ -511,31 +501,29 @@ public class ConflictResolutionDialog implements Initializable {
         
         Scene scene = new Scene(root, 700, 500);
         
-        // Применяем стили если доступны
+        // Применяем стили через новую систему
         try {
-            String currentTheme = StyleUtils.getCurrentTheme();
-            LOGGER.info("Programmatic dialog - Current theme: {}", currentTheme);
+            LOGGER.info("Programmatic dialog - Current theme is dark: {}", StyleUtils.isDarkTheme());
             
-            // Всегда добавляем светлую тему как базовую
-            URL lightStylesUrl = ConflictResolutionDialog.class.getResource("/styles/light-theme.css");
-            if (lightStylesUrl != null) {
-                scene.getStylesheets().add(lightStylesUrl.toExternalForm());
-                LOGGER.info("Programmatic dialog - Added light-theme.css");
-            }
-            
-            // Если темная тема, добавляем её после светлой
-            if (currentTheme.contains("dark")) {
-                URL darkStylesUrl = ConflictResolutionDialog.class.getResource("/styles/dark-theme.css");
-                if (darkStylesUrl != null) {
-                    scene.getStylesheets().add(darkStylesUrl.toExternalForm());
-                    LOGGER.info("Programmatic dialog - Added dark-theme.css");
+            // Добавляем базовые стили с переменными темы
+            for (String stylesheet : StyleUtils.getBaseStylesheets()) {
+                URL url = ConflictResolutionDialog.class.getResource(stylesheet);
+                if (url != null) {
+                    scene.getStylesheets().add(url.toExternalForm());
+                    LOGGER.info("Programmatic dialog - Added stylesheet: {}", stylesheet);
+                } else {
+                    LOGGER.warn("Programmatic dialog - Stylesheet not found: {}", stylesheet);
                 }
             }
+            
+            // Добавляем специфичные стили для диалога конфликтов
+            scene.getStylesheets().add(
+                    Objects.requireNonNull(ConflictResolutionDialog.class.getResource("/styles/conflict-dialog.css")).toExternalForm()
+            );
             
             LOGGER.info("Programmatic dialog - Loaded stylesheets: {}", scene.getStylesheets());
         } catch (Exception e) {
             LOGGER.error("Programmatic dialog - Failed to load styles: {}", e.getMessage());
-            // Если стили не найдены, используем встроенные
         }
         
         dialogStage.setScene(scene);
