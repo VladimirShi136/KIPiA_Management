@@ -41,6 +41,7 @@ build/
 # Пути к базе и логам #
 /src/main/resources/logs/kipia-management-dev.log
 /src/main/resources/data/kipia_management.db
+/src/main/resources/data/time_state.properties
 
 # Конфиденциальные данные
 .env

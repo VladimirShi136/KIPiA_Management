@@ -2,11 +2,6 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 
-<!--
-  Author: vladimir_shi
-  Since: 02.12.2025
-  * Окно фотогалереи *
--->
 <StackPane fx:id="rootPane"
            xmlns="http://javafx.com/javafx/23"
            xmlns:fx="http://javafx.com/fxml/1"
@@ -42,7 +37,7 @@
                            styleClass="stat-label"/>
                 </VBox>
             </HBox>
-            <!-- Фильтрованная статистика (показывается при активных фильтрах) -->
+            <!-- Фильтрованная статистика -->
             <HBox fx:id="filteredStatsBox" spacing="10" styleClass="statistics-data"
                   HBox.hgrow="ALWAYS" visible="false" managed="false">
                 <VBox alignment="CENTER" HBox.hgrow="ALWAYS">
@@ -78,10 +73,7 @@
         <!-- КОНТЕЙНЕР КАРТОЧЕК -->
         <ListView fx:id="cardsListView"
                   VBox.vgrow="ALWAYS"
-                  prefWidth="2200"
-                  prefHeight="1800"
-                  minWidth="600"
-                  minHeight="200"
+                  maxWidth="Infinity"
                   maxHeight="Infinity"
                   styleClass="photo-gallery-listview"/>
     </VBox>

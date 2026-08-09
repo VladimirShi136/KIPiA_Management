@@ -44,9 +44,18 @@
                         <Tooltip text="Поиск"/>
                     </tooltip>
                 </Button>
+
                 <!-- Контейнер для элементов поиска (изначально скрыт) -->
                 <HBox fx:id="topSearchFieldContainer" spacing="10" alignment="CENTER_LEFT"
                       styleClass="search-field-container" visible="false" managed="false">
+                    <!-- Фильтр по схеме (только для редактора схем) -->
+                    <ComboBox fx:id="topSchemeFilter"
+                              promptText="Все схемы"
+                              styleClass="filter-combo"
+                              visible="false"
+                              managed="false"
+                              prefWidth="200"/>
+
                     <!-- Поле поиска -->
                     <TextField fx:id="topSearchField"
                                promptText="Поиск..."

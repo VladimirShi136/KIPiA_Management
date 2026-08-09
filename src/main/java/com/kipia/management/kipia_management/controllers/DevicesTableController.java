@@ -120,6 +120,8 @@ public class DevicesTableController implements SearchableController {
         // Запускаем загрузку данных
         loadDataFromDaoAsync();
 
+        deviceTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
+
         LOGGER.info("DevicesTableController инициализирован успешно");
     }
 
@@ -661,8 +663,7 @@ public class DevicesTableController implements SearchableController {
         javafx.scene.layout.VBox root = new javafx.scene.layout.VBox(titleBar, formContent);
         javafx.scene.layout.VBox.setVgrow(formContent, Priority.ALWAYS);
         root.setStyle(
-                "-fx-background-color:" + (dark ? "#252d38" : "#ffffff") + ";" +
-                        "-fx-background-radius:12px;" +
+                "-fx-background-radius:12px;" +
                         "-fx-border-color:" + (dark ? "#2d3e50" : "#d0d4d8") + ";" +
                         "-fx-border-width:1px;-fx-border-radius:12px;"
         );
@@ -683,11 +684,19 @@ public class DevicesTableController implements SearchableController {
         // ===== SCENE =====
         Scene scene = new Scene(root, 580, 720);
         scene.setFill(javafx.scene.paint.Color.TRANSPARENT);
-        
+
         // Применяем базовые стили с переменными темы
         for (String stylesheet : StyleUtils.getBaseStylesheets()) {
             scene.getStylesheets().add(
                     Objects.requireNonNull(getClass().getResource(stylesheet)).toExternalForm()
+            );
+        }
+
+        // Добавляем специфический стиль для add-device
+        String addDeviceStylesheet = StyleUtils.getScreenStylesheet("add-device");
+        if (addDeviceStylesheet != null) {
+            scene.getStylesheets().add(
+                    Objects.requireNonNull(getClass().getResource(addDeviceStylesheet)).toExternalForm()
             );
         }
 
@@ -746,12 +755,12 @@ public class DevicesTableController implements SearchableController {
                     // Обычные колонки
                     minWidth = Math.max(width * 0.4, 50);
                     columns.get(i).setMinWidth(minWidth);
-                    columns.get(i).setMaxWidth(400);
+                    columns.get(i).setMaxWidth(Double.MAX_VALUE);
                 } else {
                     // Последняя колонка (доп. информация)
                     minWidth = Math.max(width * 0.4, 50);
                     columns.get(i).setMinWidth(minWidth);
-                    columns.get(i).setMaxWidth(600);
+                    columns.get(i).setMaxWidth(Double.MAX_VALUE);
                 }
             }
 

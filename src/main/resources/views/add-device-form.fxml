@@ -12,12 +12,10 @@
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.kipia.management.kipia_management.controllers.AddDeviceController"
       styleClass="add-device-root"
-      style="-fx-background-color: transparent;"
       VBox.vgrow="ALWAYS">
 
     <!-- ScrollPane для всей формы -->
     <ScrollPane fitToWidth="true"
-                style="-fx-background: transparent; -fx-border-color: transparent;"
                 VBox.vgrow="ALWAYS">
 
         <VBox spacing="20" alignment="TOP_CENTER" style="-fx-padding: 20;">

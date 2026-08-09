@@ -20,6 +20,8 @@
             <VBox spacing="10">
                 <!-- Панель инструментов -->
                 <ToolBar styleClass="tool-bar">
+                    <!-- Растягивающийся регион слева для центрирования -->
+                    <Region HBox.hgrow="ALWAYS"/>
                     <!-- Группа инструментов редактирования -->
                     <Button fx:id="undoBtn" styleClass="tool-button">
                         <tooltip>
@@ -65,12 +67,9 @@
                         </tooltip>
                     </Button>
                     <Separator orientation="VERTICAL"/>
-                    <!-- Группа управления схемами -->
-                    <Label text="Схема:" styleClass="scheme-label" style="-fx-padding: 0 5 0 10;"/>
-                    <VBox spacing="1" alignment="CENTER_LEFT">
-                        <ComboBox fx:id="schemeComboBox" styleClass="filter-combo"/>
-                        <Label fx:id="schemeUpdatedLabel" styleClass="scheme-updated-label"/>
-                    </VBox>
+                    <!-- Скрытый ComboBox для работы контроллера (отображается в шапке) -->
+                    <ComboBox fx:id="schemeComboBox" visible="false" managed="false"/>
+                    <Label fx:id="schemeUpdatedLabel" styleClass="scheme-updated-label" visible="false" managed="false"/>
                     <Button fx:id="saveSchemeBtn" styleClass="tool-button">
                         <tooltip>
                             <Tooltip text="Сохранить схему"/>
@@ -91,7 +90,7 @@
                             <Tooltip text="Удалить схему"/>
                         </tooltip>
                     </Button>
-                    <!-- Растягивающийся регион для выравнивания -->
+                    <!-- Растягивающийся регион справа для центрирования -->
                     <Region HBox.hgrow="ALWAYS"/>
                 </ToolBar>
                 <!-- Дополнительная панель статуса инструментов (опционально) -->

@@ -91,7 +91,7 @@ public class PhotoViewer {
     private Pane       zoomOverlay;
     private VBox       mainContainer;
     private StackPane  imageContainer;
-    private HBox       topPanel;
+    private Pane       topPanel;
 
     // ═════════════════════════════════════════════════════════════════════════
     // Конструктор — одиночный прибор
@@ -297,6 +297,7 @@ public class PhotoViewer {
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
         Button closeBtn = new Button("✕");
+        closeBtn.setTooltip(new Tooltip("Закрыть окно (Esc)"));
         closeBtn.setStyle("-fx-background-color:transparent;-fx-text-fill:" +
                 (darkTheme ? "#aec6de" : "white") +
                 ";-fx-font-size:16px;-fx-cursor:hand;-fx-padding:4 12;-fx-background-radius:10px;");
@@ -391,12 +392,7 @@ public class PhotoViewer {
 
         HBox mainControlsContainer = new HBox(20);
         mainControlsContainer.setAlignment(Pos.CENTER);
-        mainControlsContainer.setStyle(String.format(
-                "-fx-background-color: %s; -fx-background-radius: 8px; -fx-padding: 10 15;",
-                darkTheme ? "#1a1f26" : "#f5f5f5"
-        ));
-        mainControlsContainer.setMaxWidth(400);
-        mainControlsContainer.setPrefWidth(400);
+        mainControlsContainer.setStyle("-fx-background-color: transparent; -fx-padding: 10 15;");
 
         HBox navSection = new HBox(10);
         navSection.setAlignment(Pos.CENTER);
@@ -413,20 +409,19 @@ public class PhotoViewer {
         return centerContainer;
     }
 
-    private HBox createTopPanel(VBox deviceInfoBox, VBox centerContainer) {
-        HBox panel = new HBox();
-        panel.setAlignment(Pos.CENTER);
+    private StackPane createTopPanel(VBox deviceInfoBox, VBox centerContainer) {
+        StackPane panel = new StackPane();
         panel.setPadding(new Insets(15, 20, 10, 20));
         panel.setStyle(String.format("-fx-background-color: %s;",
                 darkTheme ? "#252d38" : "#ffffff"));
 
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
+        // deviceInfoBox выравниваем влево
+        StackPane.setAlignment(deviceInfoBox, Pos.CENTER_LEFT);
 
-        panel.getChildren().addAll(deviceInfoBox, centerContainer, spacer);
-        HBox.setHgrow(deviceInfoBox,   Priority.ALWAYS);
-        HBox.setHgrow(centerContainer, Priority.ALWAYS);
-        HBox.setHgrow(spacer,          Priority.ALWAYS);
+        // centerContainer выравниваем по центру
+        StackPane.setAlignment(centerContainer, Pos.CENTER);
+
+        panel.getChildren().addAll(deviceInfoBox, centerContainer);
         return panel;
     }
 

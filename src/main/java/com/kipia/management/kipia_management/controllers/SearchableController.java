@@ -1,5 +1,6 @@
 package com.kipia.management.kipia_management.controllers;
 
+import com.kipia.management.kipia_management.models.Scheme;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;
@@ -34,6 +35,10 @@ public interface SearchableController {
      * @param photosOnlyCheck чекбокс
      */
     default void bindPhotosOnlyCheck(CheckBox photosOnlyCheck) {
+        // По умолчанию не используется
+    }
+
+    default void bindSchemeFilter(ComboBox<Scheme> schemeFilter) {
         // По умолчанию не используется
     }
     

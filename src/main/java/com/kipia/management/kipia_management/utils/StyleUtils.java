@@ -54,6 +54,7 @@ public class StyleUtils {
     public static String getScreenStylesheet(String screenName) {
         return switch (screenName) {
             case "devices" -> "/styles/devices.css";
+            case "settings" -> "/styles/settings.css";
             case "add-device" -> "/styles/add-device.css";
             case "conflict-dialog" -> "/styles/conflict-dialog.css";
             case "help-dialog" -> "/styles/help-dialog.css";
@@ -73,14 +74,14 @@ public class StyleUtils {
         isDarkTheme = themePath.contains("dark");
     }
 
-    /**
-     * Получает путь к текущей теме
-     * @deprecated Используйте getThemeVariablesPath() вместо этого
-     */
-    @Deprecated
-    public static String getCurrentTheme() {
-        return isDarkTheme ? "/styles/dark-theme-old.css" : "/styles/light-theme-old.css";
-    }
+//    /**
+//     * Получает путь к текущей теме
+//     * @deprecated Используйте getThemeVariablesPath() вместо этого
+//     */
+//    @Deprecated
+//    public static String getCurrentTheme() {
+//        return isDarkTheme ? "/styles/dark-theme-old.css" : "/styles/light-theme-old.css";
+//    }
 
     // ============================================================
     // УПРОЩЁННЫЕ МЕТОДЫ (без ручного переключения hover-классов)

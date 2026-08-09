@@ -1,5 +1,5 @@
 /* ============================================================
-   SCHEMES.CSS - Scheme editor styles
+   SCHEMES.CSS - Стили редактора схем
    ============================================================ */
 
 /* ==================== SCHEME EDITOR ROOT ==================== */
@@ -9,16 +9,34 @@
 
 /* ==================== TOOLBAR ==================== */
 .tool-bar {
-    -fx-background-color: -fx-bg-secondary;
-    -fx-border-color: -fx-border-primary;
-    -fx-border-width: 0 0 1 0;
-    -fx-padding: 8 12;
+    -fx-background-color: -fx-bg-toolbar-scheme;
+    -fx-padding: 14 10;
     -fx-spacing: 8;
+    -fx-border-radius: 10px;
+    -fx-background-radius: 10px;
 }
 
 .tool-bar .separator {
-    -fx-background-color: -fx-border-primary;
-    -fx-pref-width: 1;
+    -fx-padding: 0 4;
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-border-width: 0;
+}
+
+.tool-bar .separator .line {
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+    -fx-stroke: transparent;
+    -fx-stroke-width: 0;
+}
+
+.tool-bar .separator:vertical {
+    -fx-border-width: 0 1 0 0;
+    -fx-border-color: -fx-bg-color-separator;
+    -fx-border-insets: 0;
 }
 
 /* ==================== TOOL BUTTONS ==================== */
@@ -26,24 +44,26 @@
     -fx-background-color: transparent;
     -fx-background-radius: 5px;
     -fx-border-radius: 5px;
-    -fx-border-width: 0;
+    -fx-border-width: 1;
+    -fx-border-color: transparent;
     -fx-padding: 6 10;
     -fx-cursor: hand;
-    -fx-text-fill: -fx-text-primary;
 }
 
 .tool-button:hover {
-    -fx-background-color: rgba(52, 152, 219, 0.2);
+    -fx-border-color: -fx-border-btn-toolbar;
 }
 
 .tool-button:pressed {
-    -fx-background-color: rgba(52, 152, 219, 0.3);
+    -fx-background-color: -fx-bg-select-btn-toolbar;
+    -fx-border-color: -fx-border-btn-toolbar;
 }
 
 .tool-button-active {
-    -fx-background-color: -fx-accent-primary;
-    -fx-text-fill: white;
+    -fx-background-color: -fx-bg-select-btn-toolbar;
+    -fx-border-color: -fx-border-btn-toolbar;
 }
+
 
 /* ==================== SCHEME LABELS ==================== */
 .scheme-label {
@@ -54,12 +74,12 @@
 
 .scheme-status-label {
     -fx-font-size: 12px;
-    -fx-text-fill: -fx-text-tertiary;
+    -fx-text-fill: -fx-text-primary;
 }
 
 .scheme-zoom-label {
     -fx-font-size: 12px;
-    -fx-text-fill: -fx-text-tertiary;
+    -fx-text-fill: -fx-text-primary;
 }
 
 .scheme-updated-label {
@@ -71,7 +91,7 @@
 /* ==================== SCROLL PANE ==================== */
 .scheme-scroll {
     -fx-background-color: -fx-bg-primary;
-    -fx-border-color: -fx-border-primary;
+    -fx-border-color: transparent;
 }
 
 .scheme-scroll .viewport {
@@ -81,7 +101,7 @@
 /* ==================== CANVAS ==================== */
 .scheme-pane {
     -fx-background-color: -fx-bg-primary;
-    -fx-border-color: -fx-border-primary;
+    -fx-border-color: transparent;
 }
 
 /* ==================== PROPERTIES PANEL ==================== */
@@ -138,6 +158,6 @@
 
 .zoom-label {
     -fx-font-size: 12px;
-    -fx-text-fill: -fx-text-secondary;
+    -fx-text-fill: -fx-text-primary;
     -fx-padding: 4 8;
 }

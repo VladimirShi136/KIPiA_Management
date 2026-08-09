@@ -130,8 +130,7 @@ public class PhotoGalleryController implements SearchableController {
             {
                 // Инициализация и настройка один раз
                 card.getStyleClass().add("location-card");
-                card.setPrefWidth(320);
-                card.setMinWidth(320);
+                card.setMaxWidth(Double.MAX_VALUE);
                 card.setMinHeight(160);
                 card.setPadding(new Insets(15));
                 card.setSpacing(10);
@@ -211,6 +210,23 @@ public class PhotoGalleryController implements SearchableController {
             }
 
             @Override
+            protected void layoutChildren() {
+                super.layoutChildren();
+
+                if (getGraphic() != null) {
+                    double w = getWidth() - snappedLeftInset() - snappedRightInset();
+                    double h = getGraphic().prefHeight(w);
+
+                    getGraphic().resizeRelocate(
+                            snappedLeftInset(),
+                            snappedTopInset(),
+                            w,
+                            h
+                    );
+                }
+            }
+
+            @Override
             protected void updateItem(LocationCardData data, boolean empty) {
                 super.updateItem(data, empty);
 
@@ -263,6 +279,7 @@ public class PhotoGalleryController implements SearchableController {
                 if (updateToggleIcon != null) updateToggleIcon.run();
 
                 setGraphic(card);
+                setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
                 setText(null);
             }
 

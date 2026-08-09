@@ -39,7 +39,7 @@ import java.util.stream.Collectors;
  * @author vladimir_shi
  * @since 30.09.2025
  */
-public class SchemeEditorController {
+public class SchemeEditorController implements SearchableController{
 
     // ============================================================
     // FXML COMPONENTS
@@ -92,6 +92,8 @@ public class SchemeEditorController {
     private Scheme currentScheme;
     private ObservableList<Device> deviceList;
     private ShapeManager.Tool currentTool = null;
+    private ObservableList<Scheme> allSchemes; // Полный список схем для фильтрации
+    private ComboBox<Scheme> externalSchemeFilter; // Ссылка на ComboBox из MainController
 
     // ============================================================
     // CANVAS STATE
@@ -334,7 +336,7 @@ public class SchemeEditorController {
     /**
      * Создание конвертера для отображения схем
      */
-    private StringConverter<Scheme> createSchemeConverter() {
+    public StringConverter<Scheme> createSchemeConverter() {
         return new StringConverter<>() {
             @Override
             public String toString(Scheme scheme) {
@@ -734,10 +736,16 @@ public class SchemeEditorController {
             setToolbarDisabled(true);
             return;
         }
-        ObservableList<Scheme> schemeList = FXCollections.observableArrayList(schemes);
-        schemeComboBox.setItems(schemeList);
+        allSchemes = FXCollections.observableArrayList(schemes);
+        schemeComboBox.setItems(allSchemes);
+        
+        // Явно обновляем внешний ComboBox если он связан
+        if (externalSchemeFilter != null) {
+            externalSchemeFilter.setItems(allSchemes);
+        }
+        
         setToolbarDisabled(false);
-        LOGGER.info("Загружено {} схем", schemeList.size());
+        LOGGER.info("Загружено {} схем", allSchemes.size());
     }
 
     /**
@@ -766,9 +774,18 @@ public class SchemeEditorController {
      */
     private void setupInitialScheme() {
         if (!schemeComboBox.getItems().isEmpty() && schemeComboBox.getValue() == null) {
-            Scheme firstScheme = schemeComboBox.getItems().getFirst();
+            // Сортируем схемы по имени и выбираем первую по алфавиту
+            ObservableList<Scheme> sortedSchemes = schemeComboBox.getItems()
+                    .sorted((s1, s2) -> {
+                        if (s1.getName() == null && s2.getName() == null) return 0;
+                        if (s1.getName() == null) return 1;
+                        if (s2.getName() == null) return -1;
+                        return s1.getName().compareToIgnoreCase(s2.getName());
+                    });
+            Scheme firstScheme = sortedSchemes.getFirst();
             schemeComboBox.setValue(firstScheme);
         }
+        updateDeleteButtonState();
     }
 
     // ============================================================
@@ -1723,6 +1740,53 @@ public class SchemeEditorController {
     private void saveDeviceLocation(Node node, Device device) {
         schemeSaver.saveDeviceLocation(node, device, currentScheme);
         schemeSaver.markDirty(); // прибор перемещён мышью
+    }
+
+    // ============================================================
+    // SEARCHABLE IMPLEMENTATION METHODS
+    // ============================================================
+
+    @Override
+    public void bindSearchField(TextField searchField) {
+        // Поисковая строка не используется в редакторе схем
+    }
+
+    @Override
+    public void bindLocationFilter(ComboBox<String> locationFilter) {
+        // Не используется в редакторе схем
+    }
+
+    @Override
+    public void bindPhotosOnlyCheck(CheckBox photosOnlyCheck) {
+        // Не используется в редакторе схем
+    }
+
+    // Новый метод для связывания ComboBox схем
+    public void bindSchemeFilter(ComboBox<Scheme> schemeFilter) {
+        if (schemeFilter != null && schemeComboBox != null) {
+            externalSchemeFilter = schemeFilter;
+            
+            // Устанавливаем items из schemeComboBox (даже если они пока пустые)
+            schemeFilter.setItems(schemeComboBox.getItems());
+            
+            // Добавляем слушатель для синхронизации при изменении items в schemeComboBox
+            schemeComboBox.getItems().addListener((javafx.collections.ListChangeListener<Scheme>) change -> {
+                while (change.next()) {
+                    schemeFilter.setItems(schemeComboBox.getItems());
+                }
+            });
+            
+            schemeFilter.valueProperty().addListener((_, _, newScheme) -> {
+                if (newScheme != null) {
+                    schemeComboBox.setValue(newScheme);
+                }
+            });
+        }
+    }
+
+    @Override
+    public void clearFilters() {
+        // Очистка фильтров если нужно
     }
 
     // ============================================================

@@ -1,6 +1,7 @@
 package com.kipia.management.kipia_management.controllers;
 
 import com.kipia.management.kipia_management.managers.SyncManager;
+import com.kipia.management.kipia_management.managers.SearchPanelManager;
 import com.kipia.management.kipia_management.models.Scheme;
 import com.kipia.management.kipia_management.services.*;
 import com.kipia.management.kipia_management.utils.CustomAlertDialog;
@@ -37,11 +38,11 @@ public class MainController {
     private static final Logger LOGGER = LogManager.getLogger(MainController.class);
 
     // ─── Длительности анимаций (мс) ───────────────────────────────
-    private static final int ANIM_MINIMIZE_MS   = 180;
-    private static final int ANIM_RESTORE_MS    = 180;
-    private static final int ANIM_MAXIMIZE_MS   = 150;
+    private static final int ANIM_MINIMIZE_MS = 180;
+    private static final int ANIM_RESTORE_MS = 180;
+    private static final int ANIM_MAXIMIZE_MS = 150;
     private static final int ANIM_UNMAXIMIZE_MS = 150;
-    private static final int ANIM_LAUNCH_MS     = 300;
+    private static final int ANIM_LAUNCH_MS = 300;
 
     // ─── Кнопки меню ──────────────────────────────────────────────
     public Button devicesBtn;
@@ -52,24 +53,42 @@ public class MainController {
     public Button settingsBtn;
     public Button exitBtn;
 
-    @FXML private Label statusLabel;
-    @FXML private VBox contentArea;
-    @FXML private Button themeToggleBtn;
-    @FXML private ImageView themeToggleIcon;
-    @FXML private HBox topBar;
-    @FXML private Button minimizeBtn;
-    @FXML private Button maximizeBtn;
-    @FXML private Button closeBtn;
+    @FXML
+    private Label statusLabel;
+    @FXML
+    private VBox contentArea;
+    @FXML
+    private Button themeToggleBtn;
+    @FXML
+    private ImageView themeToggleIcon;
+    @FXML
+    private HBox topBar;
+    @FXML
+    private Button minimizeBtn;
+    @FXML
+    private Button maximizeBtn;
+    @FXML
+    private Button closeBtn;
 
     // Элементы поиска в верхней панели
-    @FXML private HBox topSearchPanel;
-    @FXML private Button topSearchToggleButton;
-    @FXML private HBox topSearchFieldContainer;
-    @FXML private TextField topSearchField;
-    @FXML private ComboBox<String> topLocationFilter;
-    @FXML private CheckBox topPhotosOnlyCheck;
-    @FXML private Button topClearSearchButton;
-    @FXML private Button helpBtn;
+    @FXML
+    private HBox topSearchPanel;
+    @FXML
+    private Button topSearchToggleButton;
+    @FXML
+    private HBox topSearchFieldContainer;
+    @FXML
+    private TextField topSearchField;
+    @FXML
+    private ComboBox<String> topLocationFilter;
+    @FXML
+    private ComboBox<Scheme> topSchemeFilter;
+    @FXML
+    private CheckBox topPhotosOnlyCheck;
+    @FXML
+    private Button topClearSearchButton;
+    @FXML
+    private Button helpBtn;
 
     // Сервисы
     private DeviceDAO deviceDAO;
@@ -84,14 +103,13 @@ public class MainController {
     private ReportsController reportsController;
     private SettingsController settingsController;
     private String currentActiveSection = null;
-    private SearchableController currentSearchableController = null;
-    private boolean isTopSearchExpanded = false;
+    private SearchPanelManager searchPanelManager;
 
     // ─── Управление окном ─────────────────────────────────────────
     private double xOffset = 0;
     private double yOffset = 0;
     private boolean isMaximized = false;
-    private double restoreWidth  = 1200;
+    private double restoreWidth = 1200;
     private double restoreHeight = 800;
     private double restoreX = 0;
     private double restoreY = 0;
@@ -126,9 +144,13 @@ public class MainController {
         LOGGER.info("✅ SyncManager сохранён");
     }
 
-    public Scene getScene() { return scene; }
+    public Scene getScene() {
+        return scene;
+    }
 
-    public void setScene(Scene scene) { this.scene = scene; }
+    public void setScene(Scene scene) {
+        this.scene = scene;
+    }
 
     // =============================================================
     //  Сохранение схемы
@@ -203,7 +225,12 @@ public class MainController {
 
         currentActiveSection = null;
         updateNavigationButtonsState();
-        setupTopSearch();
+
+        // Инициализируем менеджер поисковой панели
+        searchPanelManager = new SearchPanelManager();
+        searchPanelManager.initialize(topSearchPanel, topSearchToggleButton, topSearchFieldContainer,
+                topSearchField, topLocationFilter, topSchemeFilter, topPhotosOnlyCheck, topClearSearchButton);
+
         setupWindowControls();
 
         LOGGER.info("✅ UI инициализирован");
@@ -224,7 +251,7 @@ public class MainController {
             yOffset = event.getSceneY();
             isDraggingMaximized = false;
             if (!isMaximized) {
-                restoreWidth  = stage.getWidth();
+                restoreWidth = stage.getWidth();
                 restoreHeight = stage.getHeight();
             }
         });
@@ -299,10 +326,10 @@ public class MainController {
         Stage stage = (Stage) minimizeBtn.getScene().getWindow();
 
         if (!isMaximized) {
-            restoreWidth  = stage.getWidth();
+            restoreWidth = stage.getWidth();
             restoreHeight = stage.getHeight();
-            restoreX      = stage.getX();
-            restoreY      = stage.getY();
+            restoreX = stage.getX();
+            restoreY = stage.getY();
         }
 
         isAnimating = true;
@@ -331,7 +358,8 @@ public class MainController {
         // При восстановлении из таскбара — плавное появление
         stage.iconifiedProperty().addListener((obs, wasIconified, nowIconified) -> {
             if (wasIconified && !nowIconified) {
-                obs.removeListener((_, _, _) -> {});
+                obs.removeListener((_, _, _) -> {
+                });
                 Platform.runLater(() -> animateRestore(stage));
             }
         });
@@ -366,10 +394,10 @@ public class MainController {
         if (isMaximized) {
             animateUnmaximize(stage);
         } else {
-            restoreWidth  = stage.getWidth();
+            restoreWidth = stage.getWidth();
             restoreHeight = stage.getHeight();
-            restoreX      = stage.getX();
-            restoreY      = stage.getY();
+            restoreX = stage.getX();
+            restoreY = stage.getY();
             animateMaximize(stage);
         }
     }
@@ -377,7 +405,7 @@ public class MainController {
     private void animateMaximize(Stage stage) {
         isAnimating = true;
         Parent root = stage.getScene().getRoot();
-        
+
         // Сначала анимация, потом максимизация
         root.setOpacity(0.85);
         root.setScaleX(0.98);
@@ -442,7 +470,7 @@ public class MainController {
     private void restoreWindowOnDrag(Stage stage, double mouseScreenX, double mouseXRatio) {
         isAnimating = true;
         Parent root = stage.getScene().getRoot();
-        
+
         stage.setMaximized(false);
         stage.setWidth(restoreWidth);
         stage.setHeight(restoreHeight);
@@ -473,130 +501,58 @@ public class MainController {
     }
 
     // =============================================================
-    //  Поиск
-    // =============================================================
-
-    private void setupTopSearch() {
-        if (topSearchToggleButton != null) topSearchToggleButton.setOnAction(_ -> toggleTopSearch());
-        if (topClearSearchButton  != null) topClearSearchButton.setOnAction(_  -> clearTopSearch());
-        if (topSearchField        != null) topSearchField.textProperty().addListener((_, _, _) -> updateClearButtonVisibility());
-        if (topLocationFilter     != null) topLocationFilter.valueProperty().addListener((_, _, _) -> updateClearButtonVisibility());
-        if (topPhotosOnlyCheck    != null) topPhotosOnlyCheck.selectedProperty().addListener((_, _, _) -> updateClearButtonVisibility());
-    }
-
-    private void toggleTopSearch() {
-        if (topSearchFieldContainer == null) return;
-        isTopSearchExpanded = !isTopSearchExpanded;
-
-        if (isTopSearchExpanded) {
-            topSearchFieldContainer.setVisible(true);
-            topSearchFieldContainer.setManaged(true);
-            topSearchFieldContainer.setOpacity(1.0);
-
-            TranslateTransition slideIn = new TranslateTransition(Duration.millis(300), topSearchFieldContainer);
-            slideIn.setFromX(50);
-            slideIn.setToX(0);
-            slideIn.play();
-        } else {
-            if (topSearchField     != null) topSearchField.clear();
-            if (topLocationFilter  != null) topLocationFilter.setValue("Все места");
-            if (topPhotosOnlyCheck != null) topPhotosOnlyCheck.setSelected(false);
-
-            TranslateTransition slideOut = new TranslateTransition(Duration.millis(300), topSearchFieldContainer);
-            slideOut.setFromX(0);
-            slideOut.setToX(50);
-            slideOut.setOnFinished(_ -> {
-                topSearchFieldContainer.setVisible(false);
-                topSearchFieldContainer.setManaged(false);
-            });
-            slideOut.play();
-        }
-    }
-
-    private void clearTopSearch() {
-        if (topSearchField != null) topSearchField.clear();
-        if (currentSearchableController != null) currentSearchableController.clearFilters();
-        if (isTopSearchExpanded) toggleTopSearch();
-    }
-
-    private void resetSearchOnNavigation() {
-        if (topSearchField != null) topSearchField.clear();
-        if (isTopSearchExpanded) {
-            isTopSearchExpanded = false;
-            if (topSearchFieldContainer != null) {
-                topSearchFieldContainer.setVisible(false);
-                topSearchFieldContainer.setManaged(false);
-            }
-        }
-        currentSearchableController = null;
-    }
-
-    private void updateClearButtonVisibility() {
-        if (topClearSearchButton == null) return;
-        boolean hasText   = topSearchField    != null && topSearchField.getText() != null && !topSearchField.getText().isEmpty();
-        boolean hasFilter = topLocationFilter  != null && topLocationFilter.isVisible()
-                && topLocationFilter.getValue() != null && !"Все места".equals(topLocationFilter.getValue());
-        boolean hasCheck  = topPhotosOnlyCheck != null && topPhotosOnlyCheck.isVisible() && topPhotosOnlyCheck.isSelected();
-        topClearSearchButton.setVisible(hasText || hasFilter || hasCheck);
-    }
-
-    private void showTopSearchPanel(boolean show, boolean hasExtendedFilters) {
-        if (topSearchPanel == null) return;
-        topSearchPanel.setVisible(show);
-        topSearchPanel.setManaged(show);
-        if (topLocationFilter  != null) { topLocationFilter.setVisible(hasExtendedFilters);  topLocationFilter.setManaged(hasExtendedFilters); }
-        if (topPhotosOnlyCheck != null) { topPhotosOnlyCheck.setVisible(hasExtendedFilters); topPhotosOnlyCheck.setManaged(hasExtendedFilters); }
-        if (!show && isTopSearchExpanded) {
-            isTopSearchExpanded = false;
-            if (topSearchFieldContainer != null) { topSearchFieldContainer.setVisible(false); topSearchFieldContainer.setManaged(false); }
-        }
-    }
-
-    // =============================================================
     //  Навигация
     // =============================================================
 
     private void updateNavigationButtonsState() {
-        StyleUtils.setNavigationButtonActive(devicesBtn,      false, "button-devices",       "button-devices-hover",       "button-devices-active");
+        StyleUtils.setNavigationButtonActive(devicesBtn, false, "button-devices", "button-devices-hover", "button-devices-active");
         StyleUtils.setNavigationButtonActive(photoGalleryBtn, false, "button-photo-gallery", "button-photo-gallery-hover", "button-photo-gallery-active");
-        StyleUtils.setNavigationButtonActive(schemesBtn,      false, "button-schemes",       "button-schemes-hover",       "button-schemes-active");
-        StyleUtils.setNavigationButtonActive(reportsBtn,      false, "button-reports",       "button-reports-hover",       "button-reports-active");
+        StyleUtils.setNavigationButtonActive(schemesBtn, false, "button-schemes", "button-schemes-hover", "button-schemes-active");
+        StyleUtils.setNavigationButtonActive(reportsBtn, false, "button-reports", "button-reports-hover", "button-reports-active");
 
         if (currentActiveSection == null) return;
 
         switch (currentActiveSection) {
-            case "devices"      -> StyleUtils.setNavigationButtonActive(devicesBtn,      true, "button-devices",       "button-devices-hover",       "button-devices-active");
-            case "photoGallery" -> StyleUtils.setNavigationButtonActive(photoGalleryBtn, true, "button-photo-gallery", "button-photo-gallery-hover", "button-photo-gallery-active");
-            case "schemes"      -> StyleUtils.setNavigationButtonActive(schemesBtn,      true, "button-schemes",       "button-schemes-hover",       "button-schemes-active");
-            case "reports"      -> StyleUtils.setNavigationButtonActive(reportsBtn,      true, "button-reports",       "button-reports-hover",       "button-reports-active");
+            case "devices" ->
+                    StyleUtils.setNavigationButtonActive(devicesBtn, true, "button-devices", "button-devices-hover", "button-devices-active");
+            case "photoGallery" ->
+                    StyleUtils.setNavigationButtonActive(photoGalleryBtn, true, "button-photo-gallery", "button-photo-gallery-hover", "button-photo-gallery-active");
+            case "schemes" ->
+                    StyleUtils.setNavigationButtonActive(schemesBtn, true, "button-schemes", "button-schemes-hover", "button-schemes-active");
+            case "reports" ->
+                    StyleUtils.setNavigationButtonActive(reportsBtn, true, "button-reports", "button-reports-hover", "button-reports-active");
         }
     }
 
     @FXML
     private void toggleTheme() {
-        if (scene == null) { CustomAlertDialog.showError("Ошибка", "Scene не передана"); return; }
+        if (scene == null) {
+            CustomAlertDialog.showError("Ошибка", "Scene не передана");
+            return;
+        }
 
         isDarkTheme = !isDarkTheme;
         StyleUtils.setDarkTheme(isDarkTheme);
 
         scene.getStylesheets().clear();
-        
+
         // Загружаем базовые стили с переменными темы
         for (String stylesheet : StyleUtils.getBaseStylesheets()) {
             scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource(stylesheet)).toExternalForm());
         }
-        
+
         // Загружаем стили для всех экранов
         String[] screenStylesheets = {
-            "/styles/devices.css",
-            "/styles/add-device.css",
-            "/styles/schemes.css",
-            "/styles/reports.css",
-            "/styles/photo-gallery.css",
-            "/styles/conflict-dialog.css",
-            "/styles/help-dialog.css"
+                "/styles/devices.css",
+                "/styles/settings.css",
+                "/styles/add-device.css",
+                "/styles/schemes.css",
+                "/styles/reports.css",
+                "/styles/photo-gallery.css",
+                "/styles/conflict-dialog.css",
+                "/styles/help-dialog.css"
         };
-        
+
         for (String stylesheet : screenStylesheets) {
             try {
                 scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource(stylesheet)).toExternalForm());
@@ -607,7 +563,7 @@ public class MainController {
 
         if (themeToggleIcon != null)
             themeToggleIcon.setImage(new Image(Objects.requireNonNull(getClass().getResourceAsStream(
-                isDarkTheme ? "/images/theme-dark.png" : "/images/theme-white.png"))));
+                    isDarkTheme ? "/images/theme-dark.png" : "/images/theme-white.png"))));
 
         if (reportsController != null) reportsController.refreshTheme();
     }
@@ -650,8 +606,8 @@ public class MainController {
     }
 
     private void refreshCurrentView() {
-        if      ("devices".equals(currentActiveSection))  showDevices();
-        else if ("schemes".equals(currentActiveSection))  showSchemesEditor();
+        if ("devices".equals(currentActiveSection)) showDevices();
+        else if ("schemes".equals(currentActiveSection)) showSchemesEditor();
         else if ("settings".equals(currentActiveSection)) showSettings();
     }
 
@@ -662,7 +618,7 @@ public class MainController {
     @FXML
     private void showDevices() {
         if ("devices".equals(currentActiveSection)) return;
-        resetSearchOnNavigation();
+        searchPanelManager.resetOnNavigation();
         currentActiveSection = "devices";
 
         Runnable loadDevices = () -> {
@@ -677,9 +633,8 @@ public class MainController {
                 if (ctrl != null) {
                     ctrl.setDeviceDAO(deviceDAO);
                     ctrl.init();
-                    currentSearchableController = ctrl;
-                    if (topSearchField != null) ctrl.bindSearchField(topSearchField);
-                    showTopSearchPanel(true, false);
+                    searchPanelManager.bindController(ctrl);
+                    searchPanelManager.showPanel(true, false, false);
                 }
                 contentArea.getChildren().add(view);
                 updateNavigationButtonsState();
@@ -700,7 +655,7 @@ public class MainController {
     @FXML
     private void showPhotoGallery() {
         if ("photoGallery".equals(currentActiveSection)) return;
-        resetSearchOnNavigation();
+        searchPanelManager.resetOnNavigation();
         currentActiveSection = "photoGallery";
 
         Runnable loadPhotoGallery = () -> {
@@ -716,11 +671,8 @@ public class MainController {
                 if (ctrl != null) {
                     ctrl.setDeviceDAO(deviceDAO);
                     ctrl.init();
-                    currentSearchableController = ctrl;
-                    if (topSearchField     != null) ctrl.bindSearchField(topSearchField);
-                    if (topLocationFilter  != null) ctrl.bindLocationFilter(topLocationFilter);
-                    if (topPhotosOnlyCheck != null) ctrl.bindPhotosOnlyCheck(topPhotosOnlyCheck);
-                    showTopSearchPanel(true, true);
+                    searchPanelManager.bindController(ctrl);
+                    searchPanelManager.showPanel(true, true, false);
                 }
                 contentArea.getChildren().add(view);
                 updateNavigationButtonsState();
@@ -741,7 +693,7 @@ public class MainController {
     @FXML
     private void showSchemesEditor() {
         if ("schemes".equals(currentActiveSection)) return;
-        resetSearchOnNavigation();
+        searchPanelManager.resetOnNavigation();
         currentActiveSection = "schemes";
         statusLabel.setText("Редактор схем");
 
@@ -764,12 +716,13 @@ public class MainController {
                     schemeEditorController.setDeviceDAO(deviceDAO);
                     schemeEditorController.setSchemeDAO(schemeDAO);
                     schemeEditorController.setDeviceLocationDAO(deviceLocationDAO);
+                    searchPanelManager.setSchemeConverter(schemeEditorController.createSchemeConverter());
+                    searchPanelManager.bindController(schemeEditorController);
                     schemeEditorController.init();
+                    searchPanelManager.showPanel(true, false, true);
                 }
                 contentArea.getChildren().clear();
                 contentArea.getChildren().add(schemeEditorView);
-                currentSearchableController = null;
-                showTopSearchPanel(false, false);
                 updateNavigationButtonsState();
             } catch (IOException e) {
                 statusLabel.setText("Ошибка загрузки редактора схем: " + e.getMessage());
@@ -784,7 +737,7 @@ public class MainController {
     @FXML
     private void showReports() {
         if ("reports".equals(currentActiveSection)) return;
-        resetSearchOnNavigation();
+        searchPanelManager.resetOnNavigation();
         currentActiveSection = "reports";
 
         Runnable loadReports = () -> {
@@ -802,8 +755,8 @@ public class MainController {
                     this.reportsController = ctrl;
                 }
                 contentArea.getChildren().add(view);
-                currentSearchableController = null;
-                showTopSearchPanel(false, false);
+                searchPanelManager.bindController(null);
+                searchPanelManager.showPanel(false, false, false);
                 updateNavigationButtonsState();
             } catch (IOException e) {
                 statusLabel.setText("Ошибка загрузки отчётов: " + e.getMessage());
@@ -822,7 +775,7 @@ public class MainController {
     @FXML
     private void showSettings() {
         if ("settings".equals(currentActiveSection)) return;
-        resetSearchOnNavigation();
+        searchPanelManager.resetOnNavigation();
         currentActiveSection = "settings";
 
         Runnable loadSettings = () -> {
@@ -843,8 +796,8 @@ public class MainController {
                     settingsController = ctrl;
                 }
                 contentArea.getChildren().add(view);
-                currentSearchableController = null;
-                showTopSearchPanel(false, false);
+                searchPanelManager.bindController(null);
+                searchPanelManager.showPanel(false, false, false);
                 updateNavigationButtonsState();
             } catch (IOException e) {
                 statusLabel.setText("Ошибка загрузки настроек: " + e.getMessage());
@@ -868,8 +821,8 @@ public class MainController {
         VBox testPanel = DevTools.createDialogTestPanel(result -> statusLabel.setText(result));
 
         contentArea.getChildren().add(testPanel);
-        currentSearchableController = null;
-        showTopSearchPanel(false, false);
+        searchPanelManager.bindController(null);
+        searchPanelManager.showPanel(false, false, false);
     }
 
     @FXML
@@ -888,14 +841,14 @@ public class MainController {
             // Прозрачный фон сцены
             Scene scene = new Scene(root);
             scene.setFill(javafx.scene.paint.Color.TRANSPARENT);
-            
+
             // Применяем базовые стили с переменными темы
             for (String stylesheet : StyleUtils.getBaseStylesheets()) {
                 scene.getStylesheets().add(
                         Objects.requireNonNull(getClass().getResource(stylesheet)).toExternalForm()
                 );
             }
-            
+
             // Загружаем стили для help-dialog
             scene.getStylesheets().add(
                     Objects.requireNonNull(getClass().getResource("/styles/help-dialog.css")).toExternalForm()

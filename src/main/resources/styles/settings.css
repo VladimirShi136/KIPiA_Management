@@ -1,0 +1,98 @@
+/* ============================================================
+   SETTINGS.CSS - Стили для окна настроек
+   ============================================================ */
+
+/* ==================== SETTINGS.FXML ==================== */
+.settings-root {
+    -fx-background-color: -fx-settings-bg;
+}
+
+.settings-header {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-settings-header-text;
+}
+
+.settings-section-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-settings-section-title;
+}
+
+.settings-section-description {
+    -fx-font-size: 13px;
+    -fx-text-fill: -fx-settings-section-desc;
+}
+
+.timestamp-label {
+    -fx-font-size: 11px;
+    -fx-text-fill: -fx-settings-timestamp;
+}
+
+.arrow-icon-top {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-settings-arrow-top;
+    -fx-underline: true;
+}
+
+.arrow-icon-bottom {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-settings-arrow-bottom;
+    -fx-underline: true;
+}
+
+.export-button-label {
+    -fx-text-fill: -fx-settings-export-text;
+    -fx-font-weight: bold;
+}
+
+.import-button-label {
+    -fx-text-fill: -fx-settings-import-text;
+    -fx-font-weight: bold;
+}
+
+.settings-button-export {
+    -fx-background-color: transparent;
+    -fx-background-radius: 10px;
+    -fx-text-fill: -fx-settings-export-text;
+    -fx-font-weight: bold;
+    -fx-border-color: -fx-settings-export-border;
+    -fx-border-radius: 10px;
+    -fx-cursor: hand;
+}
+
+.settings-button-export:hover {
+    -fx-background-color: -fx-settings-export-bg-hover;
+}
+
+.settings-button-import {
+    -fx-background-color: -fx-settings-import-bg;
+    -fx-background-radius: 10px;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-border-color: -fx-settings-import-bg;
+    -fx-border-radius: 10px;
+    -fx-cursor: hand;
+}
+
+.settings-button-import:hover {
+    -fx-background-color: -fx-settings-import-bg-hover;
+    -fx-border-color: -fx-settings-import-bg-hover;
+}
+
+.settings-info-title {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -fx-settings-info-title;
+}
+
+.settings-info-text {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-settings-info-text;
+}
+
+.button-label {
+    -fx-text-fill: white;
+}

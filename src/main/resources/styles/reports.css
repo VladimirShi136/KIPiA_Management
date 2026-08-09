@@ -132,3 +132,8 @@
 .reports-button-print:hover {
     -fx-background-color: -fx-accent-warning-hover;
 }
+
+/* ==================== REPORTS BUTTONS CONTAINER ==================== */
+.report-buttons {
+    -fx-spacing: 20px;
+}

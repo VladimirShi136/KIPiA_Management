@@ -97,6 +97,7 @@ public class Main extends Application {
             // Загружаем стили для всех экранов
             String[] screenStylesheets = {
                 "/styles/devices.css",
+                    "/styles/settings.css",
                 "/styles/add-device.css",
                 "/styles/schemes.css",
                 "/styles/reports.css",
