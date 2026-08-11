@@ -1,9 +1,11 @@
 package com.kipia.management.kipia_management.controllers;
 
 import com.kipia.management.kipia_management.managers.PhotoManager;
+import com.kipia.management.kipia_management.managers.PhotoViewer;
 import com.kipia.management.kipia_management.models.Device;
 import com.kipia.management.kipia_management.services.DeviceDAO;
 import com.kipia.management.kipia_management.utils.CustomAlertDialog;
+import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.scene.control.Label;
 import javafx.collections.FXCollections;
@@ -18,10 +20,7 @@ import org.apache.logging.log4j.Logger;
 import java.io.File;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * Контроллер для формы добавления нового прибора.
@@ -257,8 +256,19 @@ public class AddDeviceController {
                 if (empty || item == null) {
                     setText(null);
                     setGraphic(null);
+                    setStyle(null);
                 } else {
                     setText((getIndex() + 1) + ". " + item);
+                    setStyle("-fx-cursor: hand;");
+                    
+                    // Обработчик клика: одиночный - выделение, двойной - просмотр
+                    setOnMouseClicked(event -> {
+                        if (event.getClickCount() == 2 && editingDevice != null) {
+                            // Двойной клик - просмотр фото
+                            viewPhoto(item);
+                        }
+                        // Одиночный клик - стандартное поведение ListView (выделение)
+                    });
                 }
             }
         });
@@ -288,14 +298,46 @@ public class AddDeviceController {
         List<File> files = chooser.showOpenMultipleDialog(stage);
 
         if (files != null && !files.isEmpty()) {
-            for (File file : files) {
-                String fileName = file.getName();
-                if (!selectedPhotoFiles.contains(fileName)) {
-                    selectedPhotoFiles.add(fileName);
-                    // Сохраняем физический файл для последующего копирования
-                    pendingPhotoFiles.add(file);
-                } else {
-                    LOGGER.info("Файл уже в списке: {}", fileName);
+            if (editingDevice != null) {
+                // Режим редактирования: сохраняем фото сразу через PhotoManager
+                PhotoManager photoManager = PhotoManager.getInstance();
+                
+                for (File file : files) {
+                    String fileName = file.getName();
+                    if (!selectedPhotoFiles.contains(fileName)) {
+                        try {
+                            String storedFileName = photoManager.copyPhotoToStorageManual(file, editingDevice);
+                            if (storedFileName != null) {
+                                editingDevice.addPhoto(storedFileName);
+                                selectedPhotoFiles.add(storedFileName);
+                                LOGGER.info("Фото сохранено: {}", storedFileName);
+                            }
+                        } catch (Exception e) {
+                            LOGGER.error("Ошибка сохранения фото: {}", e.getMessage(), e);
+                            CustomAlertDialog.showError("Ошибка", "Не удалось сохранить фото: " + fileName);
+                        }
+                    } else {
+                        LOGGER.info("Файл уже в списке: {}", fileName);
+                    }
+                }
+                
+                // Обновляем прибор в БД
+                try {
+                    deviceDAO.updateDevice(editingDevice);
+                    LOGGER.info("Прибор обновлён в БД после добавления фото");
+                } catch (Exception e) {
+                    LOGGER.error("Ошибка обновления прибора в БД: {}", e.getMessage(), e);
+                }
+            } else {
+                // Режим создания: сохраняем временно
+                for (File file : files) {
+                    String fileName = file.getName();
+                    if (!selectedPhotoFiles.contains(fileName)) {
+                        selectedPhotoFiles.add(fileName);
+                        pendingPhotoFiles.add(file);
+                    } else {
+                        LOGGER.info("Файл уже в списке: {}", fileName);
+                    }
                 }
             }
             LOGGER.info("Выбрано {} фото для прибора", files.size());
@@ -405,29 +447,6 @@ public class AddDeviceController {
         // Обновляем поля существующего прибора
         createOrUpdateDevice(data.type, data.name, data.manufacturer, data.inventoryNumber, data.year, data.measurementLimit, data.accuracyClass, data.location, data.valveNumber, data.status, editingDevice);
 
-        // Копируем новые фото через PhotoManager
-        if (!pendingPhotoFiles.isEmpty()) {
-            LOGGER.info("📸 Копирование {} новых фото в локацию '{}'", pendingPhotoFiles.size(), data.location);
-            
-            for (File photoFile : pendingPhotoFiles) {
-                try {
-                    String storedFileName = PhotoManager.getInstance()
-                            .copyPhotoToStorageManual(photoFile, editingDevice);
-                    
-                    if (storedFileName != null) {
-                        editingDevice.addPhoto(storedFileName);
-                        LOGGER.info("✅ Фото скопировано: {}", storedFileName);
-                    } else {
-                        LOGGER.warn("⚠️ Не удалось скопировать фото: {}", photoFile.getName());
-                    }
-                } catch (Exception e) {
-                    LOGGER.error("❌ Ошибка копирования фото: {}", e.getMessage(), e);
-                }
-            }
-            
-            pendingPhotoFiles.clear();
-        }
-
         // Мигрируем фото если локация изменилась
         if (!data.location.equals(oldLocation)) {
             int migratedCount = PhotoManager.getInstance()
@@ -492,6 +511,36 @@ public class AddDeviceController {
             LOGGER.info("Прибор удалён из формы редактирования: {}", editingDevice.getName());
         } else {
             CustomAlertDialog.showError("Ошибка", "Не удалось удалить прибор");
+        }
+    }
+
+    /**
+     * Просмотр выбранного фото в PhotoViewer.
+     */
+    private void viewPhoto(String photoFileName) {
+        if (editingDevice == null) {
+            LOGGER.warn("Попытка просмотра фото без редактируемого устройства");
+            return;
+        }
+        
+        try {
+            PhotoManager photoManager = PhotoManager.getInstance();
+            Stage stage = (Stage) selectedPhotosListView.getScene().getWindow();
+            
+            // Callback для обновления списка после удаления фото
+            PhotoViewer.OnPhotoDeletedCallback onDeleted = (deletedDevice, deletedPhotoName) ->
+                    Platform.runLater(() -> {
+                        if (deletedDevice.getId() == editingDevice.getId()) {
+                            selectedPhotoFiles.remove(deletedPhotoName);
+                            LOGGER.info("Фото удалено из списка: {}", deletedPhotoName);
+                        }
+                    });
+            
+            photoManager.viewDevicePhotos(editingDevice, stage, onDeleted);
+            
+        } catch (Exception e) {
+            LOGGER.error("Ошибка при просмотре фото: {}", e.getMessage(), e);
+            CustomAlertDialog.showError("Ошибка", "Не удалось открыть просмотр фото");
         }
     }
 

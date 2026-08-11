@@ -50,7 +50,6 @@
                       styleClass="search-field-container" visible="false" managed="false">
                     <!-- Фильтр по схеме (только для редактора схем) -->
                     <ComboBox fx:id="topSchemeFilter"
-                              promptText="Все схемы"
                               styleClass="filter-combo"
                               visible="false"
                               managed="false"

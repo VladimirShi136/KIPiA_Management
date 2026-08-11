@@ -82,6 +82,11 @@
     -fx-text-fill: -fx-text-primary;
 }
 
+.scheme-last-saved-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-text-primary;
+}
+
 .scheme-updated-label {
     -fx-font-size: 10px;
     -fx-text-fill: -fx-accent-warning;

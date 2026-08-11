@@ -102,6 +102,9 @@
                                     <Image url="@../images/image-plus.png"/>
                                 </javafx.scene.image.ImageView>
                             </graphic>
+                            <tooltip>
+                                <Tooltip text="Добавить фото"/>
+                            </tooltip>
                         </Button>
                         <Button fx:id="photoRemoveBtn" onAction="#onRemovePhoto"
                                 styleClass="photo-icon-btn-with-margin" prefWidth="24" prefHeight="24">
@@ -110,6 +113,9 @@
                                     <Image url="@../images/image-minus.png"/>
                                 </javafx.scene.image.ImageView>
                             </graphic>
+                            <tooltip>
+                                <Tooltip text="Удалить выбранное фото"/>
+                            </tooltip>
                         </Button>
                     </HBox>
 
@@ -145,11 +151,22 @@
                                 <Image url="@../images/delete.png"/>
                             </javafx.scene.image.ImageView>
                         </graphic>
+                        <tooltip>
+                            <Tooltip text="Удалить прибор"/>
+                        </tooltip>
                     </Button>
                     <Button fx:id="cancelBtn" onAction="#onCancel"
-                            styleClass="button-icon" prefWidth="24" prefHeight="24"/>
+                            styleClass="button-icon" prefWidth="24" prefHeight="24">
+                        <tooltip>
+                            <Tooltip text="Отмена"/>
+                        </tooltip>
+                    </Button>
                     <Button fx:id="addBtn" onAction="#onAddDevice"
-                            styleClass="button-icon" prefWidth="24" prefHeight="24"/>
+                            styleClass="button-icon" prefWidth="24" prefHeight="24">
+                        <tooltip>
+                            <Tooltip text="Сохранить"/>
+                        </tooltip>
+                    </Button>
                 </HBox>
             </VBox>
         </VBox>

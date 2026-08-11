@@ -140,4 +140,7 @@
     /* ==================== SEARCH GLOW COLORS ==================== */
     -fx-accent-glow-soft: rgba(41, 151, 214, 0.28);
     -fx-accent-glow-strong: rgba(41, 151, 214, 0.55);
+
+    /* ==================== LIST HOVER COLORS ==================== */
+    -fx-list-hover: #1a1a1a;
 }

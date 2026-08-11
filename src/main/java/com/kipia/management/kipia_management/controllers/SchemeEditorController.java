@@ -64,6 +64,8 @@ public class SchemeEditorController implements SearchableController{
     @FXML
     private Label zoomLabel;
     @FXML
+    private Label lastSavedLabel;
+    @FXML
     private Label schemeUpdatedLabel;
 
     // ============================================================
@@ -1312,14 +1314,14 @@ public class SchemeEditorController implements SearchableController{
     }
 
     private void updateSchemeTimestamp(Scheme scheme) {
-        if (schemeUpdatedLabel == null || scheme == null) return;
+        if (lastSavedLabel == null || scheme == null) return;
         if (scheme.getUpdatedAt() == 0) {
-            schemeUpdatedLabel.setText("ещё не сохранялась");
+            lastSavedLabel.setText("Последнее сохранение: -");
             return;
         }
         String formatted = new java.text.SimpleDateFormat("dd.MM.yyyy HH:mm")
                 .format(new java.util.Date(scheme.getUpdatedAt()));
-        schemeUpdatedLabel.setText("сохранено: " + formatted);
+        lastSavedLabel.setText("Последнее сохранение: " + formatted);
     }
 
     // ============================================================
