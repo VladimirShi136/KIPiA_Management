@@ -28,6 +28,7 @@ public class HelpController {
     @FXML private ScrollPane scrollPane;
     @FXML private VBox contentWrapper;
     @FXML private Button understoodBtn;
+    @FXML private Button closeBtn;
 
     private Stage stage;
 
@@ -270,6 +271,11 @@ public class HelpController {
         if (stage != null) {
             stage.close();
         }
+    }
+
+    @FXML
+    private void onClose() {
+        closeHelp();
     }
 
     /**

@@ -53,6 +53,8 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
 
     // Добавляем поля для сохранения начальной позиции перед перемещением
     protected double dragStartX, dragStartY;
+    private Color originalFill;
+    private Color originalStroke;
 
     // ============================================================
     // DEPENDENCIES
@@ -1573,8 +1575,8 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     }
 
     // ============================================================
-// GETTERS FOR COLORS AND STROKE
-// ============================================================
+    // GETTERS FOR COLORS AND STROKE
+    // ============================================================
 
     /**
      * Получить цвет обводки
@@ -1621,5 +1623,46 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
             }
         }
         // Для TextShape игнорируем
+    }
+
+    public void setOriginalFill(Color color) {
+        this.originalFill = color;
+    }
+
+    public void setOriginalStroke(Color color) {
+        this.originalStroke = color;
+    }
+
+    public Color getOriginalFill() {
+        return originalFill;
+    }
+
+    public Color getOriginalStroke() {
+        return originalStroke;
+    }
+
+    // Переопределить setFill/setStroke для сохранения оригиналов
+    public void setFill(Color color) {
+        if (this.originalFill == null) {
+            this.originalFill = color;
+        }
+        // Применяем цвет ко всем дочерним элементам
+        for (javafx.scene.Node child : getChildren()) {
+            if (child instanceof javafx.scene.shape.Shape shape) {
+                shape.setFill(color);
+            }
+        }
+    }
+
+    public void setStroke(Color color) {
+        if (this.originalStroke == null) {
+            this.originalStroke = color;
+        }
+        // Применяем цвет ко всем дочерним элементам
+        for (javafx.scene.Node child : getChildren()) {
+            if (child instanceof javafx.scene.shape.Shape shape) {
+                shape.setStroke(color);
+            }
+        }
     }
 }

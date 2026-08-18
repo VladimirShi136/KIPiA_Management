@@ -57,10 +57,11 @@
 
     /* ==================== DIALOG COLORS ==================== */
     -fx-dialog-bg: #2d2d2d;
-    -fx-dialog-header: #8b0000;
-    -fx-dialog-header-border: #6b0000;
+    -fx-dialog-header: #1E2A3A;
+    -fx-dialog-header-border: #2d3e50;
     -fx-help-dialog-bg: #2e2c23;
     -fx-help-dialog-header: #1E2A3A;
+    -fx-dialog-icon-fill: #7090b0;
 
     /* ==================== SCROLLBAR COLORS ==================== */
     -fx-scrollbar-bg: #2d2d2d;

@@ -296,18 +296,9 @@ public class PhotoViewer {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        Button closeBtn = new Button("✕");
+        Button closeBtn = new Button("×");
+        closeBtn.getStyleClass().add("unified-close-button");
         closeBtn.setTooltip(new Tooltip("Закрыть окно (Esc)"));
-        closeBtn.setStyle("-fx-background-color:transparent;-fx-text-fill:" +
-                (darkTheme ? "#aec6de" : "white") +
-                ";-fx-font-size:16px;-fx-cursor:hand;-fx-padding:4 12;-fx-background-radius:10px;");
-        closeBtn.setOnMouseEntered(_ -> closeBtn.setStyle(
-                "-fx-background-color:#e74c3c;-fx-text-fill:white;" +
-                        ";-fx-font-size:16px;-fx-cursor:hand;-fx-padding:4 12;-fx-background-radius:4px;"));
-        closeBtn.setOnMouseExited(_ -> closeBtn.setStyle(
-                "-fx-background-color:transparent;-fx-text-fill:" +
-                        (darkTheme ? "#aec6de" : "white") +
-                        ";-fx-font-size:16px;-fx-cursor:hand;-fx-padding:4 12;-fx-background-radius:4px;"));
         closeBtn.setOnAction(_ -> stage.close());
 
         HBox titleBar = new HBox(14, iconWrap, titleBox, spacer, closeBtn);

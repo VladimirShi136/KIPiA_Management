@@ -190,11 +190,10 @@ public class LineShape extends ShapeBase {
     private void setupLineEventHandlers() {
         line.setOnMousePressed(event -> {
             if (event.isPrimaryButtonDown()) {
-                // Переводим координаты события линии в координаты панели
-                Point2D panePoint = line.localToParent(event.getX(), event.getY());
-                // Инициализируем drag: dragOffset = позиция мыши в системе группы
-                // event.getX()/getY() уже в локальной системе группы (Group)
-                initializeDrag(new Point2D(event.getX(), event.getY()));
+                // Переводим координаты события в мировые координаты панели
+                Point2D worldMousePos = pane.sceneToLocal(event.getSceneX(), event.getSceneY());
+                // Инициализируем drag с мировыми координатами
+                initializeDrag(worldMousePos);
 
                 if (onSelectCallback != null) {
                     onSelectCallback.accept(this);

@@ -541,6 +541,11 @@ public class MainController {
             scene.getStylesheets().add(Objects.requireNonNull(getClass().getResource(stylesheet)).toExternalForm());
         }
 
+        // Перерисовываем канвас схемы при смене темы
+        if (schemeEditorController != null) {
+            schemeEditorController.redrawCanvasForThemeChange();
+        }
+
         // Загружаем стили для всех экранов
         String[] screenStylesheets = {
                 "/styles/devices.css",

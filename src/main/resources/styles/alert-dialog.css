@@ -82,11 +82,20 @@
     -fx-effect: dropshadow(gaussian, -fx-shadow-medium, 20, 0, 0, 5);
 }
 
-.device-selection-dialog .top-box {
+.device-selection-dialog .top-box,
+.device-selection-dialog .dialog-top-box {
     -fx-background-color: -fx-dialog-header;
     -fx-background-radius: 12px 12px 0 0;
     -fx-border-color: -fx-dialog-header-border;
     -fx-border-width: 0 0 1 0;
+}
+
+.device-selection-dialog .top-box .stack-pane {
+    -fx-background-color: transparent;
+}
+
+.device-selection-dialog .top-box .svg-path {
+    -fx-fill: -fx-dialog-icon-fill;
 }
 
 .device-selection-dialog .type-label {
@@ -103,6 +112,11 @@
     -fx-padding: 0 0 4 0;
 }
 
+.device-selection-dialog .count-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-text-tertiary;
+}
+
 .device-selection-dialog .section-label {
     -fx-font-size: 12px;
     -fx-text-fill: -fx-text-tertiary;
@@ -112,54 +126,69 @@
     -fx-fill: -fx-text-on-dark;
 }
 
-.device-selection-dialog .device-table {
+.device-selection-dialog .device-icon {
+    -fx-fill: -fx-dialog-icon-fill;
+    -fx-stroke: -fx-dialog-icon-fill;
+    -fx-stroke-width: 0;
+}
+
+.device-selection-dialog .top-box > .stack-pane {
+    -fx-background-color: transparent;
+}
+
+.device-selection-dialog .device-selection-table {
     -fx-background-color: -fx-bg-secondary;
     -fx-border-color: -fx-border-primary;
     -fx-border-radius: 8px;
     -fx-background-radius: 8px;
 }
 
-.device-selection-dialog .device-table .column-header {
+.device-selection-dialog .device-selection-table .column-header {
     -fx-background-color: transparent;
     -fx-text-fill: -fx-text-primary;
     -fx-font-weight: bold;
 }
 
-.device-selection-dialog .device-table .column-header-background {
+.device-selection-dialog .device-selection-table .column-header-background {
     -fx-background-color: -fx-bg-surface-variant;
     -fx-background-radius: 8px 8px 0 0;
 }
 
-.device-selection-dialog .device-table .table-row-cell:even {
-    -fx-background-color: -fx-bg-secondary;
+.device-selection-dialog .device-selection-table .table-row-cell:even {
+    -fx-background-color: -fx-table-row-even;
 }
 
-.device-selection-dialog .device-table .table-row-cell:odd {
-    -fx-background-color: rgba(182, 192, 201, 0.1);
+.device-selection-dialog .device-selection-table .table-row-cell:odd {
+    -fx-background-color: -fx-table-row-odd;
 }
 
-.device-selection-dialog .device-table .table-row-cell:selected {
-    -fx-background-color: rgba(52, 152, 219, 0.3);
+.device-selection-dialog .device-selection-table .table-row-cell:selected {
+    -fx-background-color: -fx-table-row-selected;
 }
 
-.device-selection-dialog .device-table .table-row-cell:filled:hover {
-    -fx-background-color: rgba(52, 152, 219, 0.15);
+.device-selection-dialog .device-selection-table .table-row-cell:filled:hover {
+    -fx-background-color: -fx-table-row-hover;
 }
 
-.device-selection-dialog .device-table .table-cell {
+.device-selection-dialog .device-selection-table .table-cell {
     -fx-border-color: -fx-border-primary;
     -fx-padding: 8px;
     -fx-alignment: center-left;
     -fx-text-fill: -fx-text-primary;
 }
 
-.device-selection-dialog .button-bar {
-    -fx-background-color: transparent;
-    -fx-padding: 15 0 0 0;
+.device-selection-dialog .device-selection-divider {
+    -fx-background-color: -fx-border-primary;
+    -fx-pref-height: 1;
 }
 
-.device-selection-dialog .button-bar .button {
-    -fx-background-color: -fx-accent-primary;
+.device-selection-dialog .device-selection-btn-bar {
+    -fx-background-color: transparent;
+    -fx-padding: 15 20 20 20;
+}
+
+.device-selection-dialog .device-selection-btn-primary {
+    -fx-background-color: -fx-dialog-header;
     -fx-text-fill: -fx-text-on-dark;
     -fx-font-weight: bold;
     -fx-padding: 8px 16px;
@@ -167,15 +196,27 @@
     -fx-cursor: hand;
 }
 
-.device-selection-dialog .button-bar .button:hover {
-    -fx-background-color: -fx-accent-primary-hover;
+.device-selection-dialog .device-selection-btn-primary:hover {
+    -fx-background-color: #5B6572;
 }
 
-.device-selection-dialog .button-bar .button-secondary {
-    -fx-background-color: -fx-text-tertiary;
-    -fx-text-fill: -fx-text-on-dark;
+.device-selection-dialog .device-selection-btn-primary:disabled {
+    -fx-opacity: 0.5;
 }
 
-.device-selection-dialog .button-bar .button-secondary:hover {
-    -fx-background-color: -fx-text-secondary;
+.device-selection-dialog .device-selection-btn-ghost {
+    -fx-background-color: transparent;
+    -fx-text-fill: -fx-text-primary;
+    -fx-font-weight: bold;
+    -fx-padding: 8px 16px;
+    -fx-background-radius: 5px;
+    -fx-border-color: -fx-border-primary;
+    -fx-border-width: 1px;
+    -fx-border-radius: 5px;
+    -fx-cursor: hand;
+}
+
+.device-selection-dialog .device-selection-btn-ghost:hover {
+    -fx-background-color: -fx-bg-tertiary;
+    -fx-border-color: -fx-border-secondary;
 }

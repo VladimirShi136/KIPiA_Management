@@ -36,6 +36,9 @@
             <Label fx:id="titleLabel" text="Информация о приложении" styleClass="title-label" wrapText="true"/>
             <Label fx:id="sectionLabel" styleClass="section-label"/>
         </VBox>
+
+        <!-- Кнопка закрытия -->
+        <Button fx:id="closeBtn" text="×" styleClass="unified-close-button" onAction="#onClose"/>
     </HBox>
 
     <!-- Тело с контентом -->

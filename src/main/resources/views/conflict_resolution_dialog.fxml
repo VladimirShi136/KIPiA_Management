@@ -32,6 +32,9 @@
             <Label fx:id="titleLabel" text="Разрешение конфликтов данных" styleClass="title-label" wrapText="true"/>
             <Label fx:id="countLabel" text="Обнаружено конфликтов: 0" styleClass="section-label"/>
         </VBox>
+
+        <!-- Кнопка закрытия -->
+        <Button fx:id="closeBtn" text="×" styleClass="unified-close-button" onAction="#cancelResolution"/>
     </HBox>
 
     <!-- Тело с контентом -->

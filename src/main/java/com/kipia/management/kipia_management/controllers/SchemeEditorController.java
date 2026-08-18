@@ -39,7 +39,7 @@ import java.util.stream.Collectors;
  * @author vladimir_shi
  * @since 30.09.2025
  */
-public class SchemeEditorController implements SearchableController{
+public class SchemeEditorController implements SearchableController {
 
     // ============================================================
     // FXML COMPONENTS
@@ -83,7 +83,7 @@ public class SchemeEditorController implements SearchableController{
     private ShapeService shapeService;
     private DeviceIconService deviceIconService;
     private SchemeSaver schemeSaver;
-    
+
     // Индикатор загрузки
     private LoadingIndicator loadingIndicator;
 
@@ -165,16 +165,16 @@ public class SchemeEditorController implements SearchableController{
     public void init() {
         try {
             validateDAODependencies();
-            
+
             // Инициализация индикатора загрузки
             loadingIndicator = new LoadingIndicator("Загрузка схемы...");
             if (rootPane != null) {
                 rootPane.getChildren().add(loadingIndicator.getOverlay());
             }
-            
+
             // Скрываем контент до загрузки
             hideContentBeforeLoad();
-            
+
             // Запускаем асинхронную загрузку
             loadDataAsync();
         } catch (Exception e) {
@@ -182,7 +182,7 @@ public class SchemeEditorController implements SearchableController{
             if (statusLabel != null) statusLabel.setText("Ошибка запуска: " + e.getMessage());
         }
     }
-    
+
     /**
      * Скрывает контент до загрузки данных
      */
@@ -191,7 +191,7 @@ public class SchemeEditorController implements SearchableController{
             contentBox.setOpacity(0);
         }
     }
-    
+
     /**
      * Показывает контент после загрузки данных
      */
@@ -200,18 +200,18 @@ public class SchemeEditorController implements SearchableController{
             contentBox.setOpacity(1);
         }
     }
-    
+
     /**
      * Асинхронная загрузка данных с индикатором загрузки
      */
     private void loadDataAsync() {
         Platform.runLater(() -> loadingIndicator.show());
-        
+
         Task<Void> loadTask = new Task<>() {
             @Override
             protected Void call() throws Exception {
                 long startTime = System.currentTimeMillis();
-                
+
                 // Инициализация сервисов и загрузка данных
                 Platform.runLater(() -> {
                     initializeServices();
@@ -220,31 +220,31 @@ public class SchemeEditorController implements SearchableController{
                     statusLabel.setText("Готов - выберите инструмент или работайте с фигурами");
                     refreshAvailableDevices();
                 });
-                
+
                 // Умная задержка
                 long elapsedTime = System.currentTimeMillis() - startTime;
                 long minDisplayTime = 500;
-                
+
                 if (elapsedTime < minDisplayTime) {
                     Thread.sleep(minDisplayTime - elapsedTime);
                 }
-                
+
                 return null;
             }
         };
-        
+
         loadTask.setOnSucceeded(_ -> {
             showContentAfterLoad();
             loadingIndicator.hide();
         });
-        
+
         loadTask.setOnFailed(_ -> {
             LOGGER.error("Ошибка загрузки схемы: {}", loadTask.getException().getMessage());
             CustomAlertDialog.showError("Ошибка", "Не удалось загрузить схему");
             showContentAfterLoad();
             loadingIndicator.hide();
         });
-        
+
         new Thread(loadTask).start();
     }
 
@@ -288,7 +288,8 @@ public class SchemeEditorController implements SearchableController{
                 deviceLocationDAO,
                 this::refreshAvailableDevices,
                 currentScheme,
-                deviceDAO
+                deviceDAO,
+                shapeManager
         );
 
         shapeManager.setOnShapeSelected(this::handleShapeSelection);
@@ -331,6 +332,10 @@ public class SchemeEditorController implements SearchableController{
         schemeComboBox.valueProperty().addListener((_, oldV, newV) -> {
             if (newV != null && !newV.equals(oldV)) {
                 loadScheme(newV);
+                // Синхронизируем внешний ComboBox в поисковой панели
+                if (externalSchemeFilter != null) {
+                    externalSchemeFilter.setValue(newV);
+                }
             }
         });
     }
@@ -368,13 +373,42 @@ public class SchemeEditorController implements SearchableController{
      */
     private void setupPaneKeyHandlers() {
         schemePane.setOnKeyPressed(event -> {
-            if (isShapeSelected()) {
-                if (event.isControlDown()) {
-                    switch (event.getCode()) {
-                        case C -> copySelectedShape();
-                        case V -> pasteShape();
+            if (event.isControlDown()) {
+                switch (event.getCode()) {
+                    case Z -> {
+                        if (event.isShiftDown()) {
+                            // Ctrl+Shift+Z или Ctrl+Y для redo
+                            if (shapeManager != null) {
+                                shapeManager.redo();
+                            }
+                        } else {
+                            // Ctrl+Z для undo
+                            if (shapeManager != null) {
+                                shapeManager.undo();
+                            }
+                        }
+                        event.consume();
                     }
-                } else {
+                    case Y -> {
+                        // Ctrl+Y для redo
+                        if (shapeManager != null) {
+                            shapeManager.redo();
+                        }
+                        event.consume();
+                    }
+                    case C -> {
+                        if (isShapeSelected()) {
+                            copySelectedShape();
+                        }
+                    }
+                    case V -> {
+                        if (isShapeSelected()) {
+                            pasteShape();
+                        }
+                    }
+                }
+            } else {
+                if (isShapeSelected()) {
                     switch (event.getCode()) {
                         case DELETE, BACK_SPACE -> deleteSelectedShape();
                     }
@@ -541,6 +575,7 @@ public class SchemeEditorController implements SearchableController{
 
     /**
      * Блокирует или разблокирует все кнопки панели инструментов.
+     *
      * @param disabled true — заблокировать, false — разблокировать
      */
     private void setToolbarDisabled(boolean disabled) {
@@ -686,7 +721,7 @@ public class SchemeEditorController implements SearchableController{
     private void loadSchemes() {
         List<String> locations = deviceDAO.getDistinctLocations();
         createOrLoadSchemes(locations);
-        
+
         // ⭐⭐ НОВОЕ: Загружаем ВСЕ схемы из БД (включая без приборов) ⭐⭐
         List<Scheme> allSchemes = schemeDAO.getAllSchemes();
         updateSchemeComboBox(allSchemes);
@@ -740,12 +775,12 @@ public class SchemeEditorController implements SearchableController{
         }
         allSchemes = FXCollections.observableArrayList(schemes);
         schemeComboBox.setItems(allSchemes);
-        
+
         // Явно обновляем внешний ComboBox если он связан
         if (externalSchemeFilter != null) {
             externalSchemeFilter.setItems(allSchemes);
         }
-        
+
         setToolbarDisabled(false);
         LOGGER.info("Загружено {} схем", allSchemes.size());
     }
@@ -762,6 +797,7 @@ public class SchemeEditorController implements SearchableController{
     /**
      * Проверяет, есть ли хотя бы одно устройство,
      * у которого поле {@code location} равно названию текущей схемы.
+     *
      * @return true – если такие устройства найдены
      */
     private boolean hasDevicesWithSchemeName() {
@@ -786,6 +822,10 @@ public class SchemeEditorController implements SearchableController{
                     });
             Scheme firstScheme = sortedSchemes.getFirst();
             schemeComboBox.setValue(firstScheme);
+            // Обновляем внешний ComboBox в поисковой панели
+            if (externalSchemeFilter != null) {
+                externalSchemeFilter.setValue(firstScheme);
+            }
         }
         updateDeleteButtonState();
     }
@@ -935,8 +975,8 @@ public class SchemeEditorController implements SearchableController{
         double margin = 100.0;
 
         // Максимальный offset: канвас не уходит левее/выше viewport
-        double maxX =  viewW - margin;
-        double maxY =  viewH - margin;
+        double maxX = viewW - margin;
+        double maxY = viewH - margin;
 
         // Минимальный offset: правый/нижний край канваса не уходит дальше margin
         double minX = -(scaledW - margin);
@@ -956,6 +996,14 @@ public class SchemeEditorController implements SearchableController{
                         node instanceof javafx.scene.shape.Line && "gridLine".equals(node.getId())
         );
 
+        // Определяем цвета в зависимости от темы
+        Color backgroundColor = StyleUtils.isDarkTheme()
+                ? Color.rgb(30, 30, 35)  // Темно-серый для темной темы
+                : Color.WHITE;            // Белый для светлой темы
+        Color strokeColor = StyleUtils.isDarkTheme()
+                ? Color.rgb(60, 60, 70)   // Светло-серый для темной темы
+                : Color.LIGHTGRAY;        // Светло-серый для светлой темы
+
         // Рисуем фон канваса
         Rectangle background = new Rectangle(
                 0, 0,
@@ -963,8 +1011,8 @@ public class SchemeEditorController implements SearchableController{
                 canvasState.getHeight()
         );
         background.setId("canvasBackground");
-        background.setFill(Color.WHITE);
-        background.setStroke(Color.LIGHTGRAY);
+        background.setFill(backgroundColor);
+        background.setStroke(strokeColor);
         background.setStrokeWidth(1);
         background.setMouseTransparent(true);
         schemePane.getChildren().addFirst(background);
@@ -1051,7 +1099,7 @@ public class SchemeEditorController implements SearchableController{
     private void updateZoomLabel() {
         if (zoomLabel != null) {
             zoomLabel.setText(String.format("Масштаб: %d%%  |  Ctrl+колесо мыши",
-                    (int)(canvasState.getScale() * 100)));
+                    (int) (canvasState.getScale() * 100)));
         }
     }
 
@@ -1101,7 +1149,7 @@ public class SchemeEditorController implements SearchableController{
             refreshAvailableDevices();
             schemeSaver.resetDirty(); // свежезагруженная схема — изменений нет
             statusLabel.setText("Загружена схема: " + scheme.getName() +
-                    " (" + (int)canvasState.getWidth() + "x" + (int)canvasState.getHeight() + ")");
+                    " (" + (int) canvasState.getWidth() + "x" + (int) canvasState.getHeight() + ")");
 
             updateSchemeTimestamp(currentScheme);
             updateDeleteButtonState();
@@ -1222,6 +1270,10 @@ public class SchemeEditorController implements SearchableController{
                 loadSchemes();
                 if (!schemeComboBox.getItems().isEmpty()) {
                     schemeComboBox.getSelectionModel().selectFirst();
+                    // Синхронизируем внешний ComboBox
+                    if (externalSchemeFilter != null) {
+                        externalSchemeFilter.setValue(schemeComboBox.getValue());
+                    }
                 }
                 CustomAlertDialog.showSuccess("Удаление схемы", "Схема \"" + schemeName + "\" успешно удалена");
             } else {
@@ -1670,33 +1722,41 @@ public class SchemeEditorController implements SearchableController{
                 }
 
                 Node deviceNode = deviceIconService.createDeviceIcon(x, y, selectedDevice, currentScheme);
-                if (schemePane != null) schemePane.getChildren().add(deviceNode);
 
-                if (currentScheme != null && deviceLocationDAO != null) {
-                    DeviceLocation location = new DeviceLocation(
-                            selectedDevice.getId(), currentScheme.getId(), x, y
-                    );
-                    boolean added = deviceLocationDAO.addDeviceLocation(location);
-                    if (added) {
-                        selectedDevice.updateTimestamp();
-                        deviceDAO.updateDevice(selectedDevice);
-                        if (schemeSaver != null) {
-                            schemeSaver.markDirty();
-                            // Обновляем индикатор в UI
-                            updateSchemeTimestamp(currentScheme);
-                            statusLabel.setText("Прибор добавлен: " + selectedDevice.getName());
+                // Используем команду добавления с undo/redo
+                if (shapeManager != null && currentScheme != null) {
+                    shapeManager.registerAddDevice(deviceNode, selectedDevice, deviceLocationDAO,
+                            currentScheme, this::refreshAvailableDevices);
+                } else {
+                    // Fallback к прямому добавлению
+                    if (schemePane != null) schemePane.getChildren().add(deviceNode);
+
+                    if (currentScheme != null && deviceLocationDAO != null) {
+                        DeviceLocation location = new DeviceLocation(
+                                selectedDevice.getId(), currentScheme.getId(), x, y
+                        );
+                        boolean added = deviceLocationDAO.addDeviceLocation(location);
+                        if (added) {
+                            selectedDevice.updateTimestamp();
+                            deviceDAO.updateDevice(selectedDevice);
+                            if (schemeSaver != null) {
+                                schemeSaver.markDirty();
+                                // Обновляем индикатор в UI
+                                updateSchemeTimestamp(currentScheme);
+                                statusLabel.setText("Прибор добавлен: " + selectedDevice.getName());
+                            }
+                        }
+                        if (!added) {
+                            CustomAlertDialog.showError("Ошибка", "Не удалось сохранить прибор в базу данных");
                         }
                     }
-                    if (!added) {
-                        CustomAlertDialog.showError("Ошибка", "Не удалось сохранить прибор в базу данных");
-                    }
+
+                    refreshAvailableDevices();
+                    statusLabel.setText("Прибор добавлен: " + selectedDevice.getName());
+
+                    CustomAlertDialog.showSuccess("Добавление прибора",
+                            "Прибор '" + selectedDevice.getName() + "' успешно добавлен на схему");
                 }
-
-                refreshAvailableDevices();
-                statusLabel.setText("Прибор добавлен: " + selectedDevice.getName());
-
-                CustomAlertDialog.showSuccess("Добавление прибора",
-                        "Прибор '" + selectedDevice.getName() + "' успешно добавлен на схему");
             }
         } catch (Exception e) {
             LOGGER.error("Ошибка добавления устройства: {}", e.getMessage(), e);
@@ -1767,17 +1827,17 @@ public class SchemeEditorController implements SearchableController{
     public void bindSchemeFilter(ComboBox<Scheme> schemeFilter) {
         if (schemeFilter != null && schemeComboBox != null) {
             externalSchemeFilter = schemeFilter;
-            
+
             // Устанавливаем items из schemeComboBox (даже если они пока пустые)
             schemeFilter.setItems(schemeComboBox.getItems());
-            
+
             // Добавляем слушатель для синхронизации при изменении items в schemeComboBox
             schemeComboBox.getItems().addListener((javafx.collections.ListChangeListener<Scheme>) change -> {
                 while (change.next()) {
                     schemeFilter.setItems(schemeComboBox.getItems());
                 }
             });
-            
+
             schemeFilter.valueProperty().addListener((_, _, newScheme) -> {
                 if (newScheme != null) {
                     schemeComboBox.setValue(newScheme);
@@ -1831,6 +1891,17 @@ public class SchemeEditorController implements SearchableController{
     // ============================================================
     // THEME SUPPORT
     // ============================================================
+
+    /**
+     * Публичный метод для перерисовки канваса при смене темы
+     */
+    public void redrawCanvasForThemeChange() {
+        updateCanvasDisplay();
+        // Обновляем цвета всех фигур
+        if (shapeManager != null) {
+            shapeManager.refreshShapeColors();
+        }
+    }
 
     /**
      * Обновление иконок кнопок в зависимости от темы

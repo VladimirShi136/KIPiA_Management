@@ -34,7 +34,7 @@
     -fx-background-color: transparent;
     -fx-background-radius: 10px;
     -fx-border-radius: 10px;
-    -fx-text-fill: white;
+    -fx-text-fill: #ffffff !important;
     -fx-font-size: 18px;
     -fx-font-weight: normal;
     -fx-font-family: "Segoe UI", "Arial", sans-serif;
@@ -67,12 +67,12 @@
 
 .window-controls .window-close-button {
     -fx-background-color: transparent;
-    -fx-text-fill: white;
+    -fx-text-fill: #ffffff !important;
 }
 
 .window-controls .window-close-button:hover {
     -fx-background-color: -fx-accent-danger;
-    -fx-text-fill: white;
+    -fx-text-fill: #ffffff !important;
     -fx-scale-x: 1.0;
     -fx-scale-y: 1.0;
     -fx-effect: none;
@@ -80,7 +80,7 @@
 
 .window-controls .window-close-button:pressed {
     -fx-background-color: -fx-accent-danger-hover;
-    -fx-text-fill: white;
+    -fx-text-fill: #ffffff !important;
     -fx-scale-x: 1.0;
     -fx-scale-y: 1.0;
     -fx-effect: none;
@@ -91,7 +91,7 @@
 #maximizeBtn,
 #closeBtn {
     -fx-background-color: transparent;
-    -fx-text-fill: white;
+    -fx-text-fill: #ffffff !important;
     -fx-font-size: 18px;
     -fx-font-weight: bold;
     -fx-padding: 0;
@@ -117,7 +117,7 @@
 
 #closeBtn:hover {
     -fx-background-color: -fx-accent-danger;
-    -fx-text-fill: white;
+    -fx-text-fill: #ffffff !important;
     -fx-scale-x: 1.0;
     -fx-scale-y: 1.0;
     -fx-effect: none;
@@ -125,6 +125,42 @@
 
 #closeBtn:pressed {
     -fx-background-color: -fx-accent-danger-hover;
+    -fx-scale-x: 1.0;
+    -fx-scale-y: 1.0;
+    -fx-effect: none;
+}
+
+/* ==================== UNIFIED CLOSE BUTTON FOR DIALOGS ==================== */
+.unified-close-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #ffffff !important;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-padding: 0;
+    -fx-effect: none;
+    -fx-background-radius: 10px;
+    -fx-border-radius: 10px;
+    -fx-border-width: 0;
+    -fx-min-width: 45px;
+    -fx-max-width: 45px;
+    -fx-pref-width: 45px;
+    -fx-min-height: 40px;
+    -fx-max-height: 40px;
+    -fx-pref-height: 40px;
+    -fx-cursor: hand;
+}
+
+.unified-close-button:hover {
+    -fx-background-color: -fx-accent-danger;
+    -fx-text-fill: #ffffff !important;
+    -fx-scale-x: 1.0;
+    -fx-scale-y: 1.0;
+    -fx-effect: none;
+}
+
+.unified-close-button:pressed {
+    -fx-background-color: -fx-accent-danger-hover;
+    -fx-text-fill: #ffffff !important;
     -fx-scale-x: 1.0;
     -fx-scale-y: 1.0;
     -fx-effect: none;
@@ -299,7 +335,7 @@
 
 .combo-box .combo-box-popup .list-view .list-cell:filled:selected {
     -fx-background-color: -fx-accent-primary;
-    -fx-text-fill: white;
+    -fx-text-fill: #ffffff !important;
 }
 
 /* ==================== TEXT INPUT ==================== */

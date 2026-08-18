@@ -55,7 +55,10 @@ public class ConflictResolutionDialog implements Initializable {
     
     @FXML
     private Button cancelButton;
-    
+
+    @FXML
+    private Button closeBtn;
+
     @FXML
     private Label titleLabel;
     
@@ -150,6 +153,7 @@ public class ConflictResolutionDialog implements Initializable {
         chooseAllRemoteButton.setOnAction(_ -> chooseAll(ConflictResolution.REMOTE));
         applyButton.setOnAction(_ -> applyResolution());
         cancelButton.setOnAction(_ -> cancelResolution());
+        closeBtn.setOnAction(_ -> cancelResolution());
         
         // Добавляем перетаскивание за шапку
         setupDragHandling();

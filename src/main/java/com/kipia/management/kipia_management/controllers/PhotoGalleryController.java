@@ -387,19 +387,19 @@ public class PhotoGalleryController implements SearchableController {
             }
 
             /**
-             * Вспомогаьельный метод для получения комбинированного названия прибора
+             * Вспомогательный метод для получения метки прибора
              * @param device - передаваемое устройство
-             * @return - текстовая метка с названием прибора
+             * @return - текстовая метка с инв. номером и номером крана
              */
             private static Label getNameLabel(Device device) {
-                String deviceName = device.getName() != null && !device.getName().trim().isEmpty()
-                        ? device.getName()
-                        : "Без имени";
                 String inventoryNumber = device.getInventoryNumber() != null && !device.getInventoryNumber().trim().isEmpty()
                         ? device.getInventoryNumber()
+                        : "Без инв. №";
+                String valveNumber = device.getValveNumber() != null && !device.getValveNumber().trim().isEmpty()
+                        ? device.getValveNumber()
                         : "";
 
-                String displayName = inventoryNumber.isEmpty() ? deviceName : deviceName + " (" + inventoryNumber + ")";
+                String displayName = valveNumber.isEmpty() ? inventoryNumber : inventoryNumber + " | " + valveNumber;
 
                 return new Label(displayName);
             }
@@ -485,13 +485,21 @@ public class PhotoGalleryController implements SearchableController {
             // Загрузка всех приборов
             allDevices = deviceDAO.getAllDevices();
 
-            // Группировка по местам установки
+            // Группировка по местам установки с сортировкой по номеру крана внутри каждой локации
             devicesByLocation = allDevices.stream()
                     .filter(device -> device.getLocation() != null && !device.getLocation().trim().isEmpty())
                     .collect(Collectors.groupingBy(
                             Device::getLocation,
                             TreeMap::new,
-                            Collectors.toList()
+                            Collectors.collectingAndThen(
+                                    Collectors.toList(),
+                                    list -> list.stream()
+                                            .sorted(Comparator.comparing(
+                                                    Device::getValveNumberInt,
+                                                    Comparator.nullsLast(Comparator.naturalOrder())
+                                            ))
+                                            .collect(Collectors.toList())
+                            )
                     ));
 
             // Создание данных для карточек

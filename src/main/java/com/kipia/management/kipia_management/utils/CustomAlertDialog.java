@@ -3,6 +3,7 @@ package com.kipia.management.kipia_management.utils;
 import com.kipia.management.kipia_management.Main;
 import javafx.animation.FadeTransition;
 import javafx.animation.PauseTransition;
+import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -18,6 +19,7 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.SVGPath;
@@ -434,7 +436,7 @@ public class CustomAlertDialog {
         );
         colorIcon.setFill(Color.web(dark ? "#7090b0" : "#465261"));
 
-        HBox topBox = createTopBox(colorIcon, "Настройка цвета", title);
+        HBox topBox = createTopBox(colorIcon, "Настройка цвета", title, null, stage);
 
         // Сборка контента
         VBox content = new VBox(10);
@@ -540,7 +542,7 @@ public class CustomAlertDialog {
         );
         fontIcon.setFill(Color.web(dark ? "#7090b0" : "#465261"));
 
-        HBox topBox = createTopBox(fontIcon, "Настройка шрифта", "Настройки шрифта");
+        HBox topBox = createTopBox(fontIcon, "Настройка шрифта", "Настройки шрифта", null, stage);
 
         // Сборка
         VBox content = new VBox(10);
@@ -689,8 +691,22 @@ public class CustomAlertDialog {
 
             stage.show();
             if (main != null) {
-                stage.setX(main.getX() + (main.getWidth() - content.getPrefWidth()) / 2);
-                stage.setY(main.getY() + (main.getHeight() - content.getPrefHeight()) / 2);
+                // Ждем отрисовки контента для получения правильных размеров
+                Platform.runLater(() -> {
+                    double contentWidth = content.getLayoutBounds().getWidth();
+                    double contentHeight = content.getLayoutBounds().getHeight();
+                    
+                    // Получаем размеры шапки и левой панели для исключения из области центрирования
+                    double topHeight = 60;  // Примерная высота шапки
+                    double leftWidth = 200; // Примерная ширина левой панели навигации
+                    
+                    // Центрируем в области контента (исключая шапку и левую панель)
+                    double centerX = main.getX() + leftWidth + (main.getWidth() - leftWidth - contentWidth) / 2;
+                    double centerY = main.getY() + topHeight + (main.getHeight() - topHeight - contentHeight) / 2;
+                    
+                    stage.setX(centerX);
+                    stage.setY(centerY);
+                });
             }
 
             // Анимация появления/исчезновения
@@ -753,40 +769,16 @@ public class CustomAlertDialog {
      */
     public static Device showDeviceSelection(List<Device> devices) {
         Stage stage = createStage();
-
-        // ===== ИКОНКА (прибор) =====
-        SVGPath deviceIcon = getSvgPath();
-        deviceIcon.getStyleClass().add("device-icon");
-
-        StackPane iconWrap = new StackPane(deviceIcon);
-        iconWrap.setPrefSize(40, 40);
-        iconWrap.setMinSize(40, 40);
+        boolean dark = isDark();
 
         // ===== ШАПКА ДИАЛОГА =====
-        Label typeLabel = new Label("Выбор прибора");
-        typeLabel.getStyleClass().add("type-label");
-
-        Label titleLabel = new Label("Выберите прибор для схемы");
-        titleLabel.setWrapText(true);
-        titleLabel.getStyleClass().add("title-label");
-
-        Label countLabel = new Label("Доступно приборов: " + devices.size());
-        countLabel.getStyleClass().add("count-label");
-
-        VBox rightContent = new VBox(3, typeLabel, titleLabel, countLabel);
-        rightContent.setAlignment(Pos.TOP_LEFT);
-        VBox.setVgrow(rightContent, Priority.ALWAYS);
-
-        HBox topBox = new HBox(16, iconWrap, rightContent);
-        topBox.setAlignment(Pos.TOP_LEFT);
-        topBox.setPadding(new Insets(20, 20, 12, 20));
-        topBox.getStyleClass().add("top-box");
+        HBox topBox = createTopBox((SVGPath) null, "Выбор прибора", "Выберите прибор для схемы", "Доступно приборов: " + devices.size(), stage);
 
         // ===== ТАБЛИЦА =====
         TableView<Device> tableView = new TableView<>();
         tableView.getStyleClass().add("device-selection-table");
         tableView.setPrefHeight(320);
-        tableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        tableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
 
         TableColumn<Device, String> modelCol = new TableColumn<>("Модель");
         modelCol.setCellValueFactory(new PropertyValueFactory<>("name"));
@@ -819,8 +811,8 @@ public class CustomAlertDialog {
                 (_, _, sel) -> okBtn.setDisable(sel == null)
         );
 
-        cancelBtn.getStyleClass().add("device-selection-btn-ghost");
-        okBtn.getStyleClass().add("device-selection-btn-primary");
+        setupButtonStyles(okBtn, true);
+        setupButtonStyles(cancelBtn, false);
 
         // ===== КНОПОЧНАЯ ПАНЕЛЬ =====
         HBox btnBar = new HBox(10, cancelBtn, okBtn);
@@ -829,9 +821,8 @@ public class CustomAlertDialog {
         btnBar.getStyleClass().add("device-selection-btn-bar");
 
         // ===== ТЕЛО =====
-        VBox body = new VBox();
+        VBox body = new VBox(tableView);
         body.setPadding(new Insets(10, 20, 8, 20));
-        body.getChildren().add(tableView);
 
         // ===== РАЗДЕЛИТЕЛЬ =====
         Region divider = new Region();
@@ -862,6 +853,11 @@ public class CustomAlertDialog {
                     Objects.requireNonNull(Main.class.getResource(stylesheet)).toExternalForm()
             );
         }
+
+        // Загружаем стили для alert-dialog
+        scene.getStylesheets().add(
+                Objects.requireNonNull(Main.class.getResource("/styles/alert-dialog.css")).toExternalForm()
+        );
 
         stage.setScene(scene);
 
@@ -1161,7 +1157,65 @@ public class CustomAlertDialog {
         return btnBar;
     }
 
-    private static HBox createTopBox(SVGPath icon, String typeLabel, String titleLabel) {
+    private static HBox createTopBox(SVGPath icon, String typeLabel, String titleLabel, String sectionLabel, Stage stage) {
+        boolean dark = isDark();
+
+        Label typeLbl = new Label(typeLabel);
+        typeLbl.setStyle(
+                "-fx-font-size:11px;-fx-font-weight:bold;" +
+                        "-fx-text-fill:" + (dark ? "#5a6a7a" : "#888780") + ";" +
+                        "-fx-padding:0 0 4 0;"
+        );
+
+        Label titleLbl = new Label(titleLabel);
+        titleLbl.setWrapText(true);
+        titleLbl.setStyle(
+                "-fx-font-size:14px;-fx-font-weight:bold;" +
+                        "-fx-text-fill:" + (dark ? "#aec6de" : "#ffffff") + ";" +
+                        "-fx-padding:0 0 4 0;"
+        );
+
+        VBox rightContent;
+        if (sectionLabel != null && !sectionLabel.isEmpty()) {
+            Label sectionLbl = new Label(sectionLabel);
+            sectionLbl.setStyle(
+                    "-fx-font-size:12px;" +
+                            "-fx-text-fill:" + (dark ? "#5a6a7a" : "#D3D8DC") + ";" +
+                            "-fx-padding:0 0 0 0;"
+            );
+            rightContent = new VBox(4, typeLbl, titleLbl, sectionLbl);
+        } else {
+            rightContent = new VBox(4, typeLbl, titleLbl);
+        }
+        rightContent.setAlignment(Pos.TOP_LEFT);
+        VBox.setVgrow(rightContent, Priority.ALWAYS);
+
+        // Кнопка закрытия с унифицированным стилем
+        Button closeBtn = new Button("×");
+        closeBtn.getStyleClass().add("unified-close-button");
+        closeBtn.setOnAction(_ -> stage.close());
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        HBox topBox;
+        if (icon != null) {
+            StackPane iconWrap = new StackPane(icon);
+            iconWrap.setPrefSize(40, 40);
+            iconWrap.setMinSize(40, 40);
+            iconWrap.setStyle("-fx-background-color: transparent;");
+            topBox = new HBox(16, iconWrap, rightContent, spacer, closeBtn);
+        } else {
+            topBox = new HBox(16, rightContent, spacer, closeBtn);
+        }
+
+        topBox.setAlignment(Pos.CENTER_LEFT);
+        topBox.setPadding(new Insets(20, 20, 12, 20));
+        topBox.getStyleClass().add("dialog-top-box");
+        return topBox;
+    }
+
+    private static HBox createTopBox(ImageView icon, String typeLabel, String titleLabel, Stage stage) {
         boolean dark = isDark();
         StackPane iconWrap = new StackPane(icon);
         iconWrap.setPrefSize(40, 40);
@@ -1179,7 +1233,7 @@ public class CustomAlertDialog {
         titleLbl.setWrapText(true);
         titleLbl.setStyle(
                 "-fx-font-size:14px;-fx-font-weight:bold;" +
-                        "-fx-text-fill:" + (dark ? "#aec6de" : "#2c3a47") + ";" +
+                        "-fx-text-fill:" + (dark ? "#aec6de" : "#ffffff") + ";" +
                         "-fx-padding:0 0 4 0;"
         );
 
@@ -1187,10 +1241,18 @@ public class CustomAlertDialog {
         rightContent.setAlignment(Pos.TOP_LEFT);
         VBox.setVgrow(rightContent, Priority.ALWAYS);
 
-        HBox topBox = new HBox(16, iconWrap, rightContent);
-        topBox.setAlignment(Pos.TOP_LEFT);
+        // Кнопка закрытия с унифицированным стилем
+        Button closeBtn = new Button("×");
+        closeBtn.getStyleClass().add("unified-close-button");
+        closeBtn.setOnAction(_ -> stage.close());
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        HBox topBox = new HBox(16, iconWrap, rightContent, spacer, closeBtn);
+        topBox.setAlignment(Pos.CENTER_LEFT);
         topBox.setPadding(new Insets(20, 20, 12, 20));
-        topBox.setStyle("-fx-background-color: transparent;");
+        topBox.getStyleClass().add("dialog-top-box");
         return topBox;
     }
 

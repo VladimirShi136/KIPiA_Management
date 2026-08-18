@@ -291,6 +291,206 @@ public class ShapeManager {
         }
     }
 
+    // ============================================================
+    // КОМАНДЫ ДЛЯ ПРИБОРОВ (DEVICES)
+    // ============================================================
+
+    // Команда для добавления прибора на схему
+    public static class AddDeviceCommand implements CommandManager.Command {
+        private final javafx.scene.Node deviceNode;
+        private final AnchorPane pane;
+        private final com.kipia.management.kipia_management.models.Device device;
+        private final com.kipia.management.kipia_management.services.DeviceLocationDAO deviceLocationDAO;
+        private final com.kipia.management.kipia_management.models.Scheme scheme;
+        private final Runnable onDeviceDeletedCallback;
+
+        public AddDeviceCommand(javafx.scene.Node deviceNode, AnchorPane pane,
+                               com.kipia.management.kipia_management.models.Device device,
+                               com.kipia.management.kipia_management.services.DeviceLocationDAO deviceLocationDAO,
+                               com.kipia.management.kipia_management.models.Scheme scheme,
+                               Runnable onDeviceDeletedCallback) {
+            this.deviceNode = deviceNode;
+            this.pane = pane;
+            this.device = device;
+            this.deviceLocationDAO = deviceLocationDAO;
+            this.scheme = scheme;
+            this.onDeviceDeletedCallback = onDeviceDeletedCallback;
+        }
+
+        @Override
+        public void execute() {
+            if (!pane.getChildren().contains(deviceNode)) {
+                pane.getChildren().add(deviceNode);
+            }
+            // Сохраняем позицию в БД
+            saveDevicePosition();
+        }
+
+        @Override
+        public void undo() {
+            pane.getChildren().remove(deviceNode);
+            // Удаляем позицию из БД
+            if (scheme != null && deviceLocationDAO != null) {
+                deviceLocationDAO.deleteDeviceLocation(device.getId(), scheme.getId());
+            }
+            if (onDeviceDeletedCallback != null) {
+                onDeviceDeletedCallback.run();
+            }
+        }
+
+        private void saveDevicePosition() {
+            if (scheme == null || deviceLocationDAO == null) return;
+
+            double x = deviceNode.getLayoutX();
+            double y = deviceNode.getLayoutY();
+            double rotation = deviceNode.getRotate();
+
+            // Корректировка для Circle (центр вместо левого верхнего угла)
+            if (deviceNode instanceof javafx.scene.shape.Circle) {
+                x -= 10;
+                y -= 10;
+            }
+
+            com.kipia.management.kipia_management.models.DeviceLocation location =
+                    new com.kipia.management.kipia_management.models.DeviceLocation(
+                            device.getId(), scheme.getId(), x, y, rotation);
+            deviceLocationDAO.addDeviceLocation(location);
+        }
+    }
+
+    // Команда для удаления прибора со схемы
+    public static class RemoveDeviceCommand implements CommandManager.Command {
+        private final javafx.scene.Node deviceNode;
+        private final AnchorPane pane;
+        private final com.kipia.management.kipia_management.models.Device device;
+        private final com.kipia.management.kipia_management.services.DeviceLocationDAO deviceLocationDAO;
+        private final com.kipia.management.kipia_management.models.Scheme scheme;
+        private final Runnable onDeviceDeletedCallback;
+        private final double savedX, savedY, savedRotation;
+
+        public RemoveDeviceCommand(javafx.scene.Node deviceNode, AnchorPane pane,
+                                  com.kipia.management.kipia_management.models.Device device,
+                                  com.kipia.management.kipia_management.services.DeviceLocationDAO deviceLocationDAO,
+                                  com.kipia.management.kipia_management.models.Scheme scheme,
+                                  Runnable onDeviceDeletedCallback) {
+            this.deviceNode = deviceNode;
+            this.pane = pane;
+            this.device = device;
+            this.deviceLocationDAO = deviceLocationDAO;
+            this.scheme = scheme;
+            this.onDeviceDeletedCallback = onDeviceDeletedCallback;
+            // Сохраняем позицию для восстановления
+            this.savedX = deviceNode.getLayoutX();
+            this.savedY = deviceNode.getLayoutY();
+            this.savedRotation = deviceNode.getRotate();
+        }
+
+        @Override
+        public void execute() {
+            pane.getChildren().remove(deviceNode);
+            // Удаляем позицию из БД
+            if (scheme != null && deviceLocationDAO != null) {
+                deviceLocationDAO.deleteDeviceLocation(device.getId(), scheme.getId());
+            }
+            if (onDeviceDeletedCallback != null) {
+                onDeviceDeletedCallback.run();
+            }
+        }
+
+        @Override
+        public void undo() {
+            if (!pane.getChildren().contains(deviceNode)) {
+                pane.getChildren().add(deviceNode);
+            }
+            // Восстанавливаем позицию
+            deviceNode.setLayoutX(savedX);
+            deviceNode.setLayoutY(savedY);
+            deviceNode.setRotate(savedRotation);
+            // Сохраняем позицию в БД
+            saveDevicePosition();
+        }
+
+        private void saveDevicePosition() {
+            if (scheme == null || deviceLocationDAO == null) return;
+
+            double x = savedX;
+            double y = savedY;
+
+            // Корректировка для Circle (центр вместо левого верхнего угла)
+            if (deviceNode instanceof javafx.scene.shape.Circle) {
+                x -= 10;
+                y -= 10;
+            }
+
+            com.kipia.management.kipia_management.models.DeviceLocation location =
+                    new com.kipia.management.kipia_management.models.DeviceLocation(
+                            device.getId(), scheme.getId(), x, y, savedRotation);
+            deviceLocationDAO.addDeviceLocation(location);
+        }
+    }
+
+    // Команда для перемещения прибора
+    public static class MoveDeviceCommand implements CommandManager.Command {
+        private final javafx.scene.Node deviceNode;
+        private final com.kipia.management.kipia_management.models.Device device;
+        private final com.kipia.management.kipia_management.services.DeviceLocationDAO deviceLocationDAO;
+        private final com.kipia.management.kipia_management.models.Scheme scheme;
+        private final double oldX, oldY, oldRotation;
+        private final double newX, newY, newRotation;
+
+        public MoveDeviceCommand(javafx.scene.Node deviceNode,
+                                com.kipia.management.kipia_management.models.Device device,
+                                com.kipia.management.kipia_management.services.DeviceLocationDAO deviceLocationDAO,
+                                com.kipia.management.kipia_management.models.Scheme scheme,
+                                double oldX, double oldY, double oldRotation,
+                                double newX, double newY, double newRotation) {
+            this.deviceNode = deviceNode;
+            this.device = device;
+            this.deviceLocationDAO = deviceLocationDAO;
+            this.scheme = scheme;
+            this.oldX = oldX;
+            this.oldY = oldY;
+            this.oldRotation = oldRotation;
+            this.newX = newX;
+            this.newY = newY;
+            this.newRotation = newRotation;
+        }
+
+        @Override
+        public void execute() {
+            deviceNode.setLayoutX(newX);
+            deviceNode.setLayoutY(newY);
+            deviceNode.setRotate(newRotation);
+            saveDevicePosition(newX, newY, newRotation);
+        }
+
+        @Override
+        public void undo() {
+            deviceNode.setLayoutX(oldX);
+            deviceNode.setLayoutY(oldY);
+            deviceNode.setRotate(oldRotation);
+            saveDevicePosition(oldX, oldY, oldRotation);
+        }
+
+        private void saveDevicePosition(double x, double y, double rotation) {
+            if (scheme == null || deviceLocationDAO == null) return;
+
+            double correctedX = x;
+            double correctedY = y;
+
+            // Корректировка для Circle (центр вместо левого верхнего угла)
+            if (deviceNode instanceof javafx.scene.shape.Circle) {
+                correctedX -= 10;
+                correctedY -= 10;
+            }
+
+            com.kipia.management.kipia_management.models.DeviceLocation location =
+                    new com.kipia.management.kipia_management.models.DeviceLocation(
+                            device.getId(), scheme.getId(), correctedX, correctedY, rotation);
+            deviceLocationDAO.addDeviceLocation(location);
+        }
+    }
+
     /**
      * Конструктор менеджера фигур
      *
@@ -503,6 +703,54 @@ public class ShapeManager {
         ChangeLinePointsCommand cmd = new ChangeLinePointsCommand(lineShape,
                 oldStartX, oldStartY, oldEndX, oldEndY,
                 newStartX, newStartY, newEndX, newEndY);
+        commandManager.execute(cmd);
+        notifyChange();
+    }
+
+    // -----------------------------------------------------------------
+    // DEVICE COMMAND REGISTRATION
+    // -----------------------------------------------------------------
+
+    /**
+     * Регистрация добавления прибора в undo-стек
+     */
+    public void registerAddDevice(javafx.scene.Node deviceNode,
+                                   com.kipia.management.kipia_management.models.Device device,
+                                   com.kipia.management.kipia_management.services.DeviceLocationDAO deviceLocationDAO,
+                                   com.kipia.management.kipia_management.models.Scheme scheme,
+                                   Runnable onDeviceDeletedCallback) {
+        if (isLoading) return;
+        AddDeviceCommand cmd = new AddDeviceCommand(deviceNode, pane, device, deviceLocationDAO, scheme, onDeviceDeletedCallback);
+        commandManager.execute(cmd);
+        notifyChange();
+    }
+
+    /**
+     * Регистрация удаления прибора в undo-стек
+     */
+    public void registerRemoveDevice(javafx.scene.Node deviceNode,
+                                      com.kipia.management.kipia_management.models.Device device,
+                                      com.kipia.management.kipia_management.services.DeviceLocationDAO deviceLocationDAO,
+                                      com.kipia.management.kipia_management.models.Scheme scheme,
+                                      Runnable onDeviceDeletedCallback) {
+        if (isLoading) return;
+        RemoveDeviceCommand cmd = new RemoveDeviceCommand(deviceNode, pane, device, deviceLocationDAO, scheme, onDeviceDeletedCallback);
+        commandManager.execute(cmd);
+        notifyChange();
+    }
+
+    /**
+     * Регистрация перемещения прибора в undo-стек
+     */
+    public void registerMoveDevice(javafx.scene.Node deviceNode,
+                                    com.kipia.management.kipia_management.models.Device device,
+                                    com.kipia.management.kipia_management.services.DeviceLocationDAO deviceLocationDAO,
+                                    com.kipia.management.kipia_management.models.Scheme scheme,
+                                    double oldX, double oldY, double oldRotation,
+                                    double newX, double newY, double newRotation) {
+        if (isLoading) return;
+        MoveDeviceCommand cmd = new MoveDeviceCommand(deviceNode, device, deviceLocationDAO, scheme,
+                oldX, oldY, oldRotation, newX, newY, newRotation);
         commandManager.execute(cmd);
         notifyChange();
     }
@@ -960,6 +1208,66 @@ public class ShapeManager {
     private void notifyChange() {
         if (onChangeCallback != null) {
             onChangeCallback.run();
+        }
+    }
+
+    // -----------------------------------------------------------------
+    // UPDATE COLORS
+    // -----------------------------------------------------------------
+
+    /**
+     * Метод коррекции яркости для темной темы
+     * @param originalColor - оригинальный цвет
+     * @return - нужный по яркости цвет
+     */
+    private Color adjustColorForTheme(Color originalColor) {
+        if (originalColor == null) {
+            return originalColor;
+        }
+        if (!com.kipia.management.kipia_management.utils.StyleUtils.isDarkTheme()) {
+            return originalColor; // В светлой теме не меняем
+        }
+
+        // В темной теме затемняем слишком светлые цвета
+        double brightness = (originalColor.getRed() * 0.299 +
+                originalColor.getGreen() * 0.587 +
+                originalColor.getBlue() * 0.114);
+
+        if (brightness > 0.7) {
+            // Затемняем на 30-40%
+            double factor = 0.6;
+            return new Color(
+                    originalColor.getRed() * factor,
+                    originalColor.getGreen() * factor,
+                    originalColor.getBlue() * factor,
+                    originalColor.getOpacity()
+            );
+        }
+
+        return originalColor;
+    }
+
+    /**
+     * Метод для обновления цветов фигур
+     */
+    public void refreshShapeColors() {
+        if (shapeService == null) return;
+        
+        // Итерируем через дочерние элементы панели и находим все ShapeBase
+        for (Node node : pane.getChildren()) {
+            if (node instanceof ShapeBase shapeBase) {
+                Color originalFill = shapeBase.getOriginalFill();
+                Color originalStroke = shapeBase.getOriginalStroke();
+
+                if (originalFill != null) {
+                    Color adjustedFill = adjustColorForTheme(originalFill);
+                    shapeBase.setFill(adjustedFill);
+                }
+                if (originalStroke != null) {
+                    Color adjustedStroke = adjustColorForTheme(originalStroke);
+                    shapeBase.setStroke(adjustedStroke);
+                }
+            }
         }
     }
 

@@ -2,6 +2,7 @@ package com.kipia.management.kipia_management.services;
 
 import com.kipia.management.kipia_management.managers.PhotoManager;
 import com.kipia.management.kipia_management.managers.PhotoViewer;
+import com.kipia.management.kipia_management.managers.ShapeManager;
 import com.kipia.management.kipia_management.models.Device;
 import com.kipia.management.kipia_management.models.DeviceLocation;
 import com.kipia.management.kipia_management.models.Scheme;
@@ -40,6 +41,7 @@ public class DeviceIconService {
     private final BiConsumer<Node, Device> onDeviceMovedCallback;
     private final DeviceDAO deviceDAO;
     private final DeviceLocationDAO deviceLocationDAO;
+    private final ShapeManager shapeManager; // Добавляем ShapeManager для undo/redo
     private Scheme currentScheme; // поле для текущей схемы
 
     // Константы для стилей
@@ -55,13 +57,15 @@ public class DeviceIconService {
                              DeviceLocationDAO deviceLocationDAO,
                              Runnable onDeviceDeletedCallback,
                              Scheme currentScheme,
-                             DeviceDAO deviceDAO) {  // Добавьте параметр
+                             DeviceDAO deviceDAO,
+                             ShapeManager shapeManager) {  // Добавляем ShapeManager
         this.schemePane = schemePane;
         this.onDeviceMovedCallback = onDeviceMovedCallback;
         this.deviceLocationDAO = deviceLocationDAO;
         this.onDeviceDeletedCallback = onDeviceDeletedCallback;
         this.currentScheme = currentScheme; // Сохраняем текущую схему
         this.deviceDAO = deviceDAO;
+        this.shapeManager = shapeManager; // Сохраняем ShapeManager
     }
 
     /**
@@ -152,7 +156,7 @@ public class DeviceIconService {
     }
 
     /**
-     * Сохранение позиции и угла поворота устройства
+     * Сохранение позиции и угла поворота устройства (без undo/redo - используется при загрузке)
      */
     private void saveDevicePositionAndRotation(Node node, Device device) {
         if (currentScheme == null || deviceLocationDAO == null) return;
@@ -194,6 +198,33 @@ public class DeviceIconService {
     }
 
     /**
+     * Сохранение позиции и угла поворота устройства с undo/redo (для интерактивных изменений)
+     */
+    private void saveDevicePositionAndRotationWithUndo(Node node, Device device, double oldX, double oldY, double oldRotation) {
+        if (currentScheme == null || deviceLocationDAO == null || shapeManager == null) {
+            // Fallback к прямому сохранению если нет ShapeManager
+            saveDevicePositionAndRotation(node, device);
+            return;
+        }
+
+        double newX = node.getLayoutX();
+        double newY = node.getLayoutY();
+        double newRotation = node.getRotate();
+
+        // Регистрируем только если позиция реально изменилась
+        if (Math.abs(newX - oldX) > 0.1 || Math.abs(newY - oldY) > 0.1 || Math.abs(newRotation - oldRotation) > 0.1) {
+            shapeManager.registerMoveDevice(node, device, deviceLocationDAO, currentScheme,
+                    oldX, oldY, oldRotation, newX, newY, newRotation);
+
+            // Обновляем timestamp устройства
+            device.updateTimestamp();
+            if (deviceDAO != null) {
+                deviceDAO.updateDevice(device);
+            }
+        }
+    }
+
+    /**
      * Добавление обработчиков перемещения для иконки
      */
     private void addMovementHandlers(Node node) {
@@ -207,7 +238,8 @@ public class DeviceIconService {
         };
 
         DragHandler dragHandler = new DragHandler(node, schemePane,
-                onDeviceMovedCallback, onDragStart, onDragEnd);
+                onDeviceMovedCallback, onDragStart, onDragEnd,
+                shapeManager, deviceLocationDAO, currentScheme, deviceDAO);
         dragHandler.attach();
     }
 
@@ -343,11 +375,14 @@ public class DeviceIconService {
             if (deviceDAO != null) {
                 deviceDAO.updateDevice(deviceToDelete);
             }
-            deleteDeviceFromScheme(node, deviceToDelete, currentScheme);
-        }
 
-        if (onDeviceDeletedCallback != null) {
-            onDeviceDeletedCallback.run();
+            // Используем команду удаления с undo/redo если есть ShapeManager
+            if (shapeManager != null && currentScheme != null) {
+                shapeManager.registerRemoveDevice(node, deviceToDelete, deviceLocationDAO, currentScheme, onDeviceDeletedCallback);
+            } else {
+                // Fallback к прямому удалению
+                deleteDeviceFromScheme(node, deviceToDelete, currentScheme);
+            }
         }
     }
 
@@ -455,18 +490,31 @@ public class DeviceIconService {
         private double dragOffsetX, dragOffsetY;
         private double initialMouseX, initialMouseY;
         private double initialLayoutX, initialLayoutY;
+        private double initialRotation; // Сохраняем начальный поворот
         private final Runnable onDragStartCallback; // Новый callback
         private final Runnable onDragEndCallback;   // Новый callback
+        private final ShapeManager shapeManager; // Добавляем ShapeManager для undo/redo
+        private final DeviceLocationDAO deviceLocationDAO;
+        private final Scheme currentScheme;
+        private final DeviceDAO deviceDAO;
 
         public DragHandler(Node node, AnchorPane pane,
                            BiConsumer<Node, Device> onMoveCallback,
                            Runnable onDragStartCallback,  // Новый параметр
-                           Runnable onDragEndCallback) {  // Новый параметр
+                           Runnable onDragEndCallback,   // Новый параметр
+                           ShapeManager shapeManager,    // Добавляем ShapeManager
+                           DeviceLocationDAO deviceLocationDAO,
+                           Scheme currentScheme,
+                           DeviceDAO deviceDAO) {
             this.node = node;
             this.pane = pane;
             this.onMoveCallback = onMoveCallback;
             this.onDragStartCallback = onDragStartCallback;
             this.onDragEndCallback = onDragEndCallback;
+            this.shapeManager = shapeManager;
+            this.deviceLocationDAO = deviceLocationDAO;
+            this.currentScheme = currentScheme;
+            this.deviceDAO = deviceDAO;
         }
 
         /**
@@ -508,16 +556,19 @@ public class DeviceIconService {
                     onDragStartCallback.run();
                 }
 
-                initialMouseX = event.getSceneX();
-                initialMouseY = event.getSceneY();
+                // Переводим scene координаты в локальные координаты панели
+                javafx.geometry.Point2D panePoint = pane.sceneToLocal(event.getSceneX(), event.getSceneY());
+                initialMouseX = panePoint.getX();
+                initialMouseY = panePoint.getY();
                 initialLayoutX = node.getLayoutX();
                 initialLayoutY = node.getLayoutY();
+                initialRotation = node.getRotate(); // Сохраняем начальный поворот
 
                 double centerOffsetX = calculateCenterOffsetX();
                 double centerOffsetY = calculateCenterOffsetY();
 
-                dragOffsetX = event.getSceneX() - (node.getLayoutX() + centerOffsetX);
-                dragOffsetY = event.getSceneY() - (node.getLayoutY() + centerOffsetY);
+                dragOffsetX = panePoint.getX() - (node.getLayoutX() + centerOffsetX);
+                dragOffsetY = panePoint.getY() - (node.getLayoutY() + centerOffsetY);
 
                 isDragging = false;
                 node.setCursor(Cursor.MOVE);
@@ -528,9 +579,12 @@ public class DeviceIconService {
         private void handleMouseDragged(javafx.scene.input.MouseEvent event) {
             if (!event.isPrimaryButtonDown()) return;
 
+            // Переводим scene координаты в локальные координаты панели
+            javafx.geometry.Point2D panePoint = pane.sceneToLocal(event.getSceneX(), event.getSceneY());
+
             // Используем ОТНОСИТЕЛЬНОЕ перемещение - это ключевое исправление!
-            double deltaX = event.getSceneX() - initialMouseX;
-            double deltaY = event.getSceneY() - initialMouseY;
+            double deltaX = panePoint.getX() - initialMouseX;
+            double deltaY = panePoint.getY() - initialMouseY;
 
             double newX = initialLayoutX + deltaX;
             double newY = initialLayoutY + deltaY;
@@ -550,7 +604,7 @@ public class DeviceIconService {
 
         private void handleMouseReleased(javafx.scene.input.MouseEvent event) {
             node.setCursor(Cursor.HAND);
-            if (isDragging && onMoveCallback != null) {
+            if (isDragging) {
                 // Получаем устройство из UserData (может быть Device или DeviceWithRotation)
                 Object userData = node.getUserData();
                 Device device;
@@ -559,7 +613,30 @@ public class DeviceIconService {
                 } else {
                     device = (Device) userData;
                 }
-                onMoveCallback.accept(node, device);
+
+                // Регистрируем перемещение через ShapeManager для undo/redo
+                if (shapeManager != null && currentScheme != null) {
+                    double newX = node.getLayoutX();
+                    double newY = node.getLayoutY();
+                    double newRotation = node.getRotate();
+
+                    // Регистрируем только если позиция реально изменилась
+                    if (Math.abs(newX - initialLayoutX) > 0.1 || Math.abs(newY - initialLayoutY) > 0.1 || Math.abs(newRotation - initialRotation) > 0.1) {
+                        shapeManager.registerMoveDevice(node, device, deviceLocationDAO, currentScheme,
+                                initialLayoutX, initialLayoutY, initialRotation, newX, newY, newRotation);
+
+                        // Обновляем timestamp устройства
+                        device.updateTimestamp();
+                        if (deviceDAO != null) {
+                            deviceDAO.updateDevice(device);
+                        }
+                    }
+                }
+
+                // Вызываем callback для совместимости
+                if (onMoveCallback != null) {
+                    onMoveCallback.accept(node, device);
+                }
             }
 
             isDragging = false;

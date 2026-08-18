@@ -626,21 +626,8 @@ public class DevicesTableController implements SearchableController {
         titleBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
         javafx.scene.layout.HBox.setHgrow(titleBox, Priority.ALWAYS);
 
-        Button closeBtn = new Button("✕");
-        closeBtn.setStyle(
-                "-fx-background-color:transparent;-fx-text-fill:" +
-                        (dark ? "#aec6de" : "white") +
-                        ";-fx-font-size:15px;-fx-cursor:hand;-fx-padding:4 10;-fx-background-radius:4px;"
-        );
-        closeBtn.setOnMouseEntered(_ -> closeBtn.setStyle(
-                "-fx-background-color:#e74c3c;-fx-text-fill:white;" +
-                        "-fx-font-size:15px;-fx-cursor:hand;-fx-padding:4 10;-fx-background-radius:4px;"
-        ));
-        closeBtn.setOnMouseExited(_ -> closeBtn.setStyle(
-                "-fx-background-color:transparent;-fx-text-fill:" +
-                        (dark ? "#aec6de" : "white") +
-                        ";-fx-font-size:15px;-fx-cursor:hand;-fx-padding:4 10;-fx-background-radius:4px;"
-        ));
+        Button closeBtn = new Button("×");
+        closeBtn.getStyleClass().add("unified-close-button");
 
         Stage dialog = new Stage();
         closeBtn.setOnAction(_ -> dialog.close());

@@ -467,6 +467,29 @@ public class Device {
     }
 
     /**
+     * Извлечь числовой номер крана из строки valveNumber.
+     * Ожидаемый формат: "Р1-345" или "Р1 - 345", где 345 - номер крана.
+     *
+     * @return числовой номер крана или null, если не удалось распарсить
+     */
+    public Integer getValveNumberInt() {
+        if (valveNumber == null || valveNumber.trim().isEmpty()) {
+            return null;
+        }
+
+        // Разбиваем по дефису, удаляем пробелы вокруг частей
+        String[] parts = valveNumber.split("-");
+        if (parts.length >= 2) {
+            try {
+                return Integer.parseInt(parts[1].trim());
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Переопределенный метод toString() для удобного представления объекта в виде строки.
      * Используется для отладки и вывода информации о приборе.
      *

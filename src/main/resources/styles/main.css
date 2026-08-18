@@ -389,7 +389,7 @@
 .filter-checkbox {
     -fx-font-size: 13px;
     -fx-font-weight: 500;
-    -fx-text-fill: -fx-text-primary;
+    -fx-text-fill: -fx-text-on-dark;
     -fx-padding: 5px 10px;
     -fx-background-color: rgba(255, 255, 255, 0.05);
     -fx-background-radius: 17px;
