@@ -338,6 +338,10 @@ public class SchemeEditorController implements SearchableController {
                 }
             }
         });
+
+        // Настройка анимаций для комбобокса схем
+        StyleUtils.setupComboBoxArrowAnimation(schemeComboBox);
+        StyleUtils.setupComboBoxPopupAnimation(schemeComboBox);
     }
 
     /**

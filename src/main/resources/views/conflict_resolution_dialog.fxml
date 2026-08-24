@@ -33,8 +33,6 @@
             <Label fx:id="countLabel" text="Обнаружено конфликтов: 0" styleClass="section-label"/>
         </VBox>
 
-        <!-- Кнопка закрытия -->
-        <Button fx:id="closeBtn" text="×" styleClass="unified-close-button" onAction="#cancelResolution"/>
     </HBox>
 
     <!-- Тело с контентом -->
@@ -45,48 +43,28 @@
 
         <!-- Инструкция -->
         <VBox spacing="8">
-            <Label text="🔄 Обнаружены конфликты синхронизации"
-                   styleClass="instruction-label" wrapText="true"/>
             <Label text="Конфликт возникает, когда один и тот же прибор был изменен на двух устройствах после последней синхронизации."
                    styleClass="section-label" wrapText="true"/>
         </VBox>
 
         <!-- Список конфликтов -->
-        <ListView fx:id="conflictListView"
-                  prefHeight="200"
-                  styleClass="conflict-list">
-        </ListView>
-        
-        <!-- Объяснение вариантов выбора -->
-        <VBox spacing="12" styleClass="explanation-box">
-            <Label text="📋 Что означают варианты выбора:" styleClass="section-label"/>
-            <HBox spacing="20">
-                <VBox spacing="4" prefWidth="200">
-                    <Label text="LOCAL" styleClass="choice-title-local"/>
-                    <Label text="Сохранить изменения с этого устройства" styleClass="choice-description"/>
-                    <Label text="✅ Ваша текущая версия данных" styleClass="choice-hint"/>
-                </VBox>
-                <VBox spacing="4" prefWidth="200">
-                    <Label text="REMOTE" styleClass="choice-title-remote"/>
-                    <Label text="Взять данные с другого устройства" styleClass="choice-description"/>
-                    <Label text="📡 Версия с удаленного устройства" styleClass="choice-hint"/>
-                </VBox>
-                <VBox spacing="4" prefWidth="200">
-                    <Label text="Пропустить" styleClass="choice-title-skip"/>
-                    <Label text="Не синхронизировать этот прибор" styleClass="choice-description"/>
-                    <Label text="⏸️ Оставить как есть без изменений" styleClass="choice-hint"/>
-                </VBox>
-            </HBox>
-        </VBox>
-        
+        <ListView fx:id="conflictListView" prefHeight="300" styleClass="conflict-list"/>
+
         <!-- Кнопки массового выбора -->
         <HBox spacing="10" alignment="CENTER" styleClass="mass-action-box">
+            <HBox spacing="8" alignment="CENTER_LEFT">
+                <StackPane fx:id="helpIcon" prefWidth="28" prefHeight="28" minWidth="28" minHeight="28" styleClass="help-icon-circle">
+                    <Label text="?" styleClass="help-question-mark"/>
+                </StackPane>
+                <Label text="Что означают варианты?" styleClass="help-text-label"/>
+            </HBox>
+            <Region HBox.hgrow="ALWAYS"/>
             <Button fx:id="chooseAllLocalButton"
-                    text="Выбрать все LOCAL"
+                    text="Выбрать все БД ПК"
                     styleClass="button-local"/>
             
             <Button fx:id="chooseAllRemoteButton"
-                    text="Выбрать все REMOTE"
+                    text="Выбрать все БД АРХИВ"
                     styleClass="button-remote"/>
         </HBox>
     </VBox>

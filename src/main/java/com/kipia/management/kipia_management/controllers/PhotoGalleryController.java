@@ -189,17 +189,44 @@ public class PhotoGalleryController implements SearchableController {
 
                 toggleBtn.setOnAction(_ -> {
                     isExpanded = !isExpanded;
-                    devicesList.setVisible(isExpanded);
-                    devicesList.setManaged(isExpanded);
-                    updateToggleIcon.run();   // обновляем иконку при клике
 
                     if (isExpanded) {
+                        // Плавное открытие
+                        devicesList.setVisible(true);
+                        devicesList.setManaged(true);
+                        devicesList.setOpacity(0);
+                        devicesList.setScaleY(0);
+
+                        javafx.animation.FadeTransition fadeIn = new javafx.animation.FadeTransition(javafx.util.Duration.millis(200), devicesList);
+                        fadeIn.setToValue(1);
+
+                        javafx.animation.ScaleTransition scaleIn = new javafx.animation.ScaleTransition(javafx.util.Duration.millis(200), devicesList);
+                        scaleIn.setToY(1);
+
+                        javafx.animation.ParallelTransition parallelIn = new javafx.animation.ParallelTransition(fadeIn, scaleIn);
+                        parallelIn.play();
+
                         toggleBtn.getStyleClass().add("expanded");
                         if (currentLocation != null) cardExpansionState.put(currentLocation, true);
                     } else {
+                        // Плавное закрытие
+                        javafx.animation.FadeTransition fadeOut = new javafx.animation.FadeTransition(javafx.util.Duration.millis(150), devicesList);
+                        fadeOut.setToValue(0);
+
+                        javafx.animation.ScaleTransition scaleOut = new javafx.animation.ScaleTransition(javafx.util.Duration.millis(150), devicesList);
+                        scaleOut.setToY(0);
+
+                        javafx.animation.ParallelTransition parallelOut = new javafx.animation.ParallelTransition(fadeOut, scaleOut);
+                        parallelOut.setOnFinished(__ -> {
+                            devicesList.setVisible(false);
+                            devicesList.setManaged(false);
+                        });
+                        parallelOut.play();
+
                         toggleBtn.getStyleClass().remove("expanded");
                         if (currentLocation != null) cardExpansionState.put(currentLocation, false);
                     }
+                    updateToggleIcon.run();
                 });
 
                 card.getChildren().addAll(locationLabel, statsBox, buttonsBox, toggleBtn, devicesList);

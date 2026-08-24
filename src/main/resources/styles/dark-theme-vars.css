@@ -59,7 +59,7 @@
     -fx-dialog-bg: #2d2d2d;
     -fx-dialog-header: #1E2A3A;
     -fx-dialog-header-border: #2d3e50;
-    -fx-help-dialog-bg: #2e2c23;
+    -fx-help-dialog-bg: #1E1E1E;
     -fx-help-dialog-header: #1E2A3A;
     -fx-dialog-icon-fill: #7090b0;
 
@@ -119,8 +119,8 @@
     -fx-table-scrollbar-thumb-hover: #777777;
 
     /* ==================== TOOLTIPS COLORS ==================== */
-    -fx-bg-tooltip: white;
-    -fx-fill-text-tooltip: black;
+    -fx-bg-tooltip: #ffffff;
+    -fx-fill-text-tooltip: #000000;
 
     /* ==================== CONTEXT COLORS ==================== */
     -fx-bg-context: #2d2d2d;

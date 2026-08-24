@@ -290,17 +290,40 @@
 .combo-box {
     -fx-background-color: -fx-input-bg;
     -fx-border-color: -fx-border-primary;
-    -fx-border-radius: 4px;
-    -fx-background-radius: 4px;
+    -fx-border-width: 1.5px;
+    -fx-border-radius: 17px;
+    -fx-background-radius: 17px;
+    -fx-font-size: 13px;
+    -fx-effect: dropshadow(three-pass-box, -fx-accent-glow-soft, 3, 0, 0, 1);
 }
 
-.combo-box:focused {
-    -fx-border-color: -fx-input-border-focused;
+.combo-box:focused,
+.combo-box:showing {
+    -fx-border-color: -fx-accent-primary;
+    -fx-effect: dropshadow(three-pass-box, -fx-accent-glow-strong, 10, 0.35, 0, 2);
+}
+
+.combo-box:hover {
+    -fx-border-color: -fx-accent-primary;
+    -fx-effect: dropshadow(three-pass-box, -fx-accent-glow-strong, 8, 0.4, 0, 3);
+}
+
+/* Убираем border у TextField внутри editable ComboBox */
+.combo-box .text-field {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-border-radius: 0;
+    -fx-background-radius: 0;
+    -fx-padding: 0 0 0 10px;
 }
 
 .combo-box .list-cell {
     -fx-background-color: -fx-input-bg;
     -fx-text-fill: -fx-text-primary;
+    -fx-background-radius: 16px 0 0 16px;
+    -fx-padding: 0px 0px 0px 10px;
 }
 
 .combo-box .list-cell:hover {
@@ -308,25 +331,45 @@
 }
 
 .combo-box .arrow-button {
-    -fx-background-color: -fx-input-bg;
+    -fx-background-color: transparent;
     -fx-border-color: -fx-border-primary;
+    -fx-border-width: 0 0 0 1.5px;
+    -fx-background-radius: 0 17px 17px 0;
+    -fx-padding: 0 12px 0 8px;
 }
 
 .combo-box .arrow {
     -fx-background-color: -fx-text-primary;
+    -fx-rotate: 0;
+}
+
+.combo-box:showing .arrow {
+    -fx-background-color: -fx-accent-primary;
+    -fx-rotate: 180;
+}
+
+.combo-box .button-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: -fx-text-primary;
+    -fx-padding: 0 0 0 10px;
 }
 
 .combo-box .combo-box-popup .list-view {
-    -fx-background-color: -fx-input-bg-dark;
-    -fx-border-color: -fx-border-primary;
-    -fx-border-radius: 5px;
-    -fx-background-radius: 5px;
+    -fx-background-color: -fx-input-bg;
+    -fx-border-color: -fx-accent-primary;
+    -fx-border-width: 1.5px;
+    -fx-border-radius: 14px;
+    -fx-background-radius: 14px;
+    -fx-padding: 4px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.35), 18, 0, 0, 6);
 }
 
 .combo-box .combo-box-popup .list-view .list-cell {
-    -fx-background-color: -fx-input-bg-dark;
+    -fx-background-color: transparent;
     -fx-text-fill: -fx-text-primary;
-    -fx-padding: 8px 12px;
+    -fx-padding: 10px 14px;
+    -fx-background-radius: 10px;
+    -fx-font-size: 13px;
 }
 
 .combo-box .combo-box-popup .list-view .list-cell:filled:hover {
@@ -334,8 +377,10 @@
 }
 
 .combo-box .combo-box-popup .list-view .list-cell:filled:selected {
-    -fx-background-color: -fx-accent-primary;
+    -fx-background-color: #3498db;
     -fx-text-fill: #ffffff !important;
+    -fx-background-radius: 10px;
+    -fx-background-insets: 2px;
 }
 
 /* ==================== TEXT INPUT ==================== */

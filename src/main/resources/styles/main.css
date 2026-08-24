@@ -349,8 +349,8 @@
 }
 
 .filter-combo .combo-box-popup .list-view .list-cell:filled:selected {
-    -fx-background-color: -fx-accent-primary;
-    -fx-text-fill: #ffffff;
+    -fx-background-color: #3498db;
+    -fx-text-fill: #ffffff !important;
     -fx-background-radius: 10px;
     -fx-background-insets: 2px;
 }

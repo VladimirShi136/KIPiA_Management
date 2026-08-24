@@ -5,6 +5,7 @@ import com.kipia.management.kipia_management.managers.PhotoViewer;
 import com.kipia.management.kipia_management.models.Device;
 import com.kipia.management.kipia_management.services.DeviceDAO;
 import com.kipia.management.kipia_management.utils.CustomAlertDialog;
+import com.kipia.management.kipia_management.utils.StyleUtils;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.scene.control.Label;
@@ -94,12 +95,65 @@ public class AddDeviceController {
     // ---------- Колбэк после добавления (для обновления таблицы) ----------
     private Runnable onDeviceAdded;
 
+    // ---------- Отслеживание изменений формы ----------
+    private String initialFormData;
+    
+    // ---------- Stage для закрытия через крестик ----------
+    private Stage dialogStage;
+
     /**
      * Установка обратного вызова
      * @param onDeviceAdded - колбек
      */
     public void setOnDeviceAdded(Runnable onDeviceAdded) {
         this.onDeviceAdded = onDeviceAdded;
+    }
+    
+    /**
+     * Установка Stage диалога для обработки закрытия
+     * @param stage - Stage диалога
+     */
+    public void setDialogStage(Stage stage) {
+        this.dialogStage = stage;
+        
+        // Добавляем обработчик закрытия окна через крестик
+        stage.setOnCloseRequest(event -> {
+            if (hasChanges()) {
+                // Создаем кнопки для диалога
+                ButtonType saveButton = new ButtonType("Сохранить", ButtonBar.ButtonData.YES);
+                ButtonType dontSaveButton = new ButtonType("Не сохранять", ButtonBar.ButtonData.NO);
+                ButtonType cancelButton = new ButtonType("Отмена", ButtonBar.ButtonData.CANCEL_CLOSE);
+                
+                String message = editingDevice != null 
+                    ? "В форме есть несохраненные изменения. Сохранить изменения перед закрытием?"
+                    : "В форме есть несохраненные данные. Сохранить новый прибор перед закрытием?";
+                
+                Optional<ButtonType> result = CustomAlertDialog.showConfirmationWithOptions(
+                    "Подтверждение закрытия",
+                    message,
+                    saveButton, dontSaveButton, cancelButton
+                );
+                
+                if (result.isEmpty() || result.get() == cancelButton) {
+                    // Пользователь отменил закрытие - предотвращаем закрытие окна
+                    event.consume();
+                    LOGGER.info("Пользователь отменил закрытие формы через крестик");
+                } else if (result.get() == saveButton) {
+                    // Пользователь выбрал сохранить
+                    if (editingDevice != null) {
+                        onSaveDevice();
+                    } else {
+                        onAddDevice();
+                    }
+                    // Если сохранение прошло успешно, окно закроется автоматически
+                    // Если сохранение не удалось, предотвращаем закрытие
+                    event.consume();
+                } else if (result.get() == dontSaveButton) {
+                    // Пользователь выбрал не сохранять - позволяем закрытие
+                    LOGGER.info("Пользователь выбрал не сохранять изменения при закрытии через крестик");
+                }
+            }
+        });
     }
 
     /**
@@ -147,6 +201,9 @@ public class AddDeviceController {
 
         // Включаем элементы для работы с фото при редактировании
         disablePhotoControls(false);
+
+        // Сохраняем начальное состояние формы для отслеживания изменений
+        saveInitialFormData();
 
         LOGGER.info("Форма переведена в режим редактирования: {}", device.getName());
     }
@@ -223,6 +280,12 @@ public class AddDeviceController {
         // Инициализация ComboBox статусов
         statusComboBox.setItems(FXCollections.observableArrayList("Хранение", "В работе", "Утерян", "Испорчен"));
         statusComboBox.getSelectionModel().selectFirst();
+
+        // Включаем плавную анимацию стрелки и открытия popup для комбобоксов в форме
+        StyleUtils.setupComboBoxArrowAnimation(statusComboBox);
+        StyleUtils.setupComboBoxPopupAnimation(statusComboBox);
+        StyleUtils.setupComboBoxArrowAnimation(locationField);
+        StyleUtils.setupComboBoxPopupAnimation(locationField);
 
         // Инициализация ComboBox локаций (загрузка позже через setDeviceDAO)
         locationField.setEditable(true);
@@ -665,6 +728,9 @@ public class AddDeviceController {
         statusComboBox.getSelectionModel().selectFirst();
         selectedPhotoFiles.clear();
         pendingPhotoFiles.clear();
+        
+        // Сбрасываем начальное состояние
+        initialFormData = null;
     }
 
     /**
@@ -672,7 +738,43 @@ public class AddDeviceController {
      */
     @FXML
     private void onCancel() {
-        // Просто закрываем форму без очистки
+        // Проверяем, были ли изменения в форме
+        if (hasChanges()) {
+            // Создаем кнопки для диалога
+            ButtonType saveButton = new ButtonType("Сохранить", ButtonBar.ButtonData.YES);
+            ButtonType dontSaveButton = new ButtonType("Не сохранять", ButtonBar.ButtonData.NO);
+            ButtonType cancelButton = new ButtonType("Отмена", ButtonBar.ButtonData.CANCEL_CLOSE);
+            
+            String message = editingDevice != null 
+                ? "В форме есть несохраненные изменения. Сохранить изменения перед закрытием?"
+                : "В форме есть несохраненные данные. Сохранить новый прибор перед закрытием?";
+            
+            Optional<ButtonType> result = CustomAlertDialog.showConfirmationWithOptions(
+                "Подтверждение закрытия",
+                message,
+                saveButton, dontSaveButton, cancelButton
+            );
+            
+            if (result.isEmpty() || result.get() == cancelButton) {
+                // Пользователь отменил закрытие
+                LOGGER.info("Пользователь отменил закрытие формы");
+                return;
+            } else if (result.get() == saveButton) {
+                // Пользователь выбрал сохранить
+                if (editingDevice != null) {
+                    onSaveDevice();
+                } else {
+                    onAddDevice();
+                }
+                // Если сохранение прошло успешно, форма закроется автоматически
+                return;
+            } else if (result.get() == dontSaveButton) {
+                // Пользователь выбрал не сохранять - просто закрываем
+                LOGGER.info("Пользователь выбрал не сохранять изменения");
+            }
+        }
+        
+        // Закрываем форму
         Stage stage = (Stage) cancelBtn.getScene().getWindow();
         stage.close();
         LOGGER.info("Форма закрыта пользователем");
@@ -752,5 +854,45 @@ public class AddDeviceController {
         device.setStatus(status);
         device.setAdditionalInfo(additionalInfoField.getText());
         device.updateTimestamp();
+    }
+
+    /**
+     * Сохраняет начальное состояние формы для отслеживания изменений.
+     */
+    private void saveInitialFormData() {
+        initialFormData = getCurrentFormDataAsString();
+    }
+
+    /**
+     * Проверяет, были ли изменения в форме.
+     * @return true если есть изменения, false если нет
+     */
+    private boolean hasChanges() {
+        if (initialFormData == null) {
+            // Если начальное состояние не сохранено, проверяем есть ли данные
+            return !getCurrentFormDataAsString().isEmpty();
+        }
+        return !initialFormData.equals(getCurrentFormDataAsString());
+    }
+
+    /**
+     * Возвращает текущее состояние формы в виде строки для сравнения.
+     * @return строковое представление данных формы
+     */
+    private String getCurrentFormDataAsString() {
+        return String.join("|",
+            nvl(typeField.getText()),
+            nvl(nameField.getText()),
+            nvl(manufacturerField.getText()),
+            nvl(inventoryNumberField.getText()),
+            nvl(yearField.getText()),
+            nvl(measurementLimitField.getText()),
+            nvl(accuracyClassField.getText()),
+            nvl(locationField.getValue()),
+            nvl(valveNumberField.getText()),
+            nvl(statusComboBox.getValue()),
+            nvl(additionalInfoField.getText()),
+            String.join(",", selectedPhotoFiles)
+        );
     }
 }

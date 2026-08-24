@@ -2,6 +2,7 @@ package com.kipia.management.kipia_management.managers;
 
 import com.kipia.management.kipia_management.controllers.SearchableController;
 import com.kipia.management.kipia_management.models.Scheme;
+import com.kipia.management.kipia_management.utils.StyleUtils;
 import javafx.animation.FadeTransition;
 import javafx.animation.Interpolator;
 import javafx.animation.ParallelTransition;
@@ -65,66 +66,13 @@ public class SearchPanelManager {
         hideSearchFieldContainer();
 
         // Плавный выезд списка (fade + slide) и разворот стрелки для комбобоксов
-        setupComboPopupAnimation(topLocationFilter);
-        setupComboPopupAnimation(topSchemeFilter);
+        StyleUtils.setupComboBoxArrowAnimation(topLocationFilter);
+        StyleUtils.setupComboBoxPopupAnimation(topLocationFilter);
+        StyleUtils.setupComboBoxArrowAnimation(topSchemeFilter);
+        StyleUtils.setupComboBoxPopupAnimation(topSchemeFilter);
 
         // Лёгкий "pop"-эффект на галочке чекбокса при выборе
         setupCheckboxPop(topPhotosOnlyCheck);
-    }
-
-    /**
-     * Добавляет комбобоксу плавное появление выпадающего списка (fade + slide вниз)
-     * и плавный разворот стрелки при открытии/закрытии.
-     * <p>
-     * ВАЖНО: попап ComboBox — это отдельный {@link Window} (PopupWindow), а не часть
-     * графа сцены самого ComboBox. Поэтому {@code combo.lookup(".list-view")} его
-     * никогда не найдёт — нужно искать среди всех открытых окон через
-     * {@link Window#getWindows()}. Анимируем сам Window (opacity + y), а не узел
-     * внутри него — это исключает визуальную обрезку контента по границам попапа,
-     * которая возникает, если анимировать translateY внутреннего узла.
-     */
-    private void setupComboPopupAnimation(ComboBox<?> combo) {
-        if (combo == null) return;
-
-        combo.showingProperty().addListener((obs, wasShowing, isShowing) -> {
-            // Разворот стрелки — она часть основной сцены, lookup работает как обычно
-            Node arrow = combo.lookup(".arrow");
-            if (arrow != null) {
-                RotateTransition rotate = new RotateTransition(Duration.millis(220), arrow);
-                rotate.setToAngle(isShowing ? 180 : 0);
-                rotate.setInterpolator(Interpolator.EASE_BOTH);
-                rotate.play();
-            }
-
-            if (isShowing) {
-                // Даём JavaFX кадр на то, чтобы попап реально появился в Window.getWindows()
-                Platform.runLater(() -> {
-                    Window popupWindow = findOpenPopupWindow();
-                    if (popupWindow == null) return;
-
-                    double startY = popupWindow.getY() - 14;
-                    double targetY = popupWindow.getY();
-                    popupWindow.setOpacity(0);
-                    popupWindow.setY(startY);
-
-                    // Window.yProperty() доступен только на чтение (есть только setY()),
-                    // поэтому анимируем вручную через interpolate(), а не через KeyValue/Timeline.
-                    Transition reveal = new Transition() {
-                        {
-                            setCycleDuration(Duration.millis(240));
-                            setInterpolator(Interpolator.EASE_OUT);
-                        }
-
-                        @Override
-                        protected void interpolate(double frac) {
-                            popupWindow.setOpacity(frac);
-                            popupWindow.setY(startY + (targetY - startY) * frac);
-                        }
-                    };
-                    reveal.play();
-                });
-            }
-        });
     }
 
     /**

@@ -5,11 +5,16 @@
 /* ==================== CONFLICT DIALOG ==================== */
 .conflict-dialog .conflict-cell-box {
     -fx-padding: 10;
-    -fx-border-color: -fx-border-primary;
+    -fx-border-color: transparent;
     -fx-border-radius: 6;
     -fx-border-width: 1;
     -fx-background-color: -fx-bg-secondary;
     -fx-background-radius: 6;
+}
+
+.conflict-dialog .conflict-header-box {
+    -fx-alignment: center-left;
+    -fx-spacing: 10;
 }
 
 .conflict-dialog .conflict-cell-title {
@@ -62,25 +67,25 @@
 }
 
 .conflict-dialog .conflict-icon {
-    -fx-fill: -fx-text-on-dark;
+    -fx-fill: white;
 }
 
 .conflict-dialog .type-label {
     -fx-font-size: 11px;
     -fx-font-weight: bold;
-    -fx-text-fill: -fx-text-tertiary;
+    -fx-text-fill: white;
     -fx-padding: 0 0 4 0;
 }
 
 .conflict-dialog .title-label {
     -fx-font-size: 16px;
     -fx-font-weight: bold;
-    -fx-text-fill: -fx-text-on-dark;
+    -fx-text-fill: white;
     -fx-padding: 0 0 4 0;
 }
 
 .conflict-dialog .section-label {
-    -fx-text-fill: -fx-text-secondary !important;
+    -fx-text-fill: white !important;
     -fx-font-size: 12px;
     -fx-font-weight: 500;
 }
@@ -105,13 +110,43 @@
     -fx-border-color: transparent;
 }
 
+/* Отключаем визуальное выделение ячейки */
+.conflict-dialog .conflict-list .list-cell:selected,
+.conflict-dialog .conflict-list .list-cell:focused,
+.conflict-dialog .conflict-list .list-cell:selected:focused {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-text-fill: inherit;
+}
+
 .conflict-dialog .conflict-list .list-cell:filled:selected {
-    -fx-background-color: rgba(232, 244, 248, 0.5);
-    -fx-border-color: -fx-accent-primary;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
 }
 
 .conflict-dialog .mass-action-box {
     -fx-padding: 15 0 10 0;
+}
+
+.conflict-dialog .help-icon-circle {
+    -fx-background-color: #d66a40;
+    -fx-background-radius: 14;
+    -fx-cursor: hand;
+}
+
+.conflict-dialog .help-icon-circle:hover {
+    -fx-background-color: #E67D51;
+}
+
+.conflict-dialog .help-question-mark {
+    -fx-text-fill: white;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
+
+.conflict-dialog .help-text-label {
+    -fx-text-fill: -fx-text-secondary;
+    -fx-font-size: 13px;
 }
 
 .conflict-dialog .button {
@@ -120,7 +155,7 @@
 }
 
 .conflict-dialog .button-local {
-    -fx-background-color: -fx-accent-primary;
+    -fx-background-color: #1f6a9a;
     -fx-text-fill: white;
     -fx-background-radius: 6;
     -fx-border-radius: 6;
@@ -130,11 +165,11 @@
 }
 
 .conflict-dialog .button-local:hover {
-    -fx-background-color: -fx-accent-primary-hover;
+    -fx-background-color: #277AAF;
 }
 
 .conflict-dialog .button-remote {
-    -fx-background-color: -fx-accent-danger;
+    -fx-background-color: #1e7f47;
     -fx-text-fill: white;
     -fx-background-radius: 6;
     -fx-border-radius: 6;
@@ -144,7 +179,7 @@
 }
 
 .conflict-dialog .button-remote:hover {
-    -fx-background-color: -fx-accent-danger-hover;
+    -fx-background-color: #249C57;
 }
 
 .conflict-dialog .conflict-divider {
@@ -221,4 +256,141 @@
     -fx-font-size: 11px;
     -fx-text-fill: -fx-text-tertiary;
     -fx-font-style: italic;
+}
+
+/* Hover эффекты для кликабельных карточек */
+.conflict-dialog .conflict-cell-box > .hbox > .vbox:hover {
+    -fx-background-color: rgba(52, 152, 219, 0.1);
+}
+
+/* ==================== CONFLICT LIST CELL STYLES ==================== */
+.conflict-dialog .conflict-badge {
+    -fx-background-color: -fx-accent-primary;
+    -fx-text-fill: white;
+    -fx-padding: 2 8;
+    -fx-background-radius: 4;
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
+.conflict-dialog .conflict-key-label {
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+}
+
+.conflict-dialog .conflict-column {
+    -fx-cursor: hand;
+    -fx-background-color: -fx-bg-secondary;
+    -fx-padding: 10;
+    -fx-background-radius: 6;
+    -fx-border-color: -fx-border-primary;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+}
+
+.conflict-dialog .conflict-column-selected {
+    -fx-border-color: -fx-accent-primary;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian, -fx-accent-primary, 8, 0.4, 0, 0);
+}
+
+.conflict-dialog .conflict-column-skip-selected {
+    -fx-border-color: -fx-accent-warning;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian, -fx-accent-warning, 8, 0.4, 0, 0);
+}
+
+.conflict-dialog .column-title-label {
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+    -fx-text-fill: -fx-text-secondary;
+}
+
+.conflict-dialog .newer-badge {
+    -fx-background-color: -fx-accent-success;
+    -fx-text-fill: white;
+    -fx-padding: 1 6;
+    -fx-background-radius: 4;
+    -fx-font-size: 10px;
+    -fx-font-weight: bold;
+}
+
+.conflict-dialog .time-label {
+    -fx-font-size: 11px;
+    -fx-text-fill: -fx-text-tertiary;
+}
+
+.conflict-dialog .skip-warning {
+    -fx-text-fill: -fx-accent-warning;
+    -fx-font-size: 11px;
+    -fx-wrap-text: true;
+}
+
+.conflict-dialog .skip-column {
+    -fx-cursor: hand;
+    -fx-alignment: center;
+    -fx-spacing: 6;
+    -fx-background-color: -fx-bg-secondary;
+    -fx-padding: 10;
+    -fx-background-radius: 6;
+    -fx-border-color: -fx-border-primary;
+    -fx-border-width: 1;
+    -fx-border-radius: 6;
+}
+
+.conflict-dialog .skip-icon {
+    -fx-font-size: 24px;
+    -fx-text-fill: -fx-text-primary;
+}
+
+.conflict-dialog .skip-text {
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-accent-warning;
+}
+
+.conflict-dialog .status-label-local {
+    -fx-text-fill: -fx-accent-success;
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+}
+
+.conflict-dialog .status-label-remote {
+    -fx-text-fill: -fx-accent-primary;
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+}
+
+.conflict-dialog .status-label-skip {
+    -fx-text-fill: -fx-accent-warning;
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+}
+
+.conflict-dialog .status-label-unresolved {
+    -fx-text-fill: -fx-accent-danger;
+    -fx-font-weight: bold;
+    -fx-font-size: 12px;
+}
+
+.conflict-dialog .field-row {
+    -fx-alignment: center-left;
+    -fx-spacing: 6;
+}
+
+.conflict-dialog .field-name-label {
+    -fx-font-size: 11px;
+    -fx-text-fill: -fx-text-tertiary;
+    -fx-min-width: 100;
+}
+
+.conflict-dialog .field-value-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-text-secondary;
+}
+
+.conflict-dialog .field-value-label-differs {
+    -fx-font-size: 12px;
+    -fx-text-fill: -fx-accent-danger;
+    -fx-font-weight: bold;
 }

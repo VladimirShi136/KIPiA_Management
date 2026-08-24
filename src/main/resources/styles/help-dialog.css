@@ -19,25 +19,25 @@
 .help-dialog .type-label {
     -fx-font-size: 11px;
     -fx-font-weight: bold;
-    -fx-text-fill: -fx-text-tertiary;
+    -fx-text-fill: white;
     -fx-padding: 0 0 4 0;
 }
 
 .help-dialog .title-label {
     -fx-font-size: 14px;
     -fx-font-weight: bold;
-    -fx-text-fill: -fx-text-on-dark;
+    -fx-text-fill: white;
     -fx-padding: 0 0 4 0;
 }
 
 .help-dialog .section-label {
     -fx-font-size: 12px;
-    -fx-text-fill: -fx-text-tertiary;
+    -fx-text-fill: white;
 }
 
 .help-icon {
-    -fx-fill: transparent;
-    -fx-stroke: -fx-text-tertiary;
+    -fx-fill: white;
+    -fx-stroke: white;
     -fx-stroke-width: 1.5;
     -fx-stroke-line-cap: round;
     -fx-stroke-line-join: round;
@@ -117,5 +117,5 @@
 }
 
 .help-btn-bar .button:hover {
-    -fx-opacity: 0.85;
+    -fx-opacity: 0.9;
 }

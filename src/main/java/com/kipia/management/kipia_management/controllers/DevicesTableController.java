@@ -382,7 +382,10 @@ public class DevicesTableController implements SearchableController {
                 }));
             }
 
-            openStyledDialog(view, "Добавление нового прибора");
+            Stage dialogStage = openStyledDialog(view, "Добавление нового прибора");
+            if (ctrl != null && dialogStage != null) {
+                ctrl.setDialogStage(dialogStage);
+            }
             LOGGER.info("Диалог добавления прибора закрыт");
         } catch (Exception e) {
             LOGGER.error("Ошибка открытия формы добавления: {}", e.getMessage(), e);
@@ -558,7 +561,10 @@ public class DevicesTableController implements SearchableController {
                 }));
             }
 
-            openStyledDialog(view, "Редактирование: " + device.getName());
+            Stage dialogStage = openStyledDialog(view, "Редактирование: " + device.getName());
+            if (ctrl != null && dialogStage != null) {
+                ctrl.setDialogStage(dialogStage);
+            }
         } catch (Exception e) {
             LOGGER.error("Ошибка открытия формы редактирования: {}", e.getMessage(), e);
             CustomAlertDialog.showError("Ошибка", "Не удалось открыть форму редактирования");
@@ -568,8 +574,9 @@ public class DevicesTableController implements SearchableController {
     /**
      * Открывает FXML-форму в кастомном диалоге без системного titlebar.
      * Стиль соответствует CustomAlertDialog — скругление, тень, тема.
+     * @return созданный Stage
      */
-    private void openStyledDialog(Parent formContent, String titleText) {
+    private Stage openStyledDialog(Parent formContent, String titleText) {
         boolean dark = com.kipia.management.kipia_management.utils.StyleUtils.isDarkTheme();
 
         Stage ownerStage = (Stage) deviceTable.getScene().getWindow();
@@ -601,7 +608,7 @@ public class DevicesTableController implements SearchableController {
         );
 
         formIcon.setFill(Color.TRANSPARENT);
-        formIcon.setStroke(Color.web(dark ? "#7090b0" : "#ecf0f1"));
+        formIcon.setStroke(Color.web("#ffffff"));
         formIcon.setStrokeWidth(1.5);
         formIcon.setStrokeLineCap(javafx.scene.shape.StrokeLineCap.ROUND);
         formIcon.setStrokeLineJoin(javafx.scene.shape.StrokeLineJoin.ROUND);
@@ -614,26 +621,22 @@ public class DevicesTableController implements SearchableController {
         Label typeLabel = new Label("Управление приборами");
         typeLabel.setStyle(
                 "-fx-font-size:10px;-fx-font-weight:bold;" +
-                        "-fx-text-fill:" + (dark ? "#5a6a7a" : "rgba(255,255,255,0.65)") + ";"
+                        "-fx-text-fill:#ffffff;"
         );
         Label titleLabel = new Label(titleText);
         titleLabel.setStyle(
                 "-fx-font-size:13px;-fx-font-weight:bold;" +
-                        "-fx-text-fill:" + (dark ? "#aec6de" : "#ffffff") + ";"
+                        "-fx-text-fill:#ffffff;"
         );
 
         javafx.scene.layout.VBox titleBox = new javafx.scene.layout.VBox(1, typeLabel, titleLabel);
         titleBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
         javafx.scene.layout.HBox.setHgrow(titleBox, Priority.ALWAYS);
 
-        Button closeBtn = new Button("×");
-        closeBtn.getStyleClass().add("unified-close-button");
-
         Stage dialog = new Stage();
-        closeBtn.setOnAction(_ -> dialog.close());
         CustomAlertDialog.setAppIcon(dialog);
 
-        javafx.scene.layout.HBox titleBar = new javafx.scene.layout.HBox(12, iconWrap, titleBox, closeBtn);
+        javafx.scene.layout.HBox titleBar = new javafx.scene.layout.HBox(12, iconWrap, titleBox);
         titleBar.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
         titleBar.setPadding(new javafx.geometry.Insets(10, 12, 10, 16));
         titleBar.setStyle(
@@ -693,6 +696,8 @@ public class DevicesTableController implements SearchableController {
         dialog.setResizable(false);
         dialog.setScene(scene);
         dialog.showAndWait();
+        
+        return dialog;
     }
 
     /**

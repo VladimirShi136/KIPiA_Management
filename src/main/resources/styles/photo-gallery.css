@@ -193,6 +193,8 @@
     -fx-background-color: -fx-scrollbar-bg;
     -fx-pref-width: 12px;
     -fx-background-radius: 6px;
+    -fx-unit-increment: 15;
+    -fx-block-increment: 170;
 }
 
 .photo-gallery-listview .scroll-bar:vertical .track {
@@ -346,7 +348,7 @@
 
 .device-row:hover {
     -fx-background-color: -fx-bg-tertiary;
-    -fx-border-color: -fx-accent-primary;
+    -fx-effect: dropshadow(three-pass-box, -fx-accent-primary, 6, 0, 0, 0);
 }
 
 .device-name {

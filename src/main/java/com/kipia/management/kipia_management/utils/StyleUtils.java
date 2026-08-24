@@ -1,7 +1,13 @@
 package com.kipia.management.kipia_management.utils;
 
+import javafx.animation.RotateTransition;
 import javafx.animation.ScaleTransition;
+import javafx.animation.Transition;
+import javafx.animation.Interpolator;
+import javafx.application.Platform;
+import javafx.scene.Node;
 import javafx.scene.control.*;
+import javafx.stage.Window;
 import javafx.util.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -134,6 +140,91 @@ public class StyleUtils {
         if (!button.getStyleClass().contains("tool-button")) {
             button.getStyleClass().add("tool-button");
         }
+    }
+
+    /**
+     * Настройка анимации стрелки комбобокса при открытии/закрытии
+     * @param combo комбобокс
+     * @param animate включить ли плавную анимацию (по умолчанию true)
+     */
+    public static void setupComboBoxArrowAnimation(ComboBox<?> combo, boolean animate) {
+        if (combo == null) return;
+
+        combo.showingProperty().addListener((obs, wasShowing, isShowing) -> {
+            if (!animate) {
+                // Без анимации - просто меняем угол
+                Node arrow = combo.lookup(".arrow");
+                if (arrow != null) {
+                    arrow.setRotate(isShowing ? 180 : 0);
+                }
+            } else {
+                // С плавной анимацией
+                Node arrow = combo.lookup(".arrow");
+                if (arrow != null) {
+                    RotateTransition rotate = new RotateTransition(Duration.millis(220), arrow);
+                    rotate.setToAngle(isShowing ? 180 : 0);
+                    rotate.setInterpolator(javafx.animation.Interpolator.EASE_BOTH);
+                    rotate.play();
+                }
+            }
+        });
+    }
+
+    /**
+     * Настройка анимации стрелки комбобокса при открытии/закрытии (с анимацией по умолчанию)
+     */
+    public static void setupComboBoxArrowAnimation(ComboBox<?> combo) {
+        setupComboBoxArrowAnimation(combo, true);
+    }
+
+    /**
+     * Настройка плавной анимации открытия popup комбобокса
+     */
+    public static void setupComboBoxPopupAnimation(ComboBox<?> combo) {
+        if (combo == null) return;
+
+        combo.showingProperty().addListener((obs, wasShowing, isShowing) -> {
+            if (isShowing) {
+                // Даём JavaFX кадр на то, чтобы попап реально появился в Window.getWindows()
+                Platform.runLater(() -> {
+                    Window popupWindow = findOpenPopupWindow();
+                    if (popupWindow == null) return;
+
+                    double startY = popupWindow.getY() - 14;
+                    double targetY = popupWindow.getY();
+                    popupWindow.setOpacity(0);
+                    popupWindow.setY(startY);
+
+                    // Window.yProperty() доступен только на чтение (есть только setY()),
+                    // поэтому анимируем вручную через interpolate(), а не через KeyValue/Timeline.
+                    Transition reveal = new Transition() {
+                        {
+                            setCycleDuration(Duration.millis(240));
+                            setInterpolator(Interpolator.EASE_OUT);
+                        }
+
+                        @Override
+                        protected void interpolate(double frac) {
+                            popupWindow.setOpacity(frac);
+                            popupWindow.setY(startY + (targetY - startY) * frac);
+                        }
+                    };
+                    reveal.play();
+                });
+            }
+        });
+    }
+
+    /**
+     * Поиск открытого popup окна комбобокса
+     */
+    private static Window findOpenPopupWindow() {
+        for (Window window : Window.getWindows()) {
+            if (window instanceof javafx.stage.PopupWindow) {
+                return window;
+            }
+        }
+        return null;
     }
 
     // ============================================================

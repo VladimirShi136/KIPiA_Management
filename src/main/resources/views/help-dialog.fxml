@@ -8,6 +8,8 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.shape.SVGPath?>
 <?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.image.Image?>
 
 <!--
   Author: vladimir_shi
@@ -27,7 +29,9 @@
 
         <!-- Иконка справки -->
         <StackPane prefWidth="40" prefHeight="40" minWidth="40" minHeight="40">
-            <SVGPath styleClass="help-icon" content="M12,2 C6.48,2 2,6.48 2,12 s4.48,10 10,10 s10,-4.48 10,-10 S17.52,2 12,2 z M11,7 h2 v2 h-2 z M11,11 h2 v6 h-2 z"/>
+            <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
+                <Image url="@../images/help.png"/>
+            </ImageView>
         </StackPane>
 
         <!-- Текст справа от иконки -->
@@ -36,9 +40,6 @@
             <Label fx:id="titleLabel" text="Информация о приложении" styleClass="title-label" wrapText="true"/>
             <Label fx:id="sectionLabel" styleClass="section-label"/>
         </VBox>
-
-        <!-- Кнопка закрытия -->
-        <Button fx:id="closeBtn" text="×" styleClass="unified-close-button" onAction="#onClose"/>
     </HBox>
 
     <!-- Тело с контентом -->

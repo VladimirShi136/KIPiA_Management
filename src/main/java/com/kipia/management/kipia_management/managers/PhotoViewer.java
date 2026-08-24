@@ -268,7 +268,7 @@ public class PhotoViewer {
                         "M5.5,6A1.5,1.5,0,1,1,4,7.5A1.5,1.5,0,0,1,5.5,6z" +
                         "M13,12H3l3-4l2,2.5l2.5-3.5z"
         );
-        photoIcon.setFill(javafx.scene.paint.Color.web(darkTheme ? "#7090b0" : "#ecf0f1"));
+        photoIcon.setFill(javafx.scene.paint.Color.WHITE);
 
         javafx.scene.layout.StackPane iconWrap = new javafx.scene.layout.StackPane(photoIcon);
         iconWrap.setPrefSize(40, 40);
@@ -277,18 +277,18 @@ public class PhotoViewer {
 
         Label typeLabel = new Label("Просмотр фотографий");
         typeLabel.setStyle("-fx-font-size:10px;-fx-font-weight:bold;" +
-                "-fx-text-fill:" + (darkTheme ? "#5a6a7a" : "rgba(255,255,255,0.6)") + ";");
+                "-fx-text-fill:white;");
 
         String titleText = device != null && device.getName() != null
                 ? device.getName()
                 : (locationTitle != null ? locationTitle : "Прибор");
         Label titleLabel = new Label(titleText);
         titleLabel.setStyle("-fx-font-size:13px;-fx-font-weight:bold;" +
-                "-fx-text-fill:" + (darkTheme ? "#aec6de" : "#ffffff") + ";");
+                "-fx-text-fill:white;");
 
         Label hintLabel = new Label("← → для навигации  •  Esc для закрытия  •  ЛКМ для зума");
         hintLabel.setStyle("-fx-font-size:10px;" +
-                "-fx-text-fill:" + (darkTheme ? "#4a5a6a" : "rgba(255,255,255,0.45)") + ";");
+                "-fx-text-fill:white;");
 
         javafx.scene.layout.VBox titleBox = new javafx.scene.layout.VBox(1, typeLabel, titleLabel, hintLabel);
         titleBox.setAlignment(Pos.CENTER_LEFT);
@@ -325,7 +325,7 @@ public class PhotoViewer {
         ));
 
         String textColor  = darkTheme ? "#95a5a6" : "#555";
-        String labelColor = darkTheme ? "#aec6de" : "#2c3a47";
+        String labelColor = darkTheme ? "#ffffff" : "#2c3a47";
 
         // Создаём Label-ы и сохраняем ссылки для дальнейшего обновления
         deviceNameLabel      = createInfoLabel(labelColor, true);

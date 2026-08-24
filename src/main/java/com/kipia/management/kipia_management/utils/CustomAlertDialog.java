@@ -108,7 +108,7 @@ public class CustomAlertDialog {
         Label titleLabel = new Label(title);
         titleLabel.setStyle(
                 "-fx-font-size:13px;-fx-font-weight:bold;" +
-                        "-fx-text-fill:" + (dark ? "#aec6de" : "#2c3a47") + ";" +
+                        "-fx-text-fill:" + (dark ? "#ffffff" : "#000000") + ";" +
                         "-fx-font-family:'Segoe UI',Arial,sans-serif;"
         );
 
@@ -128,6 +128,12 @@ public class CustomAlertDialog {
         comboBox.setPrefWidth(300);
         comboBox.setStyle(comboBoxStyle());
 
+        // Настройка анимации стрелки
+        StyleUtils.setupComboBoxArrowAnimation(comboBox);
+
+        // Настройка плавной анимации открытия popup
+        StyleUtils.setupComboBoxPopupAnimation(comboBox);
+
         // 🔥 ИСПРАВЛЕНИЕ: Стилизуем button cell для текста выбранного элемента
         comboBox.setButtonCell(new ListCell<>() {
             @Override
@@ -140,7 +146,7 @@ public class CustomAlertDialog {
                     setText(item);
                     // Стиль для выбранного элемента (текст в combobox)
                     setStyle(
-                            "-fx-text-fill:" + (dark ? "#ecf0f1" : "#333") + ";" +
+                            "-fx-text-fill:" + (dark ? "#ecf0f1" : "#000000") + ";" +
                                     "-fx-background-color:transparent;" +
                                     "-fx-padding:6px 10px;" +
                                     "-fx-font-size:13px;" +
@@ -165,6 +171,7 @@ public class CustomAlertDialog {
         content.setPadding(new Insets(18, 16, 0, 16));
         content.setStyle("-fx-background-color: transparent;");
         content.getChildren().addAll(titleLabel, msgLabel, comboBox);
+        VBox.setMargin(comboBox, new Insets(8, 0, 8, 0));
 
         Region divider = createDivider();
 
@@ -198,32 +205,6 @@ public class CustomAlertDialog {
         });
         cancelBtn.setOnAction(_ -> stage.close());
 
-        // 🔥 ИСПРАВЛЕНИЕ: Добавляем CSS для popup стилей (для обеих тем)
-        String comboBoxPopupCSS = createComboBoxPopupCSS(dark);
-
-        // Создаем временный stylesheet из строки
-        java.net.URL cssUrl;
-        try {
-            // Записываем CSS во временный файл
-            java.nio.file.Path tempPath = java.nio.file.Files.createTempFile("combobox-popup-styles", ".css");
-            java.nio.file.Files.writeString(tempPath, comboBoxPopupCSS);
-            cssUrl = tempPath.toUri().toURL();
-
-            // Добавляем stylesheet к сцене
-            scene.getStylesheets().add(cssUrl.toExternalForm());
-
-            // Удаляем временный файл при закрытии stage
-            stage.setOnHiding(_ -> {
-                try {
-                    java.nio.file.Files.deleteIfExists(tempPath);
-                } catch (Exception e) {
-                    LOGGER.warn("Не удалось удалить временный CSS файл: {}", e.getMessage());
-                }
-            });
-        } catch (Exception e) {
-            LOGGER.warn("Не удалось создать временный CSS файл: {}", e.getMessage());
-        }
-
         // Применяем стили к ячейкам через cell factory (для обеих тем)
         comboBox.setCellFactory(_ -> new ListCell<>() {
             @Override
@@ -234,13 +215,23 @@ public class CustomAlertDialog {
                     setStyle("-fx-background-color:transparent;");
                 } else {
                     setText(item);
-                    setStyle(
-                            "-fx-text-fill:" + (dark ? "#ecf0f1" : "#333") + ";" +
-                                    "-fx-background-color:transparent;" +
-                                    "-fx-padding:6px 10px;" +
-                                    "-fx-font-size:13px;" +
-                                    "-fx-font-family:'Segoe UI',Arial,sans-serif;"
-                    );
+                    if (isSelected()) {
+                        setStyle(
+                                "-fx-text-fill:#ffffff;" +
+                                        "-fx-background-color:#3498db;" +
+                                        "-fx-padding:6px 10px;" +
+                                        "-fx-font-size:13px;" +
+                                        "-fx-font-family:'Segoe UI',Arial,sans-serif;"
+                        );
+                    } else {
+                        setStyle(
+                                "-fx-text-fill:" + (dark ? "#ecf0f1" : "#000000") + ";" +
+                                        "-fx-background-color:transparent;" +
+                                        "-fx-padding:6px 10px;" +
+                                        "-fx-font-size:13px;" +
+                                        "-fx-font-family:'Segoe UI',Arial,sans-serif;"
+                        );
+                    }
                 }
             }
 
@@ -249,106 +240,26 @@ public class CustomAlertDialog {
                 super.updateSelected(selected);
                 if (selected) {
                     setStyle(
-                            "-fx-text-fill:" + (dark ? "#ecf0f1" : "#333") + ";" +
-                                    "-fx-background-color:" + (dark ? "#4A5568" : "#d0d4d8") + ";" +
+                            "-fx-text-fill:#ffffff;" +
+                                    "-fx-background-color:#3498db;" +
                                     "-fx-padding:6px 10px;" +
                                     "-fx-font-size:13px;" +
                                     "-fx-font-family:'Segoe UI',Arial,sans-serif;"
                     );
                 } else {
                     setStyle(
-                            "-fx-text-fill:" + (dark ? "#ecf0f1" : "#333") + ";" +
+                            "-fx-text-fill:" + (dark ? "#ecf0f1" : "#000000") + ";" +
                                     "-fx-background-color:transparent;" +
                                     "-fx-padding:6px 10px;" +
                                     "-fx-font-size:13px;" +
                                     "-fx-font-family:'Segoe UI',Arial,sans-serif;"
                     );
                 }
-        }
+            }
         });
 
         stage.showAndWait();
         return result[0] != null ? Optional.of(result[0]) : Optional.empty();
-    }
-
-    /**
-     * 🔥 НОВЫЙ МЕТОД: Создает CSS для стилизации ComboBox popup
-     */
-    private static String createComboBoxPopupCSS(boolean dark) {
-        String popupBg = dark ? "#2d2d2d" : "white";
-        String popupBorder = dark ? "#4A5568" : "#bdc3c7";
-        String textColor = dark ? "#ecf0f1" : "#333";
-        String selectedBg = dark ? "#4A5568" : "#d0d4d8";
-        String scrollBg = dark ? "#3a4a5a" : "#f0f0f0";
-        String scrollThumb = dark ? "#5a6a7a" : "#c0c0c0";
-
-        return """
-            /* Popup контейнер */
-            .combo-box-popup {
-                -fx-background-color: %s;
-                -fx-background-insets: 0;
-                -fx-border-color: %s;
-                -fx-border-width: 1px;
-                -fx-border-radius: 8px;
-                -fx-background-radius: 8px;
-                -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.25), 8, 0, 0, 0);
-            }
-            
-            /* ListView внутри popup */
-            .combo-box-popup .list-view {
-                -fx-background-color: %s;
-                -fx-background-insets: 0;
-                -fx-border-color: transparent;
-                -fx-border-width: 0;
-                -fx-border-radius: 0;
-                -fx-background-radius: 0;
-            }
-            
-            /* ListCell - отдельные элементы */
-            .combo-box-popup .list-cell {
-                -fx-background-color: transparent;
-                -fx-text-fill: %s;
-                -fx-padding: 6px 12px;
-                -fx-font-size: 13px;
-                -fx-font-family: 'Segoe UI', Arial, sans-serif;
-            }
-            
-            /* Выбранная ячейка */
-            .combo-box-popup .list-cell:selected {
-                -fx-background-color: %s;
-                -fx-text-fill: %s;
-            }
-            
-            /* Hover ячейка */
-            .combo-box-popup .list-cell:hover {
-                -fx-background-color: %s;
-                -fx-text-fill: %s;
-            }
-            
-            /* Scrollbar */
-            .combo-box-popup .scroll-bar {
-                -fx-background-color: transparent;
-                -fx-border-color: transparent;
-            }
-            
-            .combo-box-popup .scroll-bar .thumb {
-                -fx-background-color: %s;
-                -fx-background-radius: 3px;
-                -fx-border-radius: 3px;
-                -fx-border-color: transparent;
-            }
-            
-            .combo-box-popup .scroll-bar .track {
-                -fx-background-color: transparent;
-                -fx-border-color: transparent;
-            }
-            """.formatted(
-                popupBg, popupBorder, popupBg,
-                textColor,
-                selectedBg, textColor,
-                dark ? "#3a4a5a" : "#e0e0e0", dark ? "#ecf0f1" : "#333",
-                scrollThumb
-        );
     }
 
     public static ButtonType showAdvancedError(String title, String message, Throwable ex) {
@@ -434,13 +345,28 @@ public class CustomAlertDialog {
                         "M8,4.5A1.5,1.5,0,1,0,8,7.5A1.5,1.5,0,1,0,8,4.5z" +
                         "M11,7.5A1.5,1.5,0,1,0,11,10.5A1.5,1.5,0,1,0,11,7.5z"
         );
-        colorIcon.setFill(Color.web(dark ? "#7090b0" : "#465261"));
+        colorIcon.setFill(dark ? Color.WHITE : Color.web("#2c3e50"));
 
         HBox topBox = createTopBox(colorIcon, "Настройка цвета", title, null, stage);
+        String dividerColor = dark ? "#2d3e50" : "#e8e8e8";
+        topBox.setStyle("-fx-background-color: " + (dark ? "#252d38" : "#ffffff") + ";" +
+                "-fx-border-color: " + dividerColor + ";" +
+                "-fx-border-width: 0 0 1 0;");
+        // Force text colors based on theme
+        for (Node node : topBox.getChildren()) {
+            if (node instanceof VBox vbox) {
+                for (Node label : vbox.getChildren()) {
+                    if (label instanceof Label) {
+                        label.setStyle(label.getStyle().replace(dark ? "#ffffff" : "#000000", dark ? "#ffffff" : "#000000"));
+                        label.setStyle(label.getStyle().replace(dark ? "#5a6a7a" : "#888780", dark ? "#5a6a7a" : "#888780"));
+                    }
+                }
+            }
+        }
 
         // Сборка контента
         VBox content = new VBox(10);
-        content.setPadding(new Insets(0, 20, 4, 20));
+        content.setPadding(new Insets(12, 20, 4, 20));
         content.setStyle("-fx-background-color: transparent;");
         content.getChildren().add(colorBox);
 
@@ -540,13 +466,28 @@ public class CustomAlertDialog {
                 "M6.6,2L1,14h2.2l1.1-2.8h5.4L10.8,14H13L7.4,2H6.6z" +
                         "M5.1,9.2L7,4.6l1.9,4.6H5.1z"
         );
-        fontIcon.setFill(Color.web(dark ? "#7090b0" : "#465261"));
+        fontIcon.setFill(dark ? Color.WHITE : Color.web("#2c3e50"));
 
         HBox topBox = createTopBox(fontIcon, "Настройка шрифта", "Настройки шрифта", null, stage);
+        String dividerColor = dark ? "#2d3e50" : "#e8e8e8";
+        topBox.setStyle("-fx-background-color: " + (dark ? "#252d38" : "#ffffff") + ";" +
+                "-fx-border-color: " + dividerColor + ";" +
+                "-fx-border-width: 0 0 1 0;");
+        // Force text colors based on theme
+        for (Node node : topBox.getChildren()) {
+            if (node instanceof VBox vbox) {
+                for (Node label : vbox.getChildren()) {
+                    if (label instanceof Label) {
+                        label.setStyle(label.getStyle().replace(dark ? "#ffffff" : "#000000", dark ? "#ffffff" : "#000000"));
+                        label.setStyle(label.getStyle().replace(dark ? "#5a6a7a" : "#888780", dark ? "#5a6a7a" : "#888780"));
+                    }
+                }
+            }
+        }
 
         // Сборка
         VBox content = new VBox(10);
-        content.setPadding(new Insets(0, 20, 4, 20));
+        content.setPadding(new Insets(12, 20, 4, 20));
         content.setStyle("-fx-background-color: transparent;");
         content.getChildren().add(grid);
 
@@ -773,6 +714,18 @@ public class CustomAlertDialog {
 
         // ===== ШАПКА ДИАЛОГА =====
         HBox topBox = createTopBox((SVGPath) null, "Выбор прибора", "Выберите прибор для схемы", "Доступно приборов: " + devices.size(), stage);
+        // Force white text in header for both themes
+        for (Node node : topBox.getChildren()) {
+            if (node instanceof VBox vbox) {
+                for (Node label : vbox.getChildren()) {
+                    if (label instanceof Label) {
+                        label.setStyle(label.getStyle().replace(dark ? "#ffffff" : "#000000", "#ffffff"));
+                        label.setStyle(label.getStyle().replace(dark ? "#5a6a7a" : "#888780", "#aec6de"));
+                        label.setStyle(label.getStyle().replace(dark ? "#5a6a7a" : "#D3D8DC", "#aec6de"));
+                    }
+                }
+            }
+        }
 
         // ===== ТАБЛИЦА =====
         TableView<Device> tableView = new TableView<>();
@@ -831,6 +784,9 @@ public class CustomAlertDialog {
         // ===== ROOT =====
         VBox root = new VBox(topBox, body, divider, btnBar);
         root.getStyleClass().add("device-selection-dialog");
+        if (dark) {
+            root.getStyleClass().add("dark");
+        }
         root.setMinWidth(620);
         root.setMaxWidth(760);
 
@@ -943,7 +899,7 @@ public class CustomAlertDialog {
             titleLabel.setWrapText(true);
             titleLabel.setStyle(
                     "-fx-font-size:14px;-fx-font-weight:bold;" +
-                            "-fx-text-fill:" + (dark ? "#aec6de" : "#2c3a47") + ";" +
+                            "-fx-text-fill:" + (dark ? "#ffffff" : "#000000") + ";" +
                             "-fx-padding:0 0 8 0;"
             );
 
@@ -1033,14 +989,14 @@ public class CustomAlertDialog {
     //  ЦВЕТА ТОЛЬКО ДЛЯ ИКОНОК
     // ════════════════════════════════════════════════════════════════════════
 
-    private record IconColors(String svgColor) {
+    private record IconColors(Color svgColor) {
         static IconColors of(AlertType type, boolean dark) {
             return switch (type) {
-                case INFO    -> new IconColors(dark ? "#7090b0" : "#465261");   // синий
-                case SUCCESS -> new IconColors(dark ? "#4a9c2f" : "#4a7c2f");   // зелёный
-                case WARNING -> new IconColors(dark ? "#b88a30" : "#9a6200");   // жёлтый
-                case ERROR   -> new IconColors(dark ? "#c04040" : "#b03030");   // красный
-                case CONFIRM -> new IconColors(dark ? "#a07cc5" : "#7b52a8");   // фиолетовый
+                case INFO    -> new IconColors(Color.web("#3498db"));   // синий
+                case SUCCESS -> new IconColors(Color.web("#27ae60"));   // зелёный
+                case WARNING -> new IconColors(Color.web("#f39c12"));   // жёлтый
+                case ERROR   -> new IconColors(Color.web("#e74c3c"));   // красный
+                case CONFIRM -> new IconColors(Color.web("#9b59b6"));   // фиолетовый
             };
         }
     }
@@ -1061,7 +1017,7 @@ public class CustomAlertDialog {
 
     private static StackPane buildLargeIcon(AlertType type, IconColors colors) {
         SVGPath path = new SVGPath();
-        path.setFill(Color.web(colors.svgColor()));
+        path.setFill(colors.svgColor());
         path.setContent(switch (type) {
             case INFO -> "M8,0C3.6,0,0,3.6,0,8s3.6,8,8,8s8-3.6,8-8S12.4,0,8,0z" +
                     "M9,12H7V7h2V12zM9,5.5H7v-2h2V5.5z";
@@ -1148,7 +1104,7 @@ public class CustomAlertDialog {
         return stage;
     }
 
-    private static HBox createButtonBar(Button... buttons) {
+    public static HBox createButtonBar(Button... buttons) {
         HBox btnBar = new HBox(8);
         btnBar.setAlignment(Pos.CENTER_RIGHT);
         btnBar.setPadding(new Insets(12, 16, 16, 16));
@@ -1157,7 +1113,7 @@ public class CustomAlertDialog {
         return btnBar;
     }
 
-    private static HBox createTopBox(SVGPath icon, String typeLabel, String titleLabel, String sectionLabel, Stage stage) {
+    public static HBox createTopBox(SVGPath icon, String typeLabel, String titleLabel, String sectionLabel, Stage stage) {
         boolean dark = isDark();
 
         Label typeLbl = new Label(typeLabel);
@@ -1171,7 +1127,7 @@ public class CustomAlertDialog {
         titleLbl.setWrapText(true);
         titleLbl.setStyle(
                 "-fx-font-size:14px;-fx-font-weight:bold;" +
-                        "-fx-text-fill:" + (dark ? "#aec6de" : "#ffffff") + ";" +
+                        "-fx-text-fill:" + (dark ? "#ffffff" : "#000000") + ";" +
                         "-fx-padding:0 0 4 0;"
         );
 
@@ -1190,23 +1146,15 @@ public class CustomAlertDialog {
         rightContent.setAlignment(Pos.TOP_LEFT);
         VBox.setVgrow(rightContent, Priority.ALWAYS);
 
-        // Кнопка закрытия с унифицированным стилем
-        Button closeBtn = new Button("×");
-        closeBtn.getStyleClass().add("unified-close-button");
-        closeBtn.setOnAction(_ -> stage.close());
-
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-
         HBox topBox;
         if (icon != null) {
             StackPane iconWrap = new StackPane(icon);
             iconWrap.setPrefSize(40, 40);
             iconWrap.setMinSize(40, 40);
             iconWrap.setStyle("-fx-background-color: transparent;");
-            topBox = new HBox(16, iconWrap, rightContent, spacer, closeBtn);
+            topBox = new HBox(16, iconWrap, rightContent);
         } else {
-            topBox = new HBox(16, rightContent, spacer, closeBtn);
+            topBox = new HBox(16, rightContent);
         }
 
         topBox.setAlignment(Pos.CENTER_LEFT);
@@ -1215,7 +1163,7 @@ public class CustomAlertDialog {
         return topBox;
     }
 
-    private static HBox createTopBox(ImageView icon, String typeLabel, String titleLabel, Stage stage) {
+    public static HBox createTopBox(ImageView icon, String typeLabel, String titleLabel, Stage stage) {
         boolean dark = isDark();
         StackPane iconWrap = new StackPane(icon);
         iconWrap.setPrefSize(40, 40);
@@ -1233,7 +1181,7 @@ public class CustomAlertDialog {
         titleLbl.setWrapText(true);
         titleLbl.setStyle(
                 "-fx-font-size:14px;-fx-font-weight:bold;" +
-                        "-fx-text-fill:" + (dark ? "#aec6de" : "#ffffff") + ";" +
+                        "-fx-text-fill:" + (dark ? "#ffffff" : "#000000") + ";" +
                         "-fx-padding:0 0 4 0;"
         );
 
@@ -1241,22 +1189,14 @@ public class CustomAlertDialog {
         rightContent.setAlignment(Pos.TOP_LEFT);
         VBox.setVgrow(rightContent, Priority.ALWAYS);
 
-        // Кнопка закрытия с унифицированным стилем
-        Button closeBtn = new Button("×");
-        closeBtn.getStyleClass().add("unified-close-button");
-        closeBtn.setOnAction(_ -> stage.close());
-
-        Region spacer = new Region();
-        HBox.setHgrow(spacer, Priority.ALWAYS);
-
-        HBox topBox = new HBox(16, iconWrap, rightContent, spacer, closeBtn);
+        HBox topBox = new HBox(16, iconWrap, rightContent);
         topBox.setAlignment(Pos.CENTER_LEFT);
         topBox.setPadding(new Insets(20, 20, 12, 20));
         topBox.getStyleClass().add("dialog-top-box");
         return topBox;
     }
 
-    private static Region createDivider() {
+    public static Region createDivider() {
         boolean dark = isDark();
         Region divider = new Region();
         divider.setPrefHeight(1);
@@ -1264,7 +1204,7 @@ public class CustomAlertDialog {
         return divider;
     }
 
-    private static VBox createRoot(Node... children) {
+    public static VBox createRoot(Node... children) {
         boolean dark = isDark();
         VBox root = new VBox(children);
         root.setStyle(
@@ -1286,7 +1226,7 @@ public class CustomAlertDialog {
         return root;
     }
 
-    private static void setupDragToMove(VBox root, Stage stage) {
+    public static void setupDragToMove(VBox root, Stage stage) {
         final double[] dragDelta = new double[2];
         root.setOnMousePressed(e -> {
             dragDelta[0] = stage.getX() - e.getScreenX();
@@ -1320,7 +1260,7 @@ public class CustomAlertDialog {
                 "-fx-selection-bar-text:" + (dark ? "#ecf0f1" : "#333") + ";";
     }
 
-    private static void setupButtonStyles(Button btn, boolean primary) {
+    public static void setupButtonStyles(Button btn, boolean primary) {
         boolean dark = isDark();
         if (primary) {
             btn.setStyle(btnPrimary(dark));
