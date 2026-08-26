@@ -632,6 +632,8 @@ public class PhotoGalleryController implements SearchableController {
         Collections.sort(locations);
 
         Platform.runLater(() -> {
+            // Очищаем выделение перед модификацией items, чтобы избежать IndexOutOfBoundsException
+            externalLocationFilter.getSelectionModel().clearSelection();
             externalLocationFilter.getItems().clear();
             externalLocationFilter.getItems().add("Все места");
             externalLocationFilter.getItems().addAll(locations);

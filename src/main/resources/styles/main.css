@@ -242,6 +242,8 @@
     -fx-border-width: 1px;
     -fx-border-radius: 20px;
     -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 8, 0, 0, 2);
+    -fx-pref-height: 42px;
+    -fx-max-height: 42px;
 }
 
 /* Единый стиль для всех поисковых элементов */
@@ -390,6 +392,8 @@
     -fx-font-size: 13px;
     -fx-font-weight: 500;
     -fx-text-fill: -fx-text-on-dark;
+    -fx-pref-height: 34px;
+    -fx-max-height: 34px;
     -fx-padding: 5px 10px;
     -fx-background-color: rgba(255, 255, 255, 0.05);
     -fx-background-radius: 17px;
@@ -460,6 +464,32 @@
 }
 
 .clear-search-button:pressed {
+    -fx-scale-x: 0.9;
+    -fx-scale-y: 0.9;
+}
+
+/* Кнопка удаления активного фильтра (крестик) */
+.filter-remove-button {
+    -fx-background-color: -fx-bg-tertiary;
+    -fx-background-radius: 50%;
+    -fx-text-fill: -fx-text-primary;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-alignment: CENTER;
+    -fx-cursor: hand;
+    -fx-padding: 0;
+    -fx-min-width: 22px;
+    -fx-min-height: 22px;
+    -fx-pref-width: 22px;
+    -fx-pref-height: 22px;
+}
+
+.filter-remove-button:hover {
+    -fx-background-color: rgba(231, 76, 60, 0.85);
+    -fx-text-fill: white;
+}
+
+.filter-remove-button:pressed {
     -fx-scale-x: 0.9;
     -fx-scale-y: 0.9;
 }

@@ -6,7 +6,7 @@
 
     <groupId>com.KIPiA.Management</groupId>
     <artifactId>KIPiA_Management</artifactId>
-    <version>2.0.1</version>
+    <version>2.1.1</version>
     <name>KIPiA_Management</name>
     <packaging>jar</packaging>
 
@@ -52,23 +52,6 @@
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
             <version>2.10.1</version>
-        </dependency>
-
-        <!-- Charts -->
-        <dependency>
-            <groupId>org.jfree</groupId>
-            <artifactId>jfreechart</artifactId>
-            <version>1.5.4</version>
-        </dependency>
-        <dependency>
-            <groupId>org.jfree</groupId>
-            <artifactId>jcommon</artifactId>
-            <version>1.0.24</version>
-        </dependency>
-        <dependency>
-            <groupId>org.jfree</groupId>
-            <artifactId>jfreechart-fx</artifactId>
-            <version>1.0.1</version>
         </dependency>
 
         <!-- Excel -->
@@ -224,7 +207,25 @@
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <excludes>
+                    <exclude>**/*.db</exclude>
+                    <exclude>**/*.jpg</exclude>
+                    <exclude>**/*.png</exclude>
+                    <exclude>**/*.ico</exclude>
+                    <exclude>**/*.bmp</exclude>
+                </excludes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
                 <filtering>false</filtering>
+                <includes>
+                    <include>**/*.db</include>
+                    <include>**/*.jpg</include>
+                    <include>**/*.png</include>
+                    <include>**/*.ico</include>
+                    <include>**/*.bmp</include>
+                </includes>
             </resource>
         </resources>
     </build>

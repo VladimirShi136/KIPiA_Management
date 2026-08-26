@@ -7,6 +7,7 @@ import com.kipia.management.kipia_management.services.*;
 import com.kipia.management.kipia_management.utils.CustomAlertDialog;
 import com.kipia.management.kipia_management.utils.DevTools;
 import com.kipia.management.kipia_management.utils.StyleUtils;
+import com.kipia.management.kipia_management.utils.VersionLoader;
 import javafx.animation.*;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -86,9 +87,37 @@ public class MainController {
     @FXML
     private CheckBox topPhotosOnlyCheck;
     @FXML
-    private Button topClearSearchButton;
+    private ComboBox<String> topStatusFilter;
+    @FXML
+    private ComboBox<String> topTypeFilter;
+    @FXML
+    private ComboBox<String> topManufacturerFilter;
+    @FXML
+    private ComboBox<String> topYearFilter;
+    @FXML
+    private HBox topActiveFiltersBox;
+    @FXML
+    private ComboBox<String> topAddFilterCombo;
+    @FXML
+    private Button topLocationRemove;
+    @FXML
+    private Button topPhotosOnlyRemove;
+    @FXML
+    private Button topStatusRemove;
+    @FXML
+    private Button topTypeRemove;
+    @FXML
+    private Button topManufacturerRemove;
+    @FXML
+    private Button topYearRemove;
+    @FXML
+    private ComboBox<String> topReportFilterTypeCombo;
+    @FXML
+    private ComboBox<String> topReportFilterValueCombo;
     @FXML
     private Button helpBtn;
+    @FXML
+    private Label versionLabel;
 
     // Сервисы
     private DeviceDAO deviceDAO;
@@ -208,6 +237,10 @@ public class MainController {
     @FXML
     private void initialize() {
         statusLabel.setText("Готов к работе");
+        
+        if (versionLabel != null) {
+            versionLabel.setText("ver " + VersionLoader.getVersion());
+        }
 
         devicesBtn.getStyleClass().add("button-devices");
         photoGalleryBtn.getStyleClass().add("button-photo-gallery");
@@ -229,7 +262,11 @@ public class MainController {
         // Инициализируем менеджер поисковой панели
         searchPanelManager = new SearchPanelManager();
         searchPanelManager.initialize(topSearchPanel, topSearchToggleButton, topSearchFieldContainer,
-                topSearchField, topLocationFilter, topSchemeFilter, topPhotosOnlyCheck, topClearSearchButton);
+                topSearchField, topLocationFilter, topSchemeFilter, topPhotosOnlyCheck,
+                topStatusFilter, topTypeFilter, topManufacturerFilter, topYearFilter,
+                topActiveFiltersBox, topAddFilterCombo, topLocationRemove, topPhotosOnlyRemove,
+                topStatusRemove, topTypeRemove, topManufacturerRemove, topYearRemove,
+                topReportFilterTypeCombo, topReportFilterValueCombo);
 
         setupWindowControls();
 
@@ -639,7 +676,7 @@ public class MainController {
                     ctrl.setDeviceDAO(deviceDAO);
                     ctrl.init();
                     searchPanelManager.bindController(ctrl);
-                    searchPanelManager.showPanel(true, false, false);
+                    searchPanelManager.showPanel(true, false, false, false);
                 }
                 contentArea.getChildren().add(view);
                 updateNavigationButtonsState();
@@ -677,7 +714,7 @@ public class MainController {
                     ctrl.setDeviceDAO(deviceDAO);
                     ctrl.init();
                     searchPanelManager.bindController(ctrl);
-                    searchPanelManager.showPanel(true, true, false);
+                    searchPanelManager.showPanel(true, true, false, false);
                 }
                 contentArea.getChildren().add(view);
                 updateNavigationButtonsState();
@@ -724,7 +761,7 @@ public class MainController {
                     searchPanelManager.setSchemeConverter(schemeEditorController.createSchemeConverter());
                     searchPanelManager.bindController(schemeEditorController);
                     schemeEditorController.init();
-                    searchPanelManager.showPanel(true, false, true);
+                    searchPanelManager.showPanel(true, false, true, false);
                 }
                 contentArea.getChildren().clear();
                 contentArea.getChildren().add(schemeEditorView);
@@ -760,8 +797,9 @@ public class MainController {
                     this.reportsController = ctrl;
                 }
                 contentArea.getChildren().add(view);
-                searchPanelManager.bindController(null);
-                searchPanelManager.showPanel(false, false, false);
+                searchPanelManager.bindController(ctrl);
+                searchPanelManager.showPanel(true, false, false, true);
+                ctrl.refreshReportFilterCombos();
                 updateNavigationButtonsState();
             } catch (IOException e) {
                 statusLabel.setText("Ошибка загрузки отчётов: " + e.getMessage());
@@ -802,7 +840,7 @@ public class MainController {
                 }
                 contentArea.getChildren().add(view);
                 searchPanelManager.bindController(null);
-                searchPanelManager.showPanel(false, false, false);
+                searchPanelManager.showPanel(false, false, false, false);
                 updateNavigationButtonsState();
             } catch (IOException e) {
                 statusLabel.setText("Ошибка загрузки настроек: " + e.getMessage());
@@ -827,7 +865,7 @@ public class MainController {
 
         contentArea.getChildren().add(testPanel);
         searchPanelManager.bindController(null);
-        searchPanelManager.showPanel(false, false, false);
+        searchPanelManager.showPanel(false, false, false, false);
     }
 
     @FXML

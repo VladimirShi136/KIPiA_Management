@@ -41,7 +41,23 @@ public interface SearchableController {
     default void bindSchemeFilter(ComboBox<Scheme> schemeFilter) {
         // По умолчанию не используется
     }
-    
+
+    default void bindStatusFilter(ComboBox<String> statusFilter) {
+        // По умолчанию не используется
+    }
+
+    default void bindTypeFilter(ComboBox<String> typeFilter) {
+        // По умолчанию не используется
+    }
+
+    default void bindManufacturerFilter(ComboBox<String> manufacturerFilter) {
+        // По умолчанию не используется
+    }
+
+    default void bindYearFilter(ComboBox<String> yearFilter) {
+        // По умолчанию не используется
+    }
+
     /**
      * Очищает все фильтры
      */
@@ -52,5 +68,48 @@ public interface SearchableController {
      */
     default boolean hasExtendedFilters() {
         return false;
+    }
+
+    /**
+     * Возвращает список доступных типов фильтров для отчетов.
+     * Используется в двухкомбобоксовом паттерне "тип → значение".
+     */
+    default java.util.List<String> getReportFilterTypes() {
+        return java.util.Collections.emptyList();
+    }
+
+    /**
+     * Возвращает список значений для заданного типа фильтра в отчетах.
+     */
+    default java.util.List<String> getReportFilterValues(String filterType) {
+        return java.util.Collections.emptyList();
+    }
+
+    /**
+     * Применяет фильтр отчета: тип + значение.
+     */
+    default void applyReportFilter(String filterType, String filterValue) {
+        // по умолчанию ничего не делает
+    }
+
+    /**
+     * Сбрасывает фильтр отчета.
+     */
+    default void clearReportFilter() {
+        // по умолчанию ничего не делает
+    }
+
+    /**
+     * Связывает комбобоксы для паттерна отчетов (тип фильтра → значение)
+     */
+    default void bindReportFilterCombos(ComboBox<String> filterTypeCombo, ComboBox<String> filterValueCombo) {
+        // по умолчанию ничего не делает
+    }
+
+    /**
+     * Обновляет комбобоксы отчетов при раскрытии поисковой панели
+     */
+    default void refreshReportFilterCombos() {
+        // по умолчанию ничего не делает
     }
 }

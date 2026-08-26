@@ -1,15 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.control.RadioButton?>
-<?import javafx.scene.control.ToggleGroup?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.layout.BorderPane?>
-<?import javafx.scene.image.ImageView?>
-<?import javafx.scene.image.Image?>
-<?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.shape.Rectangle?>
 
 <!--
   Author: vladimir_shi
@@ -24,44 +22,54 @@
     <VBox fx:id="contentBox"
           spacing="20"
           prefWidth="1000"
-          prefHeight="700"
           VBox.vgrow="ALWAYS">
-        <fx:define>
-            <ToggleGroup fx:id="reportTypeGroup"/> <!-- ToggleGroup для выбора типа отчета -->
-        </fx:define>
-        <!-- 1️⃣ РАДИО-КНОПКИ ОТЧЕТОВ ПО КАТЕГОРИЯМ -->
-        <HBox alignment="CENTER" styleClass="report-buttons">
-            <RadioButton text="По статусу" toggleGroup="$reportTypeGroup" fx:id="statusReportBtn" selected="true"
-                         styleClass="report-radio"/>
-            <RadioButton text="По типам приборов" toggleGroup="$reportTypeGroup" fx:id="typeReportBtn"
-                         styleClass="report-radio"/>
-            <RadioButton text="По производителям" toggleGroup="$reportTypeGroup" fx:id="manufacturerReportBtn"
-                         styleClass="report-radio"/>
-            <RadioButton text="По местоположению" toggleGroup="$reportTypeGroup" fx:id="locationReportBtn"
-                         styleClass="report-radio"/>
-            <RadioButton text="По годам выпуска" toggleGroup="$reportTypeGroup" fx:id="yearReportBtn"
-                         styleClass="report-radio"/>
+        <!-- Заголовок отчета -->
+        <HBox alignment="CENTER" spacing="10" styleClass="report-header">
+            <Label text="📈" styleClass="report-icon"/>
+            <Label fx:id="titleLabel" text="Сводка по приборам" styleClass="report-title"/>
         </HBox>
-        <!-- 2️ HBox с заголовком отчета и кнопка экспорта -->
-        <HBox alignment="CENTER" spacing="10">
-            <Label fx:id="titleLabel" text="Отчёт по устройствам — По статусу" styleClass="report-title"/>
-            <!-- Кнопка экспорта отчета в Excel -->
-            <Button fx:id="exportReportButton" styleClass="report-export-button">
-                <graphic>
-                    <ImageView fitWidth="24" fitHeight="24" preserveRatio="true">
-                        <Image url="@../images/export.png"/>
-                    </ImageView>
-                </graphic>
-                <tooltip>
-                    <Tooltip text="Экспортировать отчёт в Excel"/>
-                </tooltip>
-            </Button>
-        </HBox>
-        <!-- BorderPane с графиком -->
-        <BorderPane fx:id="chartPane" styleClass="chart-pane"
-                    VBox.vgrow="ALWAYS"
-                    minHeight="150"
-                    prefHeight="500"
-                    maxHeight="Infinity"/>
+        <!-- Кольцевая диаграмма -->
+        <StackPane fx:id="chartContainer" VBox.vgrow="ALWAYS" minHeight="300" alignment="CENTER">
+            <BorderPane fx:id="chartPane" styleClass="chart-pane"/>
+        </StackPane>
+        <!-- Карточки статусов, 2x2 -->
+        <GridPane fx:id="statusGrid" hgap="12" vgap="12" styleClass="status-grid">
+            <columnConstraints>
+                <ColumnConstraints percentWidth="50" hgrow="ALWAYS"/>
+                <ColumnConstraints percentWidth="50" hgrow="ALWAYS"/>
+            </columnConstraints>
+
+            <HBox fx:id="workingBar" styleClass="status-card working-card" alignment="CENTER_LEFT"
+                  GridPane.rowIndex="0" GridPane.columnIndex="0">
+                <Rectangle width="12" height="12" arcWidth="6" arcHeight="6" fill="#4CAF50" styleClass="status-dot working-dot"/>
+                <Label text="В работе" styleClass="status-card-label"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="workingLabel" text="0" styleClass="status-card-count working-count"/>
+            </HBox>
+
+            <HBox fx:id="storageBar" styleClass="status-card storage-card" alignment="CENTER_LEFT"
+                  GridPane.rowIndex="0" GridPane.columnIndex="1">
+                <Rectangle width="12" height="12" arcWidth="6" arcHeight="6" fill="#F58352" styleClass="status-dot storage-dot"/>
+                <Label text="Хранение" styleClass="status-card-label"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="storageLabel" text="0" styleClass="status-card-count storage-count"/>
+            </HBox>
+
+            <HBox fx:id="lostBar" styleClass="status-card lost-card" alignment="CENTER_LEFT"
+                  GridPane.rowIndex="1" GridPane.columnIndex="0">
+                <Rectangle width="12" height="12" arcWidth="6" arcHeight="6" fill="#848C9B" styleClass="status-dot lost-dot"/>
+                <Label text="Утерян" styleClass="status-card-label"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="lostLabel" text="0" styleClass="status-card-count lost-count"/>
+            </HBox>
+
+            <HBox fx:id="brokenBar" styleClass="status-card broken-card" alignment="CENTER_LEFT"
+                  GridPane.rowIndex="1" GridPane.columnIndex="1">
+                <Rectangle width="12" height="12" arcWidth="6" arcHeight="6" fill="#F44336" styleClass="status-dot broken-dot"/>
+                <Label text="Испорчен" styleClass="status-card-label"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="brokenLabel" text="0" styleClass="status-card-count broken-count"/>
+            </HBox>
+        </GridPane>
     </VBox>
 </StackPane>

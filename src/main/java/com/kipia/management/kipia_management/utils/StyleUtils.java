@@ -187,26 +187,34 @@ public class StyleUtils {
             if (isShowing) {
                 // Даём JavaFX кадр на то, чтобы попап реально появился в Window.getWindows()
                 Platform.runLater(() -> {
-                    Window popupWindow = findOpenPopupWindow();
+                    Window popupWindow = findOpenPopupWindow(combo);
                     if (popupWindow == null) return;
 
-                    double startY = popupWindow.getY() - 14;
-                    double targetY = popupWindow.getY();
+                    // ВАЖНО: раньше здесь ещё и двигали сам popupWindow по Y
+                    // (setY) уже ПОСЛЕ того, как JavaFX показал попап и сделал
+                    // его интерактивным/кликабельным. Пока шла анимация,
+                    // реальное окно физически ехало по экрану — и если
+                    // пользователь успевал кликнуть по пункту списка в этот
+                    // момент (а кликают обычно быстро), координаты клика
+                    // переставали совпадать с текущим положением ListView.
+                    // Это ломало внутреннее состояние SelectionModel и
+                    // приводило к IndexOutOfBoundsException в
+                    // ListViewBehavior/clearAndSelect — то самое падение из
+                    // логов. Двигать сам Window во время взаимодействия с ним
+                    // небезопасно, поэтому теперь анимируем ТОЛЬКО
+                    // прозрачность — она не влияет на hit-testing и не может
+                    // "увести" клик мимо нужной ячейки.
                     popupWindow.setOpacity(0);
-                    popupWindow.setY(startY);
 
-                    // Window.yProperty() доступен только на чтение (есть только setY()),
-                    // поэтому анимируем вручную через interpolate(), а не через KeyValue/Timeline.
                     Transition reveal = new Transition() {
                         {
-                            setCycleDuration(Duration.millis(240));
+                            setCycleDuration(Duration.millis(180));
                             setInterpolator(Interpolator.EASE_OUT);
                         }
 
                         @Override
                         protected void interpolate(double frac) {
                             popupWindow.setOpacity(frac);
-                            popupWindow.setY(startY + (targetY - startY) * frac);
                         }
                     };
                     reveal.play();
@@ -216,12 +224,19 @@ public class StyleUtils {
     }
 
     /**
-     * Поиск открытого popup окна комбобокса
+     * Поиск открытого popup-окна, принадлежащего конкретному комбобоксу.
+     * Раньше метод брал ПЕРВОЕ попавшееся PopupWindow среди Window.getWindows()
+     * — если пользователь быстро кликал по нескольким комбобоксам подряд,
+     * анимация могла случайно попасть не в то окно. Теперь ищем именно тот
+     * попап, чей владелец (owner) — сцена/окно данного combo.
      */
-    private static Window findOpenPopupWindow() {
+    private static Window findOpenPopupWindow(ComboBox<?> combo) {
+        Window owner = combo.getScene() != null ? combo.getScene().getWindow() : null;
         for (Window window : Window.getWindows()) {
-            if (window instanceof javafx.stage.PopupWindow) {
-                return window;
+            if (window instanceof javafx.stage.PopupWindow popup && window.isShowing()) {
+                if (owner == null || popup.getOwnerWindow() == owner) {
+                    return window;
+                }
             }
         }
         return null;

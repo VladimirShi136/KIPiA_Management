@@ -40,11 +40,26 @@ public class SearchPanelManager {
     private ComboBox<String> topLocationFilter;
     private ComboBox<Scheme> topSchemeFilter;
     private CheckBox topPhotosOnlyCheck;
-    private Button topClearSearchButton;
+    private ComboBox<String> topStatusFilter;
+    private ComboBox<String> topTypeFilter;
+    private ComboBox<String> topManufacturerFilter;
+    private ComboBox<String> topYearFilter;
+    private HBox topActiveFiltersBox;
+    private ComboBox<String> topAddFilterCombo;
+    private Button topLocationRemove;
+    private Button topPhotosOnlyRemove;
+    private Button topStatusRemove;
+    private Button topTypeRemove;
+    private Button topManufacturerRemove;
+    private Button topYearRemove;
+    private ComboBox<String> topReportFilterTypeCombo;
+    private ComboBox<String> topReportFilterValueCombo;
 
     // Состояние
     private SearchableController currentSearchableController;
     private boolean isTopSearchExpanded = false;
+    private boolean isReportsMode = false;
+    private boolean isSchemeEditorMode = false;
 
     /**
      * Инициализирует менеджер с UI элементами
@@ -52,7 +67,13 @@ public class SearchPanelManager {
     public void initialize(HBox topSearchPanel, Button topSearchToggleButton, HBox topSearchFieldContainer,
                            TextField topSearchField, ComboBox<String> topLocationFilter,
                            ComboBox<Scheme> topSchemeFilter, CheckBox topPhotosOnlyCheck,
-                           Button topClearSearchButton) {
+                           ComboBox<String> topStatusFilter, ComboBox<String> topTypeFilter,
+                           ComboBox<String> topManufacturerFilter, ComboBox<String> topYearFilter,
+                           HBox topActiveFiltersBox, ComboBox<String> topAddFilterCombo,
+                           Button topLocationRemove, Button topPhotosOnlyRemove,
+                           Button topStatusRemove, Button topTypeRemove,
+                           Button topManufacturerRemove, Button topYearRemove,
+                           ComboBox<String> topReportFilterTypeCombo, ComboBox<String> topReportFilterValueCombo) {
         this.topSearchPanel = topSearchPanel;
         this.topSearchToggleButton = topSearchToggleButton;
         this.topSearchFieldContainer = topSearchFieldContainer;
@@ -60,7 +81,20 @@ public class SearchPanelManager {
         this.topLocationFilter = topLocationFilter;
         this.topSchemeFilter = topSchemeFilter;
         this.topPhotosOnlyCheck = topPhotosOnlyCheck;
-        this.topClearSearchButton = topClearSearchButton;
+        this.topStatusFilter = topStatusFilter;
+        this.topTypeFilter = topTypeFilter;
+        this.topManufacturerFilter = topManufacturerFilter;
+        this.topYearFilter = topYearFilter;
+        this.topActiveFiltersBox = topActiveFiltersBox;
+        this.topAddFilterCombo = topAddFilterCombo;
+        this.topLocationRemove = topLocationRemove;
+        this.topPhotosOnlyRemove = topPhotosOnlyRemove;
+        this.topStatusRemove = topStatusRemove;
+        this.topTypeRemove = topTypeRemove;
+        this.topManufacturerRemove = topManufacturerRemove;
+        this.topYearRemove = topYearRemove;
+        this.topReportFilterTypeCombo = topReportFilterTypeCombo;
+        this.topReportFilterValueCombo = topReportFilterValueCombo;
 
         setupEventHandlers();
         hideSearchFieldContainer();
@@ -120,20 +154,29 @@ public class SearchPanelManager {
         if (topSearchToggleButton != null) {
             topSearchToggleButton.setOnAction(_ -> toggleSearch());
         }
-        if (topClearSearchButton != null) {
-            topClearSearchButton.setOnAction(_ -> clearSearch());
-        }
         if (topSearchField != null) {
-            topSearchField.textProperty().addListener((_, _, _) -> updateClearButtonVisibility());
+            topSearchField.textProperty().addListener((_, _, _) -> {});
         }
         if (topLocationFilter != null) {
-            topLocationFilter.valueProperty().addListener((_, _, _) -> updateClearButtonVisibility());
+            topLocationFilter.valueProperty().addListener((_, _, _) -> {});
         }
         if (topPhotosOnlyCheck != null) {
-            topPhotosOnlyCheck.selectedProperty().addListener((_, _, _) -> updateClearButtonVisibility());
+            topPhotosOnlyCheck.selectedProperty().addListener((_, _, _) -> {});
         }
         if (topSchemeFilter != null) {
-            topSchemeFilter.valueProperty().addListener((_, _, _) -> updateClearButtonVisibility());
+            topSchemeFilter.valueProperty().addListener((_, _, _) -> {});
+        }
+        if (topStatusFilter != null) {
+            topStatusFilter.valueProperty().addListener((_, _, _) -> {});
+        }
+        if (topTypeFilter != null) {
+            topTypeFilter.valueProperty().addListener((_, _, _) -> {});
+        }
+        if (topManufacturerFilter != null) {
+            topManufacturerFilter.valueProperty().addListener((_, _, _) -> {});
+        }
+        if (topYearFilter != null) {
+            topYearFilter.valueProperty().addListener((_, _, _) -> {});
         }
     }
 
@@ -148,6 +191,22 @@ public class SearchPanelManager {
             topSearchFieldContainer.setVisible(true);
             topSearchFieldContainer.setManaged(true);
             topSearchFieldContainer.setOpacity(0.0);
+
+            // Показываем комбобоксы отчетов только в режиме отчетов
+            if (isReportsMode) {
+                if (topReportFilterTypeCombo != null) {
+                    topReportFilterTypeCombo.setVisible(true);
+                    topReportFilterTypeCombo.setManaged(true);
+                }
+                if (topReportFilterValueCombo != null) {
+                    topReportFilterValueCombo.setVisible(true);
+                    topReportFilterValueCombo.setManaged(true);
+                }
+                // Обновляем комбобоксы отчетов для восстановления promptText
+                if (currentSearchableController != null) {
+                    currentSearchableController.refreshReportFilterCombos();
+                }
+            }
 
             TranslateTransition slideIn = new TranslateTransition(Duration.millis(350), topSearchFieldContainer);
             slideIn.setFromX(60);
@@ -165,7 +224,27 @@ public class SearchPanelManager {
             if (topSearchField != null) topSearchField.clear();
             if (topLocationFilter != null) topLocationFilter.setValue("Все места");
             if (topPhotosOnlyCheck != null) topPhotosOnlyCheck.setSelected(false);
-            if (topSchemeFilter != null) topSchemeFilter.setValue(null);
+            // Не сбрасываем фильтр схем в режиме редактора схем
+            if (!isSchemeEditorMode && topSchemeFilter != null) {
+                topSchemeFilter.setValue(null);
+            }
+
+            // Сбрасываем фильтры отчетов при сворачивании
+            if (isReportsMode && currentSearchableController != null) {
+                currentSearchableController.clearReportFilter();
+            }
+
+            // Сбрасываем и скрываем комбобоксы отчетов при сворачивании
+            if (topReportFilterTypeCombo != null) {
+                topReportFilterTypeCombo.setValue(null);
+                topReportFilterTypeCombo.setVisible(false);
+                topReportFilterTypeCombo.setManaged(false);
+            }
+            if (topReportFilterValueCombo != null) {
+                topReportFilterValueCombo.setValue(null);
+                topReportFilterValueCombo.setVisible(false);
+                topReportFilterValueCombo.setManaged(false);
+            }
 
             TranslateTransition slideOut = new TranslateTransition(Duration.millis(300), topSearchFieldContainer);
             slideOut.setFromX(0);
@@ -194,47 +273,55 @@ public class SearchPanelManager {
     }
 
     /**
-     * Очищает поиск
-     */
-    private void clearSearch() {
-        if (topSearchField != null) topSearchField.clear();
-        if (currentSearchableController != null) currentSearchableController.clearFilters();
-        if (isTopSearchExpanded) toggleSearch();
-    }
-
-    /**
-     * Обновляет видимость кнопки очистки
-     */
-    private void updateClearButtonVisibility() {
-        if (topClearSearchButton == null) return;
-        boolean hasText = topSearchField != null && topSearchField.getText() != null && !topSearchField.getText().isEmpty();
-        boolean hasFilter = topLocationFilter != null && topLocationFilter.isVisible()
-                && topLocationFilter.getValue() != null && !"Все места".equals(topLocationFilter.getValue());
-        boolean hasCheck = topPhotosOnlyCheck != null && topPhotosOnlyCheck.isVisible() && topPhotosOnlyCheck.isSelected();
-        boolean hasScheme = topSchemeFilter != null && topSchemeFilter.isVisible() && topSchemeFilter.getValue() != null;
-        topClearSearchButton.setVisible(hasText || hasFilter || hasCheck || hasScheme);
-    }
-
-    /**
      * Сбрасывает состояние поиска при навигации
      */
     public void resetOnNavigation() {
         if (topSearchField != null) topSearchField.clear();
-        if (isTopSearchExpanded) {
-            isTopSearchExpanded = false;
-            hideSearchFieldContainer();
-        }
+        // Принудительно скрываем контейнер при навигации, независимо от флага
+        isTopSearchExpanded = false;
+        hideSearchFieldContainer();
         if (topSchemeFilter != null) topSchemeFilter.setValue(null);
+        if (topLocationFilter != null) topLocationFilter.setValue("Все места");
+        if (topPhotosOnlyCheck != null) topPhotosOnlyCheck.setSelected(false);
+        if (topStatusFilter != null) topStatusFilter.setValue(null);
+        if (topTypeFilter != null) topTypeFilter.setValue(null);
+        if (topManufacturerFilter != null) topManufacturerFilter.setValue(null);
+        if (topYearFilter != null) topYearFilter.setValue(null);
+        // Скрываем комбобоксы отчетов
+        if (topReportFilterTypeCombo != null) {
+            topReportFilterTypeCombo.setVisible(false);
+            topReportFilterTypeCombo.setManaged(false);
+        }
+        if (topReportFilterValueCombo != null) {
+            topReportFilterValueCombo.setVisible(false);
+            topReportFilterValueCombo.setManaged(false);
+        }
         currentSearchableController = null;
     }
 
     /**
      * Показывает/скрывает поисковую панель с нужными фильтрами
      */
-    public void showPanel(boolean show, boolean hasExtendedFilters, boolean hasSchemeFilter) {
+    public void showPanel(boolean show, boolean hasExtendedFilters, boolean hasSchemeFilter, boolean hasReportFilters) {
         if (topSearchPanel == null) return;
         topSearchPanel.setVisible(show);
         topSearchPanel.setManaged(show);
+
+        // Устанавливаем режим отчетов и редактора схем
+        isReportsMode = hasReportFilters;
+        isSchemeEditorMode = hasSchemeFilter;
+
+        // Устанавливаем promptText для комбобоксов отчетов
+        if (hasReportFilters) {
+            if (topReportFilterTypeCombo != null) {
+                topReportFilterTypeCombo.setPromptText("Фильтр...");
+                // Значение по умолчанию будет установлено через refreshReportFilterCombos
+            }
+            if (topReportFilterValueCombo != null) {
+                topReportFilterValueCombo.setPromptText("Значение...");
+                topReportFilterValueCombo.setValue(null);
+            }
+        }
 
         if (topLocationFilter != null) {
             topLocationFilter.setVisible(hasExtendedFilters);
@@ -256,9 +343,34 @@ public class SearchPanelManager {
             isTopSearchExpanded = false;
         }
         // Для таблицы приборов и галереи показываем TextField
-        else if (!hasSchemeFilter && topSearchField != null) {
+        else if (!hasSchemeFilter && !hasReportFilters && topSearchField != null) {
             topSearchField.setVisible(true);
             topSearchField.setManaged(true);
+        }
+        // Для отчетов скрываем TextField, но показываем комбобоксы отчетов при раскрытии
+        else if (hasReportFilters && topSearchField != null) {
+            topSearchField.setVisible(false);
+            topSearchField.setManaged(false);
+            // Комбобоксы отчетов видны только при раскрытом контейнере
+            if (topReportFilterTypeCombo != null) {
+                topReportFilterTypeCombo.setVisible(isTopSearchExpanded);
+                topReportFilterTypeCombo.setManaged(isTopSearchExpanded);
+            }
+            if (topReportFilterValueCombo != null) {
+                topReportFilterValueCombo.setVisible(isTopSearchExpanded);
+                topReportFilterValueCombo.setManaged(isTopSearchExpanded);
+            }
+        }
+        // В других режимах скрываем комбобоксы отчетов
+        else {
+            if (topReportFilterTypeCombo != null) {
+                topReportFilterTypeCombo.setVisible(false);
+                topReportFilterTypeCombo.setManaged(false);
+            }
+            if (topReportFilterValueCombo != null) {
+                topReportFilterValueCombo.setVisible(false);
+                topReportFilterValueCombo.setManaged(false);
+            }
         }
 
         if (!show) {
@@ -271,16 +383,26 @@ public class SearchPanelManager {
      * Связывает текущий контроллер с элементами поиска
      */
     public void bindController(SearchableController controller) {
+        // Очищаем listener'ы от предыдущего контроллера
+        if (currentSearchableController != null) {
+            currentSearchableController.clearFilters();
+        }
+
         this.currentSearchableController = controller;
         if (controller == null) return;
 
-        // Связываем TextField только если он видим (не для редактора схем)
-        if (topSearchField != null && topSearchField.isVisible()) {
-            controller.bindSearchField(topSearchField);
-        }
+        // Связываем все элементы поиска без проверки видимости
+        if (topSearchField != null) controller.bindSearchField(topSearchField);
         if (topLocationFilter != null) controller.bindLocationFilter(topLocationFilter);
         if (topPhotosOnlyCheck != null) controller.bindPhotosOnlyCheck(topPhotosOnlyCheck);
         if (topSchemeFilter != null) controller.bindSchemeFilter(topSchemeFilter);
+        if (topStatusFilter != null) controller.bindStatusFilter(topStatusFilter);
+        if (topTypeFilter != null) controller.bindTypeFilter(topTypeFilter);
+        if (topManufacturerFilter != null) controller.bindManufacturerFilter(topManufacturerFilter);
+        if (topYearFilter != null) controller.bindYearFilter(topYearFilter);
+
+        // Связываем комбобоксы для паттерна отчетов
+        controller.bindReportFilterCombos(topReportFilterTypeCombo, topReportFilterValueCombo);
     }
 
     /**

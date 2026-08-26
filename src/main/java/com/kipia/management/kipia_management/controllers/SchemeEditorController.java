@@ -1838,6 +1838,8 @@ public class SchemeEditorController implements SearchableController {
             // Добавляем слушатель для синхронизации при изменении items в schemeComboBox
             schemeComboBox.getItems().addListener((javafx.collections.ListChangeListener<Scheme>) change -> {
                 while (change.next()) {
+                    // Очищаем выделение перед модификацией items, чтобы избежать IndexOutOfBoundsException
+                    schemeFilter.getSelectionModel().clearSelection();
                     schemeFilter.setItems(schemeComboBox.getItems());
                 }
             });

@@ -48,7 +48,7 @@
                 <!-- Контейнер для элементов поиска (изначально скрыт) -->
                 <HBox fx:id="topSearchFieldContainer" spacing="10" alignment="CENTER_LEFT"
                       styleClass="search-field-container" visible="false" managed="false">
-                    <!-- Фильтр по схеме (только для редактора схем) -->
+                    <!-- Фильтр по схеме (только для редактора схем, без кнопки удаления) -->
                     <ComboBox fx:id="topSchemeFilter"
                               styleClass="filter-combo"
                               visible="false"
@@ -61,34 +61,71 @@
                                styleClass="search-field-animated"
                                prefWidth="300"/>
 
-                    <!-- Фильтр по месту (только для галереи) -->
-                    <ComboBox fx:id="topLocationFilter"
-                              promptText="Все места установки"
+                    <!-- Два комбобокса для отчетов: тип фильтра → значение -->
+                    <ComboBox fx:id="topReportFilterTypeCombo"
+                              promptText="Фильтр..."
                               styleClass="filter-combo"
-                              visible="false"
-                              managed="false"/>
+                              visible="false" managed="false" prefWidth="150"/>
+                    <ComboBox fx:id="topReportFilterValueCombo"
+                              promptText="Значение..."
+                              styleClass="filter-combo"
+                              visible="false" managed="false" prefWidth="150"/>
 
-                    <!-- Чекбокс "Только с фото" (только для галереи) -->
-                    <CheckBox fx:id="topPhotosOnlyCheck"
-                              text="Только с фото"
-                              styleClass="filter-checkbox"
-                              visible="false"
-                              managed="false"/>
-                    <!-- Кнопка сброса -->
-                    <Button fx:id="topClearSearchButton" styleClass="clear-search-button" visible="false">
-                        <graphic>
-                            <ImageView fitWidth="24" fitHeight="24" pickOnBounds="true" preserveRatio="true">
-                                <Image url="@../images/reset.png"/>
-                            </ImageView>
-                        </graphic>
-                        <tooltip>
-                            <Tooltip text="Очистить фильтры"/>
-                        </tooltip>
-                    </Button>
+                    <!-- Контейнер активных (добавленных) фильтров -->
+                    <HBox fx:id="topActiveFiltersBox" spacing="6" alignment="CENTER_LEFT">
+                        <!-- Место установки -->
+                        <ComboBox fx:id="topLocationFilter"
+                                  promptText="Все места установки"
+                                  styleClass="filter-combo"
+                                  visible="false" managed="false"/>
+                        <Button fx:id="topLocationRemove" styleClass="filter-remove-button"
+                                text="×" visible="false" managed="false"/>
+                        <!-- Только с фото -->
+                        <CheckBox fx:id="topPhotosOnlyCheck"
+                                  text="Только с фото"
+                                  styleClass="filter-checkbox"
+                                  visible="false" managed="false"/>
+                        <Button fx:id="topPhotosOnlyRemove" styleClass="filter-remove-button"
+                                text="×" visible="false" managed="false"/>
+                        <!-- Статус -->
+                        <ComboBox fx:id="topStatusFilter"
+                                  promptText="Все статусы"
+                                  styleClass="filter-combo"
+                                  visible="false" managed="false" prefWidth="150"/>
+                        <Button fx:id="topStatusRemove" styleClass="filter-remove-button"
+                                text="×" visible="false" managed="false"/>
+                        <!-- Тип -->
+                        <ComboBox fx:id="topTypeFilter"
+                                  promptText="Все типы"
+                                  styleClass="filter-combo"
+                                  visible="false" managed="false" prefWidth="150"/>
+                        <Button fx:id="topTypeRemove" styleClass="filter-remove-button"
+                                text="×" visible="false" managed="false"/>
+                        <!-- Производитель -->
+                        <ComboBox fx:id="topManufacturerFilter"
+                                  promptText="Все производители"
+                                  styleClass="filter-combo"
+                                  visible="false" managed="false" prefWidth="150"/>
+                        <Button fx:id="topManufacturerRemove" styleClass="filter-remove-button"
+                                text="×" visible="false" managed="false"/>
+                        <!-- Год -->
+                        <ComboBox fx:id="topYearFilter"
+                                  promptText="Все годы"
+                                  styleClass="filter-combo"
+                                  visible="false" managed="false" prefWidth="120"/>
+                        <Button fx:id="topYearRemove" styleClass="filter-remove-button"
+                                text="×" visible="false" managed="false"/>
+                    </HBox>
+
+                    <!-- Выпадающий список доступных фильтров (добавление) -->
+                    <ComboBox fx:id="topAddFilterCombo"
+                              promptText="Фильтр +"
+                              styleClass="filter-combo"
+                              visible="false" managed="false" prefWidth="130"/>
                 </HBox>
             </HBox>
             <Region HBox.hgrow="ALWAYS"/>
-            <Label text="ver 2.0.1" styleClass="version-label">
+            <Label fx:id="versionLabel" text="ver 2.0.1" styleClass="version-label">
                 <padding>
                     <Insets right="15"/>
                 </padding>
