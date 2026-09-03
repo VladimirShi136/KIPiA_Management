@@ -24,10 +24,6 @@ mkdir "KIPiA_Installer"
 :: Шаг 2. Копирование JAR
 echo Step 1: Copying JAR file...
 copy "target\KIPiA_Management-%APP_VERSION%.jar" "KIPiA_Installer\"
-if %ERRORLEVEL% NEQ 0 (
-    echo ERROR: JAR file not found in target\! Did Maven build succeed?
-    exit /b 1
-)
 
 :: Шаг 3. Копирование зависимостей
 echo Step 2: Copying dependencies...
@@ -62,6 +58,7 @@ copy "installer_resources\ViewLogs.bat" "KIPiA_Installer\" >nul 2>&1
 copy "installer_resources\CheckEnvironment.bat" "KIPiA_Installer\" >nul 2>&1
 if exist "installer_resources\iconApp.ico" copy "installer_resources\iconApp.ico" "KIPiA_Installer\" >nul 2>&1
 
+:: ChangeLog и отладочные файлы
 if exist "installer_resources\ChangeLog.txt" (
     copy "installer_resources\ChangeLog.txt" "KIPiA_Installer\" >nul 2>&1
     echo ChangeLog.txt copied
@@ -82,16 +79,26 @@ echo Step 5: Creating launcher...
     echo set "INSTALL_DIR=%%~dp0"
     echo set "USER_DATA=%%APPDATA%%\KIPiA_Management"
     echo set "JAVAFX_DIR=%%INSTALL_DIR%%\javafx"
-
+    
+    echo DEBUG: Checking USER_DATA directory existence...
     echo if not exist "%%USER_DATA%%" mkdir "%%USER_DATA%%"
+    
+    echo DEBUG: Checking logs subdirectory...
     echo if not exist "%%USER_DATA%%\logs" mkdir "%%USER_DATA%%\logs"
+    
+    echo DEBUG: Checking data subdirectory...
     echo if not exist "%%USER_DATA%%\data" mkdir "%%USER_DATA%%\data"
-
+    
+    echo DEBUG: Checking log4j2.xml configuration...
     echo if not exist "%%USER_DATA%%\log4j2.xml" copy "%%INSTALL_DIR%%\log4j2.xml" "%%USER_DATA%%\" ^>nul
+    
+    echo DEBUG: Checking ViewLogs.bat utility...
     echo if not exist "%%USER_DATA%%\ViewLogs.bat" copy "%%INSTALL_DIR%%\ViewLogs.bat" "%%USER_DATA%%\" ^>nul
-
+    
+    echo DEBUG: Adding PATH variable...
     echo set "PATH=%%JAVAFX_DIR%%;%%PATH%%"
-
+    
+    echo DEBUG: Starting application...
     echo start "" javaw ^
         -Djava.library.path="%%JAVAFX_DIR%%" ^
         --module-path "%%JAVAFX_DIR%%" ^
@@ -100,12 +107,9 @@ echo Step 5: Creating launcher...
         -Dlog4j.configurationFile="%%USER_DATA%%\log4j2.xml" ^
         -cp "%%INSTALL_DIR%%\KIPiA_Management-%APP_VERSION%.jar;%%INSTALL_DIR%%\dependencies\*;%%JAVAFX_DIR%%\*" ^
         com.kipia.management.kipia_management.Main
-
+        
+    echo DEBUG: Ending local scope...
     echo endlocal
 )
 
 echo Launcher script created successfully!
-echo.
-echo ========================================
-echo    INSTALLER STRUCTURE READY
-echo ========================================

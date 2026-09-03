@@ -114,7 +114,7 @@
          * Применяет текущие цвета к фигуре
          */
         @Override
-        protected void applyCurrentStyle() {
+        public void applyCurrentStyle() {
             applyStyle(rectangle, fillColor, strokeColor, DEFAULT_STROKE_WIDTH);
         }
 
@@ -176,6 +176,9 @@
             rect.setStroke(stroke);
             rect.setStrokeWidth(strokeWidth);
             rect.setStrokeType(StrokeType.INSIDE);
+
+            // Добавляем белую обводку для черных фигур в темной теме
+            applyDarkThemeOutline(rect, stroke);
         }
 
         /**

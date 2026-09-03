@@ -180,6 +180,19 @@ public class ConflictResolutionDialog implements Initializable {
 
         // Добавляем перетаскивание за шапку
         setupDragHandling();
+
+        // ── Горячая клавиша F1 для вызова справки ───────────────────
+        // Ждем пока сцена будет установлена
+        javafx.application.Platform.runLater(() -> {
+            if (titleLabel.getScene() != null) {
+                titleLabel.getScene().setOnKeyPressed(event -> {
+                    if (event.getCode() == javafx.scene.input.KeyCode.F1) {
+                        showHelpDialog();
+                        event.consume();
+                    }
+                });
+            }
+        });
     }
     
     /**

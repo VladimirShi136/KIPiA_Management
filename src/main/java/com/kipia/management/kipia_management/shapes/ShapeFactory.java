@@ -37,6 +37,9 @@ public record ShapeFactory(AnchorPane pane, Consumer<String> statusSetter, Consu
 
         shape.addContextMenu(shape::handleDelete);
 
+        // Применяем текущий стиль (включая обводку для темной темы)
+        shape.applyCurrentStyle();
+
         return shape;
     }
 

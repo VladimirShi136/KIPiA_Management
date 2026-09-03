@@ -280,6 +280,19 @@ public class MainController {
     private void setupWindowControls() {
         if (topBar == null) return;
 
+        // ── Горячая клавиша F1 для вызова справки ───────────────────
+        // Ждем пока сцена будет установлена
+        topBar.sceneProperty().addListener((_, _, newScene) -> {
+            if (newScene != null) {
+                newScene.setOnKeyPressed(event -> {
+                    if (event.getCode() == javafx.scene.input.KeyCode.F1) {
+                        showHelp();
+                        event.consume();
+                    }
+                });
+            }
+        });
+
         // ── Перетаскивание окна ──────────────────────────────────
         topBar.setOnMousePressed(event -> {
             if (isAnimating) return;

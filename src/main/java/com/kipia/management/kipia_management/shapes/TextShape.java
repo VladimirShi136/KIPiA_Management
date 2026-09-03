@@ -25,6 +25,7 @@ public class TextShape extends ShapeBase {
     private final Text text;
     private final ShapeManager shapeManager;
     private final Consumer<String> statusSetter;
+    private final javafx.scene.shape.Rectangle selectionBorder;
 
     public TextShape(double x, double y, String content,
                      AnchorPane pane, Consumer<String> statusSetter,
@@ -46,6 +47,15 @@ public class TextShape extends ShapeBase {
         text.setMouseTransparent(false);
         text.setPickOnBounds(true);
 
+        // Создаем рамку выделения
+        selectionBorder = new javafx.scene.shape.Rectangle();
+        selectionBorder.setStroke(Color.BLUE);
+        selectionBorder.setStrokeWidth(2);
+        selectionBorder.setFill(Color.TRANSPARENT);
+        selectionBorder.setMouseTransparent(true);
+        selectionBorder.setVisible(false);
+
+        getChildren().add(selectionBorder);
         getChildren().add(text);
 
         // УСТАНАВЛИВАЕМ позицию
@@ -103,6 +113,10 @@ public class TextShape extends ShapeBase {
             double textWidth = textBounds.getWidth() + 4;  // +2px с каждой стороны
             double textHeight = textBounds.getHeight() + 4; // +2px сверху и снизу
             setCurrentDimensions(textWidth, textHeight);
+
+            // Обновляем рамку выделения
+            selectionBorder.setWidth(textWidth);
+            selectionBorder.setHeight(textHeight);
         });
     }
 
@@ -245,14 +259,19 @@ public class TextShape extends ShapeBase {
     }
 
     @Override
-    protected void applyCurrentStyle() {
+    public void applyCurrentStyle() {
         text.setFill(strokeColor); // Для текста используем strokeColor как цвет текста
         // Текст обычно не имеет отдельной заливки фона
+
+        // Добавляем белую обводку для черного текста в темной теме
+        applyDarkThemeOutline(text, strokeColor);
     }
 
     @Override
     protected void applySelectedStyle() {
         text.setFill(Color.BLUE); // Выделение синим
+        // Для выделенного текста не применяем белую обводку
+        text.setEffect(null);
     }
 
     @Override
@@ -328,13 +347,8 @@ public class TextShape extends ShapeBase {
     }
 
     private void setupTextEditHandler() {
-        setOnMouseClicked(event -> {
-            // Двойной клик для редактирования текста - работает всегда
-            if (event.getButton() == MouseButton.PRIMARY && event.getClickCount() == 2) {
-                event.consume();
-                openTextEditDialog();
-            }
-        });
+        // Двойной клик отключен - теперь текст выделяется как обычная фигура
+        // Редактирование текста доступно через контекстное меню
     }
 
     private void openTextEditDialog() {
@@ -360,19 +374,19 @@ public class TextShape extends ShapeBase {
     }
 
     /**
-     * ПЕРЕОПРЕДЕЛЯЕМ метод выделения - без handles
+     * ПЕРЕОПРЕДЕЛЯЕМ метод выделения - показываем рамку
      */
     @Override
     public void highlightAsSelected() {
-        applySelectedStyle();
+        selectionBorder.setVisible(true);
     }
 
     /**
-     * ПЕРЕОПРЕДЕЛЯЕМ метод сброса выделения
+     * ПЕРЕОПРЕДЕЛЯЕМ метод сброса выделения - скрываем рамку
      */
     @Override
     public void resetHighlight() {
-        applyDefaultStyle();
+        selectionBorder.setVisible(false);
     }
 
     /**

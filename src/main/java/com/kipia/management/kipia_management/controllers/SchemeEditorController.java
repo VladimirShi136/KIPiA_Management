@@ -412,9 +412,26 @@ public class SchemeEditorController implements SearchableController {
                     }
                 }
             } else {
-                if (isShapeSelected()) {
-                    switch (event.getCode()) {
-                        case DELETE, BACK_SPACE -> deleteSelectedShape();
+                // Горячие клавиши для инструментов
+                switch (event.getCode()) {
+                    case L -> toggleTool(ShapeManager.Tool.LINE, "Инструмент: Линия - кликните и перетащите для рисования");
+                    case R -> toggleTool(ShapeManager.Tool.RECTANGLE, "Инструмент: Прямоугольник - кликните и перетащите для рисования");
+                    case E -> toggleTool(ShapeManager.Tool.ELLIPSE, "Инструмент: Эллипс - кликните и перетащите для рисования");
+                    case K -> toggleTool(ShapeManager.Tool.RHOMBUS, "Инструмент: Ромб - кликните и перетащите для рисования");
+                    case T -> toggleTool(ShapeManager.Tool.TEXT, "Инструмент: Текст - кликните для добавления текста");
+                    case ESCAPE -> {
+                        if (shapeManager != null) {
+                            shapeManager.deselectShape();
+                            resetCurrentTool();
+                        }
+                        event.consume();
+                    }
+                    default -> {
+                        if (isShapeSelected()) {
+                            switch (event.getCode()) {
+                                case DELETE, BACK_SPACE -> deleteSelectedShape();
+                            }
+                        }
                     }
                 }
             }
@@ -686,9 +703,9 @@ public class SchemeEditorController implements SearchableController {
     private void handleShapeDeselection() {
         // Обновляем статус в зависимости от состояния инструмента
         if (currentTool != null) {
-            statusLabel.setText("Инструмент: " + getToolName(currentTool) + " - кликните на схему для создания");
+            statusLabel.setText("Выделение снято. Инструмент: " + getToolName(currentTool) + " - кликните на схему для создания");
         } else {
-            statusLabel.setText("Готов - выберите инструмент или работайте с фигурами");
+            statusLabel.setText("Выделение снято. Готов - выберите инструмент или работайте с фигурами");
         }
         // Обновляем стили кнопок (на всякий случай)
         updateToolButtonStyles();
@@ -1002,7 +1019,7 @@ public class SchemeEditorController implements SearchableController {
 
         // Определяем цвета в зависимости от темы
         Color backgroundColor = StyleUtils.isDarkTheme()
-                ? Color.rgb(30, 30, 35)  // Темно-серый для темной темы
+                ? Color.rgb(50, 50, 55)  // Светло-серый для темной темы
                 : Color.WHITE;            // Белый для светлой темы
         Color strokeColor = StyleUtils.isDarkTheme()
                 ? Color.rgb(60, 60, 70)   // Светло-серый для темной темы

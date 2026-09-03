@@ -49,7 +49,7 @@ public class LineShape extends ShapeBase {
         double minY = Math.min(startY, endY);
 
         line = new Line(startX - minX, startY - minY, endX - minX, endY - minY);
-        line.setStroke(Color.BLACK);
+        line.setStroke(strokeColor);
         line.setStrokeWidth(defaultStrokeWidth);
 
         getChildren().clear();
@@ -444,15 +444,21 @@ public class LineShape extends ShapeBase {
     }
 
     @Override
-    protected void applyCurrentStyle() {
+    public void applyCurrentStyle() {
         line.setStroke(strokeColor);
         line.setStrokeWidth(defaultStrokeWidth);
+
+        // Добавляем белую обводку для черных фигур в темной теме
+        applyDarkThemeOutline(line, strokeColor);
     }
 
     @Override
     protected void applySelectedStyle() {
         line.setStroke(Color.BLUE);
         line.setStrokeWidth(defaultStrokeWidth + 1);
+
+        // Для выделенной линии не применяем белую обводку
+        line.setEffect(null);
     }
 
     @Override

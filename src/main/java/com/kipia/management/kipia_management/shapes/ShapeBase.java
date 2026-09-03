@@ -3,9 +3,11 @@ package com.kipia.management.kipia_management.shapes;
 import com.kipia.management.kipia_management.managers.ClipboardManager;
 import com.kipia.management.kipia_management.managers.ShapeManager;
 import com.kipia.management.kipia_management.utils.CustomAlertDialog;
+import com.kipia.management.kipia_management.utils.StyleUtils;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.control.*;
+import javafx.scene.effect.DropShadow;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
@@ -863,7 +865,30 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
     /**
      * Применяет текущие цвета к фигуре
      */
-    protected abstract void applyCurrentStyle();
+    public abstract void applyCurrentStyle();
+
+    /**
+     * Применяет белую обводку для черных фигур в темной теме
+     * Использует DropShadow для создания эффекта обводки
+     */
+    protected void applyDarkThemeOutline(Node node, Color strokeColor) {
+        if (StyleUtils.isDarkTheme() && isBlackColor(strokeColor)) {
+            DropShadow whiteOutline = new DropShadow();
+            whiteOutline.setColor(Color.WHITE);
+            whiteOutline.setRadius(4);
+            whiteOutline.setSpread(0.3);
+            node.setEffect(whiteOutline);
+        } else {
+            node.setEffect(null);
+        }
+    }
+
+    /**
+     * Проверяет, является ли цвет черным (или очень темным)
+     */
+    private boolean isBlackColor(Color color) {
+        return color.getRed() < 0.1 && color.getGreen() < 0.1 && color.getBlue() < 0.1;
+    }
 
     /**
      * Настройка контекстного меню по умолчанию (без действия удаления)
@@ -1257,6 +1282,8 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
                 }
                 // ОТЛАДКА: проверяем примененные цвета
                 shape.addContextMenu(shape::handleDelete);
+                // Применяем текущий стиль (включая обводку для темной темы)
+                shape.applyCurrentStyle();
             }
             return shape;
         } catch (Exception e) {

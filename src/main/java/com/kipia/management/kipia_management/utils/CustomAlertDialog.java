@@ -301,30 +301,77 @@ public class CustomAlertDialog {
     }
 
     /**
-     * Диалог выбора цвета с ColorPicker
+     * Диалог выбора цвета с предустановленными цветами
      */
     public static Optional<Color> showColorPickerDialog(String title, Color initialColor) {
         boolean dark = isDark();
         Stage stage = createStage();
 
-        // ColorPicker
-        ColorPicker colorPicker = new ColorPicker(initialColor);
-        colorPicker.setStyle(inputFieldStyle());
+        // Предустановленные цвета (хорошо видны на обоих фонах)
+        Color[] presetColors = {
+            Color.RED,          // Красный
+            Color.GREEN,        // Зеленый
+            Color.BLUE,         // Синий
+            Color.YELLOW,       // Желтый
+            Color.MAGENTA,      // Пурпурный
+            Color.BLACK,        // Черный
+            Color.ORANGE,       // Оранжевый
+            Color.CYAN          // Голубой
+        };
 
         // Предпросмотр цвета
-        Rectangle colorPreview = new Rectangle(50, 30);
+        Rectangle colorPreview = new Rectangle(60, 40);
         colorPreview.setArcWidth(5);
         colorPreview.setArcHeight(5);
         colorPreview.setFill(initialColor);
         colorPreview.setStroke(dark ? Color.web("#4A5568") : Color.web("#bdc3c7"));
         colorPreview.setStrokeWidth(1);
 
-        colorPicker.valueProperty().addListener((_, _, newColor) -> colorPreview.setFill(newColor));
+        // Сетка кнопок цветов
+        GridPane colorGrid = new GridPane();
+        colorGrid.setHgap(8);
+        colorGrid.setVgap(8);
+        colorGrid.setAlignment(Pos.CENTER);
 
-        // Контейнер для предпросмотра и пикера
-        HBox colorBox = new HBox(10);
-        colorBox.setAlignment(Pos.CENTER_LEFT);
-        colorBox.getChildren().addAll(colorPicker, colorPreview);
+        final Color[] selectedColor = {initialColor};
+
+        int columns = 4;
+        for (int i = 0; i < presetColors.length; i++) {
+            Color color = presetColors[i];
+            Rectangle colorRect = new Rectangle(40, 40);
+            colorRect.setFill(color);
+            colorRect.setStroke(dark ? Color.web("#4A5568") : Color.web("#bdc3c7"));
+            colorRect.setStrokeWidth(1);
+            colorRect.setArcWidth(5);
+            colorRect.setArcHeight(5);
+            colorRect.setCursor(javafx.scene.Cursor.HAND);
+
+            final int index = i;
+            colorRect.setOnMouseClicked(_ -> {
+                selectedColor[0] = color;
+                colorPreview.setFill(color);
+                // Подсветка выбранного цвета
+                for (javafx.scene.Node child : colorGrid.getChildren()) {
+                    if (child instanceof Rectangle rect) {
+                        rect.setStroke(dark ? Color.web("#4A5568") : Color.web("#bdc3c7"));
+                        rect.setStrokeWidth(1);
+                    }
+                }
+                colorRect.setStroke(dark ? Color.WHITE : Color.BLACK);
+                colorRect.setStrokeWidth(1);
+            });
+
+            colorGrid.add(colorRect, i % columns, i / columns);
+        }
+
+        // Контейнер для предпросмотра (по центру)
+        HBox previewBox = new HBox(10);
+        previewBox.setAlignment(Pos.CENTER);
+        previewBox.setMaxWidth(Double.MAX_VALUE);
+        
+        Label previewLabel = new Label("Выбранный цвет:");
+        previewLabel.setStyle("-fx-text-fill: -fx-text-primary;");
+        previewBox.getChildren().addAll(previewLabel, colorPreview);
 
         // Кнопки
         Button okBtn = new Button("Применить");
@@ -365,17 +412,17 @@ public class CustomAlertDialog {
         }
 
         // Сборка контента
-        VBox content = new VBox(10);
-        content.setPadding(new Insets(12, 20, 4, 20));
+        VBox content = new VBox(15);
+        content.setPadding(new Insets(18, 16, 0, 16));
         content.setStyle("-fx-background-color: transparent;");
-        content.getChildren().add(colorBox);
+        content.getChildren().addAll(previewBox, colorGrid);
 
         Region divider = createDivider();
         VBox.setMargin(divider, new Insets(12, 0, 12, 0));
 
         VBox root = createRoot(topBox, content, divider, btnBar);
         root.setMinWidth(320);
-        root.setMaxWidth(380);
+        root.setMaxWidth(400);
 
         setupDragToMove(root, stage);
 
@@ -398,7 +445,7 @@ public class CustomAlertDialog {
 
         final Color[] result = {null};
         okBtn.setOnAction(_ -> {
-            result[0] = colorPicker.getValue();
+            result[0] = selectedColor[0];
             stage.close();
         });
         cancelBtn.setOnAction(_ -> stage.close());

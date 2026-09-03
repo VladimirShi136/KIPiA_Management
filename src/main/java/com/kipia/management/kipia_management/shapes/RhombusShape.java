@@ -220,7 +220,7 @@ public class RhombusShape extends ShapeBase {
 
 
     @Override
-    protected void applyCurrentStyle() {
+    public void applyCurrentStyle() {
         applyStyle(fillColor, strokeColor, DEFAULT_STROKE_WIDTH);
     }
 
@@ -244,6 +244,9 @@ public class RhombusShape extends ShapeBase {
         rhombusPath.setStroke(stroke);
         rhombusPath.setStrokeWidth(strokeWidth);
         rhombusPath.setStrokeType(StrokeType.INSIDE);
+
+        // Добавляем белую обводку для черных фигур в темной теме
+        applyDarkThemeOutline(rhombusPath, stroke);
     }
 
     @Override

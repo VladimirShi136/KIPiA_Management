@@ -2,6 +2,7 @@
 chcp 65001
 title KIPiA - Build EXE Installer
 
+
 cd /d "%~dp0"
 
 echo ========================================
@@ -11,6 +12,7 @@ echo.
 
 set APP_VERSION=
 FOR /F "usebackq tokens=*" %%V IN (`powershell "(Get-Content 'pom.xml' | Select-Xml '//version')[0].Node.InnerText"`) DO SET APP_VERSION=%%V
+
 
 if not defined APP_VERSION (
     echo ERROR: Version not found in pom.xml!
@@ -25,6 +27,7 @@ echo.
 echo [1/4] Cleaning previous builds...
 if exist "KIPiA_Installer" rmdir /s /q "KIPiA_Installer"
 if exist "Output" rmdir /s /q "Output"
+
 
 :: Шаг 2. Сборка JAR
 echo.
@@ -51,7 +54,7 @@ if %ERRORLEVEL% NEQ 0 (
 :: Шаг 4. Генерация ISS и компиляция EXE
 echo.
 echo [4/4] Generating ISS and compiling EXE...
-powershell -ExecutionPolicy Bypass -File "%~dp0generate-iss.ps1" -Mode "normal" -Version "%APP_VERSION%"
+call generate-iss.ps1 normal %APP_VERSION%
 if %ERRORLEVEL% NEQ 0 (
     echo.
     echo ERROR: ISS generation failed!
@@ -76,10 +79,10 @@ echo.
 
 set EXE_FILE="Output\KIPiA_Management_%APP_VERSION%.exe"
 if exist %EXE_FILE% (
-    echo [OK] SUCCESS: %EXE_FILE%
+    echo ✓ SUCCESS: %EXE_FILE%
     for %%F in (%EXE_FILE%) do echo   Size: %%~zF bytes
 ) else (
-    echo [!!] FAILED: EXE not created
+    echo ✗ FAILED: EXE not created
 )
 
 echo.

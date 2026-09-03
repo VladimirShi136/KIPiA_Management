@@ -1252,7 +1252,7 @@ public class ShapeManager {
      */
     public void refreshShapeColors() {
         if (shapeService == null) return;
-        
+
         // Итерируем через дочерние элементы панели и находим все ShapeBase
         for (Node node : pane.getChildren()) {
             if (node instanceof ShapeBase shapeBase) {
@@ -1267,6 +1267,9 @@ public class ShapeManager {
                     Color adjustedStroke = adjustColorForTheme(originalStroke);
                     shapeBase.setStroke(adjustedStroke);
                 }
+
+                // Переприменяем текущий стиль для обновления обводки в темной теме
+                shapeBase.applyCurrentStyle();
             }
         }
     }

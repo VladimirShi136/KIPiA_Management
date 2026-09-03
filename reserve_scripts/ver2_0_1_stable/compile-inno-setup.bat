@@ -14,14 +14,6 @@ set INNO_PATH="C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
 
 if not exist %INNO_PATH% (
     echo ERROR: Inno Setup compiler not found at %INNO_PATH%
-    echo Please install Inno Setup 6 from https://jrsoftware.org/isinfo.php
-    pause
-    exit /b 1
-)
-
-if not exist %ISS_FILE% (
-    echo ERROR: ISS file not found: %ISS_FILE%
-    echo Run generate-iss.ps1 first.
     pause
     exit /b 1
 )
@@ -33,12 +25,11 @@ echo Compiling %ISS_FILE%...
 
 if %ERRORLEVEL% EQU 0 (
     echo.
-    echo [OK] EXE INSTALLER CREATED SUCCESSFULLY!
-    echo File: Output\KIPiA_Management_*.exe
+    echo ✅ EXE INSTALLER CREATED SUCCESSFULLY!
+    echo File: Output\KIPiA_Management_Setup_*.exe
 ) else (
     echo.
-    echo [!!] EXE CREATION FAILED!
-    echo Check the ISS file for errors: %ISS_FILE%
+    echo ❌ EXE CREATION FAILED!
 )
 
 echo.

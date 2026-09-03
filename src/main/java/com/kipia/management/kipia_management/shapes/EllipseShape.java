@@ -70,7 +70,7 @@ public class EllipseShape extends ShapeBase {
     }
 
     @Override
-    protected void applyCurrentStyle() {
+    public void applyCurrentStyle() {
         applyStyle(ellipse, fillColor, strokeColor, DEFAULT_STROKE_WIDTH);
     }
 
@@ -165,5 +165,8 @@ public class EllipseShape extends ShapeBase {
         ellipse.setStroke(stroke);
         ellipse.setStrokeWidth(strokeWidth);
         ellipse.setStrokeType(StrokeType.INSIDE);
+
+        // Добавляем белую обводку для черных фигур в темной теме
+        applyDarkThemeOutline(ellipse, stroke);
     }
 }

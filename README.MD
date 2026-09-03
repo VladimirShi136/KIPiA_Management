@@ -31,70 +31,107 @@
 - **Импорт/экспорт** данных в Excel
 - **Валидация данных** при вводе
 
-### 🗺️ Редактор схем
-- **Визуальное расположение** приборов на схемах
-- **Рисование фигур** (прямоугольники, эллипсы, линии, текст)
-- **Привязка приборов** к позициям на схеме
-- **Undo/Redo операций**
-
-### 📸 Фотоархив
+### 📸 Галерея фотографий
 - **Привязка фотографий** к приборам
 - **Галерея изображений** с просмотром
 - **Управление фото-коллекцией**
 
+### 🗺️ Редактор схем
+- **Визуальное расположение** приборов на схемах
+- **Рисование фигур** (прямоугольники, эллипсы, ромбы / песочные часы, линии, текст)
+- **Привязка приборов** к позициям на схеме
+- **Undo/Redo операций**
+
 ### 📈 Отчетность
 - **Генерация отчетов** по приборам
-- **Графики и диаграммы** (используется JFreeChart)
-- **Экспорт отчетов** в Excel
+- **Визуализация данных** с кольцевыми диаграммами (DonutChart на JavaFX)
+- **Фильтрация отчетов** по статусу, типу, месту установки, производителю, году
 
 ### ⚙️ Дополнительные функции
-- **Темная/светлая тема**
+- **Темная/светлая тема** с переключением на лету
 - **Логирование операций** (Log4j2)
 - **Работа с буфером обмена**
 - **Валидация ячеек таблиц**
+- **Синхронизация данных** с разрешением конфликтов при импорте
+- **Проверка системного времени** перед операциями с БД
+- **Контекстная справка** для каждого раздела приложения
+- **Чтение EXIF данных** из фотографий
+- **Кросс-платформенная синхронизация** с Android-приложением [KIPiA_Management_Mobile](https://github.com/VladimirShi136/KIPiA_Management_Mobile)
 
 ---
 
 ## 🖼️ Скриншоты интерфейса
 
 ### Главный экран
-![Главный экран приложения](docs/screenshots/2025-12-14_213837.jpg)
-*Навигационное меню и статистика приборов*
+![Главный экран приложения](docs/screenshots/main_window.jpg)
+*Главный экран и навигационное меню*
+
+### Таблица приборов
+![Таблица с приборами](docs/screenshots/devices_window.jpg)
+*Таблица приборов с статистикой*
+
+### Галерея фотографий
+![Галерея со списком фотографий](docs/screenshots/gallery_window.jpg)
+*Галерея фотографий с статистикой*
 
 ### Редактор схем
-![Редактор схем с приборами](docs/screenshots/2025-12-14_213840.jpg)
-*Визуальное расположение оборудования на плане*
+![Редактор схем с приборами](docs/screenshots/scheme_window.jpg)
+*Редактор схем с панелью приборов*
 
+### Отчеты
+![Экран с отчетами](docs/screenshots/reports_window.jpg)
+*Экран с отчетами*
 ---
 
 ## ⚡ Установка и запуск
 
-### Предварительные требования
-- **Java JDK 23** или выше
-- **Maven 3.9+** (для сборки из исходников)
+### Установка через EXE установщик
 
-### Сборка из исходников
+1. Скачайте последний релиз `KIPiA_Management_*.exe` из раздела [Releases](https://github.com/VladimirShi136/KIPiA_Management/releases)
+2. Запустите установщик и следуйте инструкциям
+3. Приложение будет установлено в выбранную директорию
+4. Запустите через ярлык на рабочем столе или из меню "Пуск"
+
+**Примечание:** EXE установщик требует установленной Java 23+. Java Runtime в установщик не включена.
+
+### Сборка EXE из исходников
+
+#### Предварительные требования
+- **Java JDK 23** или выше
+- **Maven 3.9+**
+- **Inno Setup 6** - установите с [официального сайта](https://jrsoftware.org/isinfo.php)
+- **JavaFX SDK 25.0.1** - распакуйте в `C:\javafx-sdk-25.0.1\`
+
+#### Процесс сборки
 
 ```bash
 # Клонирование репозитория
 git clone https://github.com/VladimirShi136/KIPiA_Management
 cd KIPiA_Management
 
+# Запуск полной сборки EXE
+build-exe-installer.bat
+```
+
+Скрипт автоматически выполнит:
+1. Очистку предыдущих сборок
+2. Сборку JAR через Maven (`mvn clean package`)
+3. Создание структуры установщика (копирование JAR, зависимостей, JavaFX)
+4. Генерацию ISS файла конфигурации
+5. Компиляцию EXE через Inno Setup
+
+Готовый установщик будет находиться в папке `Output\KIPiA_Management_*.exe`
+
+### Запуск JAR напрямую (для разработки)
+
+```bash
 # Сборка проекта
 mvn clean package
 
-# Запуск приложения (впишите текущую версию)
-java -jar target/KIPiA_Management-*.*.*.jar
-```
-
-### Прямой запуск JAR
-
-- Скачайте последний релиз KIPiA_Management-*.*.*.jar
-- Убедитесь, что установлена Java 23+
-- Запустите:
-
-```bash
-java -jar KIPiA_Management-*.*.*.jar
+# Запуск (укажите путь к JavaFX SDK)
+java --module-path "PATH_TO_JAVAFX_SDK\lib" ^
+     --add-modules javafx.controls,javafx.fxml,javafx.graphics,javafx.base ^
+     -jar target/KIPiA_Management-*.jar
 ```
 
 ---
@@ -103,14 +140,14 @@ java -jar KIPiA_Management-*.*.*.jar
 
 - **Язык:** Java 23
 - **GUI Framework:** JavaFX 25.0.1
-- **База данных:** SQLite 3.42
+- **База данных:** SQLite 3.42.0.0
 - **Сборка:** Maven
 - **Библиотеки:**
     - Apache POI 5.4.0 (работа с Excel)
-    - JFreeChart 1.5.4 (графики и диаграммы)
     - Gson 2.10.1 (работа с JSON)
     - Log4j2 2.21.1 (логирование)
-    - Apache Commons Lang3 & IO
+    - Apache Commons Lang3 3.16.0 & IO 2.18.0
+    - Metadata Extractor 2.19.0 (чтение EXIF из фотографий)
 
 ---
 
@@ -137,6 +174,11 @@ java -jar KIPiA_Management-*.*.*.jar
 │   │       ├── <b>🗃️ data/</b>                 <i># База данных</i>
 │   │       └── <b>📝 logs/</b>                  <i># Логи</i>
 │   │
+├── <b>🔧 build-exe-installer.bat</b>          <i># Главный скрипт сборки EXE</i>
+├── <b>🔧 compile-inno-setup.bat</b>          <i># Компиляция ISS через Inno Setup</i>
+├── <b>🔧 create-installer-structure.bat</b>   <i># Создание структуры установщика</i>
+├── <b>🔧 generate-iss.ps1</b>                 <i># Генерация ISS конфигурации</i>
+│   
 ├── <b>📖 docs/</b>                               <i># Документация</i>
 │   ├── USER_GUIDE.md
 │   ├── SCHEME_EDITOR_GUIDE.md
@@ -144,11 +186,25 @@ java -jar KIPiA_Management-*.*.*.jar
 │   └── <b>🖼️ screenshots/</b>                    <i># Скриншоты к документации</i>
 │
 ├── <b>📦 installer_resources/</b>                <i># Ресурсы установщика</i>
-│   ├── setup.iss
-│   └── build-exe-installer.bat
+│   ├── KIPiA_Setup.iss
+│   ├── ChangeLog.txt
+│   ├── CheckEnvironment.bat
+│   ├── DebugLauncher.bat
+│   └── <b>🖼️ icons/</b>                         <i># Иконки приложения</i>
+│
+├── <b>📁 device_photos/</b>                     <i># Фотоархив приборов (для разработки)</i>
+│
+├── <b>📁 Output/</b>                            <i># Собранный установщик .exe</i>
+│   └── KIPiA_Management_*.exe
+│
+├── <b>📁 reserve_scripts/</b>                   <i># Резервные скрипты сборки</i>
+│
+├── <b>📁 KIPiA_Installer/</b>                   <i># Папка установщика</i>
 │
 ├── <b>⚙️ pom.xml</b>                            <i># Конфигурация Maven</i>
-└── <b>📄 README.md</b>                          <i># Вы читаете этот файл</i>
+├── <b>📄 README.md</b>                          <i># Вы читаете этот файл</i>
+├── <b>📄 LICENSE</b>                            <i># Лицензия MIT</i>
+└── <b>📄 .gitignore</b>                         <i># Игнорируемые файлы Git</i>
 </code>
 </pre>
 
@@ -181,12 +237,18 @@ java -jar KIPiA_Management-*.*.*.jar
 4. **Менеджер фотографий** - синглтон для управления фотоархивом
 5. **Темы оформления** - светлая/темная тема с переключением на лету
 6. **Логирование** - Log4j2 с конфигурируемым уровнем детализации
+7. **Синхронизация данных** - экспорт/импорт БД с разрешением конфликтов
+8. **Проверка времени** - валидация системного времени перед операциями записи
+9. **Контекстная справка** - встроенная система помощи для каждого раздела
 
 ### База данных:
-- **Файл:** `data/kipia_management.db`
+- **Файл:**
+  - Режим разработки: `src/main/resources/data/kipia_management.db`
+  - Режим продакшена: `%APPDATA%/KIPiA_Management/data/kipia_management.db`
 - **Таблицы:** devices, schemes, device_locations
 - **Автоматическое создание** при первом запуске
-- **Миграции:** выполняются автоматически через DatabaseService
+- **Миграции:** выполняются автоматически через DatabaseService (soft delete, two-way merge)
+- **Синхронизация:** экспорт/импорт в ZIP с разрешением конфликтов
 
 ### Обработка ошибок:
 - **Пользовательские алерты** (CustomAlert)
@@ -211,20 +273,20 @@ java -jar KIPiA_Management-*.*.*.jar
    - Для developer (путь к sdk выбрать свой):
 
 `--module-path
-"C:\javafx-sdk-25.0.1\lib"
+"PATH_TO_JAVAFX_SDK\lib"
 --add-modules
 javafx.controls,javafx.fxml,javafx.graphics,javafx.base
 -Dlog4j.configurationFile=src/main/resources/logs/log4j2.xml
 --enable-native-access=javafx.graphics,ALL-UNNAMED`
 
-  - Для production (путь к sdk и конфигуратору выбрать свой):
+  - Для production (путь к sdk выбрать свой):
 
 `--module-path
-"C:\javafx-sdk-25.0.1\lib"
+"PATH_TO_JAVAFX_SDK\lib"
 --add-modules
 javafx.controls,javafx.fxml,javafx.graphics,javafx.base
 -Dproduction=true
--Dlog4j.configurationFile=file:///C:/Users/kalba/AppData/Roaming/KIPiA_Management/log4j2.xml
+-Dlog4j.configurationFile=file:///%APPDATA%/KIPiA_Management/log4j2.xml
 --enable-native-access=javafx.graphics,ALL-UNNAMED`
 
 + При необходимости, добавить `-Dlog4j2.debug=true` для отладки работы логгера
@@ -254,7 +316,10 @@ CREATE TABLE devices (
     valve_number TEXT,               -- Номер крана/узла
     status TEXT DEFAULT 'В работе',  -- Статус
     additional_info TEXT,            -- Дополнительная информация
-    photos TEXT                      -- Список имён файлов фото, разделённых точкой с запятой (;)
+    photos TEXT,                     -- Список имён файлов фото, разделённых точкой с запятой (;)
+    updated_at INTEGER,              -- Время последнего обновления (мс)
+    deleted_at INTEGER DEFAULT 0,    -- Soft delete (0 = активен, >0 = удалён)
+    last_synced_at INTEGER DEFAULT 0 -- Время последней синхронизации (мс)
 );
 ```
 
@@ -262,9 +327,12 @@ CREATE TABLE devices (
 ```sql
 CREATE TABLE schemes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,              -- Название схемы
+    name TEXT UNIQUE NOT NULL,      -- Название схемы
     description TEXT,                -- Описание схемы
-    data TEXT                       -- JSON данные схемы
+    data TEXT,                      -- JSON данные схемы
+    updated_at INTEGER,              -- Время последнего обновления (мс)
+    deleted_at INTEGER DEFAULT 0,    -- Soft delete (0 = активен, >0 = удалён)
+    last_synced_at INTEGER DEFAULT 0 -- Время последней синхронизации (мс)
 );
 ```
 
@@ -276,6 +344,9 @@ CREATE TABLE device_locations (
     x REAL NOT NULL,                 -- Координата X
     y REAL NOT NULL,                 -- Координата Y
     rotation REAL DEFAULT 0.0,       -- Поворот в градусах
+    updated_at INTEGER,              -- Время последнего обновления (мс)
+    deleted_at INTEGER DEFAULT 0,    -- Soft delete (0 = активен, >0 = удалён)
+    last_synced_at INTEGER DEFAULT 0, -- Время последней синхронизации (мс)
     PRIMARY KEY (device_id, scheme_id),
     FOREIGN KEY (device_id) REFERENCES devices(id) ON DELETE CASCADE,
     FOREIGN KEY (scheme_id) REFERENCES schemes(id) ON DELETE CASCADE

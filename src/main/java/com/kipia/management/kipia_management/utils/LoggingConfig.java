@@ -86,8 +86,9 @@ public class LoggingConfig {
                 return;
             }
 
-            // Исходный файл для копирования
-            String sourceConfigPath = "C:/Users/kalba/IdeaProjects/KIPiA_Management/installer_resources/log4j2.xml";
+            // Исходный файл для копирования (из ресурсов проекта)
+            String projectDir = System.getProperty("user.dir");
+            String sourceConfigPath = projectDir + "/installer_resources/log4j2.xml";
             File sourceFile = new File(sourceConfigPath);
 
             // Проверяем существует ли исходный файл
