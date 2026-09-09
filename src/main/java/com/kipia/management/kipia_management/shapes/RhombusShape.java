@@ -239,6 +239,11 @@ public class RhombusShape extends ShapeBase {
         return "RHOMBUS";
     }
 
+    @Override
+    public String getRussianName() {
+        return "Кран";
+    }
+
     private void applyStyle(Color fill, Color stroke, double strokeWidth) {
         rhombusPath.setFill(fill);
         rhombusPath.setStroke(stroke);

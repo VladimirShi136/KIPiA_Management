@@ -157,6 +157,13 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
      */
     public abstract String getShapeType();
 
+    /**
+     * Получение русского названия фигуры для отображения в UI
+     *
+     * @return русское название фигуры
+     */
+    public abstract String getRussianName();
+
     // ============================================================
     // RESIZE HANDLES MANAGEMENT
     // ============================================================
@@ -511,7 +518,7 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
         // Показываем handles для ресайза ТОЛЬКО при двойном клике
         makeResizeHandlesVisible();
         if (statusSetter != null) {
-            statusSetter.accept("Фигура выделена: " + getShapeType() + " - используйте ручки для изменения");
+            statusSetter.accept("Фигура выделена: " + getRussianName() + " - используйте ручки для изменения");
         }
     }
 
@@ -587,13 +594,6 @@ public abstract class ShapeBase extends Group implements ShapeHandler {
 
         // Передаём мировые координаты мыши — смещение считаем в мировом пространстве
         initializeDrag(worldMousePos);
-
-        if (this instanceof LineShape) {
-            if (onSelectCallback != null) {
-                onSelectCallback.accept(this);
-            }
-            makeResizeHandlesVisible();
-        }
 
         isDragging = false;
         event.consume();

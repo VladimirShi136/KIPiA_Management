@@ -89,6 +89,11 @@ public class EllipseShape extends ShapeBase {
         return "ELLIPSE";
     }
 
+    @Override
+    public String getRussianName() {
+        return "Эллипс";
+    }
+
     /**
      * Получение максимального X относительно позиции фигуры
      */

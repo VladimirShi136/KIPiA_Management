@@ -594,6 +594,7 @@ public class MainController {
         // Перерисовываем канвас схемы при смене темы
         if (schemeEditorController != null) {
             schemeEditorController.redrawCanvasForThemeChange();
+            schemeEditorController.refreshTheme();
         }
 
         // Загружаем стили для всех экранов

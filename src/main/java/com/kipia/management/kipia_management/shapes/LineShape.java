@@ -33,7 +33,7 @@ public class LineShape extends ShapeBase {
     private static final double SNAP_THRESHOLD = 10.0;
 
     // Константы для точного определения попадания
-    private static final double HIT_THRESHOLD = 5.0;
+    private static final double HIT_THRESHOLD = 2.0;
 
     public LineShape(double startX, double startY, double endX, double endY,
                      AnchorPane pane, Consumer<String> statusSetter,
@@ -97,7 +97,7 @@ public class LineShape extends ShapeBase {
         double x2 = line.getEndX();
         double y2 = line.getEndY();
         double distance = distanceToLine(localX, localY, x1, y1, x2, y2);
-        double effectiveThreshold = HIT_THRESHOLD + (line.getStrokeWidth() / 2);
+        double effectiveThreshold = HIT_THRESHOLD;
         return distance <= effectiveThreshold;
     }
 
@@ -194,11 +194,6 @@ public class LineShape extends ShapeBase {
                 Point2D worldMousePos = pane.sceneToLocal(event.getSceneX(), event.getSceneY());
                 // Инициализируем drag с мировыми координатами
                 initializeDrag(worldMousePos);
-
-                if (onSelectCallback != null) {
-                    onSelectCallback.accept(this);
-                }
-                makeResizeHandlesVisible();
                 event.consume();
             }
         });
@@ -209,6 +204,9 @@ public class LineShape extends ShapeBase {
                     onSelectCallback.accept(this);
                 }
                 makeResizeHandlesVisible();
+                if (statusSetter != null) {
+                    statusSetter.accept("Фигура выделена: " + getRussianName() + " - используйте ручки для изменения");
+                }
                 clickEvent.consume();
             }
         });
@@ -233,7 +231,7 @@ public class LineShape extends ShapeBase {
             double localPy = localY - getLayoutY();
 
             double distance = distanceToLine(localPx, localPy, x1, y1, x2, y2);
-            double effectiveThreshold = HIT_THRESHOLD + (line.getStrokeWidth() / 2);
+            double effectiveThreshold = HIT_THRESHOLD;
 
             return distance <= effectiveThreshold;
         } catch (Exception e) {
@@ -469,6 +467,11 @@ public class LineShape extends ShapeBase {
     @Override
     public String getShapeType() {
         return "LINE";
+    }
+
+    @Override
+    public String getRussianName() {
+        return "Линия";
     }
 
     @Override

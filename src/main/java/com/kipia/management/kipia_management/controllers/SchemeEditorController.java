@@ -410,6 +410,20 @@ public class SchemeEditorController implements SearchableController {
                             pasteShape();
                         }
                     }
+                    case S -> {
+                        boolean saved = schemeSaver.selectButtonSaveScheme(currentScheme);
+                        if (saved) {
+                            statusLabel.setText("Схема сохранена");
+                        } else {
+                            statusLabel.setText("Ошибка сохранения схемы");
+                        }
+                        updateSchemeTimestamp(currentScheme);
+                        event.consume();
+                    }
+                    case R -> {
+                        resetView();
+                        event.consume();
+                    }
                 }
             } else {
                 // Горячие клавиши для инструментов
@@ -417,12 +431,13 @@ public class SchemeEditorController implements SearchableController {
                     case L -> toggleTool(ShapeManager.Tool.LINE, "Инструмент: Линия - кликните и перетащите для рисования");
                     case R -> toggleTool(ShapeManager.Tool.RECTANGLE, "Инструмент: Прямоугольник - кликните и перетащите для рисования");
                     case E -> toggleTool(ShapeManager.Tool.ELLIPSE, "Инструмент: Эллипс - кликните и перетащите для рисования");
-                    case K -> toggleTool(ShapeManager.Tool.RHOMBUS, "Инструмент: Ромб - кликните и перетащите для рисования");
+                    case K -> toggleTool(ShapeManager.Tool.RHOMBUS, "Инструмент: Кран - кликните и перетащите для рисования");
                     case T -> toggleTool(ShapeManager.Tool.TEXT, "Инструмент: Текст - кликните для добавления текста");
                     case ESCAPE -> {
                         if (shapeManager != null) {
                             shapeManager.deselectShape();
                             resetCurrentTool();
+                            statusLabel.setText("Выделение снято");
                         }
                         event.consume();
                     }
@@ -520,6 +535,16 @@ public class SchemeEditorController implements SearchableController {
     }
 
     /**
+     * Обновляет тему редактора схем
+     */
+    public void refreshTheme() {
+        if (deviceIconService != null) {
+            deviceIconService.refreshTheme();
+        }
+        updateButtonIcons();
+    }
+
+    /**
      * Настройка кнопок инструментов
      */
     private void setupToolButtons() {
@@ -534,7 +559,7 @@ public class SchemeEditorController implements SearchableController {
         lineToolBtn.setOnAction(_ -> toggleTool(ShapeManager.Tool.LINE, "Инструмент: Линия - кликните и перетащите для рисования"));
         rectToolBtn.setOnAction(_ -> toggleTool(ShapeManager.Tool.RECTANGLE, "Инструмент: Прямоугольник - кликните и перетащите для рисования"));
         ellipseToolBtn.setOnAction(_ -> toggleTool(ShapeManager.Tool.ELLIPSE, "Инструмент: Эллипс - кликните и перетащите для рисования"));
-        rhombusToolBtn.setOnAction(_ -> toggleTool(ShapeManager.Tool.RHOMBUS, "Инструмент: Ромб - кликните и перетащите для рисования"));
+        rhombusToolBtn.setOnAction(_ -> toggleTool(ShapeManager.Tool.RHOMBUS, "Инструмент: Кран - кликните и перетащите для рисования"));
         textToolBtn.setOnAction(_ -> toggleTool(ShapeManager.Tool.TEXT, "Инструмент: Текст - кликните для добавления текста"));
     }
 
@@ -545,7 +570,12 @@ public class SchemeEditorController implements SearchableController {
         undoBtn.setOnAction(_ -> shapeManager.undo());
         redoBtn.setOnAction(_ -> shapeManager.redo());
         saveSchemeBtn.setOnAction(_ -> {
-            schemeSaver.selectButtonSaveScheme(currentScheme);
+            boolean saved = schemeSaver.selectButtonSaveScheme(currentScheme);
+            if (saved) {
+                statusLabel.setText("Схема сохранена");
+            } else {
+                statusLabel.setText("Ошибка сохранения схемы");
+            }
             updateSchemeTimestamp(currentScheme);
         });
         clearSchemeBtn.setOnAction(_ -> clearScheme());
@@ -1456,7 +1486,7 @@ public class SchemeEditorController implements SearchableController {
             case LINE -> "Линия";
             case RECTANGLE -> "Прямоугольник";
             case ELLIPSE -> "Эллипс";
-            case RHOMBUS -> "Ромб";
+            case RHOMBUS -> "Кран";
             case TEXT -> "Текст";
         };
     }

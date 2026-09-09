@@ -126,6 +126,11 @@
             return "RECTANGLE";
         }
 
+        @Override
+        public String getRussianName() {
+            return "Прямоугольник";
+        }
+
         /**
          * Получение максимального X относительно позиции фигуры
          */

@@ -19,7 +19,10 @@ import javafx.scene.shape.Circle;
 import javafx.scene.Cursor;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
+import javafx.scene.text.Text;
+import javafx.scene.Group;
 import javafx.stage.Stage;
+import com.kipia.management.kipia_management.utils.StyleUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -92,8 +95,24 @@ public class DeviceIconService {
     private Node createIconWithImage(double x, double y, Device device, Scheme currentScheme) {
         Image iconImage = loadDeviceImage();
         ImageView deviceIcon = createImageView(iconImage);
-        configureIcon(deviceIcon, x, y, device, currentScheme);
-        return deviceIcon;
+        
+        // Создаем текст с номером крана над иконкой
+        String valveTextValue = device.getValveNumber() != null ? device.getValveNumber() : "";
+        Text valveText = new Text(valveTextValue);
+        valveText.setFont(new javafx.scene.text.Font("Arial", 12));
+        // Цвет текста зависит от темы
+        Color textColor = StyleUtils.isDarkTheme() ? Color.WHITE : Color.BLACK;
+        valveText.setFill(textColor);
+        
+        // Центрируем текст над иконкой
+        double textWidth = valveText.getLayoutBounds().getWidth();
+        valveText.setX((DEFAULT_ICON_SIZE - textWidth) / 2);
+        valveText.setY(-5); // Чуть выше иконки
+        
+        // Создаем Group с иконкой и текстом
+        Group iconGroup = new Group(deviceIcon, valveText);
+        configureIcon(iconGroup, x, y, device, currentScheme);
+        return iconGroup;
     }
 
     /**
@@ -105,8 +124,24 @@ public class DeviceIconService {
                         "'. Используется резервная круглая иконка.");
 
         Circle fallbackCircle = createFallbackCircle();
-        configureIcon(fallbackCircle, x, y, device, currentScheme);
-        return fallbackCircle;
+        
+        // Создаем текст с номером крана над иконкой
+        String valveTextValue = device.getValveNumber() != null ? device.getValveNumber() : "";
+        Text valveText = new Text(valveTextValue);
+        valveText.setFont(new javafx.scene.text.Font("Arial", 12));
+        // Цвет текста зависит от темы
+        Color textColor = StyleUtils.isDarkTheme() ? Color.WHITE : Color.BLACK;
+        valveText.setFill(textColor);
+        
+        // Центрируем текст над кругом
+        double textWidth = valveText.getLayoutBounds().getWidth();
+        valveText.setX((FALLBACK_CIRCLE_RADIUS * 2 - textWidth) / 2);
+        valveText.setY(-5); // Чуть выше иконки
+        
+        // Создаем Group с кругом и текстом
+        Group iconGroup = new Group(fallbackCircle, valveText);
+        configureIcon(iconGroup, x, y, device, currentScheme);
+        return iconGroup;
     }
 
     /**
@@ -176,10 +211,13 @@ public class DeviceIconService {
         double y = node.getLayoutY();
         double rotation = node.getRotate();
 
-        // Корректировка для Circle (центр вместо левого верхнего угла)
-        if (node instanceof Circle) {
-            x -= 10;
-            y -= 10;
+        // Корректировка для Circle внутри Group (центр вместо левого верхнего угла)
+        if (node instanceof Group) {
+            Group group = (Group) node;
+            if (group.getChildren().get(0) instanceof Circle) {
+                x -= 10;
+                y -= 10;
+            }
         }
 
         DeviceLocation location = new DeviceLocation(device.getId(), currentScheme.getId(), x, y, rotation);
@@ -278,12 +316,12 @@ public class DeviceIconService {
         Device device = extractDeviceFromUserData(node);
         int photoCount = device.getPhotos() != null ? device.getPhotos().size() : 0;
 
-        MenuItem photosItem = new MenuItem("📸 Фотографии (" + photoCount + "/" + PhotoManager.MAX_PHOTOS_PER_DEVICE + ")");
+        MenuItem photosItem = new MenuItem("Фотографии (" + photoCount + "/" + PhotoManager.MAX_PHOTOS_PER_DEVICE + ")");
 
         // Отключаем пункт если нет фото
         if (photoCount == 0) {
             photosItem.setDisable(true);
-            photosItem.setText("📸 Нет фотографий");
+            photosItem.setText("Нет фотографий");
         }
 
         photosItem.setOnAction(_ -> {
@@ -463,6 +501,25 @@ public class DeviceIconService {
     // Метод для обновления текущей схемы
     public void setCurrentScheme(Scheme scheme) {
         this.currentScheme = scheme;
+    }
+
+    /**
+     * Обновляет цвета текста на иконках при смене темы
+     */
+    public void refreshTheme() {
+        Color textColor = StyleUtils.isDarkTheme() ? Color.WHITE : Color.BLACK;
+        
+        for (Node node : schemePane.getChildren()) {
+            if (node instanceof Group) {
+                Group group = (Group) node;
+                // Ищем Text в группе и обновляем его цвет
+                for (Node child : group.getChildren()) {
+                    if (child instanceof Text) {
+                        ((Text) child).setFill(textColor);
+                    }
+                }
+            }
+        }
     }
 
     // ============================================================
@@ -648,7 +705,14 @@ public class DeviceIconService {
          * Применение границ по X с учетом реального размера pane
          */
         private double applyBoundsX(double x) {
-            double nodeWidth = (node instanceof ImageView) ? DEFAULT_ICON_SIZE : FALLBACK_CIRCLE_RADIUS * 2;
+            double nodeWidth;
+            if (node instanceof Group) {
+                nodeWidth = DEFAULT_ICON_SIZE;
+            } else if (node instanceof ImageView) {
+                nodeWidth = DEFAULT_ICON_SIZE;
+            } else {
+                nodeWidth = FALLBACK_CIRCLE_RADIUS * 2;
+            }
             double maxX = pane.getWidth() - nodeWidth;
             return Math.max(0, Math.min(x, maxX));
         }
@@ -657,17 +721,36 @@ public class DeviceIconService {
          * Применение границ по Y с учетом реального размера pane
          */
         private double applyBoundsY(double y) {
-            double nodeHeight = (node instanceof ImageView) ? DEFAULT_ICON_SIZE : FALLBACK_CIRCLE_RADIUS * 2;
+            double nodeHeight;
+            if (node instanceof Group) {
+                nodeHeight = DEFAULT_ICON_SIZE;
+            } else if (node instanceof ImageView) {
+                nodeHeight = DEFAULT_ICON_SIZE;
+            } else {
+                nodeHeight = FALLBACK_CIRCLE_RADIUS * 2;
+            }
             double maxY = pane.getHeight() - nodeHeight;
             return Math.max(0, Math.min(y, maxY));
         }
 
         private double calculateCenterOffsetX() {
-            return (node instanceof ImageView) ? DEFAULT_ICON_SIZE / 2 : FALLBACK_CIRCLE_RADIUS;
+            if (node instanceof Group) {
+                return DEFAULT_ICON_SIZE / 2;
+            } else if (node instanceof ImageView) {
+                return DEFAULT_ICON_SIZE / 2;
+            } else {
+                return FALLBACK_CIRCLE_RADIUS;
+            }
         }
 
         private double calculateCenterOffsetY() {
-            return (node instanceof ImageView) ? DEFAULT_ICON_SIZE / 2 : FALLBACK_CIRCLE_RADIUS;
+            if (node instanceof Group) {
+                return DEFAULT_ICON_SIZE / 2;
+            } else if (node instanceof ImageView) {
+                return DEFAULT_ICON_SIZE / 2;
+            } else {
+                return FALLBACK_CIRCLE_RADIUS;
+            }
         }
     }
 }

@@ -25,45 +25,45 @@
                     <!-- Группа инструментов редактирования -->
                     <Button fx:id="undoBtn" styleClass="tool-button">
                         <tooltip>
-                            <Tooltip text="Отменить"/>
+                            <Tooltip text="Отменить (Ctrl+Z)"/>
                         </tooltip>
                     </Button>
                     <Button fx:id="redoBtn" styleClass="tool-button">
                         <tooltip>
-                            <Tooltip text="Повторить"/>
+                            <Tooltip text="Повторить (Ctrl+Y)"/>
                         </tooltip>
                     </Button>
                     <Separator orientation="VERTICAL"/>
                     <Button fx:id="resetViewBtn" styleClass="tool-button" onAction="#resetView">
                         <tooltip>
-                            <Tooltip text="Сбросить вид"/>
+                            <Tooltip text="Сбросить вид (Ctrl+R)"/>
                         </tooltip>
                     </Button>
                     <Separator orientation="VERTICAL"/>
                     <!-- Группа инструментов рисования -->
                     <Button fx:id="lineToolBtn" styleClass="tool-button">
                         <tooltip>
-                            <Tooltip text="Линия"/>
+                            <Tooltip text="Линия (L)"/>
                         </tooltip>
                     </Button>
                     <Button fx:id="rectToolBtn" styleClass="tool-button">
                         <tooltip>
-                            <Tooltip text="Прямоугольник"/>
+                            <Tooltip text="Прямоугольник (R)"/>
                         </tooltip>
                     </Button>
                     <Button fx:id="ellipseToolBtn" styleClass="tool-button">
                         <tooltip>
-                            <Tooltip text="Эллипс"/>
+                            <Tooltip text="Эллипс (E)"/>
                         </tooltip>
                     </Button>
                     <Button fx:id="rhombusToolBtn" styleClass="tool-button">
                         <tooltip>
-                            <Tooltip text="Кран"/>
+                            <Tooltip text="Кран (K)"/>
                         </tooltip>
                     </Button>
                     <Button fx:id="textToolBtn" styleClass="tool-button">
                         <tooltip>
-                            <Tooltip text="Текст"/>
+                            <Tooltip text="Текст (T)"/>
                         </tooltip>
                     </Button>
                     <Separator orientation="VERTICAL"/>
@@ -72,7 +72,7 @@
                     <Label fx:id="schemeUpdatedLabel" styleClass="scheme-updated-label" visible="false" managed="false"/>
                     <Button fx:id="saveSchemeBtn" styleClass="tool-button">
                         <tooltip>
-                            <Tooltip text="Сохранить схему"/>
+                            <Tooltip text="Сохранить схему (Ctrl+S)"/>
                         </tooltip>
                     </Button>
                     <Button fx:id="clearSchemeBtn" styleClass="tool-button">

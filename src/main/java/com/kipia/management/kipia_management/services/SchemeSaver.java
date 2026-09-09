@@ -128,11 +128,12 @@ public class SchemeSaver {
     /**
      * Сохранение схемы через кнопку сохранить.
      */
-    public void selectButtonSaveScheme(Scheme scheme) {
+    public boolean selectButtonSaveScheme(Scheme scheme) {
         // Кнопка "Сохранить" работает всегда — принудительно помечаем dirty
         markDirty();
-        saveScheme(scheme);
+        boolean saved = saveScheme(scheme);
         CustomAlertDialog.showSaveNotification("Сохранение", 1.8);
+        return saved;
     }
 
     // --- Вспомогательные методы ---

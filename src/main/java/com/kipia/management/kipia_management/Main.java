@@ -19,6 +19,14 @@ import javafx.stage.StageStyle;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import javax.swing.JOptionPane;
+import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Objects;
 
 /**
@@ -36,10 +44,27 @@ public class Main extends Application {
     private static final Logger LOGGER = LogManager.getLogger(Main.class);
     private MainController mainController;
     private Stage primaryStage;
+    private static FileLock lock;
+    private static FileChannel channel;
+    private static final String LOCK_FILE_NAME = "kipia_management.lock";
 
     public static void main(String[] args) {
         LoggingConfig.initialize();
         LOGGER.info("Запуск главного метода приложения...");
+        
+        // Проверка на уже запущенный экземпляр до запуска JavaFX
+        if (!acquireLock()) {
+            LOGGER.warn("Приложение уже запущено. Завершение работы.");
+            JOptionPane.showMessageDialog(
+                null,
+                "Система учёта приборов КИПиА уже работает.\n\n" +
+                "Запуск нескольких экземпляров приложения не поддерживается.",
+                "Приложение уже запущено",
+                JOptionPane.WARNING_MESSAGE
+            );
+            System.exit(0);
+        }
+        
         try {
             launch(args);
         } catch (Exception e) {
@@ -251,5 +276,45 @@ public class Main extends Application {
     public void stop() {
         LOGGER.info("Приложение завершает работу");
         if (databaseService != null) databaseService.closeConnection();
+        releaseLock();
+    }
+
+    private static boolean acquireLock() {
+        try {
+            Path lockFilePath = Paths.get(System.getProperty("java.io.tmpdir"), LOCK_FILE_NAME);
+            File lockFile = lockFilePath.toFile();
+            
+            if (!lockFile.exists()) {
+                lockFile.createNewFile();
+            }
+            
+            channel = new RandomAccessFile(lockFile, "rw").getChannel();
+            lock = channel.tryLock();
+            
+            if (lock == null) {
+                LOGGER.warn("Не удалось получить блокировку. Приложение уже запущено.");
+                return false;
+            }
+            
+            LOGGER.info("Блокировка получена успешно. Файл блокировки: {}", lockFilePath);
+            return true;
+        } catch (IOException e) {
+            LOGGER.error("Ошибка при получении блокировки: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    private static void releaseLock() {
+        try {
+            if (lock != null) {
+                lock.release();
+                LOGGER.info("Блокировка освобождена");
+            }
+            if (channel != null) {
+                channel.close();
+            }
+        } catch (IOException e) {
+            LOGGER.error("Ошибка при освобождении блокировки: {}", e.getMessage(), e);
+        }
     }
 }

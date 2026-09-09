@@ -284,6 +284,11 @@ public class TextShape extends ShapeBase {
         return "TEXT";
     }
 
+    @Override
+    public String getRussianName() {
+        return "Текст";
+    }
+
     /**
      * Переопределяем метод для текста - поворачиваем весь Group
      */
