@@ -1400,6 +1400,8 @@ public class SchemeEditorController implements SearchableController {
                         location.getX(), location.getY(), device, currentScheme
                 );
                 deviceNode.setRotate(location.getRotation());
+                // Компенсируем поворот текста, чтобы он оставался горизонтальным
+                DeviceIconService.compensateTextRotation(deviceNode, location.getRotation());
                 schemePane.getChildren().add(deviceNode);
             }
         }

@@ -374,6 +374,7 @@ CREATE TABLE device_locations (
 * Автор: [VladimirShi136](https://github.com/VladimirShi136)
 * Issues: [Перейти к вопросам и задачам](https://github.com/VladimirShi136/KIPiA_Management/issues)
 * Документация: [Перейти к Wiki](https://github.com/VladimirShi136/KIPiA_Management/wiki)
+* Мобильная версия: [KIPiA_Management_Mobile](https://github.com/VladimirShi136/KIPiA_Management_Mobile)
 
 **_Примечание:_** Для полной документации с пошаговыми инструкциями и скриншотами обратитесь к Wiki проекта.
 

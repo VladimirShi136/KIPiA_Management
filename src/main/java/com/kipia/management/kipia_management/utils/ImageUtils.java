@@ -164,4 +164,48 @@ public class ImageUtils {
                 return image;
         }
     }
+
+    /**
+     * Поворачивает изображение на 90° по часовой стрелке
+     *
+     * @param image исходное изображение
+     * @return повернутое изображение
+     */
+    public static Image rotate90CW(Image image) {
+        int width = (int) image.getWidth();
+        int height = (int) image.getHeight();
+
+        PixelReader reader = image.getPixelReader();
+        WritableImage rotated = new WritableImage(height, width);
+        PixelWriter writer = rotated.getPixelWriter();
+
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                writer.setArgb(height - y - 1, x, reader.getArgb(x, y));
+            }
+        }
+        return rotated;
+    }
+
+    /**
+     * Поворачивает изображение на 90° против часовой стрелки
+     *
+     * @param image исходное изображение
+     * @return повернутое изображение
+     */
+    public static Image rotate90CCW(Image image) {
+        int width = (int) image.getWidth();
+        int height = (int) image.getHeight();
+
+        PixelReader reader = image.getPixelReader();
+        WritableImage rotated = new WritableImage(height, width);
+        PixelWriter writer = rotated.getPixelWriter();
+
+        for (int y = 0; y < height; y++) {
+            for (int x = 0; x < width; x++) {
+                writer.setArgb(y, width - x - 1, reader.getArgb(x, y));
+            }
+        }
+        return rotated;
+    }
 }

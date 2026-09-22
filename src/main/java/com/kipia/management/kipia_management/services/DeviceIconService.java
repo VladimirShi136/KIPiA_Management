@@ -362,11 +362,40 @@ public class DeviceIconService {
     }
 
     /**
+     * Компенсация поворота текста, чтобы он оставался горизонтальным
+     */
+    public static void compensateTextRotation(Node node, double angle) {
+        if (node instanceof Group) {
+            Group group = (Group) node;
+            for (Node child : group.getChildren()) {
+                if (child instanceof Text) {
+                    Text text = (Text) child;
+                    // Устанавливаем тексту обратный поворот, чтобы он всегда был горизонтальным
+                    text.setRotate(-angle);
+
+                    // При 90° и 270° увеличиваем расстояние текста от иконки
+                    double normalizedAngle = angle % 360;
+                    if (normalizedAngle < 0) normalizedAngle += 360;
+
+                    if (normalizedAngle == 90 || normalizedAngle == 270) {
+                        text.setY(-10); // Больше расстояние при вертикальной ориентации
+                    } else {
+                        text.setY(-5); // Стандартное расстояние
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * Поворот иконки устройства
      */
     private void rotateDeviceIcon(Node node, double angle, Device device) {
-        // Применяем поворот
+        // Применяем поворот к группе
         node.setRotate(angle);
+
+        // Компенсируем поворот текста, чтобы он оставался горизонтальным
+        compensateTextRotation(node, angle);
 
         // Сохраняем угол поворота в UserData для последующего сохранения
         node.setUserData(new DeviceWithRotation(device, angle));

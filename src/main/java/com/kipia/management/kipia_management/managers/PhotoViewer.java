@@ -73,6 +73,8 @@ public class PhotoViewer {
     private Button     nextBtn;
     private Button     deleteBtn;
     private Button     openSystemBtn;
+    private Button     rotateLeftBtn;
+    private Button     rotateRightBtn;
 
     // Блок информации о приборе (обновляется при навигации в multiDeviceMode)
     private Label deviceNameLabel;
@@ -213,6 +215,8 @@ public class PhotoViewer {
         nextBtn       = createNavAndActButton(ICON_FORWARD,     "Вперёд");
         openSystemBtn = createNavAndActButton(ICON_OPEN_SYSTEM, "Открыть в системном приложении");
         deleteBtn     = createNavAndActButton(ICON_DELETE,       "Удалить фото");
+        rotateLeftBtn  = createNavAndActButton("/images/rotate-left.png",  "Повернуть влево (90°)");
+        rotateRightBtn = createNavAndActButton("/images/rotate-right.png", "Повернуть вправо (90°)");
 
         zoomOverlay = new Pane();
         zoomOverlay.setStyle("-fx-background-color: rgba(0,0,0,0.7);");
@@ -389,11 +393,15 @@ public class PhotoViewer {
         navSection.setAlignment(Pos.CENTER);
         navSection.getChildren().addAll(prevBtn, counterLabel, nextBtn);
 
+        HBox rotateSection = new HBox(10);
+        rotateSection.setAlignment(Pos.CENTER);
+        rotateSection.getChildren().addAll(rotateLeftBtn, rotateRightBtn);
+
         HBox actionSection = new HBox(15);
         actionSection.setAlignment(Pos.CENTER);
         actionSection.getChildren().addAll(openSystemBtn, deleteBtn);
 
-        mainControlsContainer.getChildren().addAll(navSection, actionSection);
+        mainControlsContainer.getChildren().addAll(navSection, rotateSection, actionSection);
         centerContainer.getChildren().add(mainControlsContainer);
 
         setupNavigationHandlers();
@@ -432,6 +440,8 @@ public class PhotoViewer {
     private void setupNavigationHandlers() {
         prevBtn.setOnAction(_ -> navigateTo(-1));
         nextBtn.setOnAction(_ -> navigateTo(1));
+        rotateLeftBtn.setOnAction(_ -> rotateCurrentImage(-90));
+        rotateRightBtn.setOnAction(_ -> rotateCurrentImage(90));
 
         stage.addEventHandler(javafx.scene.input.KeyEvent.KEY_PRESSED, event -> {
             switch (event.getCode()) {
@@ -452,6 +462,32 @@ public class PhotoViewer {
         if (newIndex >= 0 && newIndex < size) {
             currentIndex = newIndex;
             loadPhotoAtIndex(currentIndex);
+        }
+    }
+
+    /**
+     * Поворачивает текущее изображение на указанный угол
+     * @param degrees угол поворота (90 или -90)
+     */
+    private void rotateCurrentImage(int degrees) {
+        Image currentImage = imageView.getImage();
+        if (currentImage == null) return;
+
+        try {
+            Image rotatedImage;
+            if (degrees == 90) {
+                rotatedImage = ImageUtils.rotate90CW(currentImage);
+            } else if (degrees == -90) {
+                rotatedImage = ImageUtils.rotate90CCW(currentImage);
+            } else {
+                return;
+            }
+
+            imageView.setImage(rotatedImage);
+            Platform.runLater(() -> scaleImageToFit(rotatedImage));
+            LOGGER.info("✅ Фото повернуто на {}°", degrees);
+        } catch (Exception e) {
+            LOGGER.error("❌ Ошибка поворота фото: {}", e.getMessage(), e);
         }
     }
 

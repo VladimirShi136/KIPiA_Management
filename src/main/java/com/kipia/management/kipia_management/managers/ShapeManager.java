@@ -406,6 +406,8 @@ public class ShapeManager {
             deviceNode.setLayoutX(savedX);
             deviceNode.setLayoutY(savedY);
             deviceNode.setRotate(savedRotation);
+            // Компенсируем поворот текста, чтобы он оставался горизонтальным
+            com.kipia.management.kipia_management.services.DeviceIconService.compensateTextRotation(deviceNode, savedRotation);
             // Сохраняем позицию в БД
             saveDevicePosition();
         }
@@ -461,6 +463,8 @@ public class ShapeManager {
             deviceNode.setLayoutX(newX);
             deviceNode.setLayoutY(newY);
             deviceNode.setRotate(newRotation);
+            // Компенсируем поворот текста, чтобы он оставался горизонтальным
+            com.kipia.management.kipia_management.services.DeviceIconService.compensateTextRotation(deviceNode, newRotation);
             saveDevicePosition(newX, newY, newRotation);
         }
 
@@ -469,6 +473,8 @@ public class ShapeManager {
             deviceNode.setLayoutX(oldX);
             deviceNode.setLayoutY(oldY);
             deviceNode.setRotate(oldRotation);
+            // Компенсируем поворот текста, чтобы он оставался горизонтальным
+            com.kipia.management.kipia_management.services.DeviceIconService.compensateTextRotation(deviceNode, oldRotation);
             saveDevicePosition(oldX, oldY, oldRotation);
         }
 

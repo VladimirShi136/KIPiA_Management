@@ -19,10 +19,11 @@ import javafx.stage.StageStyle;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import javax.swing.JOptionPane;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.nio.channels.FileChannel;
 import java.nio.channels.FileLock;
 import java.nio.file.Path;
@@ -47,6 +48,8 @@ public class Main extends Application {
     private static FileLock lock;
     private static FileChannel channel;
     private static final String LOCK_FILE_NAME = "kipia_management.lock";
+    private static final int APP_PORT = 54321;
+    private static java.net.ServerSocket serverSocket;
 
     public static void main(String[] args) {
         LoggingConfig.initialize();
@@ -55,13 +58,13 @@ public class Main extends Application {
         // Проверка на уже запущенный экземпляр до запуска JavaFX
         if (!acquireLock()) {
             LOGGER.warn("Приложение уже запущено. Завершение работы.");
-            JOptionPane.showMessageDialog(
-                null,
-                "Система учёта приборов КИПиА уже работает.\n\n" +
-                "Запуск нескольких экземпляров приложения не поддерживается.",
-                "Приложение уже запущено",
-                JOptionPane.WARNING_MESSAGE
-            );
+            // Пытаемся отправить сигнал первому экземпляру для поднятия окна
+            try {
+                java.net.Socket socket = new java.net.Socket("localhost", APP_PORT);
+                socket.close();
+            } catch (Exception e) {
+                LOGGER.debug("Не удалось отправить сигнал первому экземпляру: {}", e.getMessage());
+            }
             System.exit(0);
         }
         
@@ -83,6 +86,9 @@ public class Main extends Application {
         try {
             this.primaryStage = primaryStage;
             LOGGER.info("Запуск приложения...");
+
+            // Запускаем сервер для приема сигналов от вторичных экземпляров
+            startSignalServer();
 
             initializeServices();
 
@@ -313,8 +319,52 @@ public class Main extends Application {
             if (channel != null) {
                 channel.close();
             }
+            if (serverSocket != null && !serverSocket.isClosed()) {
+                serverSocket.close();
+                LOGGER.info("Серверный сокет закрыт");
+            }
         } catch (IOException e) {
             LOGGER.error("Ошибка при освобождении блокировки: {}", e.getMessage(), e);
         }
+    }
+
+    /**
+     * Запускает сервер для приема сигналов от вторичных экземпляров приложения.
+     * При получении сигнала поднимает окно первого экземпляра на передний план.
+     */
+    private void startSignalServer() {
+        new Thread(() -> {
+            try {
+                serverSocket = new ServerSocket(APP_PORT);
+                LOGGER.info("Сервер сигналов запущен на порту {}", APP_PORT);
+                
+                while (!serverSocket.isClosed()) {
+                    Socket clientSocket = serverSocket.accept();
+                    LOGGER.info("Получен сигнал от вторичного экземпляра");
+                    clientSocket.close();
+                    
+                    // Поднимаем окно на передний план
+                    Platform.runLater(() -> {
+                        if (primaryStage != null) {
+                            primaryStage.setIconified(false);
+                            primaryStage.show();
+                            primaryStage.toFront();
+                            primaryStage.requestFocus();
+                            
+                            // Показываем кастомное уведомление поверх окна
+                            CustomAlertDialog.showWarning(
+                                "Попытка повторного запуска",
+                                "Обнаружена попытка запуска второго экземпляра приложения.\n\n" +
+                                "Запуск нескольких экземпляров не поддерживается."
+                            );
+                        }
+                    });
+                }
+            } catch (IOException e) {
+                if (!serverSocket.isClosed()) {
+                    LOGGER.error("Ошибка сервера сигналов: {}", e.getMessage(), e);
+                }
+            }
+        }).start();
     }
 }

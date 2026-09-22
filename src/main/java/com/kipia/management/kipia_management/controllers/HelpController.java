@@ -2,8 +2,10 @@ package com.kipia.management.kipia_management.controllers;
 
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
+import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
@@ -43,7 +45,7 @@ public class HelpController {
                 new String[]{
                         "Добро пожаловать в систему учёта приборов КИПиА!",
                         "",
-                        "Приложение предназначено для учёта и управления приборами измерения и автоматики.",
+                        "Приложение предназначено для учёта и управления приборами измерения.",
                         "",
                         "Основные функции:",
                         "• Учёт приборов с полной информацией",
@@ -70,11 +72,11 @@ public class HelpController {
                         "• Добавление нового прибора через форму",
                         "• Редактирование существующих приборов",
                         "• Удаление приборов",
-                        "• Поиск по названию, типу, серийному номеру",
+                        "• Поиск по всем колонкам в таблице",
                         "",
-                        "Для добавления прибора нажмите кнопку «Добавить прибор».",
+                        "Для добавления прибора нажмите кнопку «+» в правом нижнем углу экрана.",
                         "Для редактирования дважды кликните на строку в таблице.",
-                        "Для удаления выделите прибор и нажмите кнопку удаления."
+                        "Для удаления: правая кнопка мыши на прибор, нажмите кнопку удаления."
                 }
         ));
 
@@ -103,18 +105,21 @@ public class HelpController {
                 "Редактор технологических схем",
                 "Схемы",
                 new String[]{
-                        "В этом разделе вы можете создавать и редактировать технологические схемы.",
+                        "В этом разделе вы можете редактировать технологические схемы.",
                         "",
                         "Функции:",
-                        "• Создание новых схем",
+                        "• Автоматическое создание схем по названию местоположения прибора",
                         "• Редактирование существующих схем",
                         "• Добавление элементов (линии, круги, прямоугольники, текст)",
+                        "• Расположение приборов на схеме",
                         "• Отмена и повтор действий (Undo/Redo)",
                         "• Сохранение схем",
                         "",
-                        "Панель инструментов слева содержит инструменты рисования.",
+                        "Панель инструментов сверху содержит инструменты для рисования.",
                         "Используйте Undo/Redo для отмены и повтора действий.",
-                        "Схемы автоматически сохраняются при навигации."
+                        "Схемы автоматически сохраняются при навигации.",
+                        "Схему можно удалить полностью только если нет приборов в БД,",
+                        "которые ссылаются на эту схему через \"Местоположение\""
                 }
         ));
 
@@ -127,9 +132,8 @@ public class HelpController {
                         "В этом разделе вы можете генерировать отчёты по приборам.",
                         "",
                         "Функции:",
-                        "• Генерация отчётов в различных форматах",
+                        "• Генерация отчётов по заданным фильтрам",
                         "• Фильтрация данных для отчёта",
-                        "• Экспорт в Excel",
                         "",
                         "Выберите тип отчёта и параметры для генерации."
                 }
@@ -141,15 +145,18 @@ public class HelpController {
                 "Настройки приложения",
                 "Настройки",
                 new String[]{
-                        "В этом разделе вы можете настроить параметры приложения.",
+                        "В этом разделе вы можете провести операции по синхронизации данных.",
                         "",
                         "Функции:",
-                        "• Управление базой данных",
-                        "• Импорт/экспорт данных",
-                        "• Настройка синхронизации",
-                        "• Управление резервными копиями",
+                        "• Импорт/экспорт базы данных",
+                        "• Импорт/экспорт данных в excel",
                         "",
-                        "Будьте осторожны при операциях с базой данных - они необратимы."
+                        "Существует возможность синхронизации БД с [мобильным приложением на Android|https://github.com/VladimirShi136/KIPiA_Management_Mobile].",
+                        "Для быстрого переноса таблицы приборов из excel необходимо:",
+                        "1. Экспортировать пустую excel таблицу.",
+                        "2. Заполнить пустой шаблон таблицы нужными данными.",
+                        "3. Выполнить импорт заполненной таблицы."
+
                 }
         ));
     }
@@ -179,8 +186,8 @@ public class HelpController {
         
         // Добавляем контент в оба контейнера
         for (String line : content.lines()) {
-            Text textNode = createTextForLine(line);
-            helpContent.getChildren().add(textNode);
+            javafx.scene.Node node = createTextForLine(line);
+            helpContent.getChildren().add(node);
             helpContentNoScroll.getChildren().add(createTextForLine(line));
         }
         
@@ -188,7 +195,7 @@ public class HelpController {
         javafx.application.Platform.runLater(this::adjustWindowSize);
     }
     
-    private Text createTextForLine(String line) {
+    private javafx.scene.Node createTextForLine(String line) {
         if (line.isEmpty()) {
             Text emptyText = new Text(" ");
             emptyText.setStyle("-fx-font-size: 8px;");
@@ -205,10 +212,53 @@ public class HelpController {
             headerText.getStyleClass().add("help-text-header");
             return headerText;
         } else {
-            Text normalText = new Text(line);
-            normalText.setStyle("-fx-font-size: 14px;");
-            normalText.getStyleClass().add("help-text-normal");
-            return normalText;
+            // Проверяем наличие ссылки в формате [текст|url]
+            int linkStart = line.indexOf('[');
+            int linkEnd = line.indexOf(']');
+            int pipeIndex = line.indexOf('|', linkStart);
+
+            if (linkStart != -1 && linkEnd != -1 && pipeIndex != -1 && pipeIndex > linkStart && pipeIndex < linkEnd) {
+                // Создаем HBox с текстом и ссылкой
+                HBox hbox = new HBox(5);
+                hbox.setStyle("-fx-alignment: center-left;");
+
+                // Текст до ссылки
+                if (linkStart > 0) {
+                    Text beforeText = new Text(line.substring(0, linkStart));
+                    beforeText.setStyle("-fx-font-size: 14px;");
+                    beforeText.getStyleClass().add("help-text-normal");
+                    hbox.getChildren().add(beforeText);
+                }
+
+                // Ссылка
+                String linkText = line.substring(linkStart + 1, pipeIndex);
+                String linkUrl = line.substring(pipeIndex + 1, linkEnd);
+                Hyperlink hyperlink = new Hyperlink(linkText);
+                hyperlink.setStyle("-fx-font-size: 14px; -fx-border-color: transparent;");
+                hyperlink.setOnAction(_ -> {
+                    try {
+                        java.awt.Desktop.getDesktop().browse(new java.net.URI(linkUrl));
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                });
+                hbox.getChildren().add(hyperlink);
+
+                // Текст после ссылки
+                if (linkEnd < line.length() - 1) {
+                    Text afterText = new Text(line.substring(linkEnd + 1));
+                    afterText.setStyle("-fx-font-size: 14px;");
+                    afterText.getStyleClass().add("help-text-normal");
+                    hbox.getChildren().add(afterText);
+                }
+
+                return hbox;
+            } else {
+                Text normalText = new Text(line);
+                normalText.setStyle("-fx-font-size: 14px;");
+                normalText.getStyleClass().add("help-text-normal");
+                return normalText;
+            }
         }
     }
 
