@@ -60,7 +60,7 @@ public class DeviceDAO {
             LOGGER.error("Добавление прибора заблокировано: проблема с системным временем");
             return false;
         }
-        
+
         if (updateTimestamp) {
             device.updateTimestamp();
         }
@@ -105,7 +105,7 @@ public class DeviceDAO {
             LOGGER.error("Обновление прибора заблокировано: проблема с системным временем");
             return false;
         }
-        
+
         if (updateTimestamp) {
             device.updateTimestamp();
         }
@@ -135,7 +135,7 @@ public class DeviceDAO {
             LOGGER.error("Удаление прибора заблокировано: проблема с системным временем");
             return false;
         }
-        
+
         String sql = "UPDATE devices SET deleted_at = ?, updated_at = ? WHERE id = ?";
         try (PreparedStatement stmt = databaseService.getConnection().prepareStatement(sql)) {
             long now = System.currentTimeMillis();
@@ -223,6 +223,104 @@ public class DeviceDAO {
             LOGGER.error("Ошибка получения уникальных локаций: {}", e.getMessage(), e);
         }
         return locations;
+    }
+
+    public List<String> getDistinctTypes() {
+        List<String> types = new ArrayList<>();
+        String sql = "SELECT DISTINCT type FROM devices WHERE type IS NOT NULL AND type <> '' AND deleted_at = 0 ORDER BY type";
+        try (Statement stmt = databaseService.getConnection().createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                types.add(rs.getString("type"));
+            }
+        } catch (SQLException e) {
+            LOGGER.error("Ошибка получения уникальных типов: {}", e.getMessage(), e);
+        }
+        return types;
+    }
+
+    public List<String> getDistinctNames() {
+        List<String> names = new ArrayList<>();
+        String sql = "SELECT DISTINCT name FROM devices WHERE name IS NOT NULL AND name <> '' AND deleted_at = 0 ORDER BY name";
+        try (Statement stmt = databaseService.getConnection().createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                names.add(rs.getString("name"));
+            }
+        } catch (SQLException e) {
+            LOGGER.error("Ошибка получения уникальных моделей: {}", e.getMessage(), e);
+        }
+        return names;
+    }
+
+    public List<String> getDistinctManufacturers() {
+        List<String> manufacturers = new ArrayList<>();
+        String sql = "SELECT DISTINCT manufacturer FROM devices WHERE manufacturer IS NOT NULL AND manufacturer <> '' AND deleted_at = 0 ORDER BY manufacturer";
+        try (Statement stmt = databaseService.getConnection().createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                manufacturers.add(rs.getString("manufacturer"));
+            }
+        } catch (SQLException e) {
+            LOGGER.error("Ошибка получения уникальных производителей: {}", e.getMessage(), e);
+        }
+        return manufacturers;
+    }
+
+    public List<String> getDistinctValveNumbers() {
+        List<String> valveNumbers = new ArrayList<>();
+        String sql = "SELECT DISTINCT valve_number FROM devices WHERE valve_number IS NOT NULL AND valve_number <> '' AND deleted_at = 0 ORDER BY valve_number";
+        try (Statement stmt = databaseService.getConnection().createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                valveNumbers.add(rs.getString("valve_number"));
+            }
+        } catch (SQLException e) {
+            LOGGER.error("Ошибка получения уникальных номеров кранов: {}", e.getMessage(), e);
+        }
+        return valveNumbers;
+    }
+
+    public List<String> getDistinctMeasurementLimits() {
+        List<String> measurementLimits = new ArrayList<>();
+        String sql = "SELECT DISTINCT measurement_limit FROM devices WHERE measurement_limit IS NOT NULL AND measurement_limit <> '' AND deleted_at = 0 ORDER BY measurement_limit";
+        try (Statement stmt = databaseService.getConnection().createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                measurementLimits.add(rs.getString("measurement_limit"));
+            }
+        } catch (SQLException e) {
+            LOGGER.error("Ошибка получения уникальных пределов измерений: {}", e.getMessage(), e);
+        }
+        return measurementLimits;
+    }
+
+    public List<String> getDistinctAccuracyClasses() {
+        List<String> accuracyClasses = new ArrayList<>();
+        String sql = "SELECT DISTINCT accuracy_class FROM devices WHERE accuracy_class IS NOT NULL AND deleted_at = 0 ORDER BY accuracy_class";
+        try (Statement stmt = databaseService.getConnection().createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                accuracyClasses.add(String.valueOf(rs.getDouble("accuracy_class")));
+            }
+        } catch (SQLException e) {
+            LOGGER.error("Ошибка получения уникальных классов точности: {}", e.getMessage(), e);
+        }
+        return accuracyClasses;
+    }
+
+    public List<String> getDistinctYears() {
+        List<String> years = new ArrayList<>();
+        String sql = "SELECT DISTINCT year FROM devices WHERE year IS NOT NULL AND deleted_at = 0 ORDER BY year DESC";
+        try (Statement stmt = databaseService.getConnection().createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                years.add(String.valueOf(rs.getInt("year")));
+            }
+        } catch (SQLException e) {
+            LOGGER.error("Ошибка получения уникальных годов выпуска: {}", e.getMessage(), e);
+        }
+        return years;
     }
 
     public List<Device> getAllDevicesForExport() {

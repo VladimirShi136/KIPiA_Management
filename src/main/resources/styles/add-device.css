@@ -178,6 +178,23 @@
     -fx-background-radius: 4px;
 }
 
+/* ComboBox без стрелки (для автозаполнения) */
+.form-input.combo-box.no-arrow .arrow-button {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+    -fx-pref-width: 0;
+    -fx-max-width: 0;
+    -fx-min-width: 0;
+}
+
+.form-input.combo-box.no-arrow .arrow {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+    -fx-pref-width: 0;
+    -fx-max-width: 0;
+    -fx-min-width: 0;
+}
+
 .form-input.combo-box .list-cell {
     -fx-background-color: -fx-input-bg;
     -fx-text-fill: -fx-text-primary;
@@ -199,6 +216,12 @@
 .form-input.combo-box .text-field {
     -fx-background-color: -fx-input-bg;
     -fx-text-fill: -fx-text-primary;
+    /* Обнуляем собственный внутренний отступ текстового поля ComboBox,
+       чтобы единственным источником отступа слева/справа оставался
+       -fx-padding: 8px у .form-input — тогда текст в обычном TextField
+       (например, "Инв. номер") и в полях с автозаполнением будет
+       смещён от края поля одинаково. */
+    -fx-padding: 0;
 }
 
 .form-input.combo-box .text-input {

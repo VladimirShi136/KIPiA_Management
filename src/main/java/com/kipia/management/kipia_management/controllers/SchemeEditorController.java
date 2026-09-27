@@ -1145,6 +1145,28 @@ public class SchemeEditorController implements SearchableController {
     }
 
     /**
+     * Установка масштаба 50% и центрирование схемы
+     */
+    private void resetViewTo50PercentAndCenter() {
+        double scale = 0.5;
+        canvasState.setScale(scale);
+
+        // Вычисляем offset для центрирования
+        double viewW = schemeScrollPane.getWidth();
+        double viewH = schemeScrollPane.getHeight();
+        double canvasW = canvasState.getWidth();
+        double canvasH = canvasState.getHeight();
+
+        double offsetX = (viewW - canvasW * scale) / 2;
+        double offsetY = (viewH - canvasH * scale) / 2;
+
+        canvasState.setOffset(new Point2D(offsetX, offsetY));
+        clampPanOffset();
+        updateZoomLabel();
+        statusLabel.setText("Масштаб 50%, схема отцентрирована");
+    }
+
+    /**
      * Обновление текстовой метки масштаба
      */
     private void updateZoomLabel() {
@@ -1194,8 +1216,8 @@ public class SchemeEditorController implements SearchableController {
             // Загружаем фигуры и устройства
             loadSchemeContent(scheme);
 
-            // Сбрасываем вид
-            resetView();
+            // Устанавливаем масштаб 50% и центрируем
+            resetViewTo50PercentAndCenter();
 
             refreshAvailableDevices();
             schemeSaver.resetDirty(); // свежезагруженная схема — изменений нет
@@ -1396,12 +1418,16 @@ public class SchemeEditorController implements SearchableController {
         for (DeviceLocation location : locations) {
             Device device = deviceDAO.getDeviceById(location.getDeviceId());
             if (device != null) {
+                // Преобразуем координаты из формата Android в формат JavaFX
+                // с учетом динамического смещения при повороте
+                double[] javafxCoords = DeviceIconService.convertFromAndroidCoordinates(
+                        location.getX(), location.getY(), location.getRotation());
+
                 Node deviceNode = deviceIconService.createDeviceIcon(
-                        location.getX(), location.getY(), device, currentScheme
+                        javafxCoords[0], javafxCoords[1], device, currentScheme
                 );
-                deviceNode.setRotate(location.getRotation());
-                // Компенсируем поворот текста, чтобы он оставался горизонтальным
-                DeviceIconService.compensateTextRotation(deviceNode, location.getRotation());
+                // Применяем поворот с правильным pivot point для синхронизации с Android
+                DeviceIconService.applyRotationWithPivot(deviceNode, location.getRotation());
                 schemePane.getChildren().add(deviceNode);
             }
         }
@@ -1785,8 +1811,12 @@ public class SchemeEditorController implements SearchableController {
                     if (schemePane != null) schemePane.getChildren().add(deviceNode);
 
                     if (currentScheme != null && deviceLocationDAO != null) {
+                        // Преобразуем координаты из формата JavaFX в формат Android
+                        // с учетом динамического смещения при повороте (rotation = 0 для нового прибора)
+                        double[] androidCoords = DeviceIconService.convertToAndroidCoordinates(x, y, 0.0);
+
                         DeviceLocation location = new DeviceLocation(
-                                selectedDevice.getId(), currentScheme.getId(), x, y
+                                selectedDevice.getId(), currentScheme.getId(), androidCoords[0], androidCoords[1]
                         );
                         boolean added = deviceLocationDAO.addDeviceLocation(location);
                         if (added) {

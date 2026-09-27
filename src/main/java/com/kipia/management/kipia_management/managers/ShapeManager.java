@@ -1,5 +1,6 @@
 package com.kipia.management.kipia_management.managers;
 
+import com.kipia.management.kipia_management.services.DeviceIconService;
 import com.kipia.management.kipia_management.services.ShapeService;
 import com.kipia.management.kipia_management.shapes.*;
 import javafx.geometry.Point2D;
@@ -343,7 +344,7 @@ public class ShapeManager {
 
             double x = deviceNode.getLayoutX();
             double y = deviceNode.getLayoutY();
-            double rotation = deviceNode.getRotate();
+            double rotation = DeviceIconService.getRotationAngle(deviceNode);
 
             // Корректировка для Circle (центр вместо левого верхнего угла)
             if (deviceNode instanceof javafx.scene.shape.Circle) {
@@ -351,9 +352,13 @@ public class ShapeManager {
                 y -= 10;
             }
 
+            // Преобразуем координаты из формата JavaFX в формат Android
+            // с учетом динамического смещения при повороте
+            double[] androidCoords = DeviceIconService.convertToAndroidCoordinates(x, y, rotation);
+
             com.kipia.management.kipia_management.models.DeviceLocation location =
                     new com.kipia.management.kipia_management.models.DeviceLocation(
-                            device.getId(), scheme.getId(), x, y, rotation);
+                            device.getId(), scheme.getId(), androidCoords[0], androidCoords[1], rotation);
             deviceLocationDAO.addDeviceLocation(location);
         }
     }
@@ -382,7 +387,7 @@ public class ShapeManager {
             // Сохраняем позицию для восстановления
             this.savedX = deviceNode.getLayoutX();
             this.savedY = deviceNode.getLayoutY();
-            this.savedRotation = deviceNode.getRotate();
+            this.savedRotation = DeviceIconService.getRotationAngle(deviceNode);
         }
 
         @Override
@@ -405,9 +410,8 @@ public class ShapeManager {
             // Восстанавливаем позицию
             deviceNode.setLayoutX(savedX);
             deviceNode.setLayoutY(savedY);
-            deviceNode.setRotate(savedRotation);
-            // Компенсируем поворот текста, чтобы он оставался горизонтальным
-            com.kipia.management.kipia_management.services.DeviceIconService.compensateTextRotation(deviceNode, savedRotation);
+            // Применяем поворот с правильным pivot point
+            DeviceIconService.applyRotationWithPivot(deviceNode, savedRotation);
             // Сохраняем позицию в БД
             saveDevicePosition();
         }
@@ -424,9 +428,13 @@ public class ShapeManager {
                 y -= 10;
             }
 
+            // Преобразуем координаты из формата JavaFX в формат Android
+            // с учетом динамического смещения при повороте
+            double[] androidCoords = DeviceIconService.convertToAndroidCoordinates(x, y, savedRotation);
+
             com.kipia.management.kipia_management.models.DeviceLocation location =
                     new com.kipia.management.kipia_management.models.DeviceLocation(
-                            device.getId(), scheme.getId(), x, y, savedRotation);
+                            device.getId(), scheme.getId(), androidCoords[0], androidCoords[1], savedRotation);
             deviceLocationDAO.addDeviceLocation(location);
         }
     }
@@ -462,9 +470,8 @@ public class ShapeManager {
         public void execute() {
             deviceNode.setLayoutX(newX);
             deviceNode.setLayoutY(newY);
-            deviceNode.setRotate(newRotation);
-            // Компенсируем поворот текста, чтобы он оставался горизонтальным
-            com.kipia.management.kipia_management.services.DeviceIconService.compensateTextRotation(deviceNode, newRotation);
+            // Применяем поворот с правильным pivot point
+            DeviceIconService.applyRotationWithPivot(deviceNode, newRotation);
             saveDevicePosition(newX, newY, newRotation);
         }
 
@@ -472,9 +479,8 @@ public class ShapeManager {
         public void undo() {
             deviceNode.setLayoutX(oldX);
             deviceNode.setLayoutY(oldY);
-            deviceNode.setRotate(oldRotation);
-            // Компенсируем поворот текста, чтобы он оставался горизонтальным
-            com.kipia.management.kipia_management.services.DeviceIconService.compensateTextRotation(deviceNode, oldRotation);
+            // Применяем поворот с правильным pivot point
+            DeviceIconService.applyRotationWithPivot(deviceNode, oldRotation);
             saveDevicePosition(oldX, oldY, oldRotation);
         }
 
@@ -490,9 +496,13 @@ public class ShapeManager {
                 correctedY -= 10;
             }
 
+            // Преобразуем координаты из формата JavaFX в формат Android
+            // с учетом динамического смещения при повороте
+            double[] androidCoords = DeviceIconService.convertToAndroidCoordinates(correctedX, correctedY, rotation);
+
             com.kipia.management.kipia_management.models.DeviceLocation location =
                     new com.kipia.management.kipia_management.models.DeviceLocation(
-                            device.getId(), scheme.getId(), correctedX, correctedY, rotation);
+                            device.getId(), scheme.getId(), androidCoords[0], androidCoords[1], rotation);
             deviceLocationDAO.addDeviceLocation(location);
         }
     }

@@ -21,6 +21,7 @@ import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.text.Text;
 import javafx.scene.Group;
+import javafx.scene.transform.Rotate;
 import javafx.stage.Stage;
 import com.kipia.management.kipia_management.utils.StyleUtils;
 import org.apache.logging.log4j.LogManager;
@@ -51,6 +52,61 @@ public class DeviceIconService {
     private static final double DEFAULT_ICON_SIZE = 45.0;
     private static final double FALLBACK_CIRCLE_RADIUS = 10.0;
     private static final String DEFAULT_ICON_PATH = "/images/manometer.png";
+    
+    // Pivot point для поворота - должен совпадать с Android версией
+    public static final double PIVOT_X = 22.5;  // Центр иконки по X (45 / 2)
+    public static final double PIVOT_Y = 5.0;   // Граница между текстом и иконкой
+
+    /**
+     * Преобразует координаты из формата JavaFX (левый верхний угол Group)
+     * в формат Android (сырые координаты - pivot point)
+     *
+     * Android хранит в БД сырые координаты (pivot point), а при отрисовке
+     * применяет динамическое смещение: adjustedX = screenX - 22.5 + 22.5*sin(rotation)
+     *
+     * Поэтому при сохранении нужно просто преобразовать из левого верхнего угла в pivot point.
+     *
+     * @param x координата X левого верхнего угла Group
+     * @param y координата Y левого верхнего угла Group
+     * @param rotation угол поворота в градусах (не используется в преобразовании)
+     * @return координаты в формате Android (pivot point)
+     */
+    public static double[] convertToAndroidCoordinates(double x, double y, double rotation) {
+        // Просто преобразуем из левого верхнего угла в pivot point
+        double pivotX = x + PIVOT_X;
+        double pivotY = y + PIVOT_Y;
+
+        LOGGER.debug("convertToAndroid: JavaFX=({},{}) -> Android pivot=({},{})",
+                String.format("%.2f", x), String.format("%.2f", y),
+                String.format("%.2f", pivotX), String.format("%.2f", pivotY));
+
+        return new double[]{pivotX, pivotY};
+    }
+
+    /**
+     * Преобразует координаты из формата Android (сырые - pivot point)
+     * в формат JavaFX (левый верхний угол Group)
+     *
+     * Android хранит в БД сырые координаты (pivot point), а при отрисовке
+     * применяет динамическое смещение. JavaFX не делает такого смещения,
+     * поэтому при загрузке нужно просто преобразовать из pivot point в левый верхний угол.
+     *
+     * @param x координата X в формате Android (pivot point)
+     * @param y координата Y в формате Android (pivot point)
+     * @param rotation угол поворота в градусах (не используется в преобразовании)
+     * @return координаты левого верхнего угла Group
+     */
+    public static double[] convertFromAndroidCoordinates(double x, double y, double rotation) {
+        // Просто преобразуем из pivot point в левый верхний угол
+        double topLeftX = x - PIVOT_X;
+        double topLeftY = y - PIVOT_Y;
+
+        LOGGER.debug("convertFromAndroid: Android pivot=({},{}) -> JavaFX=({},{})",
+                String.format("%.2f", x), String.format("%.2f", y),
+                String.format("%.2f", topLeftX), String.format("%.2f", topLeftY));
+
+        return new double[]{topLeftX, topLeftY};
+    }
 
     private final Runnable onDeviceDeletedCallback;
 
@@ -209,7 +265,7 @@ public class DeviceIconService {
 
         double x = node.getLayoutX();
         double y = node.getLayoutY();
-        double rotation = node.getRotate();
+        double rotation = getRotationAngle(node);
 
         // Корректировка для Circle внутри Group (центр вместо левого верхнего угла)
         if (node instanceof Group) {
@@ -220,7 +276,11 @@ public class DeviceIconService {
             }
         }
 
-        DeviceLocation location = new DeviceLocation(device.getId(), currentScheme.getId(), x, y, rotation);
+        // Преобразуем координаты из формата JavaFX в формат Android
+        // с учетом динамического смещения при повороте
+        double[] androidCoords = convertToAndroidCoordinates(x, y, rotation);
+
+        DeviceLocation location = new DeviceLocation(device.getId(), currentScheme.getId(), androidCoords[0], androidCoords[1], rotation);
         boolean saved = deviceLocationDAO.addDeviceLocation(location);
 
         if (saved) {
@@ -247,12 +307,18 @@ public class DeviceIconService {
 
         double newX = node.getLayoutX();
         double newY = node.getLayoutY();
-        double newRotation = node.getRotate();
+        double newRotation = getRotationAngle(node);
+
+        // Преобразуем координаты из формата JavaFX в формат Android
+        // с учетом динамического смещения при повороте
+        double[] newAndroidCoords = convertToAndroidCoordinates(newX, newY, newRotation);
+        double[] oldAndroidCoords = convertToAndroidCoordinates(oldX, oldY, oldRotation);
 
         // Регистрируем только если позиция реально изменилась
         if (Math.abs(newX - oldX) > 0.1 || Math.abs(newY - oldY) > 0.1 || Math.abs(newRotation - oldRotation) > 0.1) {
             shapeManager.registerMoveDevice(node, device, deviceLocationDAO, currentScheme,
-                    oldX, oldY, oldRotation, newX, newY, newRotation);
+                    oldAndroidCoords[0], oldAndroidCoords[1], oldRotation,
+                    newAndroidCoords[0], newAndroidCoords[1], newRotation);
 
             // Обновляем timestamp устройства
             device.updateTimestamp();
@@ -388,20 +454,47 @@ public class DeviceIconService {
     }
 
     /**
-     * Поворот иконки устройства
+     * Поворот иконки устройства с использованием правильного pivot point
+     * для синхронизации с Android версией
      */
     private void rotateDeviceIcon(Node node, double angle, Device device) {
-        // Применяем поворот к группе
-        node.setRotate(angle);
-
-        // Компенсируем поворот текста, чтобы он оставался горизонтальным
-        compensateTextRotation(node, angle);
+        applyRotationWithPivot(node, angle);
 
         // Сохраняем угол поворота в UserData для последующего сохранения
         node.setUserData(new DeviceWithRotation(device, angle));
 
         // ВАЖНО: Сохраняем позицию и угол поворота в БД
         saveDevicePositionAndRotation(node, device);
+    }
+
+    /**
+     * Применяет поворот с правильным pivot point (22.5, 5)
+     * для синхронизации с Android версией
+     */
+    public static void applyRotationWithPivot(Node node, double angle) {
+        // Удаляем старые Rotate трансформации если есть
+        node.getTransforms().removeIf(transform -> transform instanceof Rotate);
+
+        // Создаем новую Rotate трансформацию с правильным pivot
+        Rotate rotate = new Rotate(angle, PIVOT_X, PIVOT_Y);
+        node.getTransforms().add(rotate);
+
+        // Компенсируем поворот текста, чтобы он оставался горизонтальным
+        compensateTextRotation(node, angle);
+    }
+
+    /**
+     * Получает текущий угол поворота из Rotate transform
+     * Возвращает 0 если Rotate transform не найден
+     */
+    public static double getRotationAngle(Node node) {
+        for (var transform : node.getTransforms()) {
+            if (transform instanceof Rotate) {
+                return ((Rotate) transform).getAngle();
+            }
+        }
+        // Fallback к старому методу если transform не найден
+        return node.getRotate();
     }
 
     /**
@@ -534,12 +627,18 @@ public class DeviceIconService {
 
     /**
      * Обновляет цвета текста на иконках при смене темы
+     * Обновляет только текст над иконками приборов, не затрагивает текстовые фигуры
      */
     public void refreshTheme() {
         Color textColor = StyleUtils.isDarkTheme() ? Color.WHITE : Color.BLACK;
         
         for (Node node : schemePane.getChildren()) {
             if (node instanceof Group) {
+                // Проверяем, что это устройство (а не текстовая фигура)
+                if (!isDeviceNode(node)) {
+                    continue;
+                }
+                
                 Group group = (Group) node;
                 // Ищем Text в группе и обновляем его цвет
                 for (Node child : group.getChildren()) {
@@ -549,6 +648,15 @@ public class DeviceIconService {
                 }
             }
         }
+    }
+
+    /**
+     * Проверка, является ли узел устройством
+     */
+    private boolean isDeviceNode(Node node) {
+        return node.getUserData() != null &&
+                (node.getUserData() instanceof Device ||
+                        node.getUserData() instanceof DeviceWithRotation);
     }
 
     // ============================================================
@@ -648,7 +756,7 @@ public class DeviceIconService {
                 initialMouseY = panePoint.getY();
                 initialLayoutX = node.getLayoutX();
                 initialLayoutY = node.getLayoutY();
-                initialRotation = node.getRotate(); // Сохраняем начальный поворот
+                initialRotation = getRotationAngle(node); // Сохраняем начальный поворот
 
                 double centerOffsetX = calculateCenterOffsetX();
                 double centerOffsetY = calculateCenterOffsetY();
@@ -704,7 +812,7 @@ public class DeviceIconService {
                 if (shapeManager != null && currentScheme != null) {
                     double newX = node.getLayoutX();
                     double newY = node.getLayoutY();
-                    double newRotation = node.getRotate();
+                    double newRotation = getRotationAngle(node);
 
                     // Регистрируем только если позиция реально изменилась
                     if (Math.abs(newX - initialLayoutX) > 0.1 || Math.abs(newY - initialLayoutY) > 0.1 || Math.abs(newRotation - initialRotation) > 0.1) {

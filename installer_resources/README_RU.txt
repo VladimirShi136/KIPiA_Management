@@ -105,6 +105,6 @@
 GitHub: https://github.com/VladimirShi136/KIPiA_Management.git
 Telegram: https://t.me/Skilds
 
-Версия: 2.1.2
-Дата сборки: 22.09.2026
+Версия 2.1.3
+Дата выпуска: 27.09.2026
   

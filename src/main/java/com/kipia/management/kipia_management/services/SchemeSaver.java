@@ -180,13 +180,17 @@ public class SchemeSaver {
     public void saveDeviceLocation(Node node, Device device, Scheme scheme) {
         double x = node.getLayoutX();
         double y = node.getLayoutY();
-        double rotation = node.getRotate();
+        double rotation = DeviceIconService.getRotationAngle(node);
+
+        // Преобразуем координаты из формата JavaFX в формат Android
+        // с учетом динамического смещения при повороте
+        double[] androidCoords = DeviceIconService.convertToAndroidCoordinates(x, y, rotation);
 
         DeviceLocation location = new DeviceLocation(
                 device.getId(),
                 scheme.getId(),
-                x,
-                y,
+                androidCoords[0],
+                androidCoords[1],
                 rotation
         );
 

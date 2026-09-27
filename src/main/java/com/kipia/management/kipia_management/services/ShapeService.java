@@ -2,6 +2,7 @@ package com.kipia.management.kipia_management.services;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.kipia.management.kipia_management.models.Device;
 import com.kipia.management.kipia_management.models.ShapeData;
 import com.kipia.management.kipia_management.models.SchemeData;
 import com.kipia.management.kipia_management.shapes.*;
@@ -123,7 +124,13 @@ public class ShapeService {
         // Общие свойства
         data.setX(shape.getLayoutX());
         data.setY(shape.getLayoutY());
-        data.setRotation(shape.getRotate());
+        // Для device icons используем getRotationAngle, для обычных фигур - getRotate
+        if (shape.getUserData() instanceof DeviceIconService.DeviceWithRotation || 
+            shape.getUserData() instanceof Device) {
+            data.setRotation(DeviceIconService.getRotationAngle(shape));
+        } else {
+            data.setRotation(shape.getRotate());
+        }
 
         // Цвета - используем новые геттеры
         Color stroke = shape.getStrokeColor();

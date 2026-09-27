@@ -1,21 +1,21 @@
-﻿#define AppVersion "2.1.1"
+﻿#define AppVersion "2.1.3"
 
 [Setup]
 AppName=KIPiA_Management
-AppVersion=2.1.1
-AppVerName=KIPiA_Management 2.1.1
-AppId={{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}}
+AppVersion=2.1.3
+AppVerName=KIPiA_Management 2.1.3
+AppId="{{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}}"
 DefaultDirName={commonpf}\KIPiA_Management
 DefaultGroupName=KIPiA_Management
-OutputBaseFilename=KIPiA_Management_2.1.1
+OutputBaseFilename=KIPiA_Management_2.1.3
 Compression=lzma2
 SolidCompression=yes
 PrivilegesRequired=admin
-FlatComponentsList=false
+FlatComponentsList=no
 ShowComponentSizes=yes
 AllowNoIcons=yes
 LanguageDetectionMethod=locale
-UninstallDisplayName=KIPiA_Management 2.1.1
+UninstallDisplayName=KIPiA_Management 2.1.3
 UninstallDisplayIcon={app}\iconApp.ico
 DirExistsWarning=no
 SetupIconFile=C:\Users\kalba\IdeaProjects\KIPiA_Management\installer_resources\iconApp.ico
@@ -43,9 +43,11 @@ ru.WelcomeLabel2=Это приложение установит KIPiA_Management
 ru.ButtonNext=Далее >
 ru.ButtonBack=< Назад
 ru.ButtonFinish=Завершить
-ru.SetupWindowTitle=Установка KIPiA_Management 2.1.1
+ru.SetupWindowTitle=Установка KIPiA_Management 2.1.3
 ru.FinishedLabel=Программа успешно установлена!
 ru.ConfirmUninstall=Вы действительно хотите удалить KIPiA_Management?
+ru.ExitSetupTitle=Выход из программы установки
+ru.ExitSetupMessage=Программа установки не завершена.%n%nЕсли вы выйдете сейчас, программа не будет установлена.%n%nВы хотите выйти?
 
 [Types]
 Name: "full"; Description: "Полная установка"
@@ -83,8 +85,10 @@ Type: dirifempty; Name: "{commonappdata}\KIPiA_Management"
 
 // Ключ реестра, куда Inno Setup записывает информацию об установке
 const
-  REG_KEY_32 = 'SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}}_is1';
-  REG_KEY_64 = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}}_is1';
+  REG_KEY_32 = 'SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}_is1';
+  REG_KEY_64 = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}_is1';
+  REG_KEY_32_OLD = 'SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}}_is1';
+  REG_KEY_64_OLD = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}}_is1';
 
 // Возвращает строку установленной версии или '', если не установлено
 function GetInstalledVersion: String;
@@ -92,6 +96,7 @@ var
   Version: String;
 begin
   Result := '';
+  // Проверяем новый GUID
   if RegQueryStringValue(HKLM, REG_KEY_32, 'DisplayVersion', Version) then
     Result := Version
   else if RegQueryStringValue(HKLM, REG_KEY_64, 'DisplayVersion', Version) then
@@ -99,6 +104,15 @@ begin
   else if RegQueryStringValue(HKCU, REG_KEY_32, 'DisplayVersion', Version) then
     Result := Version
   else if RegQueryStringValue(HKCU, REG_KEY_64, 'DisplayVersion', Version) then
+    Result := Version
+  // Проверяем старый GUID (с лишней скобкой) для совместимости
+  else if RegQueryStringValue(HKLM, REG_KEY_32_OLD, 'DisplayVersion', Version) then
+    Result := Version
+  else if RegQueryStringValue(HKLM, REG_KEY_64_OLD, 'DisplayVersion', Version) then
+    Result := Version
+  else if RegQueryStringValue(HKCU, REG_KEY_32_OLD, 'DisplayVersion', Version) then
+    Result := Version
+  else if RegQueryStringValue(HKCU, REG_KEY_64_OLD, 'DisplayVersion', Version) then
     Result := Version;
 end;
 
@@ -106,6 +120,13 @@ end;
 function GetUserDataDir: String;
 begin
   Result := ExpandConstant('{userappdata}\KIPiA_Management');
+end;
+
+// Изменение размера окна мастера установки
+procedure InitializeWizard;
+begin
+  WizardForm.ClientWidth := 700;
+  WizardForm.ClientHeight := WizardForm.ClientHeight + 50;
 end;
 
 // Инициализация установщика: проверяем наличие старой версии
@@ -124,19 +145,22 @@ begin
     UserDataDir := GetUserDataDir;
 
     Msg := 'Обнаружена установленная версия KIPiA_Management: ' + InstalledVer + '.' + #13#10 + #13#10 +
-           '⚠️  ВАЖНО: Перед обновлением сделайте резервную копию базы данных!' + #13#10 +
-           'Папка с данными: ' + UserDataDir + '\data' + #13#10 + #13#10 +
-           'Старая версия будет удалена, новая (' + '{#AppVersion}' + ') установлена на её место.' + #13#10 + #13#10 +
-           'Вы сделали резервную копию БД и готовы продолжить обновление?';
+           'ВАЖНО: Перед обновлением сделайте' + #13#10 +
+           'резервную копию базы данных!' + #13#10 +
+           'Папка с данными:' + #13#10 +
+           UserDataDir + '\data' + #13#10 + #13#10 +
+           'Старая версия будет удалена,' + #13#10 +
+           'новая (' + '{#AppVersion}' + ') установлена на её место.' + #13#10 + #13#10 +
+           'Вы сделали резервную копию БД' + #13#10 +
+           'и готовы продолжить обновление?';
 
-    Answer := MsgBox(Msg,
-                     mbConfirmation,
-                     MB_YESNO or MB_DEFBUTTON2);
+    Answer := MsgBox(Msg, mbConfirmation, MB_YESNO or MB_DEFBUTTON2);
 
     if Answer <> IDYES then
     begin
-      MsgBox('Установка отменена. Пожалуйста, сделайте резервную копию папки:' + #13#10 +
-             UserDataDir + '\data' + #13#10 +
+      MsgBox('Установка отменена.' + #13#10 + #13#10 +
+             'Пожалуйста, сделайте резервную копию папки:' + #13#10 +
+             UserDataDir + '\data' + #13#10 + #13#10 +
              'и запустите установщик снова.',
              mbInformation, MB_OK);
       Result := False;
@@ -160,7 +184,12 @@ begin
       if RegQueryStringValue(HKLM, REG_KEY_32, 'UninstallString', UninstPath) or
          RegQueryStringValue(HKLM, REG_KEY_64, 'UninstallString', UninstPath) or
          RegQueryStringValue(HKCU, REG_KEY_32, 'UninstallString', UninstPath) or
-         RegQueryStringValue(HKCU, REG_KEY_64, 'UninstallString', UninstPath) then
+         RegQueryStringValue(HKCU, REG_KEY_64, 'UninstallString', UninstPath) or
+         // Проверяем старый GUID (с лишней скобкой) для совместимости
+         RegQueryStringValue(HKLM, REG_KEY_32_OLD, 'UninstallString', UninstPath) or
+         RegQueryStringValue(HKLM, REG_KEY_64_OLD, 'UninstallString', UninstPath) or
+         RegQueryStringValue(HKCU, REG_KEY_32_OLD, 'UninstallString', UninstPath) or
+         RegQueryStringValue(HKCU, REG_KEY_64_OLD, 'UninstallString', UninstPath) then
       begin
         // Удаляем кавычки, если есть
         UninstPath := RemoveQuotes(UninstPath);

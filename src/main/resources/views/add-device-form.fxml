@@ -33,13 +33,13 @@
 
                     <!-- СТРОКА 0: Тип прибора -->
                     <Label text="* Тип прибора:" GridPane.rowIndex="0" GridPane.columnIndex="0" styleClass="form-label"/>
-                    <TextField fx:id="typeField" GridPane.rowIndex="0" GridPane.columnIndex="1" prefWidth="280"
-                               styleClass="form-input" promptText="Например, Манометр"/>
+                    <ComboBox fx:id="typeField" GridPane.rowIndex="0" GridPane.columnIndex="1" prefWidth="280"
+                              editable="true" styleClass="form-input, no-arrow" promptText="Например, Манометр"/>
 
                     <!-- СТРОКА 1: Модель -->
                     <Label text="* Модель:" GridPane.rowIndex="1" GridPane.columnIndex="0" styleClass="form-label"/>
-                    <TextField fx:id="nameField" GridPane.rowIndex="1" GridPane.columnIndex="1" prefWidth="280"
-                               styleClass="form-input" promptText="Например, МП4-УУ2"/>
+                    <ComboBox fx:id="nameField" GridPane.rowIndex="1" GridPane.columnIndex="1" prefWidth="280"
+                              editable="true" styleClass="form-input, no-arrow" promptText="Например, МП4-УУ2"/>
 
                     <!-- СТРОКА 2: Инвентарный номер -->
                     <Label text="* Инвентарный номер:" GridPane.rowIndex="2" GridPane.columnIndex="0" styleClass="form-label"/>
@@ -53,8 +53,8 @@
 
                     <!-- СТРОКА 4: Кран № -->
                     <Label text="Кран №:" GridPane.rowIndex="4" GridPane.columnIndex="0" styleClass="form-label"/>
-                    <TextField fx:id="valveNumberField" GridPane.rowIndex="4" GridPane.columnIndex="1" prefWidth="280"
-                               styleClass="form-input" promptText="Например, Р1-333"/>
+                    <ComboBox fx:id="valveNumberField" GridPane.rowIndex="4" GridPane.columnIndex="1" prefWidth="280"
+                              editable="true" styleClass="form-input, no-arrow" promptText="Например, Р1-333"/>
 
                     <!-- СТРОКА 5: Статус -->
                     <Label text="* Статус:" GridPane.rowIndex="5" GridPane.columnIndex="0" styleClass="form-label"/>
@@ -64,26 +64,26 @@
                     <!-- СТРОКА 6: Предел измерений -->
                     <Label text="Предел измерений:" GridPane.rowIndex="6" GridPane.columnIndex="0"
                            styleClass="form-label"/>
-                    <TextField fx:id="measurementLimitField" GridPane.rowIndex="6" GridPane.columnIndex="1" prefWidth="280"
-                               styleClass="form-input" promptText="В кг или МПа"/>
+                    <ComboBox fx:id="measurementLimitField" GridPane.rowIndex="6" GridPane.columnIndex="1" prefWidth="280"
+                              editable="true" styleClass="form-input, no-arrow" promptText="В кг или МПа"/>
 
                     <!-- СТРОКА 7: Класс точности -->
                     <Label text="Класс точности:" GridPane.rowIndex="7" GridPane.columnIndex="0"
                            styleClass="form-label"/>
-                    <TextField fx:id="accuracyClassField" GridPane.rowIndex="7" GridPane.columnIndex="1" prefWidth="280"
-                               styleClass="form-input" promptText="Введите число в %"/>
+                    <ComboBox fx:id="accuracyClassField" GridPane.rowIndex="7" GridPane.columnIndex="1" prefWidth="280"
+                              editable="true" styleClass="form-input, no-arrow" promptText="Введите число в %"/>
 
                     <!-- СТРОКА 8: Производитель -->
                     <Label text="Производитель:" GridPane.rowIndex="8" GridPane.columnIndex="0"
                            styleClass="form-label"/>
-                    <TextField fx:id="manufacturerField" GridPane.rowIndex="8" GridPane.columnIndex="1" prefWidth="280"
-                               promptText="Например, ОАО Манотомь" styleClass="form-input"/>
+                    <ComboBox fx:id="manufacturerField" GridPane.rowIndex="8" GridPane.columnIndex="1" prefWidth="280"
+                              editable="true" promptText="Например, ОАО Манотомь" styleClass="form-input, no-arrow"/>
 
                     <!-- СТРОКА 9: Год выпуска -->
                     <Label text="Год выпуска:" GridPane.rowIndex="9" GridPane.columnIndex="0"
                            styleClass="form-label"/>
-                    <TextField fx:id="yearField" GridPane.rowIndex="9" GridPane.columnIndex="1" prefWidth="280"
-                               promptText="Год (число), напр. 2023" styleClass="form-input"/>
+                    <ComboBox fx:id="yearField" GridPane.rowIndex="9" GridPane.columnIndex="1" prefWidth="280"
+                              editable="true" styleClass="form-input, no-arrow" promptText="Год (число), напр. 2023"/>
 
                     <!-- СТРОКА 10: Доп. информация -->
                     <Label text="Доп. информация:" GridPane.rowIndex="10" GridPane.columnIndex="0"
