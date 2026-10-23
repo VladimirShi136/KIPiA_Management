@@ -56,6 +56,8 @@ public class DevicesTableController implements SearchableController {
     @FXML
     private Label storageDevicesLabel;
     @FXML
+    private Label inRepairDevicesLabel;
+    @FXML
     private Label lostDevicesLabel;
     @FXML
     private Label brokenDevicesLabel;
@@ -177,7 +179,7 @@ public class DevicesTableController implements SearchableController {
         TableColumn<Device, String> statusCol = new TableColumn<>("Статус");
         statusCol.setCellValueFactory(new PropertyValueFactory<>("status"));
         statusCol.setCellFactory(ComboBoxTableCell.forTableColumn(
-                "Хранение", "В работе", "Утерян", "Испорчен"));
+                "Хранение", "В работе", "В ремонте", "Утерян", "Испорчен"));
         statusCol.setOnEditCommit(event -> {
             Device dev = event.getRowValue();
             dev.setStatus(event.getNewValue());
@@ -475,6 +477,9 @@ public class DevicesTableController implements SearchableController {
         long storage = filteredList.stream()
                 .filter(d -> "Хранение".equalsIgnoreCase(d.getStatus()))
                 .count();
+        long inRepair = filteredList.stream()
+                .filter(d -> "В ремонте".equalsIgnoreCase(d.getStatus()))
+                .count();
         long lost = filteredList.stream()
                 .filter(d -> "Утерян".equalsIgnoreCase(d.getStatus()))
                 .count();
@@ -485,6 +490,7 @@ public class DevicesTableController implements SearchableController {
         totalDevicesLabel.setText(String.valueOf(total));
         workingDevicesLabel.setText(String.valueOf(working));
         storageDevicesLabel.setText(String.valueOf(storage));
+        inRepairDevicesLabel.setText(String.valueOf(inRepair));
         lostDevicesLabel.setText(String.valueOf(lost));
         brokenDevicesLabel.setText(String.valueOf(broken));
     }

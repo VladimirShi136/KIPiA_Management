@@ -10,24 +10,25 @@ import com.kipia.management.kipia_management.utils.CustomAlertDialog;
 import com.kipia.management.kipia_management.utils.TimeValidator;
 import javafx.application.Platform;
 import javafx.scene.Node;
-import javafx.scene.control.Menu;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.Cursor;
-import javafx.scene.control.ContextMenu;
-import javafx.scene.control.MenuItem;
 import javafx.scene.text.Text;
 import javafx.scene.Group;
 import javafx.scene.transform.Rotate;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 import com.kipia.management.kipia_management.utils.StyleUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.BiConsumer;
 
 /**
@@ -109,12 +110,14 @@ public class DeviceIconService {
     }
 
     private final Runnable onDeviceDeletedCallback;
+    private final Runnable onDeviceEditedCallback;
 
     // Обновите конструктор
     public DeviceIconService(AnchorPane schemePane,
                              BiConsumer<Node, Device> onDeviceMovedCallback,
                              DeviceLocationDAO deviceLocationDAO,
                              Runnable onDeviceDeletedCallback,
+                             Runnable onDeviceEditedCallback,
                              Scheme currentScheme,
                              DeviceDAO deviceDAO,
                              ShapeManager shapeManager) {  // Добавляем ShapeManager
@@ -122,6 +125,7 @@ public class DeviceIconService {
         this.onDeviceMovedCallback = onDeviceMovedCallback;
         this.deviceLocationDAO = deviceLocationDAO;
         this.onDeviceDeletedCallback = onDeviceDeletedCallback;
+        this.onDeviceEditedCallback = onDeviceEditedCallback;
         this.currentScheme = currentScheme; // Сохраняем текущую схему
         this.deviceDAO = deviceDAO;
         this.shapeManager = shapeManager; // Сохраняем ShapeManager
@@ -151,7 +155,7 @@ public class DeviceIconService {
     private Node createIconWithImage(double x, double y, Device device, Scheme currentScheme) {
         Image iconImage = loadDeviceImage();
         ImageView deviceIcon = createImageView(iconImage);
-        
+
         // Создаем текст с номером крана над иконкой
         String valveTextValue = device.getValveNumber() != null ? device.getValveNumber() : "";
         Text valveText = new Text(valveTextValue);
@@ -159,14 +163,26 @@ public class DeviceIconService {
         // Цвет текста зависит от темы
         Color textColor = StyleUtils.isDarkTheme() ? Color.WHITE : Color.BLACK;
         valveText.setFill(textColor);
-        
+
         // Центрируем текст над иконкой
         double textWidth = valveText.getLayoutBounds().getWidth();
         valveText.setX((DEFAULT_ICON_SIZE - textWidth) / 2);
         valveText.setY(-5); // Чуть выше иконки
-        
+
         // Создаем Group с иконкой и текстом
         Group iconGroup = new Group(deviceIcon, valveText);
+
+        // Добавляем иконку гаечного ключа для статуса "В ремонте"
+        if ("В ремонте".equals(device.getStatus())) {
+            javafx.scene.shape.SVGPath wrenchIcon = createWrenchIcon();
+            iconGroup.getChildren().add(wrenchIcon);
+        }
+
+        // Применяем прозрачность для статуса "Утерян"
+        if ("Утерян".equals(device.getStatus())) {
+            iconGroup.setOpacity(0.5);
+        }
+
         configureIcon(iconGroup, x, y, device, currentScheme);
         return iconGroup;
     }
@@ -180,7 +196,7 @@ public class DeviceIconService {
                         "'. Используется резервная круглая иконка.");
 
         Circle fallbackCircle = createFallbackCircle();
-        
+
         // Создаем текст с номером крана над иконкой
         String valveTextValue = device.getValveNumber() != null ? device.getValveNumber() : "";
         Text valveText = new Text(valveTextValue);
@@ -188,14 +204,26 @@ public class DeviceIconService {
         // Цвет текста зависит от темы
         Color textColor = StyleUtils.isDarkTheme() ? Color.WHITE : Color.BLACK;
         valveText.setFill(textColor);
-        
+
         // Центрируем текст над кругом
         double textWidth = valveText.getLayoutBounds().getWidth();
         valveText.setX((FALLBACK_CIRCLE_RADIUS * 2 - textWidth) / 2);
         valveText.setY(-5); // Чуть выше иконки
-        
+
         // Создаем Group с кругом и текстом
         Group iconGroup = new Group(fallbackCircle, valveText);
+
+        // Добавляем иконку гаечного ключа для статуса "В ремонте"
+        if ("В ремонте".equals(device.getStatus())) {
+            javafx.scene.shape.SVGPath wrenchIcon = createWrenchIcon();
+            iconGroup.getChildren().add(wrenchIcon);
+        }
+
+        // Применяем прозрачность для статуса "Утерян"
+        if ("Утерян".equals(device.getStatus())) {
+            iconGroup.setOpacity(0.5);
+        }
+
         configureIcon(iconGroup, x, y, device, currentScheme);
         return iconGroup;
     }
@@ -229,6 +257,25 @@ public class DeviceIconService {
         circle.setStroke(Color.GRAY);
         circle.setStrokeWidth(1);
         return circle;
+    }
+
+    /**
+     * Создание иконки гаечного ключа для статуса "В ремонте"
+     */
+    private javafx.scene.shape.SVGPath createWrenchIcon() {
+        javafx.scene.shape.SVGPath wrench = new javafx.scene.shape.SVGPath();
+        // Конвертированный путь из Android XML
+        wrench.setContent(
+                "M22.7,19L13.6,9.9C14.5,7.6 14,4.9 12.1,3C10.1,1 7.1,0.5 4.7,1.7L9,6L6,9L1.7,4.7C0.5,7.1 1,10.1 3,12.1C4.9,14 7.6,14.5 9.9,13.6L19,22.7C19.6,23.3 20.5,23.3 21.1,22.7L22.7,21.1C23.3,20.5 23.3,19.6 22.7,19Z"
+        );
+        wrench.setFill(Color.web("#FF9800"));
+        // Уменьшаем размер иконки
+        wrench.setScaleX(0.6);
+        wrench.setScaleY(0.6);
+        // Позиционируем иконку внизу по центру основной иконки
+        wrench.setLayoutX((DEFAULT_ICON_SIZE - 14.4) / 2); // 14.4 = 24 * 0.6, точное центрирование
+        wrench.setLayoutY(DEFAULT_ICON_SIZE - 8); // Чуть ниже
+        return wrench;
     }
 
     /**
@@ -428,7 +475,7 @@ public class DeviceIconService {
     }
 
     /**
-     * Компенсация поворота текста, чтобы он оставался горизонтальным
+     * Компенсация поворота текста и иконок, чтобы они оставались горизонтальными
      */
     public static void compensateTextRotation(Node node, double angle) {
         if (node instanceof Group) {
@@ -448,6 +495,9 @@ public class DeviceIconService {
                     } else {
                         text.setY(-5); // Стандартное расстояние
                     }
+                } else if (child instanceof javafx.scene.shape.SVGPath) {
+                    // Компенсируем поворот для гаечного ключа
+                    child.setRotate(-angle);
                 }
             }
         }
@@ -588,17 +638,170 @@ public class DeviceIconService {
     }
 
     /**
-     * Показ информации об устройстве
+     * Показ информации об устройстве с кнопкой редактирования
      */
     private void
-    showDeviceInfo(Node node) {  // Добавьте параметр Node
+    showDeviceInfo(Node node) {
         Device deviceToShow = extractDeviceFromUserData(node);
         assert deviceToShow != null;
         String infoText = buildDeviceInfoText(deviceToShow);
-        CustomAlertDialog.showInfo(
+
+        ButtonType editButton = new ButtonType("Редактировать", ButtonBar.ButtonData.APPLY);
+        ButtonType closeButton = new ButtonType("Закрыть", ButtonBar.ButtonData.CANCEL_CLOSE);
+
+        Optional<ButtonType> result = CustomAlertDialog.showConfirmationWithOptions(
                 "Информация о приборе",
-                "'" + deviceToShow.getName() + "' (" + deviceToShow.getInventoryNumber() + ")\n" + infoText
+                "'" + deviceToShow.getName() + "' (" + deviceToShow.getInventoryNumber() + ")\n" + infoText,
+                editButton, closeButton
         );
+
+        if (result.isPresent() && result.get() == editButton) {
+            openEditForm(deviceToShow, node);
+        }
+    }
+
+    /**
+     * Открытие формы редактирования прибора
+     */
+    private void openEditForm(Device device, Node node) {
+        try {
+            javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(
+                    getClass().getResource("/views/add-device-form.fxml"));
+            javafx.scene.Parent view = loader.load();
+
+            com.kipia.management.kipia_management.controllers.AddDeviceController ctrl = loader.getController();
+            if (ctrl != null) {
+                ctrl.setDeviceDAO(deviceDAO);
+                ctrl.setEditMode(device);
+                ctrl.setOnDeviceAdded(() -> Platform.runLater(() -> {
+                    // Обновление после редактирования
+                    if (onDeviceEditedCallback != null) {
+                        onDeviceEditedCallback.run();
+                    }
+                }));
+            }
+
+            Stage ownerStage = (Stage) node.getScene().getWindow();
+            Stage dialogStage = createStyledDialog(view, "Редактирование: " + device.getName(), ownerStage);
+            if (ctrl != null && dialogStage != null) {
+                ctrl.setDialogStage(dialogStage);
+            }
+        } catch (Exception e) {
+            LOGGER.error("Ошибка открытия формы редактирования: {}", e.getMessage(), e);
+            CustomAlertDialog.showError("Ошибка", "Не удалось открыть форму редактирования");
+        }
+    }
+
+    /**
+     * Создание стилизованного диалога для формы редактирования
+     */
+    private Stage createStyledDialog(javafx.scene.Parent formContent, String titleText, Stage ownerStage) {
+        boolean dark = StyleUtils.isDarkTheme();
+
+        // ===== TITLEBAR =====
+        javafx.scene.shape.SVGPath formIcon = new javafx.scene.shape.SVGPath();
+        formIcon.setContent(
+                "M12,2 C6.48,2 2,6.48 2,12 s4.48,10 10,10 s10,-4.48 10,-10 S17.52,2 12,2 z " +
+                        "M12,3.5 C7.31,3.5 3.5,7.31 3.5,12 s3.81,8.5 8.5,8.5 s8.5,-3.81 8.5,-8.5 S16.69,3.5 12,3.5 z " +
+                        "M12,4.2 L12,5 M12,19 L12,19.8 M4.2,12 L5,12 M19,12 L19.8,12 " +
+                        "M17.66,6.34 L17.17,6.83 M6.83,17.17 L6.34,17.66 " +
+                        "M6.34,6.34 L6.83,6.83 M17.17,17.17 L17.66,17.66 " +
+                        "M12,12 m-0.4,0 a0.4,0.4 0 1,0 0.8,0 a0.4,0.4 0 1,0 -0.8,0 " +
+                        "M12,12 L9.2,8.8 " +
+                        "M9.2,8.8 L8.8,9.5 L9.6,9.2 Z"
+        );
+
+        formIcon.setFill(Color.TRANSPARENT);
+        formIcon.setStroke(Color.web("#ffffff"));
+        formIcon.setStrokeWidth(1.5);
+        formIcon.setStrokeLineCap(javafx.scene.shape.StrokeLineCap.ROUND);
+        formIcon.setStrokeLineJoin(javafx.scene.shape.StrokeLineJoin.ROUND);
+
+        javafx.scene.layout.StackPane iconWrap = new javafx.scene.layout.StackPane(formIcon);
+        iconWrap.setPrefSize(40, 40);
+        iconWrap.setMinSize(40, 40);
+        iconWrap.setStyle("-fx-background-color: transparent;");
+
+        Label typeLabel = new Label("Управление приборами");
+        typeLabel.setStyle(
+                "-fx-font-size:10px;-fx-font-weight:bold;" +
+                        "-fx-text-fill:#ffffff;"
+        );
+        Label titleLabel = new Label(titleText);
+        titleLabel.setStyle(
+                "-fx-font-size:13px;-fx-font-weight:bold;" +
+                        "-fx-text-fill:#ffffff;"
+        );
+
+        javafx.scene.layout.VBox titleBox = new javafx.scene.layout.VBox(1, typeLabel, titleLabel);
+        titleBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        javafx.scene.layout.HBox.setHgrow(titleBox, javafx.scene.layout.Priority.ALWAYS);
+
+        Stage dialog = new Stage();
+        CustomAlertDialog.setAppIcon(dialog);
+
+        javafx.scene.layout.HBox titleBar = new javafx.scene.layout.HBox(12, iconWrap, titleBox);
+        titleBar.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        titleBar.setPadding(new javafx.geometry.Insets(10, 12, 10, 16));
+        titleBar.setStyle(
+                "-fx-background-color:" + (dark ? "#1a2330" : "#465261") + ";" +
+                        "-fx-background-radius:12px 12px 0 0;"
+        );
+
+        // Drag на titlebar
+        final double[] drag = new double[2];
+        titleBar.setOnMousePressed(e -> { drag[0] = e.getScreenX() - dialog.getX(); drag[1] = e.getScreenY() - dialog.getY(); });
+        titleBar.setOnMouseDragged(e -> { dialog.setX(e.getScreenX() - drag[0]); dialog.setY(e.getScreenY() - drag[1]); });
+
+        // ===== ROOT =====
+        javafx.scene.layout.VBox root = new javafx.scene.layout.VBox(titleBar, formContent);
+        javafx.scene.layout.VBox.setVgrow(formContent, javafx.scene.layout.Priority.ALWAYS);
+        root.setStyle(
+                "-fx-background-radius:12px;" +
+                        "-fx-border-color:" + (dark ? "#2d3e50" : "#d0d4d8") + ";" +
+                        "-fx-border-width:1px;-fx-border-radius:12px;"
+        );
+        root.setEffect(new javafx.scene.effect.DropShadow(
+                20, 0, 5,
+                dark ? javafx.scene.paint.Color.rgb(0,0,0,0.6)
+                        : javafx.scene.paint.Color.rgb(0,0,0,0.22)
+        ));
+
+        // Clip для скругления
+        javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle();
+        clip.setArcWidth(24);
+        clip.setArcHeight(24);
+        clip.widthProperty().bind(root.widthProperty());
+        clip.heightProperty().bind(root.heightProperty());
+        root.setClip(clip);
+
+        // ===== SCENE =====
+        Scene scene = new Scene(root, 580, 720);
+        scene.setFill(javafx.scene.paint.Color.TRANSPARENT);
+
+        // Применяем базовые стили с переменными темы
+        for (String stylesheet : StyleUtils.getBaseStylesheets()) {
+            scene.getStylesheets().add(
+                    Objects.requireNonNull(getClass().getResource(stylesheet)).toExternalForm()
+            );
+        }
+
+        // Добавляем специфический стиль для add-device
+        String addDeviceStylesheet = StyleUtils.getScreenStylesheet("add-device");
+        if (addDeviceStylesheet != null) {
+            scene.getStylesheets().add(
+                    Objects.requireNonNull(getClass().getResource(addDeviceStylesheet)).toExternalForm()
+            );
+        }
+
+        dialog.initStyle(javafx.stage.StageStyle.TRANSPARENT);
+        dialog.initOwner(ownerStage);
+        dialog.initModality(Modality.APPLICATION_MODAL);
+        dialog.setResizable(false);
+        dialog.setScene(scene);
+        dialog.showAndWait();
+
+        return dialog;
     }
 
     /**

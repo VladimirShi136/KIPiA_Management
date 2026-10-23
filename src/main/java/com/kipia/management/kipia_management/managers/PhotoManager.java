@@ -33,7 +33,7 @@ public class PhotoManager {
     private static final Logger LOGGER = LogManager.getLogger(PhotoManager.class);
     private static final String LAST_PHOTO_DIR_KEY = "last_photo_directory";
     private static final String PHOTOS_DIR_NAME = "device_photos";
-    public static final int MAX_PHOTOS_PER_DEVICE = 10;
+    public static final int MAX_PHOTOS_PER_DEVICE = 6;
 
     // ⭐⭐ Статический экземпляр  ⭐⭐
     private static final PhotoManager INSTANCE = new PhotoManager();

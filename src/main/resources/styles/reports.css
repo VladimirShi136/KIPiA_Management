@@ -228,6 +228,10 @@
     -fx-fill: -fx-status-storage;
 }
 
+.status-dot.inrepair-dot {
+    -fx-fill: -fx-status-inrepair;
+}
+
 .status-dot.lost-dot {
     -fx-fill: -fx-status-lost;
 }
@@ -255,6 +259,10 @@
 
 .status-card-count.storage-count {
     -fx-text-fill: -fx-status-storage;
+}
+
+.status-card-count.inrepair-count {
+    -fx-text-fill: -fx-status-inrepair;
 }
 
 .status-card-count.lost-count {

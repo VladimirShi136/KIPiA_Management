@@ -287,6 +287,7 @@ public class SchemeEditorController implements SearchableController {
                 this::saveDeviceLocation,
                 deviceLocationDAO,
                 this::refreshAvailableDevices,
+                this::reloadDevicesOnScheme,
                 currentScheme,
                 deviceDAO,
                 shapeManager
@@ -1503,6 +1504,83 @@ public class SchemeEditorController implements SearchableController {
         return deviceLocationDAO.getLocationsBySchemeId(currentScheme.getId()).stream()
                 .map(DeviceLocation::getDeviceId)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Перезагрузка устройств на схеме после редактирования
+     * Удаляет устройства с канваса и загружает их заново из базы данных
+     * Также удаляет устройства, чья локация не соответствует текущей схеме
+     */
+    private void reloadDevicesOnScheme() {
+        if (currentScheme == null || schemePane == null) {
+            return;
+        }
+
+        try {
+            // Включаем режим загрузки для предотвращения регистрации команд undo/redo
+            if (shapeManager != null) {
+                shapeManager.startLoading();
+            }
+
+            // Сначала удаляем устройства, чья локация не соответствует схеме
+            removeDevicesWithWrongLocation();
+
+            // Удаляем только устройства с канваса (не фигуры)
+            removeDevicesFromScheme();
+
+            // Перезагружаем устройства из базы данных
+            loadDevicesFromScheme(currentScheme);
+
+            // Обновляем список доступных устройств
+            refreshAvailableDevices();
+
+            LOGGER.info("Устройства на схеме перезагружены после редактирования");
+        } catch (Exception e) {
+            LOGGER.error("Ошибка при перезагрузке устройств на схеме: {}", e.getMessage(), e);
+        } finally {
+            if (shapeManager != null) {
+                shapeManager.finishLoading();
+            }
+        }
+    }
+
+    /**
+     * Удаляет устройства с канваса и из базы данных, если их локация не соответствует схеме
+     */
+    private void removeDevicesWithWrongLocation() {
+        if (currentScheme == null || schemePane == null || deviceLocationDAO == null || deviceDAO == null) {
+            return;
+        }
+
+        String schemeName = currentScheme.getName();
+        List<DeviceLocation> locations = deviceLocationDAO.getLocationsBySchemeId(currentScheme.getId());
+
+        for (DeviceLocation location : locations) {
+            Device device = deviceDAO.getDeviceById(location.getDeviceId());
+            if (device != null && !schemeName.equals(device.getLocation())) {
+                // Локация устройства не соответствует схеме - удаляем
+                LOGGER.info("Удаление прибора '{}' со схемы '{}' - локация изменилась на '{}'",
+                        device.getName(), schemeName, device.getLocation());
+
+                // Удаляем из базы данных
+                deviceLocationDAO.deleteDeviceLocation(location.getDeviceId(), currentScheme.getId());
+            }
+        }
+    }
+
+    /**
+     * Удаление только устройств с канваса (не фигур)
+     */
+    private void removeDevicesFromScheme() {
+        if (schemePane == null) return;
+
+        List<Node> toRemove = new java.util.ArrayList<>();
+        for (Node node : schemePane.getChildren()) {
+            if (isDeviceNode(node)) {
+                toRemove.add(node);
+            }
+        }
+        schemePane.getChildren().removeAll(toRemove);
     }
 
     /**

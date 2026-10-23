@@ -63,6 +63,12 @@
     -fx-font-weight: bold;
 }
 
+.stat-inrepair {
+    -fx-text-fill: -fx-status-inrepair;
+    -fx-font-size: 30px;
+    -fx-font-weight: bold;
+}
+
 .stat-lost {
     -fx-text-fill: -fx-status-lost;
     -fx-font-size: 30px;

@@ -520,7 +520,7 @@ public class AddDeviceController {
     @FXML
     private void initialize() {
         // Инициализация ComboBox статусов
-        statusComboBox.setItems(FXCollections.observableArrayList("Хранение", "В работе", "Утерян", "Испорчен"));
+        statusComboBox.setItems(FXCollections.observableArrayList("Хранение", "В работе", "В ремонте", "Утерян", "Испорчен"));
         statusComboBox.getSelectionModel().selectFirst();
 
         // Включаем плавную анимацию стрелки и открытия popup для комбобоксов в форме

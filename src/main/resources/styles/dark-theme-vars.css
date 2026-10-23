@@ -51,6 +51,7 @@
     -fx-status-total: #1D5A73;
     -fx-status-working: #4CAF50;
     -fx-status-storage: #F58352;
+    -fx-status-inrepair: #dac801;
     -fx-status-lost: #848C9B;
     -fx-status-broken: #F44336;
     -fx-status-with-photos: #A8C8D0;

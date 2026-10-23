@@ -35,10 +35,12 @@ public class ReportsController implements SearchableController {
     @FXML private BorderPane chartPane;
     @FXML private HBox workingBar;
     @FXML private HBox storageBar;
+    @FXML private HBox inRepairBar;
     @FXML private HBox lostBar;
     @FXML private HBox brokenBar;
     @FXML private Label workingLabel;
     @FXML private Label storageLabel;
+    @FXML private Label inRepairLabel;
     @FXML private Label lostLabel;
     @FXML private Label brokenLabel;
 
@@ -427,11 +429,13 @@ public class ReportsController implements SearchableController {
     private void updateStatusBars() {
         long working = filteredDevices.stream().filter(d -> "В работе".equals(d.getStatus())).count();
         long storage = filteredDevices.stream().filter(d -> "Хранение".equals(d.getStatus())).count();
+        long inRepair = filteredDevices.stream().filter(d -> "В ремонте".equals(d.getStatus())).count();
         long lost = filteredDevices.stream().filter(d -> "Утерян".equals(d.getStatus())).count();
         long broken = filteredDevices.stream().filter(d -> "Испорчен".equals(d.getStatus())).count();
 
         workingLabel.setText(String.valueOf(working));
         storageLabel.setText(String.valueOf(storage));
+        inRepairLabel.setText(String.valueOf(inRepair));
         lostLabel.setText(String.valueOf(lost));
         brokenLabel.setText(String.valueOf(broken));
     }
@@ -471,12 +475,14 @@ public class ReportsController implements SearchableController {
 
         if (workingBar != null) workingBar.setStyle(cardStyle);
         if (storageBar != null) storageBar.setStyle(cardStyle);
+        if (inRepairBar != null) inRepairBar.setStyle(cardStyle);
         if (lostBar != null) lostBar.setStyle(cardStyle);
         if (brokenBar != null) brokenBar.setStyle(cardStyle);
 
         // Обновляем цвета Rectangle для точек статусов
         String workingColor = "#4CAF50";
         String storageColor = "#F58352";
+        String inRepairColor = "#dac801";
         String lostColor = "#848C9B";
         String brokenColor = "#F44336";
 
@@ -503,6 +509,12 @@ public class ReportsController implements SearchableController {
             javafx.scene.Node node = brokenBar.getChildren().get(0);
             if (node instanceof javafx.scene.shape.Rectangle) {
                 ((javafx.scene.shape.Rectangle) node).setFill(javafx.scene.paint.Color.web(brokenColor));
+            }
+        }
+        if (inRepairBar != null && !inRepairBar.getChildren().isEmpty()) {
+            javafx.scene.Node node = inRepairBar.getChildren().get(0);
+            if (node instanceof javafx.scene.shape.Rectangle) {
+                ((javafx.scene.shape.Rectangle) node).setFill(javafx.scene.paint.Color.web(inRepairColor));
             }
         }
 
@@ -533,11 +545,17 @@ public class ReportsController implements SearchableController {
                 node.setStyle(labelStyle);
             }
         }
+        for (javafx.scene.Node node : inRepairBar.getChildren()) {
+            if (node instanceof Label && !"inRepairLabel".equals(node.getId())) {
+                node.setStyle(labelStyle);
+            }
+        }
 
         // Обновляем цвета счетчиков
         String countStyleFormat = "-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: %s;";
         if (workingLabel != null) workingLabel.setStyle(String.format(countStyleFormat, workingColor));
         if (storageLabel != null) storageLabel.setStyle(String.format(countStyleFormat, storageColor));
+        if (inRepairLabel != null) inRepairLabel.setStyle(String.format(countStyleFormat, inRepairColor));
         if (lostLabel != null) lostLabel.setStyle(String.format(countStyleFormat, lostColor));
         if (brokenLabel != null) brokenLabel.setStyle(String.format(countStyleFormat, brokenColor));
     }

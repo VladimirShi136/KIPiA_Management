@@ -24,13 +24,14 @@ public class DonutChart extends StackPane {
 
     // Фиксированный порядок отрисовки сегментов (чтобы кольцо не "прыгало" между обновлениями)
     public static final List<String> STATUS_ORDER = List.of(
-            "В работе", "Хранение", "Утерян", "Испорчен"
+            "В работе", "Хранение", "В ремонте", "Утерян", "Испорчен"
     );
 
     private static final Map<String, Color> STATUS_COLORS = new LinkedHashMap<>();
     static {
         STATUS_COLORS.put("В работе", Color.web("#4CAF50"));   // зелёный
         STATUS_COLORS.put("Хранение", Color.web("#FF9800"));   // оранжевый
+        STATUS_COLORS.put("В ремонте", Color.rgb(218, 200, 1)); // жёлто-коричневый
         STATUS_COLORS.put("Утерян", Color.web("#9E9E9E"));     // серый
         STATUS_COLORS.put("Испорчен", Color.web("#F44336"));   // красный
     }

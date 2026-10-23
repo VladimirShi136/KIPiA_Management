@@ -56,3 +56,6 @@ build/
 *.pem
 *.key
 /hs_err_pid6412.log
+
+# Continue AI config files
+.continue/agents/*.yaml

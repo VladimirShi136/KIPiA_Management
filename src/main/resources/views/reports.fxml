@@ -32,11 +32,12 @@
         <StackPane fx:id="chartContainer" VBox.vgrow="ALWAYS" minHeight="300" alignment="CENTER">
             <BorderPane fx:id="chartPane" styleClass="chart-pane"/>
         </StackPane>
-        <!-- Карточки статусов, 2x2 -->
+        <!-- Карточки статусов, 3x2 -->
         <GridPane fx:id="statusGrid" hgap="12" vgap="12" styleClass="status-grid">
             <columnConstraints>
-                <ColumnConstraints percentWidth="50" hgrow="ALWAYS"/>
-                <ColumnConstraints percentWidth="50" hgrow="ALWAYS"/>
+                <ColumnConstraints percentWidth="33.3" hgrow="ALWAYS"/>
+                <ColumnConstraints percentWidth="33.3" hgrow="ALWAYS"/>
+                <ColumnConstraints percentWidth="33.3" hgrow="ALWAYS"/>
             </columnConstraints>
 
             <HBox fx:id="workingBar" styleClass="status-card working-card" alignment="CENTER_LEFT"
@@ -53,6 +54,14 @@
                 <Label text="Хранение" styleClass="status-card-label"/>
                 <Region HBox.hgrow="ALWAYS"/>
                 <Label fx:id="storageLabel" text="0" styleClass="status-card-count storage-count"/>
+            </HBox>
+
+            <HBox fx:id="inRepairBar" styleClass="status-card inrepair-card" alignment="CENTER_LEFT"
+                  GridPane.rowIndex="0" GridPane.columnIndex="2">
+                <Rectangle width="12" height="12" arcWidth="6" arcHeight="6" fill="#dac801" styleClass="status-dot inrepair-dot"/>
+                <Label text="В ремонте" styleClass="status-card-label"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="inRepairLabel" text="0" styleClass="status-card-count inrepair-count"/>
             </HBox>
 
             <HBox fx:id="lostBar" styleClass="status-card lost-card" alignment="CENTER_LEFT"
